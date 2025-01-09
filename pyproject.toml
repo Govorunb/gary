@@ -1,0 +1,21 @@
+[project]
+name = "garry"
+version = "0.1.0"
+description = "A testing implementation of the LLM side of the Neuro-sama Game SDK, based around the Guidance project."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "gpustat>=1.1.1",
+    "guidance-stitch>=0.1.0",
+    "guidance>=0.2.0",
+    "llama-cpp-python>=0.3.4",
+    "setuptools>=75.7.0",
+    "fastapi[standard]>=0.115.6",
+    "pydantic>=2.10.4",
+    "websockets>=14.1",
+    "uvicorn>=0.34.0",
+    "starlette>=0.41.3",
+]
+
+[[tool.uv.index]]
+url = "https://abetlen.github.io/llama-cpp-python/whl/cu124/"
