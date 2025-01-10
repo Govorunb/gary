@@ -17,7 +17,7 @@ Initially tested on [Abandoned Pub](https://itch.io/jam/neuro/rate/3213265).
 
 ### Quick start
 1. Install [uv](https://github.com/astral-sh/uv)
-2. Configure stuff in `config.yaml`
+2. Configure stuff in `config.yaml` (use a YAML language server that supports schemas for an easier time)
 3. Run the following command:
 ```
 uv run main.py [--preset your_preset]
@@ -68,7 +68,7 @@ You probably *should* consider doing the following:
 #### Implementation-specific behaviour
 These are edge cases where Neuro may behave differently. For most of these, the spec doesn't say anything, so I had to pick something.
 - Registering an existing action will replace the old one
-- Only one websocket connection is allowed per game; on conflict, either the old or the new connection will be closed (configurable in `registry.py`)
+- Only one active websocket connection is allowed per game; when another tries to connect, either the old or the new connection will be closed (configurable in `config.yaml`)
 - On reconnect, Gary will wait for the first message before sending `actions/reregister_all`
 	- I can probably make something that figures out if it's a first launch or a reconnect but I'm too lazy
 - etc etc, just download the repo and search for "IMPL" in the code

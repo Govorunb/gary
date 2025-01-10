@@ -57,6 +57,10 @@ definitions:
             description: |
               On receiving `actions/register`, try to act immediately.
               Can be hit or miss.
+          existing_connection_policy:
+            enum: [disconnect_new, disconnect_existing]
+            description: |
+              What to do when someone tries to connect to a game that already has an active connection.
     additionalProperties: false
   preset_inherit:
     description: Inherit from another preset

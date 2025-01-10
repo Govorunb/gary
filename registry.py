@@ -2,20 +2,16 @@ from enum import Enum
 from typing import * # type: ignore
 from logger import logger
 
-from config import CONFIG
+from config import CONFIG, ExistingConnectionPolicy
 from llm import LLM
 from spec import *
 from websocket import WebsocketConnection
 
 class Registry:
-    class ConflictResolution(Enum):
-        DISCONNECT_NEW = 1
-        DISCONNECT_EXISTING = 2
-
-    def __init__(self, llm: LLM, *, conflict_resolution: ConflictResolution = ConflictResolution.DISCONNECT_EXISTING):
+    def __init__(self, llm: LLM, *, existing_connection_policy: ExistingConnectionPolicy | None = None):
         self.games: MutableMapping[str, "Game"] = {}
         self.llm = llm
-        self.conflict_resolution = conflict_resolution
+        self.conflict_resolution = existing_connection_policy or CONFIG.gary.existing_connection_policy
     
     async def on_startup(self, msg: Startup, conn: WebsocketConnection):
         self.llm.gaming(msg.game)
@@ -28,7 +24,8 @@ class Registry:
             if game.connection != conn and game.connection.is_connected():
                 # IMPL: different active connection
                 logger.warning(f"Game {msg.game} is actively connected to someone else! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
-                conn_to_close = game.connection if self.conflict_resolution == Registry.ConflictResolution.DISCONNECT_EXISTING else conn
+                conn_to_close = game.connection if self.conflict_resolution == ExistingConnectionPolicy.DISCONNECT_EXISTING else conn
+                logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {self.conflict_resolution}")
                 close_code = 1012 # Service Restart https://github.com/Luka967/websocket-close-codes
                 await conn_to_close.ws.close(close_code, "Game already connected")
             del game.connection.ws.state.game

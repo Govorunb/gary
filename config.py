@@ -1,3 +1,4 @@
+from enum import Enum
 import dotenv, yaml, argparse
 from os import environ
 from typing import * # type: ignore
@@ -8,6 +9,10 @@ parser.add_argument("--preset", default="default", help="Preset from config.yaml
 args = parser.parse_args()
 dotenv.load_dotenv(".env", override=True)
 
+class ExistingConnectionPolicy(Enum):
+    DISCONNECT_NEW = "disconnect_new"
+    DISCONNECT_EXISTING = "disconnect_existing"
+
 _LogLevel = Literal["all", "debug", "info", "warn", "warning", "error", "critical", "fatal", "none"] | int
 class Config(BaseModel):
     class LLMConfig(BaseModel):
@@ -15,8 +20,10 @@ class Config(BaseModel):
         model: str
         api_key: str = ""
     class GaryConfig(BaseModel):
-        log_level_file: _LogLevel
-        log_level_console: _LogLevel
+        log_level_file: _LogLevel = "info"
+        log_level_console: _LogLevel = "debug"
+        existing_connection_policy: ExistingConnectionPolicy = ExistingConnectionPolicy.DISCONNECT_EXISTING
+        '''What to do when someone tries to connect to a game that already has an active connection.'''
         enable_cot: bool = False
         '''
         Enable poor man's chain-of-thought.
@@ -32,9 +39,9 @@ class Config(BaseModel):
         # will probably be obsoleted by the scheduler if i get around to making it
         try_on_register: bool = True
         '''On receiving `actions/register`, try to act immediately.'''
-    fastapi: dict[str, Any]
+    fastapi: dict[str, Any] = {}
     llm: LLMConfig
-    engine_params: dict[str, Any]
+    engine_params: dict[str, Any] = {}
     gary: GaryConfig
 
 def _load_config(preset_name: str):
