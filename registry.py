@@ -2,7 +2,7 @@ from enum import Enum
 from typing import * # type: ignore
 from logger import logger
 
-from config import LLM_FLAGS, LLMConfig
+from config import CONFIG
 from llm import LLM
 from spec import *
 from websocket import WebsocketConnection
@@ -43,7 +43,7 @@ class Registry:
             if game is None:
                 logger.warning(f"Game {msg.game} not connected, faking a `startup`")
                 # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
-                # IMPL: timing for `actions/reregister_all`
+                # IMPL: timing for sending `actions/reregister_all`
                 await self.on_startup(Startup(game=msg.game), conn)
                 await conn.send(ReregisterAllActions())
                 await self.handle(msg, conn)
@@ -71,7 +71,7 @@ class Game:
 
     async def action_register(self, actions: list[ActionModel]):
         for action in actions:
-            # IMPL: overwriting registered actions
+            # IMPL: overwrites existing actions
             if action.name in self.actions:
                 logger.warning(f"Action {action.name} already registered")
             # small implementation quirk, BaseModel has a deprecated 'schema' method
@@ -80,7 +80,7 @@ class Game:
                 action.schema = None
             self.actions[action.name] = action
             logger.info(f"Registered action {action.name}")
-        if LLMConfig.TRY_ON_REGISTER in LLM_FLAGS and self.actions:
+        if CONFIG.gary.try_on_register and self.actions:
             self.registry.llm.context(self.name, f"Actions registered: {list(self.actions.keys())}")
             await self.try_action()
     

@@ -1,45 +1,55 @@
 import math
-import random, asyncio, time, textwrap
+import random, asyncio, time
 from guidance import * # type: ignore
 from guidance.chat import Llama3ChatTemplate
 from guidance._grammar import Function
 import llama_cpp
 
-import config
+from config import CONFIG, MANUAL_RULES
 from logger import logger
 from spec import *
 
 SchemaLike = Mapping[str, Any] | type[BaseModel] | TypeAdapter
 
+_engine_map = {
+    "openai": models.OpenAI,
+    "anthropic": models.Anthropic,
+    "azure_openai": models.AzureOpenAI,
+    "googleai": models.GoogleAI,
+    "llama_cpp": models.LlamaCpp,
+    "transformers": models.Transformers,
+    "guidance_server": models.Model
+}
+
 class LLM:
     llm: models.Model
     token_limit: int
     temperature: float
-    cot: bool
     rules: str | None
 
     def __init__(self):
         logger.info("loading model")
         start = time.time()
-        # self.llm = models.OpenAI("gpt-4o-mini", api_key=config.MODEL_API_KEY)
-        # self.llm = models.Model("https://localhost:12345/", api_key=config.MODEL_API_KEY) # guidance server
+        llm_config = CONFIG.llm
+        engine = llm_config.engine
+        model = llm_config.model
+        engine_params = CONFIG.engine_params
         params = {
-            "n_ctx": config.MODEL_CTX_LENGTH,
-            "n_gpu_layers": -1,
-            "seed": random.randint(0, 2**32 - 1),
-            "chat_template": Llama3ChatTemplate() if 'Llama-3.1' in config.MODEL_PATH else None,
+            "api_key": llm_config.api_key,
+            "seed": random.randint(1, 2**32 - 1),
+            "chat_template": Llama3ChatTemplate() if 'Llama-3.1' in model else None,
             "enable_monitoring": False,
+            **engine_params
         }
-        model_cls = models.LlamaCpp if config.MODEL_PATH.endswith('.gguf') else models.Transformers
-        self.llm = model_cls(config.MODEL_PATH, **params) # type: ignore
-        self.token_limit = math.ceil(config.MODEL_CTX_LENGTH * 0.9)
+        model_cls = _engine_map[engine]
+        self.llm = model_cls(model, echo=False, **params) # type: ignore
+        self.token_limit = math.ceil(engine_params["n_ctx"] * 0.9) if "n_ctx" in engine_params else 1 << 32
         # self.token_limit = 1000 # debugging
         self.llm.echo = False
         end = time.time()
         logger.info(f"loaded in {end-start:.2f} seconds")
         self.load_system_prompt()
-        self.temperature = config.MODEL_TEMPERATURE
-        self.cot = config.ENABLE_COT
+        self.temperature = engine_params.get("temperature", 1.0)
 
     def load_system_prompt(self):
         with system():
@@ -60,23 +70,18 @@ Every action you perform is always meticulously calculated. You always keep your
     def reset(self):
         # i sure love it when other people handle the low level stuff for me
         # and abstract everything away so that i don't have to deal with any of it
-        logger.debug((tokens(self.llm),1))
         engine = self.llm_engine()
         if isinstance(engine, models.llama_cpp._llama_cpp.LlamaCppEngine):
             engine.reset_metrics()
-            logger.debug((tokens(self.llm),2))
             engine.model_obj.reset()
-            logger.debug((tokens(self.llm),3))
             llama_cpp.llama_kv_cache_clear(engine.model_obj.ctx)
-        logger.debug((tokens(self.llm),4))
         
-        # OR - just do this and pray to the GC
+        # just pray to the GC i guess
         buh = models.Model(self.llm.engine, echo=False)
         self.llm = buh
         assert self.llm.token_count == 0
         assert len(self.llm._current_prompt()) == 0
-        # self.llm.engine = models.llama_cpp._llama_cpp.LlamaCppEngine(config.MODEL_PATH, True)
-        logger.debug((tokens(self.llm),5))
+        logger.debug(f'truncated context to {tokens(self.llm)}')
 
         self.load_system_prompt()
 
@@ -91,7 +96,7 @@ Every action you perform is always meticulously calculated. You always keep your
 
     def gaming(self, game: str):
         self.context(game, "Connected.", silent=True)
-        if custom_rules := config.MANUAL_RULES.get(game, None):
+        if custom_rules := MANUAL_RULES.get(game, None):
             self.context(game, custom_rules, silent=True)
     
     def not_gaming(self, game: str):
@@ -136,7 +141,7 @@ You must perform one of the following actions, given this information:
         self.truncate_context(game)
         llm = self.llm
         with assistant():
-            if self.cot:
+            if CONFIG.gary.enable_cot:
                 llm += f"""\
                 I will carefully think about my decision and outline my reasoning. I will keep my thoughts concise. When I'm done, I will reply with the name of the action I want to perform.
                 <THOUGHTS>
@@ -144,18 +149,18 @@ You must perform one of the following actions, given this information:
                 </THOUGHTS>
                 """
                 logger.info(f"Thoughts (action): {llm['thinking']}")
-            llm += f'I have decided to perform the action "{with_temperature(select(list(actions.keys()), "chosen_action"), self.temperature)}":\n'
-            chosen_action = llm["chosen_action"]
+            llm += f'I have decided to perform the following action:'
             llm += f'''
 ```json
 {{
-    command: "action",
-    name: "{chosen_action}",'''
+    "command": "action",
+    "name": "{with_temperature(select(list(actions.keys()), "chosen_action"), self.temperature)}",'''
+            chosen_action = llm["chosen_action"]
             # grr... have to split here because the second generation depends on the first (token limits)
             llm = time_gen(llm, f'''
-    reason: "{gen("reason", stop='"', temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
+    "reason": "{gen("reason", stop='"', temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
             llm = time_gen(llm, f'''
-    data: {json("data", schema=actions[chosen_action].schema, temperature=self.temperature, max_tokens=self.max_tokens())}
+    "data": {json("data", schema=actions[chosen_action].schema, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
 ```
                 '''.strip())
@@ -170,35 +175,43 @@ You must perform one of the following actions, given this information:
         if not actions:
             return None
         logger.warning(f"{actions=} {type(actions)=}")
-        actions_json = (TypeAdapter(dict[str, ActionModel]) 
-            # .dump_json(actions, indent=4)
-            .dump_json(actions)
+        (YES, NO) = ("act", "wait")
+        # actions_for_json = dict(map(lambda kv: (kv[0], {"name": kv[1].name, "description": kv[1].description}), actions.items()))
+        actions_for_json = actions
+        actions_json = (TypeAdapter(dict[str, Any])
+            # .dump_json(actions_for_json, indent=4)
+            .dump_json(actions_for_json)
             .decode()
             .replace("\n", "\n    "))
-        llm: models.Model = self.context(game, f"""
+        ctx = f"""
 Based on previous context, decide whether you should perform any of the following actions.
 ```json
 {{
     "available_actions": {actions_json}
 }}
-```""".strip(), silent=True, ephemeral=True, do_print=True)
+```
+Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to choose an action to perform).
+"""
+        llm: models.Model = self.context(game, ctx, silent=True, ephemeral=True, do_print=True)
         with assistant():
-            if self.cot:
-                llm = time_gen(llm, f"""\
-                I will carefully think about my decision and outline my reasoning. I will keep my thoughts concise and focused on the logical steps. When I'm done, I will reply with either 'yes' or 'no'.
-                <THOUGHTS>
-                {gen("thinking", stop='</THOUGHTS>', temperature=self.temperature, max_tokens=self.max_tokens(500))}
-                </THOUGHTS>
-                """)
-                logger.info(f"Thoughts (try_action): {llm['thinking']}")
-            llm += with_temperature(select(['yes', 'no'], 'decision'), self.temperature)
+            resp = f"""
+```json
+{{
+    "command": "decision","""
+            if CONFIG.gary.enable_cot:
+                resp += f"""
+    "reasoning": "{gen("reasoning", stop_regex=r'\n|(?<!\\)"', temperature=self.temperature, max_tokens=self.max_tokens(100))}","""
+            resp += f"""
+    "decision": "{with_temperature(select([YES, NO], "decision"), self.temperature)}"
+}}
+```"""
+            llm = time_gen(llm, resp)
         decision = llm['decision']
-        logger.info(decision)
+        logger.info(f"{decision=}{f'; {llm['reasoning']}' if CONFIG.gary.enable_cot else ''}")
         # logger.debug(llm._current_prompt())
-        # self.llm = llm # supposed to be ephemeral
-        if decision == 'no':
-            return None
-        return await self.action(game, actions)
+        if CONFIG.gary.non_ephemeral_try_context:
+            self.llm = llm
+        return None if decision == NO else await self.action(game, actions)
     
     def truncate_context(self, game: str | None):
         token_count = tokens(self.llm)

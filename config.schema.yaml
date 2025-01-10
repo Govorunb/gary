@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://json-schema.org/draft-07/schema
+title: Gary Config Schema
+$id: gary-config
+additionalProperties:
+  oneOf:
+    - {$ref: "#/definitions/preset_base"}
+    - {$ref: "#/definitions/preset_inherit"}
+
+definitions:
+  preset_base:
+    description: Preset
+    type: object
+    properties:
+      fastapi:
+        type: object
+        additionalProperties: true
+        properties:
+          host: {type: string}
+          port: {type: integer, minimum: 1, maximum: 65535}
+          reload: {type: boolean}
+      llm:
+        type: object
+        properties:
+          engine: {$ref: "#/definitions/engine"}
+          model:
+            type: string
+            description: |
+              For local engines (e.g. llama_cpp), use the local path to the model (e.g. `_models/llama-2-7b.gguf`).
+              For remote services like Anthropic, use the name of the model.
+              For guidance_server, this should be the URL of the server.
+          api_key: {type: string}
+        required: [engine, model]
+      engine_params:
+        type: object
+        description: |
+          Parameters to pass to your chosen engine. Refer to the engine's documentation for possible values.
+        additionalProperties: true
+      gary:
+        type: object
+        properties:
+          log_level_file: {$ref: "#/definitions/log_level"}
+          log_level_console: {$ref: "#/definitions/log_level"}
+          enable_cot:
+            type: boolean
+            description: |
+              Enable poor man's chain-of-thought.
+              In my testing, this just consumes a bunch more tokens without a tangible difference.
+              A lot of the time, the 'reasoning' is full of hallucinations and the model chooses to do something irrelevant anyway.
+          non_ephemeral_try_context:
+            type: boolean
+            description: |
+              Don't discard context from picking whether to act or not.
+              If try_action happens to generate good reasoning, this will help. If your model hallucinates a lot, it will very much not help.
+              You should play around with this.
+          try_on_register:
+            type: boolean
+            description: |
+              On receiving `actions/register`, try to act immediately.
+              Can be hit or miss.
+    additionalProperties: false
+  preset_inherit:
+    description: Inherit from another preset
+    type: object
+    properties:
+      base: {type: string}
+      overrides: {$ref: "#/definitions/preset_base"}
+    required: [base, overrides]
+  engine: {enum: [openai, anthropic, azure_openai, googleai, llama_cpp, transformers, guidance_server]}
+  log_level:
+    description: Minimum log level. This can be one of the given values, or a non-negative integer (refer to python's logging module).
+    oneOf:
+      - enum: [all, debug, info, warn, warning, error, critical, fatal, none]
+      - type: integer
+        minimum: 0

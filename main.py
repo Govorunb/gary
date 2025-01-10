@@ -1,32 +1,6 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from llm import LLM
-from registry import Registry
-from websocket import WebsocketConnection
-from logger import logger
+import uvicorn
+import uvicorn.config
+from config import CONFIG
 
-app = FastAPI()
-
-# otherwise fastapi will hold two copies of the LLM in memory (in two different processes)
-registry = None
-
-active_connections: list[WebsocketConnection] = []
-
-@app.websocket("/")
-async def websocket_endpoint(websocket: WebSocket):
-    global registry
-    if registry is None:
-        registry = Registry(LLM())
-    await websocket.accept()
-    logger.info(f"New connection from {websocket.client}")
-    connection = WebsocketConnection(websocket)
-    websocket.state.registry = registry
-    active_connections.append(connection)
-    try:
-        await connection.lifecycle()
-        logger.info(f"Connection to {websocket.client} closed")
-    except WebSocketDisconnect as e:
-        logger.error(f"Connection closed unexpectedly ([{e.code}] {e.reason})")
-        raise
-    finally:
-        registry.llm.reset() # IMPL
-        active_connections.remove(connection)
+if __name__ == "__main__":
+    uvicorn.run("app:app", **CONFIG.fastapi, reload_includes=['config.yaml'])

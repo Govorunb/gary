@@ -4,21 +4,21 @@ from pydantic import BaseModel, Field, TypeAdapter
 
 # pyright: reportIncompatibleVariableOverride=false
 
-AnyGameCommand = Union[
-    Literal["startup"],
-    Literal["context"],
-    Literal["actions/register"],
-    Literal["actions/unregister"],
-    Literal["actions/force"],
-    Literal["action/result"],
-    Literal["shutdown/ready"],
+AnyGameCommand = Literal[
+    "startup",
+    "context",
+    "actions/register",
+    "actions/unregister",
+    "actions/force",
+    "action/result",
+    "shutdown/ready",
 ]
 
-AnyNeuroCommand = Union[
-    Literal["action"],
-    Literal["actions/reregister_all"],
-    Literal["shutdown/graceful"],
-    Literal["shutdown/immediate"],
+AnyNeuroCommand = Literal[
+    "action",
+    "actions/reregister_all",
+    "shutdown/graceful",
+    "shutdown/immediate",
 ]
 
 class ActionModel(BaseModel):
