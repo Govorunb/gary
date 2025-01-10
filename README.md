@@ -5,7 +5,7 @@ Uses [guidance](https://github.com/guidance-ai/guidance) to coerce the LLM to ad
 This is baby's first LLM code and I haven't done Python in years so ~~don't be mean please 🥺👉👈~~ PRs are welcome.
 The project is mostly for fun but I'm open to feedback and contributions.
 
-Initially tested on [Abandoned Pub](https://itch.io/jam/neuro/rate/3213265).
+Initially tested on [Abandoned Pub](https://pipeheads.itch.io/abandoned-pub).
 ### Features
 - Actually follows the schema[^1][^2][^3]
 - Generating JSON with guidance is faster than asking the model to adhere to a schema since it auto-inserts tokens that are "constant"
