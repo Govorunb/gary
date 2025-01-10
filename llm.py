@@ -158,6 +158,7 @@ You must perform one of the following actions, given this information:
             chosen_action = llm["chosen_action"]
             # grr... have to split here because the second generation depends on the first (token limits)
             llm = time_gen(llm, f'''
+    "schema": {actions[chosen_action].schema},
     "reason": "{gen("reason", stop='"', temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
             llm = time_gen(llm, f'''
     "data": {json("data", schema=actions[chosen_action].schema, temperature=self.temperature, max_tokens=self.max_tokens())}

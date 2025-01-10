@@ -45,7 +45,7 @@ class Registry:
                 await conn.send(ReregisterAllActions())
                 await self.handle(msg, conn)
                 return
-            if game.connection != conn: # IMPL
+            if game.connection != conn and game.connection.is_connected(): # IMPL
                 logger.error(f"Game {msg.game} is registered to a different active connection! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
             await game.handle(msg)
 
@@ -75,6 +75,8 @@ class Game:
             # and if no schema is sent it doesn't get overridden
             if isinstance(action.schema, Callable):
                 action.schema = None
+            else: # stop making up random fields in the data. i am no longer asking
+                action.schema["additionalProperties"] = False # type: ignore
             self.actions[action.name] = action
             logger.info(f"Registered action {action.name}")
         if CONFIG.gary.try_on_register and self.actions:
