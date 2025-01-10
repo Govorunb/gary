@@ -1,3 +1,4 @@
+from json import dumps
 import math
 import random, asyncio, time
 from guidance import * # type: ignore
@@ -103,7 +104,7 @@ Every action you perform is always meticulously calculated. You always keep your
         self.context(game, "Disconnected.", silent=True)
 
     def context(self, game: str, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True) -> models.Model:
-        self.truncate_context(game)
+        self.truncate_context(game, len(self.llm_engine().tokenizer.encode(ctx.encode())))
         msg = f"[{game}] {ctx}\n"
         with user():
             out = self.llm + msg
@@ -123,51 +124,54 @@ Every action you perform is always meticulously calculated. You always keep your
     async def force_action(self, msg: ForceAction, actions: dict[str, ActionModel]) -> tuple[str, str]:
         if not actions:
             raise Exception("No actions to choose from")
+        ephemeral = msg.data.ephemeral_context or False
+        actions_for_json = [actions[name] for name in msg.data.action_names]
+        actions_json = (TypeAdapter(list[ActionModel])
+            # .dump_json(actions_for_json, indent=4)
+            .dump_json(actions_for_json)
+            .decode()
+            .replace("\n", "\n    "))
         self.context(msg.game, f"""
 You must perform one of the following actions, given this information:
 ```json
 {{
     "query": "{msg.data.query}",
     "state": "{msg.data.state}",
-    "action_names": {msg.data.action_names},
+    "available_actions": {actions_json}
 }}
 ```
-            """.strip(), silent=True, ephemeral=msg.data.ephemeral_context or False)
-        return await self.action(msg.game, actions)
+            """.strip(), silent=True, ephemeral=ephemeral)
+        return await self.action(msg.game, actions, ephemeral=ephemeral)
 
     async def action(self, game: str, actions: dict[str, ActionModel], *, ephemeral: bool = False) -> tuple[str, str]:
         if not actions:
             raise Exception("No actions to choose from")
-        self.truncate_context(game)
+        self.truncate_context(game, 500)
         llm = self.llm
         with assistant():
-            if CONFIG.gary.enable_cot:
-                llm += f"""\
-                I will carefully think about my decision and outline my reasoning. I will keep my thoughts concise. When I'm done, I will reply with the name of the action I want to perform.
-                <THOUGHTS>
-                {gen("thinking", stop='</THOUGHTS>', temperature=self.temperature, max_tokens=self.max_tokens(500))}
-                </THOUGHTS>
-                """
-                logger.info(f"Thoughts (action): {llm['thinking']}")
-            llm += f'I have decided to perform the following action:'
-            llm += f'''
+            llm += f'''\
+I have decided to perform the following action:
 ```json
 {{
-    "command": "action",
+    "command": "action",'''
+            if CONFIG.gary.enable_cot:
+                llm = time_gen(llm, f'''
+    "reasoning": "{gen("reasoning", stop=['.','\n','"'], temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
+            llm += f'''
     "name": "{with_temperature(select(list(actions.keys()), "chosen_action"), self.temperature)}",'''
             chosen_action = llm["chosen_action"]
-            # grr... have to split here because the second generation depends on the first (token limits)
-            llm = time_gen(llm, f'''
-    "schema": {actions[chosen_action].schema},
-    "reason": "{gen("reason", stop='"', temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
+            llm += f'''
+    "schema": {actions[chosen_action].schema},'''
             llm = time_gen(llm, f'''
     "data": {json("data", schema=actions[chosen_action].schema, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
 ```
                 '''.strip())
         data = llm['data']
-        reason = llm['reason']
-        logger.info(f"chosen action: {chosen_action}; data: {data} (reason: {reason})")
+        if CONFIG.gary.enable_cot:
+            reasoning = llm['reasoning']
+            logger.debug(f"{reasoning=}")
+        logger.info(f"chosen action: {chosen_action}; data: {data}")
         if not ephemeral:
             self.llm = llm
         return (chosen_action, data)
@@ -177,9 +181,9 @@ You must perform one of the following actions, given this information:
             return None
         logger.warning(f"{actions=} {type(actions)=}")
         (YES, NO) = ("act", "wait")
-        # actions_for_json = dict(map(lambda kv: (kv[0], {"name": kv[1].name, "description": kv[1].description}), actions.items()))
-        actions_for_json = actions
-        actions_json = (TypeAdapter(dict[str, Any])
+        # actions_for_json = {name: {"name": name, "description": action.description} for name, action in actions.items()}
+        actions_for_json = list(actions.values())
+        actions_json = (TypeAdapter(list[ActionModel])
             # .dump_json(actions_for_json, indent=4)
             .dump_json(actions_for_json)
             .decode()
@@ -201,7 +205,7 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
     "command": "decision","""
             if CONFIG.gary.enable_cot:
                 resp += f"""
-    "reasoning": "{gen("reasoning", stop_regex=r'\n|(?<!\\)"', temperature=self.temperature, max_tokens=self.max_tokens(100))}","""
+    "reasoning": "{gen("reasoning", stop=['\n','"'], temperature=self.temperature, max_tokens=self.max_tokens(100))}","""
             resp += f"""
     "decision": "{with_temperature(select([YES, NO], "decision"), self.temperature)}"
 }}
@@ -214,10 +218,11 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
             self.llm = llm
         return None if decision == NO else await self.action(game, actions)
     
-    def truncate_context(self, game: str | None):
+    def truncate_context(self, game: str | None, need_tokens: int = 0):
         token_count = tokens(self.llm)
-        logger.debug(f"Currently using {token_count} tokens out of {self.token_limit}")
-        if token_count > self.token_limit:
+        logger.debug(f"Currently using {token_count} tokens out of {self.token_limit}"
+                     + f"; also need {need_tokens} - will use {token_count + need_tokens}" if need_tokens > 0 else "")
+        if token_count + need_tokens > self.token_limit:
             logger.warning(f"Truncating context")
             self.reset()
             if game is not None:
@@ -228,14 +233,14 @@ def tokens(m: models.Model) -> int:
 
 def time_gen[M: models.Model](lm: M, gen_: Function | str) -> M:
     t0 = time.time()
-    prev_tokens_generated: int = lm.engine.metrics.engine_output_tokens # type: ignore
+    prev_tokens_generated: int = lm.token_count
     out: M = lm + gen_
     generation_took = time.time() - t0
-    engine: models._model.Engine = out.engine # type: ignore
-    tokens_input: int = engine.metrics.engine_input_tokens
-    tokens_generated: int = engine.metrics.engine_output_tokens - prev_tokens_generated
-    engine.reset_metrics()
+    tokens_input: int = out.metrics.engine_input_tokens
+    tokens_generated: int = out.token_count - prev_tokens_generated
     tps: float = tokens_generated / generation_took
-    logger.info(f'input {tokens_input} and output {tokens_generated} tokens in {generation_took:.2f}s'
-          + f' ({tps:.2f} tok/s)' if tps >= 0.5 else f' ({1/tps:.2f} s/tok)')
+    logger.info(f'output {tokens_generated} tokens in {generation_took:.2f}s'
+        + f' ({tps:.2f} tok/s)' if tps >= 0.5 else f' ({1/tps:.2f} s/tok)'
+        + f'; input {tokens_input} tokens'
+    )
     return out
