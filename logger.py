@@ -1,5 +1,6 @@
 import os, sys, datetime, atexit
 import logging, logging.handlers
+import colorlog
 
 from config import CONFIG
 
@@ -17,8 +18,16 @@ logging.getLogger().setLevel(0)
 logger = logging.getLogger('gary')
 _fh = logging.FileHandler(LOG_FILENAME, mode = 'w')
 _fh.setLevel(LOG_LEVEL_FILE)
+_fh.formatter = logging.Formatter('[%(asctime)s - %(levelname)s] %(message)s')
 _stdout = logging.StreamHandler(sys.stdout)
 _stdout.setLevel(LOG_LEVEL_CONSOLE)
+_stdout.formatter = colorlog.ColoredFormatter('%(log_color)s[%(levelname)-8s : %(name)s] %(message)s', log_colors={
+    'DEBUG': 'white', # gray
+    'INFO': 'light_white', # white
+    'WARNING': 'yellow',
+    'ERROR': 'red',
+    'CRITICAL': 'bold_red',
+})
 logger.addHandler(_fh)
 logger.addHandler(_stdout)
 logger.setLevel(0) # all
