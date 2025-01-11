@@ -130,8 +130,9 @@ class Game:
     
     async def send_context(self, msg: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
         self.llm.context(msg, silent, ephemeral=ephemeral, do_print=do_print)
-        if not silent:
-            await self.try_action()
+        if not silent and not await self.try_action():
+            self.scheduler.on_context()
+
 
     async def handle(self, msg: AnyGameMessage):
         logger.debug(f'Handling {msg.command}')
@@ -141,7 +142,6 @@ class Game:
             await self.action_unregister(msg.data.action_names)
         elif isinstance(msg, Context):
             await self.send_context(msg.data.message, msg.data.silent)
-            self.scheduler.on_context()
         elif isinstance(msg, ForceAction):
             chosen_action, data = await self.llm.force_action(msg, self.actions)
             await self.execute_action(chosen_action, data)
