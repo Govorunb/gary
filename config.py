@@ -37,24 +37,29 @@ class Config(BaseModel):
         '''
         non_ephemeral_try_context: bool = False
         '''
-        Don't discard context from picking whether to act or not.
-        If try_action happens to generate good reasoning, this will help. If your model hallucinates a lot, it will very much not help.
+        Don't discard context from picking whether to act or not. This can eat up a lot of tokens.
+        If the model happens to generate good reasoning for it, this will help when picking the action.
+        If your model hallucinates a lot, it will very much not help.
+        Requires `enable_cot` to have any effect.
         You should play around with this.
         '''
-        # will probably be obsoleted by the scheduler if i get around to making it
-        try_on_register: bool = False
-        '''On receiving `actions/register`, try to act immediately.'''
         scheduler: SchedulerConfig = SchedulerConfig()
     fastapi: dict[str, Any] = {}
     llm: LLMConfig
     engine_params: dict[str, Any] = {}
-    gary: GaryConfig
+    gary: GaryConfig = GaryConfig()
 
 def _merge_nested_dicts(a: dict[str, Any], b: dict[str, Any]):
+    if not a:
+        return b
+    if not b:
+        return a
     out = dict(a)
     for k, bv in b.items():
-        out[k] = _merge_nested_dicts(a.get(k, {}), bv) if isinstance(bv, dict)\
-            else bv
+        if isinstance(bv, dict):
+            out[k] = _merge_nested_dicts(a.get(k, None), bv)
+        else:
+            out[k] = bv
     return out
 
 def _load_config(preset_name: str):
@@ -66,7 +71,7 @@ def _load_config(preset_name: str):
     if base := preset.get("base", None):
         if not (base_preset := config_yaml.get(base, None)):
             raise ValueError(f"Base preset '{base}' (from '{preset_name}') was not found in config.yaml")
-        preset = _merge_nested_dicts(base_preset, preset)
+        preset = _merge_nested_dicts(base_preset, preset["overrides"])
 
     def replace_env(d: dict[str, Any]) -> dict[str, Any]:
         out = {}
@@ -99,15 +104,16 @@ INSTRUCTIONS (Samantha):
 - Wait for a customer to arrive before performing any actions.
 - When the customer arrives, prepare their order:
     - If they want something that's available in storage, just pick it up and then serve it.
-    - Check the recipe book for the drink they want.
+    - Otherwise, the drink must require combining items. Check the recipe book for the drink they want.
+        - Recipes are formatted as follows: "(Drink): (Step 1); (Step 2); ...; serve customer".
     - Prepare the drink:
         - Take ingredients from storage.
-        - Combine them to make the drink. Follow the recipe order carefully.
+        - Follow the recipe order carefully to make the drink.
             - To combine two items, one of them must be on a table. Interact with that table with the second item in your hands.
             - To process an item in an appliance, interact with it with an item in your hands.
-                - While the appliance is processing, wait.
-                - When the appliance is done, take the item from that appliance by interacting with its table.
-        - If the recipe has multiple steps, use tables to store items.
+                - Wait for the appliance to process the item.
+                - When the appliance is done, take the item from that appliance by interacting with its table again.
+        - If the recipe has multiple steps, use tables to store intermediate steps.
 - Serve the drink to the customer.
 - After serving the current customer, wait for the next customer to arrive.
 
@@ -117,13 +123,41 @@ INSTRUCTIONS (Kayori):
 - Enjoy!
 
 TIPS (Samantha):
-The recipe book will show the recipe for the latest customer. If you just served a customer, the recipe will be outdated and should not be used. Just wait for the next customer.
-Follow the recipe EXACTLY - for example, if the recipe calls for "chat juice", "raw chat juice" is not acceptable.
-Some recipes require combining items multiple times - you will need to use the tables to temporarily store ingredients!
-If picking up items is not available, it means you are already holding something else. Put it down on a table or throw it in the trash can.
-If you try to serve a customer and the game says "customer don't want that", you must be holding the wrong item. Free up your hands then try again.
-The tables are not customer tables. They are item storage. Placing an item on one does not serve the customer.
-Actions take time. WAIT for the result of your action (e.g. 'Picked up X' or 'Blender has finished making Y') before proceeding to the next step.
+The recipe book will show the recipe for the latest customer's drink. For example, "Drink A: carbonate item 1; serve customer" means:
+    - Pick up "item 1" from storage
+    - Put it in the carbonizer
+    - Wait for carbonizer to be done (the game will say "Carbonizer has finished making Drink A")
+    - Interact with carbonizer again to take the carbonated item 1. DO NOT use 'pick up' UNDER ANY CIRCUMSTANCES.
+    - Serve customer
+If you just served a customer, the recipe will be outdated and should not be used. Just wait for the next customer.
+To combine two items (e.g. if the recipe asks for "rum and banana"):
+    - Obtain the first item and take it into your hands
+    - Interact with a table to store the first item
+    - Obtain the second item and take it into your hands
+    - Interact with the table on which you stored the first item
+The tables are all behind the bar and are not customer tables. They are item storage. Placing an item on one does not serve the customer.
+Follow the recipe EXACTLY. For example:
+    - if the recipe calls for "chat juice", "raw chat juice" is not acceptable.
+    - If the drink name is "Banana rum", you CANNOT serve just "rum" and you CANNOT serve just "banana".
+Keep your reasoning short. Do not skip steps. If the game doesn't inform you that a step has been completed, assume it hasn't and you need to do it.
+Pay attention to what the game tells you after you execute an action. For example:
+    - If you can't pick something up, it means you are already holding something else. Put it down on a table or throw it in the trash can.
+    - "can't merge this items" means that the table already has an item it, and it does not combine with what you're holding. Use another table or throw away the item.
+    - If you try to serve a customer and the game says "customer don't want that", you must be holding the wrong item.
+    - Think about what you are holding. Have you recently picked up an item? Have you recently placed one on a table somewhere?
+    - Make sure you are following the recipe.
+This is a simple game, you can only do what the game allows you to do. For example:
+    - You cannot pick up a glass, as it's not a valid item.
+    - The customers are not real. They do not talk, and they do not have feelings or opinions.
+    - You can only perform one action at a time, and actions take time. WAIT for the result of your action (e.g. '[item] picked up' or '[appliance] has finished making [item]') before proceeding to the next step.
+    - Unless the game explicitly tells you that something happened, it didn't.
+    - DO NOT use the term 'pick up' to refer to taking items from appliances, as 'pick up' is a completely different action.
+    - To take an item from an appliance, you have to use 'interact with table'.
+    - If the 'pick up' action is available, it means you are NOT holding an item.
+    - If you're not holding anything and you can interact with a table or appliance, it means there is something on that table/in that appliance. Try taking it to see if it's something you want.
+    - You cannot pick up or move appliances, they are static.
+    - If what you're holding is not named EXACTLY the same as the customer's order, the customer WILL NOT accept it.
+    - At the final step of the recipe, the ingredient is transformed into the drink whose name is in the beginning of the recipe.
 If you're lost, refer back to the INSTRUCTIONS and go through the checklist.
 """, # fml
 }

@@ -82,13 +82,13 @@ class Game:
             else: # stop making up random fields in the data. i am no longer asking
                 action.schema["additionalProperties"] = False # type: ignore
             self.actions[action.name] = action
-        # await self.send_context(f"Actions registered: {list(self.actions.keys())}", silent=not CONFIG.gary.try_on_register)
+        logger.info(f"Actions registered: {list(self.actions.keys())}")
     
     async def action_unregister(self, actions: list[str]):
         for action_name in actions:
             if action_name in self.actions:
                 del self.actions[action_name]
-        # await self.send_context(f"Actions unregistered: {actions}", silent=True)
+        logger.info(f"Actions unregistered: {actions}")
     
     async def try_action(self) -> bool:
         if not self.actions:
@@ -111,7 +111,7 @@ class Game:
 
     async def execute_action(self, name: str, data: str | None = None):
         if name not in self.actions:
-            raise Exception(f"Action {name} not registered")
+            logger.error(f"Action {name} not registered")
         # IMPL: not validating data against stored action schema (guidance is just perfect like that (clueless))
         msg = Action(data=Action.Data(name=name, data=data))
         self.pending_actions.append(msg.data.id)
@@ -122,7 +122,9 @@ class Game:
     async def process_result(self, result: ActionResult):
         if result.data.id in self.pending_actions:
             self.pending_actions.remove(result.data.id)
-            await self.send_context(f"Result for action {result.data.id[:5]}: {result.data.message or 'Performing'}", silent=True)
+            # IMPL: there SHOULD be a message on failure, but success doesn't require one
+            ctx = f"Result for action {result.data.id[:5]}: {"Performing" if result.data.success else "Failure"} ({result.data.message or 'no message'})"
+            await self.send_context(ctx, silent=result.data.success) # try doing something again if failed
         else: # IMPL: result for unknown action
             logger.warning(f"Received result for unknown action {result.data.id}")
     

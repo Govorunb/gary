@@ -102,7 +102,8 @@ Every action you perform is always meticulously calculated. You always aim to ke
 
     def context(self, game: str, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True) -> models.Model:
         msg = f"[{datetime.now().strftime('%H:%M:%S')}] [{game}] {ctx}\n"
-        self.truncate_context(game, len(self.llm_engine().tokenizer.encode(msg.encode())))
+        tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
+        self.truncate_context(game, tokens)
         with user():
             out = self.llm + msg
         if do_print:
@@ -114,6 +115,8 @@ Every action you perform is always meticulously calculated. You always aim to ke
             if prefix:
                 prefix = " " + prefix
             logger.info(f"(ctx{prefix}) {msg}")
+            if tokens > 500:
+                logger.warning(f"Context '{ctx[:20].encode('unicode_escape').decode()}...' had {tokens} tokens. Are you sure this is a good idea?")
         if not ephemeral:
             self.llm = out
         return out
@@ -168,7 +171,7 @@ I have decided to perform the following action:
         data = llm['data']
         if CONFIG.gary.enable_cot:
             reasoning = llm['reasoning']
-            logger.debug(f"{reasoning=}")
+            logger.info(f"choose_action {reasoning=}")
         logger.info(f"chosen action: {chosen_action}; data: {data}")
         if not ephemeral:
             self.llm = llm
@@ -210,10 +213,10 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
 ```"""
             llm = time_gen(llm, resp)
         decision = llm['decision']
-        logger.info(f"{decision=}")
         if CONFIG.gary.enable_cot:
             reasoning = llm['reasoning']
-            logger.debug(f"{reasoning=}")
+            logger.info(f"try_act {reasoning=}")
+        logger.info(f"{decision=}")
         # logger.debug(llm._current_prompt())
         if CONFIG.gary.non_ephemeral_try_context:
             self.llm = llm

@@ -49,9 +49,10 @@ definitions:
           non_ephemeral_try_context:
             type: boolean
             description: |
-              Don't discard context from picking whether to act or not.
+              Don't discard context from picking whether to act or not. This can eat up a lot of tokens.
               If the model happens to generate good reasoning for it, this will help when picking the action.
               If your model hallucinates a lot, it will very much not help.
+              Requires `enable_cot` to have any effect.
               You should play around with this.
           act_on_context:
             type: boolean

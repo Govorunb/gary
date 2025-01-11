@@ -13,10 +13,9 @@ default:
     temperature: 0.6
   gary:
     log_level_file: info
-    log_level_console: debug
+    log_level_console: info
     enable_cot: false
     non_ephemeral_try_context: false
-    try_on_register: false
     scheduler:
       idle_timeout_try: 5
       idle_timeout_force: 30
@@ -28,10 +27,11 @@ phi:
       model: _models/bartowski_Phi-3.5-mini-instruct-Q4_K_L.gguf
     engine_params:
       n_gpu_layers: -1
-      n_ctx: 4096
+      n_ctx: 8192
       temperature: 1.0
     gary:
       enable_cot: true
+      non_ephemeral_try_context: true
 openai:
   base: default
   overrides:
