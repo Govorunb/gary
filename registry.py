@@ -30,14 +30,14 @@ class Registry:
             del game.connection.ws.state.game
         game.connection = conn
         game.connection.ws.state.game = game
-        game.connected()
+        await game.connected()
     
     async def handle(self, msg: AnyGameMessage, conn: WebsocketConnection):
         if isinstance(msg, Startup):
             await self.on_startup(msg, conn)
         else:
             if not (game := self.games.get(msg.game, None)):
-                logger.warning(f"Game {msg.game} was not connected, imitating a `startup`")
+                logger.warning(f"Game {msg.game} was somehow not connected, imitating a `startup`")
                 # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
                 # IMPL: timing for sending `actions/reregister_all`
                 await self.on_startup(Startup(game=msg.game), conn)
@@ -47,13 +47,6 @@ class Registry:
             if game.connection != conn and game.connection.is_connected(): # IMPL
                 logger.error(f"Game {msg.game} is registered to a different active connection! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
             await game.handle(msg)
-
-    async def disconnect(self, game: str):
-        _game = self.games.pop(game, None)
-        if _game is None or not _game.connection.is_connected(): # IMPL
-            logger.warning(f"Game {game} already disconnected")
-            return
-        await _game.connection.ws.close(1000, "Disconnected")
 
 class Game:
     def __init__(self, name: str, registry: Registry, connection: WebsocketConnection):
@@ -149,10 +142,17 @@ class Game:
             await self.process_result(msg)
         else:
             raise Exception(f"Unhandled message type {type(msg)}")
+        
+    async def disconnect(self, code: int = 1000, reason: str = "Disconnected"):
+        if self.connection.is_connected():
+            await self.connection.ws.close(code, reason)
+        else:
+            logger.warning(f"Game {self.name} already disconnected")
 
-    def connected(self):
+    async def connected(self):
         self.llm.gaming()
         self.scheduler.start()
+        await self.connection.send(ReregisterAllActions()) # IMPL: sent on every connect (not just reconnects)
 
     def on_disconnect(self):
         self.llm.not_gaming()

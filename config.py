@@ -126,7 +126,7 @@ The game features two roles:
    - Serve the customer.
 
 ### KAYORI'S INSTRUCTIONS:
-- Pick a drink to order (try different ones for variety).
+- Pick a drink to order. Vary your choices to keep things interesting!
 - Set a time limit for Samantha to complete the drink.
 - Enjoy!
 
@@ -136,7 +136,7 @@ The game features two roles:
   - The drink name must match the customer's order exactly. E.g. "rum" is not valid for an order of "banana rum".
 
 - **Key Actions**:
-  - Use "pick up" only to retrieve items from the bar reserves.
+  - Use "pick up" only to retrieve items from the bar's stock (which is infinite).
   - Tables are used strictly for storage and combining.
   - To retrieve from an appliance, interact with the appliance's table.
   - Tables/appliances that have an item on them will be interactable only if your hands are empty.
