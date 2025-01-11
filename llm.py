@@ -8,6 +8,10 @@ import llama_cpp
 from config import CONFIG, MANUAL_RULES
 from logger import logger
 from spec import *
+if TYPE_CHECKING:
+    from registry import Game
+
+# IMPL: this whole file is my implementation since uhh... yeah
 
 SchemaLike = Mapping[str, Any] | type[BaseModel] | TypeAdapter
 
@@ -27,12 +31,14 @@ class LLM:
     temperature: float
     rules: str | None
 
-    def __init__(self):
-        logger.info("loading model")
+    def __init__(self, game: "Game"):
+        self.game = game
+        logger.info(f"loading model for {game.name}")
         start = time.time()
         llm_config = CONFIG.llm
         engine = llm_config.engine
         model = llm_config.model
+
         engine_params = CONFIG.engine_params
         params = {
             "api_key": llm_config.api_key,
@@ -92,18 +98,18 @@ Every action you perform is always meticulously calculated. You always aim to ke
         await asyncio.sleep(delay)
         logger.info(f"done yapping for {delay:.2f}")
 
-    def gaming(self, game: str):
-        self.context(game, "Connected.", silent=True)
-        if custom_rules := MANUAL_RULES.get(game, None):
-            self.context(game, custom_rules, silent=True)
+    def gaming(self):
+        self.context("Connected.", silent=True)
+        if custom_rules := MANUAL_RULES.get(self.game.name, None):
+            self.context(custom_rules, silent=True)
 
-    def not_gaming(self, game: str):
-        self.context(game, "Disconnected.", silent=True)
+    def not_gaming(self):
+        self.context("Disconnected.", silent=True)
 
-    def context(self, game: str, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True) -> models.Model:
-        msg = f"[{datetime.now().strftime('%H:%M:%S')}] [{game}] {ctx}\n"
+    def context(self, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True) -> models.Model:
+        msg = f"[{datetime.now().strftime('%H:%M:%S')}] [{self.game.name}] {ctx}\n"
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
-        self.truncate_context(game, tokens)
+        self.truncate_context(tokens)
         with user():
             out = self.llm + msg
         if do_print:
@@ -122,8 +128,8 @@ Every action you perform is always meticulously calculated. You always aim to ke
         return out
 
     async def force_action(self, msg: ForceAction, actions: dict[str, ActionModel]) -> tuple[str, str]:
-        if not actions:
-            raise Exception("No actions to choose from (LLM.force_action)")
+        assert actions, "No actions to choose from (LLM.force_action)"
+        assert self.game.name == msg.game, f"Received ForceAction for game {msg.game} while this LLM is for {self.game.name}"
         ephemeral = msg.data.ephemeral_context or False
         actions_for_json = [actions[name] for name in msg.data.action_names]
         actions_json = (TypeAdapter(list[ActionModel])
@@ -131,7 +137,7 @@ Every action you perform is always meticulously calculated. You always aim to ke
             .dump_json(actions_for_json)
             .decode()
             .replace("\n", "\n    "))
-        self.context(msg.game, f"""
+        self.context(f"""
 You must perform one of the following actions, given this information:
 ```json
 {{
@@ -142,12 +148,12 @@ You must perform one of the following actions, given this information:
 ```
 """,
         silent=True, ephemeral=ephemeral, do_print=False)
-        return await self.action(msg.game, actions, ephemeral=ephemeral)
+        return await self.action(actions, ephemeral=ephemeral)
 
-    async def action(self, game: str, actions: dict[str, ActionModel], *, ephemeral: bool = False) -> tuple[str, str]:
+    async def action(self, actions: dict[str, ActionModel], *, ephemeral: bool = False) -> tuple[str, str]:
         if not actions:
             raise Exception("No actions to choose from (LLM.action)")
-        self.truncate_context(game, 500)
+        self.truncate_context(500)
         llm = self.llm
         with assistant():
             llm += f'''\
@@ -177,7 +183,7 @@ I have decided to perform the following action:
             self.llm = llm
         return (chosen_action, data)
 
-    async def try_action(self, game: str, actions: dict[str, ActionModel]) -> tuple[str, str] | None:
+    async def try_action(self, actions: dict[str, ActionModel]) -> tuple[str, str] | None:
         if not actions:
             logger.info("No actions to choose from (LLM.try_action)")
             return None
@@ -198,7 +204,7 @@ Based on previous context, decide whether you should perform any of the followin
 ```
 Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to choose an action to perform).
 """
-        llm: models.Model = self.context(game, ctx, silent=True, ephemeral=True, do_print=False)
+        llm: models.Model = self.context(ctx, silent=True, ephemeral=True, do_print=False)
         with assistant():
             resp = f"""
 ```json
@@ -220,17 +226,17 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
         # logger.debug(llm._current_prompt())
         if CONFIG.gary.non_ephemeral_try_context:
             self.llm = llm
-        return None if decision == NO else await self.action(game, actions)
+        return None if decision == NO else await self.action(actions)
     
-    def truncate_context(self, game: str | None, need_tokens: int = 0):
+    def truncate_context(self, need_tokens: int = 0):
         token_count = tokens(self.llm)
         logger.debug(f"Currently using {token_count} tokens out of {self.token_limit}"
                      + f"; also need {need_tokens} - will use {token_count + need_tokens}" if need_tokens > 0 else "")
         if token_count + need_tokens > self.token_limit:
             logger.warning(f"Truncating context")
             self.reset()
-            if game is not None:
-                self.gaming(game)
+            if self.game.connection and self.game.connection.is_connected():
+                self.gaming()
 
 def tokens(m: models.Model) -> int:
     return len(m.engine.tokenizer.encode(m._current_prompt().encode())) # type: ignore

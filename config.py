@@ -153,6 +153,7 @@ This is a simple game, you can only do what the game allows you to do. For examp
     - Unless the game explicitly tells you that something happened, it didn't.
     - DO NOT use the term 'pick up' to refer to taking items from appliances, as 'pick up' is a completely different action.
     - To take an item from an appliance, you have to use 'interact with table'.
+    - If the 'serve customer' action is available, it means there is a customer waiting for their drink.
     - If the 'pick up' action is available, it means you are NOT holding an item.
     - If you're not holding anything and you can interact with a table or appliance, it means there is something on that table/in that appliance. Try taking it to see if it's something you want.
     - You cannot pick up or move appliances, they are static.

@@ -14,7 +14,7 @@ class Scheduler:
         self.idle_timeout_try = CONFIG.gary.scheduler.idle_timeout_try
         self.idle_timeout_force = CONFIG.gary.scheduler.idle_timeout_force
         self._init()
-    
+
     def _init(self):
         self._try_task = asyncio.create_task(asyncio.sleep(0))
         self._force_task = asyncio.create_task(asyncio.sleep(0))
@@ -29,6 +29,9 @@ class Scheduler:
     def on_action(self):
         self._reset_idle_timers()
 
+    def on_context(self):
+        self._reset_task(self._try_task, self._wait_try)
+
     def _reset_idle_timers(self):
         if self.idle_timeout_try > 0:
             self._try_task = self._reset_task(self._try_task, self._wait_try)
@@ -38,18 +41,18 @@ class Scheduler:
             self._force_task = self._reset_task(self._force_task, self._wait_force)
         else:
             logger.warning("Idle timeout (force) disabled")
-    
+
     def _reset_task(self, task: asyncio.Task[None], fn: Callable[..., Coroutine[Any, Any, None]]) -> asyncio.Task[None]:
         task.cancel()
         return asyncio.create_task(fn())
-    
+
     async def _wait_try(self):
         delay = self.idle_timeout_try
         await asyncio.sleep(delay)
-        logger.warning(f"Idled for {delay}, trying action")
+        logger.warning(f"Idled for {delay:.2f}, trying action")
         if not await self.game.try_action(): # if True, will reset
             self._reset_task(self._try_task, self._wait_try)
-    
+
     async def _wait_force(self):
         delay = self.idle_timeout_force
         await asyncio.sleep(delay)

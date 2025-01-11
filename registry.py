@@ -9,13 +9,11 @@ from spec import *
 from websocket import WebsocketConnection
 
 class Registry:
-    def __init__(self, llm: LLM, *, existing_connection_policy: ExistingConnectionPolicy | None = None):
+    def __init__(self, *, existing_connection_policy: ExistingConnectionPolicy | None = None):
         self.games: MutableMapping[str, "Game"] = {}
-        self.llm = llm
         self.conflict_resolution = existing_connection_policy or CONFIG.gary.existing_connection_policy
     
     async def on_startup(self, msg: Startup, conn: WebsocketConnection):
-        self.llm.gaming(msg.game)
         game = self.games.get(msg.game)
         if game is None:
             self.games[msg.game] = game = Game(msg.game, self, conn)
@@ -32,15 +30,14 @@ class Registry:
             del game.connection.ws.state.game
         game.connection = conn
         game.connection.ws.state.game = game
-        game.scheduler.start()
+        game.connected()
     
     async def handle(self, msg: AnyGameMessage, conn: WebsocketConnection):
         if isinstance(msg, Startup):
             await self.on_startup(msg, conn)
         else:
-            game = self.games.get(msg.game)
-            if game is None:
-                logger.warning(f"Game {msg.game} not connected, faking a `startup`")
+            if not (game := self.games.get(msg.game, None)):
+                logger.warning(f"Game {msg.game} was not connected, imitating a `startup`")
                 # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
                 # IMPL: timing for sending `actions/reregister_all`
                 await self.on_startup(Startup(game=msg.game), conn)
@@ -65,6 +62,7 @@ class Game:
         self.actions: dict[str, ActionModel] = {}
         self.pending_actions: list[str] = [] # action IDs
         self.connection = connection
+        self.llm = LLM(self)
         self.scheduler = Scheduler(self)
         
         connection.ws.state.registry = registry
@@ -94,7 +92,7 @@ class Game:
         if not self.actions:
             logger.debug("No actions to try (Game.try_action)")
             return False
-        if action := await self.registry.llm.try_action(self.name, self.actions):
+        if action := await self.llm.try_action(self.actions):
             await self.execute_action(*action)
             return True
         return False
@@ -103,7 +101,7 @@ class Game:
         if not self.actions:
             logger.warning("No actions to force_any")
             return False
-        if action := await self.registry.llm.action(self.name, self.actions):
+        if action := await self.llm.action(self.actions):
             await self.execute_action(*action)
             return True
         logger.warning("Tried force_any but no action. unlucky")
@@ -111,11 +109,11 @@ class Game:
 
     async def execute_action(self, name: str, data: str | None = None):
         if name not in self.actions:
-            logger.error(f"Action {name} not registered")
+            logger.error(f"Executing unregistered action {name}")
         # IMPL: not validating data against stored action schema (guidance is just perfect like that (clueless))
         msg = Action(data=Action.Data(name=name, data=data))
         self.pending_actions.append(msg.data.id)
-        self.registry.llm.context(self.name, f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}", silent=True)
+        self.llm.context(f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}", silent=True)
         self.scheduler.on_action()
         await self.connection.send(msg)
 
@@ -129,7 +127,7 @@ class Game:
             logger.warning(f"Received result for unknown action {result.data.id}")
     
     async def send_context(self, msg: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
-        self.registry.llm.context(self.name, msg, silent, ephemeral=ephemeral, do_print=do_print)
+        self.llm.context(msg, silent, ephemeral=ephemeral, do_print=do_print)
         if not silent:
             await self.try_action()
 
@@ -141,10 +139,22 @@ class Game:
             await self.action_unregister(msg.data.action_names)
         elif isinstance(msg, Context):
             await self.send_context(msg.data.message, msg.data.silent)
+            self.scheduler.on_context()
         elif isinstance(msg, ForceAction):
-            chosen_action, data = await self.registry.llm.force_action(msg, self.actions)
+            chosen_action, data = await self.llm.force_action(msg, self.actions)
             await self.execute_action(chosen_action, data)
         elif isinstance(msg, ActionResult):
             await self.process_result(msg)
         else:
             raise Exception(f"Unhandled message type {type(msg)}")
+
+    def connected(self):
+        self.llm.gaming()
+        self.scheduler.start()
+
+    def on_disconnect(self):
+        self.llm.not_gaming()
+        self.llm.reset() # TODO: config whether to reset on disconnect
+        self.scheduler.stop()
+        self.actions.clear()
+        self.pending_actions.clear()

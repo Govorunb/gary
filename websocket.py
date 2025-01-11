@@ -1,12 +1,11 @@
 import json
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
-
+from typing import * # type: ignore
 from spec import *
-from logger import logger
 
+from logger import logger
 # python is just so lovely
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from registry import Game, Registry
 
@@ -27,7 +26,7 @@ class WebsocketConnection:
 
     async def send(self, message: AnyNeuroMessage):
         text = json.dumps(message.model_dump(mode='json'))
-        logger.debug(f'Sending: {text}')
+        # logger.debug(f'Sending: {text}')
         await self.ws.send_text(text)
     
     def is_connected(self):
@@ -40,8 +39,7 @@ class WebsocketConnection:
                 await self.registry().handle(msg, self)
             except Exception as e:
                 if game := self.game():
-                    self.registry().llm.not_gaming(game.name)
-                    game.scheduler.stop()
+                    game.on_disconnect()
                 if isinstance(e, WebSocketDisconnect):
                     logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
                 else:

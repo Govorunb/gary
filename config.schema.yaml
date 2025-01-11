@@ -72,17 +72,19 @@ definitions:
             type: object
             properties: 
               idle_timeout_try:
-                type: number
-                minimum: 0
                 description: |
-                  If the LLM does not act for this many seconds, manually ask it to act (it may still decide not to).
-                  0 to disable.
+                  If the LLM does not act for this many seconds, ask it to act (it may still decide not to).
+                  1s minimum, 0 to disable.
+                oneOf:
+                  - {type: number, minimum: 1}
+                  - {const: 0}
               idle_timeout_force:
-                type: number
-                minimum: 0
                 description: |
                   If the LLM does not act for this many seconds, force it to pick an action to perform.
-                  0 to disable.
+                  1s minimum, 0 to disable.
+                oneOf:
+                  - {type: number, minimum: 1}
+                  - {const: 0}
     additionalProperties: false
   preset_inherit:
     description: Inherit from another preset
