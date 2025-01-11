@@ -26,7 +26,6 @@ phi:
       engine: llama_cpp
       model: _models/bartowski_Phi-3.5-mini-instruct-Q4_K_L.gguf
     engine_params:
-      n_gpu_layers: -1
       n_ctx: 8192
       temperature: 1.0
     gary:

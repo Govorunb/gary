@@ -80,7 +80,7 @@ def _load_config(preset_name: str):
                 else environ.get(v[5:], v) if isinstance(v, str) and v.startswith("$ENV:")\
                 else v
         return out
-    
+
     preset = replace_env(preset)
     # print(preset)
     return preset
@@ -89,72 +89,69 @@ CONFIG = Config(**_load_config(args.preset))
 
 # temp i guess
 # these are always kept in the context
-# otherwise phi is too dumb to do anything
+# more intelligent models need less handholding
+# unfortunately all that fits in my 8GB VRAM is a 3B phi3.5 with 8k ctx and an 8B llama3.1 with 4k ctx
+# i tried a Q3 Phi4 but it ran at 1tok/s, it took so long to respond the game timed out the websocket connection
 MANUAL_RULES = {
-    # the real question is, is it phi that's stupid or is it actually me
+    # the real question is, is it the llm that's stupid or is it actually me
     "Abandoned Pub": """\
-RULES:
-The game features an AI bartender named Samantha. Her job is to wait for customers to arrive, and then serve their orders.
-Some drinks can be simply picked up from storage, and some require following a recipe (available in the recipe book).
-Samantha can combine items to make others by interacting with a table while holding an item. Some combinations require using specific appliances.
-Samantha can only hold one item in her hands, but she has four tables available to her as storage space. She can also throw unwanted items in the trash can.
-You will play as either Samantha (the bartender) or Kayori (a customer).
+GAME RULES:
+The game features two roles:
+- **Samantha (AI Bartender)**: Serve drinks to customers by preparing orders.
+- **Kayori (Customer)**: Order drinks and set time limits for Samantha.
 
-INSTRUCTIONS (Samantha):
-- Wait for a customer to arrive before performing any actions.
-- When the customer arrives, prepare their order:
-    - If they want something that's available in storage, just pick it up and then serve it.
-    - Otherwise, the drink must require combining items. Check the recipe book for the drink they want.
-        - Recipes are formatted as follows: "(Drink): (Step 1); (Step 2); ...; serve customer".
-    - Prepare the drink:
-        - Take ingredients from storage.
-        - Follow the recipe order carefully to make the drink.
-            - To combine two items, one of them must be on a table. Interact with that table with the second item in your hands.
-            - To process an item in an appliance, interact with it with an item in your hands.
-                - Wait for the appliance to process the item.
-                - When the appliance is done, take the item from that appliance by interacting with its table again.
-        - If the recipe has multiple steps, use tables to store intermediate steps.
-- Serve the drink to the customer.
-- After serving the current customer, wait for the next customer to arrive.
+### SAMANTHA'S INSTRUCTIONS:
+1. **Wait for a Customer**
+   - Perform actions only after a customer arrives.
+   - Check the recipe book to see what the customer ordered.
 
-INSTRUCTIONS (Kayori):
-- Pick a drink to order. Order different drinks to keep the game interesting!
-- Pick the time limit for Samantha to make the drink.
+2. **Serve the Customer's Order**
+   - **If the drink is in storage**: Pick it up and serve it.
+   - **If the drink requires a recipe**:
+     a. Check the recipe book for instructions (e.g., "Drink A: carbonate item 1; serve customer").
+     b. Follow the steps precisely.
+
+3. **How to Prepare Drinks**:
+   - **Combine Items**:
+     1. Place the first item on a table.
+     2. Pick up the second item and interact with the same table.
+   - **Use Appliances**:
+     1. Place the item in the appliance.
+     2. Wait for completion (e.g., "Carbonizer has finished making Drink A").
+     3. Interact with the appliance's table to take the item.
+   - **Storage and Trash**: Use the four tables for temporary storage or the trash can for unwanted items.
+
+4. **Final Step**:
+   - Ensure the item matches the customer's exact order name (e.g., "banana rum," not "rum").
+   - Serve the customer.
+
+### KAYORI'S INSTRUCTIONS:
+- Pick a drink to order (try different ones for variety).
+- Set a time limit for Samantha to complete the drink.
 - Enjoy!
 
-TIPS (Samantha):
-The recipe book will show the recipe for the latest customer's drink. For example, "Drink A: carbonate item 1; serve customer" means:
-    - Pick up "item 1" from storage
-    - Put it in the Carbonizer
-    - Wait for carbonizer to be done (the game will say "Carbonizer has finished making Drink A")
-    - Interact with Carbonizer again to take the finished drink. DO NOT use 'pick up' UNDER ANY CIRCUMSTANCES.
-    - Serve customer
-If you just served a customer, the recipe will be outdated and should not be used. Just wait for the next customer.
-To combine two items (e.g. if the recipe asks for "rum and banana"):
-    - Obtain the first item and take it into your hands
-    - Interact with a table to store the first item
-    - Obtain the second item and take it into your hands
-    - Interact with the table on which you stored the first item
-The tables are all behind the bar and are not customer tables. They are item storage. Placing an item on one does not serve the customer.
-Keep your reasoning short. Do not skip steps. If the game doesn't inform you that a step has been completed, assume it hasn't and you need to do it.
-Pay attention to what the game tells you after you execute an action. For example:
-    - If you can't pick something up, it means you are already holding something else. Put it down on a table or throw it in the trash can.
-    - "can't merge this items" means that the table already has an item it, and it does not combine with what you're holding. Use another table or throw away the item.
-    - If you try to serve a customer and the game says "customer don't want that", you must be holding the wrong item.
-    - Think about what you are holding. Have you recently picked up an item? Have you recently placed one on a table somewhere?
-    - Make sure you are following the recipe.
-This is a simple game, you can only do what the game allows you to do. For example:
-    - Everything you need for a drink is in the recipe. Don't make up any ingredients or processing steps that aren't in the recipe. There are no utensils or glasses. They do not exist.
-    - The customers are not real. They cannot talk, and they do not have feelings or opinions. This is a video game.
-    - You can only perform one action at a time, and actions take time. WAIT for the result of your action (e.g. '[item] picked up' or '[appliance] has finished making [item]') before proceeding to the next step.
-    - DO NOT use the term 'pick up' to refer to taking items from appliances, as 'pick up' is a completely different action.
-    - To take an item from an appliance, you have to use 'interact with table'.
-    - If the 'pick up' action is available, it means you are NOT holding an item.
-    - If you're holding an item and the 'serve customer' action is available, it means there is a customer waiting for their drink.
-    - If you're not holding an item and you can interact with a table or appliance, it means there is something on that table/in that appliance. Try taking it to see if it's something you want.
-    - You cannot pick up or move appliances, they are static.
-    - What you're holding must be named EXACTLY the same as the customer's order for the customer to accept it. "raw chat juice" is not valid for an order of "chat juice".
-    - At the final step of the recipe, the ingredient are transformed into the drink whose name is in the beginning of the recipe. It can then be served.
-If you're lost, refer back to the INSTRUCTIONS and go through the checklist.
-""", # fml
+### IMPORTANT TIPS FOR SAMANTHA:
+- **Recipe Rules**:
+  - Recipes are formatted as follows: "(Drink): (Step 1); (Step 2); ...; serve customer".
+  - The drink name must match the customer's order exactly. E.g. "rum" is not valid for an order of "banana rum".
+
+- **Key Actions**:
+  - Use "pick up" only to retrieve items from the bar reserves.
+  - Tables are used strictly for storage and combining.
+  - To retrieve from an appliance, interact with the appliance's table.
+  - Tables/appliances that have an item on them will be interactable only if your hands are empty.
+  - Do not make up steps or ingredients not in the recipe.
+
+- **Error Handling**:
+  - "can't merge this items" = There's an item on the table and the item you're holding can't combine with it. Try another table or empty your hands.
+  - "customer don't want that" = You are holding the wrong item. Dispose of it, then verify recipe and steps.
+
+- **General Rules**:
+  - Actions take time; wait for confirmation before proceeding.
+  - You cannot move appliances.
+
+Remember, this is a game. Stick to its mechanics and logic!
+""",
+# chatgpt-improved instructions above
+# original human-made artisanal desperation has been sent to the shadow realm (git history)
 }

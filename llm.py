@@ -153,7 +153,7 @@ You must perform one of the following actions, given this information:
     async def action(self, actions: dict[str, ActionModel], *, ephemeral: bool = False) -> tuple[str, str]:
         if not actions:
             raise Exception("No actions to choose from (LLM.action)")
-        self.truncate_context(500)
+        self.truncate_context(500 if CONFIG.gary.enable_cot else 150)
         llm = self.llm
         with assistant():
             llm += f'''\
@@ -184,7 +184,7 @@ I have decided to perform the following action:
         return (chosen_action, data)
 
     async def try_action(self, actions: dict[str, ActionModel]) -> tuple[str, str] | None:
-        self.truncate_context(1000) # leave room for action() afterwards
+        self.truncate_context(1000 if CONFIG.gary.enable_cot else 300) # leave room for action() afterwards
         if not actions:
             logger.info("No actions to choose from (LLM.try_action)")
             return None
