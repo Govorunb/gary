@@ -27,7 +27,7 @@ uv run main.py [--preset your_preset]
 Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/guidance-gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
 Depending on your model/hardware, Larry might be dumber than a rock when it comes to strategy and decisionmaking.
-If so, Gary probably cannot help you and you'd be better off using [Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md) or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
+If so, Gary probably cannot help you and you'd be better off using [Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
 Getting a less intelligent model to successfully play your game will make more intelligent models even more likely to make smarter decisions.
