@@ -184,6 +184,7 @@ I have decided to perform the following action:
         return (chosen_action, data)
 
     async def try_action(self, actions: dict[str, ActionModel]) -> tuple[str, str] | None:
+        self.truncate_context(1000) # leave room for action() afterwards
         if not actions:
             logger.info("No actions to choose from (LLM.try_action)")
             return None
