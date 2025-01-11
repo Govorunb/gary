@@ -38,10 +38,11 @@ class WebsocketConnection:
             try:
                 msg = await self.receive()
                 await self.registry().handle(msg, self)
-            except WebSocketDisconnect as e:
-                logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
+            except Exception as e:
                 if game := self.game():
                     self.registry().llm.not_gaming(game.name)
-            except Exception as e:
-                logger.warning(f"Message handler error: ({type(e)}) {e}")
-                raise
+                if isinstance(e, WebSocketDisconnect):
+                    logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
+                else:
+                    logger.warning(f"Message handler error: ({type(e)}) {e}")
+                    raise

@@ -3,7 +3,7 @@ default:
   fastapi:
     host: 127.0.0.1
     port: 8000
-    reload: true
+    reload: false
   llm:
     engine: llama_cpp
     model: _models/bartowski_Meta-Llama-3.1-8B-Instruct-Q5_K_L.gguf
@@ -22,17 +22,19 @@ phi:
   overrides:
     llm:
       engine: llama_cpp
-      model: _models/bartowski_Phi-3.1-mini-128k-instruct-Q6_K_L.gguf
+      model: _models/bartowski_Phi-3.5-mini-instruct-Q4_K_L.gguf
     engine_params:
       n_gpu_layers: -1
-      n_ctx: 8192
+      n_ctx: 4096
       temperature: 1.0
+    gary:
+      enable_cot: true
 openai:
   base: default
   overrides:
     llm:
       engine: openai
       model: gpt-4o-mini
-      api_key: $OPENAI_API_KEY
+      api_key: $ENV:OPENAI_API_KEY
     engine_params:
       temperature: 0.5

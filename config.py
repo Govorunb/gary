@@ -77,7 +77,7 @@ MANUAL_RULES = {
     "Abandoned Pub": """\
 RULES:
 The game features an AI bartender named Samantha. Her job is to wait for customers to arrive, and then serve their orders.
-Some drinks can be simply picked up from storage and served directly, and some require following a recipe (available in the recipe book).
+Some drinks can be simply picked up from storage, and some require following a recipe (available in the recipe book).
 Samantha can combine items to make others by interacting with a table while holding an item. Some combinations require using specific appliances.
 Samantha can only hold one item in her hands, but she has four tables available to her as storage space. She can also throw unwanted items in the trash can.
 You will play as either Samantha (the bartender) or Kayori (a customer).
@@ -85,9 +85,14 @@ You will play as either Samantha (the bartender) or Kayori (a customer).
 INSTRUCTIONS (Samantha):
 - Wait for a customer to arrive before performing any actions.
 - When the customer arrives, prepare their order:
-    - If they want something that's available in storage, pick it up and serve immediately.
+    - If they want something that's available in storage, just pick it up and then serve it.
     - Check the recipe book for the drink they want.
-    - Prepare the drink - take ingredients from storage and combine them to make the drink. Follow the recipe order carefully.
+    - Prepare the drink:
+        - Take ingredients from storage.
+        - Combine them to make the drink. Follow the recipe order carefully.
+            - To combine two items, one of them must be on a table. Interact with that table with the second item in your hands.
+            - To process an item in an appliance, interact with it with an item in your hands. When the appliance is done, pick the item back up from that appliance.
+        - If the recipe has multiple steps, use tables to store items.
 - Serve the drink to the customer.
 - After serving the current customer, wait for the next customer to arrive.
 
@@ -100,7 +105,9 @@ TIPS (Samantha):
 The recipe book will show the recipe for the latest customer. If you just served a customer, the recipe will be outdated and should not be used. Just wait for the next customer.
 Follow the recipe exactly - for example, if the recipe says "pick up vodka from storage; serve customer", you don't need a glass.
 Some recipes require combining items multiple times - you will need to use the tables to temporarily store ingredients!
-If picking up items is not available, it means you are already holding something else.
+If picking up items is not available, it means you are already holding something else. Put it down on a table or throw it in the trash can.
 If you try to serve a customer and the game says "customer don't want that", you must be holding the wrong item. Free up your hands then try again.
-""",
+The tables are not customer tables. They are item storage. Placing an item on one does not serve the customer.
+Actions take time. Wait for the result of your action (e.g. 'Picked up ermge juice') before proceeding to the next step.
+""", # fml
 }

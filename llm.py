@@ -1,5 +1,4 @@
-from json import dumps
-import math
+from datetime import datetime
 import random, asyncio, time
 from guidance import * # type: ignore
 from guidance.chat import Llama3ChatTemplate
@@ -44,21 +43,19 @@ class LLM:
         }
         model_cls = _engine_map[engine]
         self.llm = model_cls(model, echo=False, **params) # type: ignore
-        self.token_limit = math.ceil(engine_params["n_ctx"] * 0.9) if "n_ctx" in engine_params else 1 << 32
-        # self.token_limit = 1000 # debugging
+        self.token_limit = engine_params.get("n_ctx", 1 << 32) - 500
         self.llm.echo = False
         end = time.time()
         logger.info(f"loaded in {end-start:.2f} seconds")
-        self.load_system_prompt()
+        self.system_prompt()
         self.temperature = engine_params.get("temperature", 1.0)
 
-    def load_system_prompt(self):
+    def system_prompt(self):
         with system():
             self.llm += """\
-You are Larry, an expert gamer AI that livestreams on Twitch.
+You are Larry, an expert gamer AI.
 You have a deep knowledge and masterfully honed ability to perform in-game actions via sending JSON to a special software integration system called Gary.
-Every action you perform is always meticulously calculated. You always keep your livestream in mind and do your best to keep your responses varied.
-            """.rstrip()
+Every action you perform is always meticulously calculated. You always aim to keep your responses varied and entertaining."""
 
     def llm_engine(self) -> models._model.Engine:
         return self.llm.engine # type: ignore
@@ -84,7 +81,7 @@ Every action you perform is always meticulously calculated. You always keep your
         assert len(self.llm._current_prompt()) == 0
         logger.debug(f'truncated context to {tokens(self.llm)}')
 
-        self.load_system_prompt()
+        self.system_prompt()
 
     async def yap(self):
         # TODO: generate monologues (currently prioritizing iteration speed)
@@ -99,13 +96,13 @@ Every action you perform is always meticulously calculated. You always keep your
         self.context(game, "Connected.", silent=True)
         if custom_rules := MANUAL_RULES.get(game, None):
             self.context(game, custom_rules, silent=True)
-    
+
     def not_gaming(self, game: str):
         self.context(game, "Disconnected.", silent=True)
 
     def context(self, game: str, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True) -> models.Model:
-        self.truncate_context(game, len(self.llm_engine().tokenizer.encode(ctx.encode())))
-        msg = f"[{game}] {ctx}\n"
+        msg = f"[{datetime.now().strftime('%H:%M:%S')}] [{game}] {ctx}\n"
+        self.truncate_context(game, len(self.llm_engine().tokenizer.encode(msg.encode())))
         with user():
             out = self.llm + msg
         if do_print:
@@ -116,7 +113,7 @@ Every action you perform is always meticulously calculated. You always keep your
                 prefix += "E"
             if prefix:
                 prefix = " " + prefix
-            logger.info(f"(Context{prefix}) {msg}")
+            logger.info(f"(ctx{prefix}) {msg}")
         if not ephemeral:
             self.llm = out
         return out
@@ -140,7 +137,7 @@ You must perform one of the following actions, given this information:
     "available_actions": {actions_json}
 }}
 ```
-            """.strip(), silent=True, ephemeral=ephemeral)
+            """.strip(), silent=True, ephemeral=ephemeral, do_print=False)
         return await self.action(msg.game, actions, ephemeral=ephemeral)
 
     async def action(self, game: str, actions: dict[str, ActionModel], *, ephemeral: bool = False) -> tuple[str, str]:
@@ -179,7 +176,6 @@ I have decided to perform the following action:
     async def try_action(self, game: str, actions: dict[str, ActionModel]) -> tuple[str, str] | None:
         if not actions:
             return None
-        logger.warning(f"{actions=} {type(actions)=}")
         (YES, NO) = ("act", "wait")
         # actions_for_json = {name: {"name": name, "description": action.description} for name, action in actions.items()}
         actions_for_json = list(actions.values())
@@ -197,7 +193,7 @@ Based on previous context, decide whether you should perform any of the followin
 ```
 Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to choose an action to perform).
 """
-        llm: models.Model = self.context(game, ctx, silent=True, ephemeral=True, do_print=True)
+        llm: models.Model = self.context(game, ctx, silent=True, ephemeral=True, do_print=False)
         with assistant():
             resp = f"""
 ```json
@@ -212,7 +208,10 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
 ```"""
             llm = time_gen(llm, resp)
         decision = llm['decision']
-        logger.info(f"{decision=}{f'; {llm['reasoning']}' if CONFIG.gary.enable_cot else ''}")
+        logger.info(f"{decision=}")
+        if CONFIG.gary.enable_cot:
+            reasoning = llm['reasoning']
+            logger.debug(f"{reasoning=}")
         # logger.debug(llm._current_prompt())
         if CONFIG.gary.non_ephemeral_try_context:
             self.llm = llm
@@ -239,7 +238,7 @@ def time_gen[M: models.Model](lm: M, gen_: Function | str) -> M:
     tokens_input: int = out.metrics.engine_input_tokens
     tokens_generated: int = out.token_count - prev_tokens_generated
     tps: float = tokens_generated / generation_took
-    logger.info(f'output {tokens_generated} tokens in {generation_took:.2f}s'
+    logger.debug(f'output {tokens_generated} tokens in {generation_took:.2f}s'
         + f' ({tps:.2f} tok/s)' if tps >= 0.5 else f' ({1/tps:.2f} s/tok)'
         + f'; input {tokens_input} tokens'
     )

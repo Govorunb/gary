@@ -44,7 +44,7 @@ definitions:
             type: boolean
             description: |
               Enable poor man's chain-of-thought.
-              In my testing, this just consumes a bunch more tokens without a tangible difference.
+              In my testing, this just eats through tokens without a tangible difference.
               A lot of the time, the 'reasoning' is full of hallucinations and the model chooses to do something irrelevant anyway.
           non_ephemeral_try_context:
             type: boolean
