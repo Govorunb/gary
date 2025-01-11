@@ -20,6 +20,11 @@ class Config(BaseModel):
         model: str
         api_key: str = ""
     class GaryConfig(BaseModel):
+        class SchedulerConfig(BaseModel):
+            idle_timeout_try: float = 10.0
+            '''If the LLM does not act for this many seconds, manually ask it to act (it may decide not to).'''
+            idle_timeout_force: float = 30.0
+            '''If the LLM does not act for this many seconds, force it to pick an action to perform.'''
         log_level_file: _LogLevel = "info"
         log_level_console: _LogLevel = "debug"
         existing_connection_policy: ExistingConnectionPolicy = ExistingConnectionPolicy.DISCONNECT_EXISTING
@@ -39,10 +44,18 @@ class Config(BaseModel):
         # will probably be obsoleted by the scheduler if i get around to making it
         try_on_register: bool = True
         '''On receiving `actions/register`, try to act immediately.'''
+        scheduler: SchedulerConfig = SchedulerConfig()
     fastapi: dict[str, Any] = {}
     llm: LLMConfig
     engine_params: dict[str, Any] = {}
     gary: GaryConfig
+
+def _merge_nested_dicts(a: dict[str, Any], b: dict[str, Any]):
+    out = dict(a)
+    for k, bv in b.items():
+        out[k] = _merge_nested_dicts(a.get(k, {}), bv) if isinstance(bv, dict)\
+            else bv
+    return out
 
 def _load_config(preset_name: str):
     with open("config.yaml") as f:
@@ -53,7 +66,7 @@ def _load_config(preset_name: str):
     if base := preset.get("base", None):
         if not (base_preset := config_yaml.get(base, None)):
             raise ValueError(f"Base preset '{base}' (from '{preset_name}') was not found in config.yaml")
-        preset = {**base_preset, **preset["overrides"]}
+        preset = _merge_nested_dicts(base_preset, preset)
 
     def replace_env(d: dict[str, Any]) -> dict[str, Any]:
         out = {}

@@ -41,6 +41,7 @@ class WebsocketConnection:
             except Exception as e:
                 if game := self.game():
                     self.registry().llm.not_gaming(game.name)
+                    game.scheduler.stop()
                 if isinstance(e, WebSocketDisconnect):
                     logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
                 else:

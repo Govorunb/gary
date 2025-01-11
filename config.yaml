@@ -17,6 +17,9 @@ default:
     enable_cot: false
     non_ephemeral_try_context: false
     try_on_register: false
+    scheduler:
+      idle_timeout_try: 10
+      idle_timeout_force: 30
 phi:
   base: default
   overrides:

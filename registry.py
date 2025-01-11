@@ -4,6 +4,7 @@ from logger import logger
 
 from config import CONFIG, ExistingConnectionPolicy
 from llm import LLM
+from scheduler import Scheduler
 from spec import *
 from websocket import WebsocketConnection
 
@@ -31,6 +32,7 @@ class Registry:
             del game.connection.ws.state.game
         game.connection = conn
         game.connection.ws.state.game = game
+        game.scheduler.start()
     
     async def handle(self, msg: AnyGameMessage, conn: WebsocketConnection):
         if isinstance(msg, Startup):
@@ -54,6 +56,7 @@ class Registry:
         if _game is None or not _game.connection.is_connected(): # IMPL
             logger.warning(f"Game {game} already disconnected")
             return
+        _game.scheduler.stop()
         await _game.connection.ws.close(1000, "Disconnected")
 
 class Game:
@@ -63,6 +66,8 @@ class Game:
         self.actions: dict[str, ActionModel] = {}
         self.pending_actions: list[str] = [] # action IDs
         self.connection = connection
+        self.scheduler = Scheduler(self)
+        
         connection.ws.state.registry = registry
         connection.ws.state.game = self
 
@@ -95,6 +100,16 @@ class Game:
             await self.execute_action(*action)
             return True
         return False
+    
+    async def _force_any_action(self) -> bool:
+        if not self.actions:
+            logger.warning("No actions to force_any")
+            return False
+        if action := await self.registry.llm.action(self.name, self.actions):
+            await self.execute_action(*action)
+            return True
+        logger.warning("Tried force_any but no action. unlucky")
+        return False
 
     async def execute_action(self, name: str, data: str | None = None):
         if name not in self.actions:
@@ -103,6 +118,7 @@ class Game:
         msg = Action(data=Action.Data(name=name, data=data))
         self.pending_actions.append(msg.data.id)
         self.registry.llm.context(self.name, f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}")
+        self.scheduler.on_action()
         await self.connection.send(msg)
 
     async def process_result(self, result: ActionResult):
