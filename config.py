@@ -125,9 +125,9 @@ INSTRUCTIONS (Kayori):
 TIPS (Samantha):
 The recipe book will show the recipe for the latest customer's drink. For example, "Drink A: carbonate item 1; serve customer" means:
     - Pick up "item 1" from storage
-    - Put it in the carbonizer
+    - Put it in the Carbonizer
     - Wait for carbonizer to be done (the game will say "Carbonizer has finished making Drink A")
-    - Interact with carbonizer again to take the carbonated item 1. DO NOT use 'pick up' UNDER ANY CIRCUMSTANCES.
+    - Interact with Carbonizer again to take the finished drink. DO NOT use 'pick up' UNDER ANY CIRCUMSTANCES.
     - Serve customer
 If you just served a customer, the recipe will be outdated and should not be used. Just wait for the next customer.
 To combine two items (e.g. if the recipe asks for "rum and banana"):
@@ -136,9 +136,6 @@ To combine two items (e.g. if the recipe asks for "rum and banana"):
     - Obtain the second item and take it into your hands
     - Interact with the table on which you stored the first item
 The tables are all behind the bar and are not customer tables. They are item storage. Placing an item on one does not serve the customer.
-Follow the recipe EXACTLY. For example:
-    - if the recipe calls for "chat juice", "raw chat juice" is not acceptable.
-    - If the drink name is "Banana rum", you CANNOT serve just "rum" and you CANNOT serve just "banana".
 Keep your reasoning short. Do not skip steps. If the game doesn't inform you that a step has been completed, assume it hasn't and you need to do it.
 Pay attention to what the game tells you after you execute an action. For example:
     - If you can't pick something up, it means you are already holding something else. Put it down on a table or throw it in the trash can.
@@ -147,18 +144,17 @@ Pay attention to what the game tells you after you execute an action. For exampl
     - Think about what you are holding. Have you recently picked up an item? Have you recently placed one on a table somewhere?
     - Make sure you are following the recipe.
 This is a simple game, you can only do what the game allows you to do. For example:
-    - You cannot pick up a glass, as it's not a valid item.
-    - The customers are not real. They do not talk, and they do not have feelings or opinions.
+    - Everything you need for a drink is in the recipe. Don't make up any ingredients or processing steps that aren't in the recipe. There are no utensils or glasses. They do not exist.
+    - The customers are not real. They cannot talk, and they do not have feelings or opinions. This is a video game.
     - You can only perform one action at a time, and actions take time. WAIT for the result of your action (e.g. '[item] picked up' or '[appliance] has finished making [item]') before proceeding to the next step.
-    - Unless the game explicitly tells you that something happened, it didn't.
     - DO NOT use the term 'pick up' to refer to taking items from appliances, as 'pick up' is a completely different action.
     - To take an item from an appliance, you have to use 'interact with table'.
-    - If the 'serve customer' action is available, it means there is a customer waiting for their drink.
     - If the 'pick up' action is available, it means you are NOT holding an item.
-    - If you're not holding anything and you can interact with a table or appliance, it means there is something on that table/in that appliance. Try taking it to see if it's something you want.
+    - If you're holding an item and the 'serve customer' action is available, it means there is a customer waiting for their drink.
+    - If you're not holding an item and you can interact with a table or appliance, it means there is something on that table/in that appliance. Try taking it to see if it's something you want.
     - You cannot pick up or move appliances, they are static.
-    - If what you're holding is not named EXACTLY the same as the customer's order, the customer WILL NOT accept it.
-    - At the final step of the recipe, the ingredient is transformed into the drink whose name is in the beginning of the recipe.
+    - What you're holding must be named EXACTLY the same as the customer's order for the customer to accept it. "raw chat juice" is not valid for an order of "chat juice".
+    - At the final step of the recipe, the ingredient are transformed into the drink whose name is in the beginning of the recipe. It can then be served.
 If you're lost, refer back to the INSTRUCTIONS and go through the checklist.
 """, # fml
 }

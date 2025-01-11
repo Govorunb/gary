@@ -13,7 +13,7 @@ default:
     temperature: 0.6
   gary:
     log_level_file: info
-    log_level_console: info
+    log_level_console: debug
     enable_cot: false
     non_ephemeral_try_context: false
     scheduler:
