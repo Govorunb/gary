@@ -54,6 +54,7 @@ class Game:
         self.registry = registry
         self.actions: dict[str, ActionModel] = {}
         self.pending_actions: list[str] = [] # action IDs
+        self.pending_forces: dict[str, ForceAction] = {}
         self.connection = connection
         self.llm = LLM(self)
         self.scheduler = Scheduler(self)
@@ -102,12 +103,14 @@ class Game:
         logger.warning("Tried force_any but no action. unlucky")
         return False
 
-    async def execute_action(self, name: str, data: str | None = None):
+    async def execute_action(self, name: str, data: str | None = None, *, force: ForceAction | None = None):
         if name not in self.actions:
             logger.error(f"Executing unregistered action {name}")
         # IMPL: not validating data against stored action schema (guidance is just perfect like that (clueless))
         msg = Action(data=Action.Data(name=name, data=data))
         self.pending_actions.append(msg.data.id)
+        if force:
+            self.pending_forces[msg.data.id] = force
         self.llm.context(f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}", silent=True)
         self.scheduler.on_action()
         await self.connection.send(msg)
@@ -117,7 +120,12 @@ class Game:
             self.pending_actions.remove(result.data.id)
             # IMPL: there SHOULD be a message on failure, but success doesn't require one
             ctx = f"Result for action {result.data.id[:5]}: {"Performing" if result.data.success else "Failure"} ({result.data.message or 'no message'})"
-            await self.send_context(ctx, silent=result.data.success) # try doing something again if failed
+            is_force = bool(force := self.pending_forces.pop(result.data.id, None))
+            await self.send_context(ctx, silent=result.data.success or is_force) # IMPL: will try acting again if failed
+            # IMPL: not checking whether the actions in the previous force are still registered
+            # i have no idea if it's guaranteed by the spec or not
+            if is_force and not result.data.success:
+                await self.handle(force)
         else: # IMPL: result for unknown action
             logger.warning(f"Received result for unknown action {result.data.id}")
     
@@ -125,7 +133,6 @@ class Game:
         self.llm.context(msg, silent, ephemeral=ephemeral, do_print=do_print)
         if not silent and not await self.try_action():
             self.scheduler.on_context()
-
 
     async def handle(self, msg: AnyGameMessage):
         logger.debug(f'Handling {msg.command}')
@@ -137,7 +144,7 @@ class Game:
             await self.send_context(msg.data.message, msg.data.silent)
         elif isinstance(msg, ForceAction):
             chosen_action, data = await self.llm.force_action(msg, self.actions)
-            await self.execute_action(chosen_action, data)
+            await self.execute_action(chosen_action, data, force=msg)
         elif isinstance(msg, ActionResult):
             await self.process_result(msg)
         else:
@@ -155,8 +162,12 @@ class Game:
         await self.connection.send(ReregisterAllActions()) # IMPL: sent on every connect (not just reconnects)
 
     def on_disconnect(self):
-        self.llm.not_gaming()
+        self.reset()
         self.llm.reset() # TODO: config whether to reset on disconnect
+    
+    def reset(self):
+        self.llm.not_gaming()
         self.scheduler.stop()
         self.actions.clear()
         self.pending_actions.clear()
+        self.pending_forces.clear()

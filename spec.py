@@ -99,10 +99,7 @@ class ReregisterAllActions(NeuroMessage):
     command: Literal["actions/reregister_all"] = "actions/reregister_all"
 
 class GracefulShutdown(NeuroMessage):
-    # better format would have been:
-    # - separate into { "command": "shutdown/graceful/initiate" } and { "command": "shutdown/graceful/cancel" }
-    # - or { "command": "shutdown/graceful", "data": {"request": "initiate" | "cancel"} }
-    # random booleans are opaque and unintuitive
+    # might be changed; see https://github.com/VedalAI/neuro-game-sdk/issues/44
     class Data(BaseModel):
         wants_shutdown: bool
 

@@ -51,9 +51,7 @@ You probably *should* consider doing the following:
 	- Or, register a query-like action (e.g. `check_inventory`) that allows the model to ask about the state at any time
 
 ### Known issues/todos
-- `actions/force` is not retried (todo)
-	- ~~I figure matching Randy is fine for now~~ nvm Randy can do it (they grow up so fast)
-- When the context window is full, it gets truncated, which can cause malformed action data and schema errors (and also wipes the LLM's memory)
+- When the context window is full, it gets truncated, which wipes the LLM's memory and can rarely cause malformed action data and schema errors
 	- Larger context windows will get truncated less frequently
 	- Managing the context window "properly" is currently out of scope; if it's a big issue for you, yell at me to increase motivation
 - Gary doesn't do a bunch of things that Neuro does, like:

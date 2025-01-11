@@ -88,6 +88,8 @@ Every action you perform is always meticulously calculated. You always aim to ke
         logger.debug(f'truncated context to {tokens(self.llm)}')
 
         self.system_prompt()
+        if self.game.connection and self.game.connection.is_connected():
+            self.gaming()
 
     async def yap(self):
         # TODO: generate monologues (currently prioritizing iteration speed)
@@ -236,8 +238,6 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
         if token_count + need_tokens > self.token_limit:
             logger.warning(f"Truncating context ({token_count + need_tokens}/{self.token_limit} tokens used)")
             self.reset()
-            if self.game.connection and self.game.connection.is_connected():
-                self.gaming()
 
 def tokens(m: models.Model) -> int:
     return len(m.engine.tokenizer.encode(m._current_prompt().encode())) # type: ignore
