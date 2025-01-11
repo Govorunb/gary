@@ -36,9 +36,18 @@ class WebsocketConnection:
         return self.ws.client_state == WebSocketState.CONNECTED and self.ws.application_state == WebSocketState.CONNECTED
 
     async def lifecycle(self):
+        init = True
         while self.is_connected():
             try:
+                # IMPL: sent on every connect (not just reconnects)
+                if init:
+                    await self.send(ReregisterAllActions())
+                # TODO: queue on separate thread
+                # LLM generation is synchronous and hangs the websocket
                 msg = await self.receive()
+                if init and isinstance(msg, RegisterActions):
+                    await self.registry().on_startup(Startup(game=msg.game), self)
+                init = False
                 await self.registry().handle(msg, self)
             except Exception as e:
                 if game := self.game():

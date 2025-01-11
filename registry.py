@@ -20,17 +20,18 @@ class Registry:
         else:
             # IMPL: game already connected
             logger.warning(f"Game {msg.game} already connected")
-            if game.connection != conn and game.connection.is_connected():
-                # IMPL: different active connection
-                logger.warning(f"Game {msg.game} is actively connected to someone else! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
-                conn_to_close = game.connection if self.conflict_resolution == ExistingConnectionPolicy.DISCONNECT_EXISTING else conn
-                logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {self.conflict_resolution}")
-                close_code = 1012 # Service Restart https://github.com/Luka967/websocket-close-codes
-                await conn_to_close.ws.close(close_code, "Game already connected")
-            del game.connection.ws.state.game
+            if game.connection != conn:
+                if game.connection.is_connected():
+                    # IMPL: different active connection
+                    logger.warning(f"Game {msg.game} is actively connected to someone else! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
+                    conn_to_close = game.connection if self.conflict_resolution == ExistingConnectionPolicy.DISCONNECT_EXISTING else conn
+                    logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {self.conflict_resolution}")
+                    close_code = 1012 # Service Restart https://github.com/Luka967/websocket-close-codes
+                    await conn_to_close.ws.close(close_code, "Game already connected")
+                del game.connection.ws.state.game
         game.connection = conn
         game.connection.ws.state.game = game
-        await game.connected()
+        game.connected()
     
     async def handle(self, msg: AnyGameMessage, conn: WebsocketConnection):
         if isinstance(msg, Startup):
@@ -156,10 +157,9 @@ class Game:
         else:
             logger.warning(f"Game {self.name} already disconnected")
 
-    async def connected(self):
+    def connected(self):
         self.llm.gaming()
         self.scheduler.start()
-        await self.connection.send(ReregisterAllActions()) # IMPL: sent on every connect (not just reconnects)
 
     def on_disconnect(self):
         self.reset()
