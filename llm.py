@@ -120,7 +120,7 @@ Every action you perform is always meticulously calculated. You always aim to ke
 
     async def force_action(self, msg: ForceAction, actions: dict[str, ActionModel]) -> tuple[str, str]:
         if not actions:
-            raise Exception("No actions to choose from")
+            raise Exception("No actions to choose from (LLM.force_action)")
         ephemeral = msg.data.ephemeral_context or False
         actions_for_json = [actions[name] for name in msg.data.action_names]
         actions_json = (TypeAdapter(list[ActionModel])
@@ -137,12 +137,13 @@ You must perform one of the following actions, given this information:
     "available_actions": {actions_json}
 }}
 ```
-            """.strip(), silent=True, ephemeral=ephemeral, do_print=False)
+""",
+        silent=True, ephemeral=ephemeral, do_print=False)
         return await self.action(msg.game, actions, ephemeral=ephemeral)
 
     async def action(self, game: str, actions: dict[str, ActionModel], *, ephemeral: bool = False) -> tuple[str, str]:
         if not actions:
-            raise Exception("No actions to choose from")
+            raise Exception("No actions to choose from (LLM.action)")
         self.truncate_context(game, 500)
         llm = self.llm
         with assistant():
@@ -175,6 +176,7 @@ I have decided to perform the following action:
 
     async def try_action(self, game: str, actions: dict[str, ActionModel]) -> tuple[str, str] | None:
         if not actions:
+            logger.info("No actions to choose from (LLM.try_action)")
             return None
         (YES, NO) = ("act", "wait")
         # actions_for_json = {name: {"name": name, "description": action.description} for name, action in actions.items()}

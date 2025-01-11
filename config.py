@@ -21,7 +21,7 @@ class Config(BaseModel):
         api_key: str = ""
     class GaryConfig(BaseModel):
         class SchedulerConfig(BaseModel):
-            idle_timeout_try: float = 10.0
+            idle_timeout_try: float = 5.0
             '''If the LLM does not act for this many seconds, manually ask it to act (it may decide not to).'''
             idle_timeout_force: float = 30.0
             '''If the LLM does not act for this many seconds, force it to pick an action to perform.'''
@@ -42,7 +42,7 @@ class Config(BaseModel):
         You should play around with this.
         '''
         # will probably be obsoleted by the scheduler if i get around to making it
-        try_on_register: bool = True
+        try_on_register: bool = False
         '''On receiving `actions/register`, try to act immediately.'''
         scheduler: SchedulerConfig = SchedulerConfig()
     fastapi: dict[str, Any] = {}
@@ -104,7 +104,9 @@ INSTRUCTIONS (Samantha):
         - Take ingredients from storage.
         - Combine them to make the drink. Follow the recipe order carefully.
             - To combine two items, one of them must be on a table. Interact with that table with the second item in your hands.
-            - To process an item in an appliance, interact with it with an item in your hands. When the appliance is done, pick the item back up from that appliance.
+            - To process an item in an appliance, interact with it with an item in your hands.
+                - While the appliance is processing, wait.
+                - When the appliance is done, take the item from that appliance by interacting with its table.
         - If the recipe has multiple steps, use tables to store items.
 - Serve the drink to the customer.
 - After serving the current customer, wait for the next customer to arrive.
@@ -116,11 +118,12 @@ INSTRUCTIONS (Kayori):
 
 TIPS (Samantha):
 The recipe book will show the recipe for the latest customer. If you just served a customer, the recipe will be outdated and should not be used. Just wait for the next customer.
-Follow the recipe exactly - for example, if the recipe says "pick up vodka from storage; serve customer", you don't need a glass.
+Follow the recipe EXACTLY - for example, if the recipe calls for "chat juice", "raw chat juice" is not acceptable.
 Some recipes require combining items multiple times - you will need to use the tables to temporarily store ingredients!
 If picking up items is not available, it means you are already holding something else. Put it down on a table or throw it in the trash can.
 If you try to serve a customer and the game says "customer don't want that", you must be holding the wrong item. Free up your hands then try again.
 The tables are not customer tables. They are item storage. Placing an item on one does not serve the customer.
-Actions take time. Wait for the result of your action (e.g. 'Picked up ermge juice') before proceeding to the next step.
+Actions take time. WAIT for the result of your action (e.g. 'Picked up X' or 'Blender has finished making Y') before proceeding to the next step.
+If you're lost, refer back to the INSTRUCTIONS and go through the checklist.
 """, # fml
 }

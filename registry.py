@@ -56,7 +56,6 @@ class Registry:
         if _game is None or not _game.connection.is_connected(): # IMPL
             logger.warning(f"Game {game} already disconnected")
             return
-        _game.scheduler.stop()
         await _game.connection.ws.close(1000, "Disconnected")
 
 class Game:
@@ -83,18 +82,17 @@ class Game:
             else: # stop making up random fields in the data. i am no longer asking
                 action.schema["additionalProperties"] = False # type: ignore
             self.actions[action.name] = action
-        self.registry.llm.context(self.name, f"Actions registered: {list(self.actions.keys())}")
-        if CONFIG.gary.try_on_register and self.actions:
-            await self.try_action()
+        # await self.send_context(f"Actions registered: {list(self.actions.keys())}", silent=not CONFIG.gary.try_on_register)
     
     async def action_unregister(self, actions: list[str]):
         for action_name in actions:
             if action_name in self.actions:
                 del self.actions[action_name]
-        self.registry.llm.context(self.name, f"Actions unregistered: {list(self.actions.keys())}")
+        # await self.send_context(f"Actions unregistered: {actions}", silent=True)
     
     async def try_action(self) -> bool:
         if not self.actions:
+            logger.debug("No actions to try (Game.try_action)")
             return False
         if action := await self.registry.llm.try_action(self.name, self.actions):
             await self.execute_action(*action)
@@ -117,17 +115,21 @@ class Game:
         # IMPL: not validating data against stored action schema (guidance is just perfect like that (clueless))
         msg = Action(data=Action.Data(name=name, data=data))
         self.pending_actions.append(msg.data.id)
-        self.registry.llm.context(self.name, f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}")
+        self.registry.llm.context(self.name, f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}", silent=True)
         self.scheduler.on_action()
         await self.connection.send(msg)
 
     async def process_result(self, result: ActionResult):
         if result.data.id in self.pending_actions:
             self.pending_actions.remove(result.data.id)
-            self.registry.llm.context(result.game, f"Result for action {result.data.id[:5]}: {result.data.message or "Success"}")
-            await self.try_action() # IMPL: action loop
+            await self.send_context(f"Result for action {result.data.id[:5]}: {result.data.message or 'Performing'}", silent=True)
         else: # IMPL: result for unknown action
             logger.warning(f"Received result for unknown action {result.data.id}")
+    
+    async def send_context(self, msg: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
+        self.registry.llm.context(self.name, msg, silent, ephemeral=ephemeral, do_print=do_print)
+        if not silent:
+            await self.try_action()
 
     async def handle(self, msg: AnyGameMessage):
         logger.debug(f'Handling {msg.command}')
@@ -136,9 +138,7 @@ class Game:
         elif isinstance(msg, UnregisterActions):
             await self.action_unregister(msg.data.action_names)
         elif isinstance(msg, Context):
-            self.registry.llm.context(msg.game, msg.data.message, msg.data.silent)
-            if not msg.data.silent:
-                await self.try_action()
+            await self.send_context(msg.data.message, msg.data.silent)
         elif isinstance(msg, ForceAction):
             chosen_action, data = await self.registry.llm.force_action(msg, self.actions)
             await self.execute_action(chosen_action, data)
