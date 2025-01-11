@@ -13,6 +13,7 @@ class Scheduler:
         self.game = game
         self.idle_timeout_try = CONFIG.gary.scheduler.idle_timeout_try
         self.idle_timeout_force = CONFIG.gary.scheduler.idle_timeout_force
+        self._active = False
         self._init()
 
     def _init(self):
@@ -20,9 +21,15 @@ class Scheduler:
         self._force_task = asyncio.create_task(asyncio.sleep(0))
 
     def start(self):
+        if self._active:
+            return
+        self._active = True
         self._reset_idle_timers()
 
     def stop(self):
+        if not self._active:
+            return
+        self._active = False
         self._try_task.cancel()
         self._force_task.cancel()
 
@@ -33,6 +40,8 @@ class Scheduler:
         self._reset_task(self._try_task, self._wait_try)
 
     def _reset_idle_timers(self):
+        if not self._active:
+            return
         if self.idle_timeout_try > 0:
             self._try_task = self._reset_task(self._try_task, self._wait_try)
         else:
@@ -43,12 +52,21 @@ class Scheduler:
             logger.warning("Idle timeout (force) disabled")
 
     def _reset_task(self, task: asyncio.Task[None], fn: Callable[..., Coroutine[Any, Any, None]]) -> asyncio.Task[None]:
+        if not self._active:
+            return asyncio.create_task(asyncio.sleep(0))
         task.cancel()
         return asyncio.create_task(fn())
 
     async def _wait_try(self):
         delay = self.idle_timeout_try
         await asyncio.sleep(delay)
+        if not self.game.connection.is_connected():
+            self.stop()
+            return
+        if not self.game.actions:
+            logger.info(f"Idled for {delay:.2f}, but no actions")
+            self._reset_task(self._try_task, self._wait_try)
+            return
         logger.warning(f"Idled for {delay:.2f}, trying action")
         if not await self.game.try_action(): # if True, will reset
             self._reset_task(self._try_task, self._wait_try)
@@ -56,6 +74,13 @@ class Scheduler:
     async def _wait_force(self):
         delay = self.idle_timeout_force
         await asyncio.sleep(delay)
+        if not self.game.connection.is_connected():
+            self.stop()
+            return
+        if not self.game.actions:
+            logger.info(f"Didn't do anything for {delay:.2f}! But nothing to force")
+            self._reset_idle_timers()
+            return
         self._try_task.cancel()
         logger.error(f"Didn't do anything after {delay}! Forcing")
         if not await self.game._force_any_action():

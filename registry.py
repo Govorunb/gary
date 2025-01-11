@@ -89,6 +89,8 @@ class Game:
         logger.info(f"Actions unregistered: {actions}")
     
     async def try_action(self) -> bool:
+        if not self.connection.is_connected():
+            return False
         if not self.actions:
             logger.debug("No actions to try (Game.try_action)")
             return False

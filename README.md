@@ -56,7 +56,7 @@ You probably *should* consider doing the following:
 	- Managing the context window "properly" is currently out of scope; if it's a big issue for you, yell at me to increase motivation
 - Gary doesn't do a bunch of things that Neuro does, like:
 	- Processing other sources of information like vision/audio/chat (I don't think I'll be doing this one)
-	- Acting on a scheduler (periodically acting unprompted, generating yaps, waiting for TTS, etc)
+	- Acting on a scheduler (~~periodically acting unprompted~~, generating yaps, waiting for TTS, etc)
 	- Running actions on a second thread (todo maybe, depends on the scheduler)
 - There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
 	- Basically, if the model wants something invalid, it will pick the closest valid option. For example:

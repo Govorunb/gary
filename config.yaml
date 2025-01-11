@@ -17,7 +17,7 @@ default:
     enable_cot: false
     non_ephemeral_try_context: false
     scheduler:
-      idle_timeout_try: 5
+      idle_timeout_try: 6
       idle_timeout_force: 30
 phi:
   base: default

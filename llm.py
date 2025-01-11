@@ -233,7 +233,7 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
         logger.debug(f"Currently using {token_count} tokens out of {self.token_limit}"
                      + f"; also need {need_tokens} - will use {token_count + need_tokens}" if need_tokens > 0 else "")
         if token_count + need_tokens > self.token_limit:
-            logger.warning(f"Truncating context")
+            logger.warning(f"Truncating context ({token_count + need_tokens}/{self.token_limit} tokens used)")
             self.reset()
             if self.game.connection and self.game.connection.is_connected():
                 self.gaming()

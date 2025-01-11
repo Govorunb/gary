@@ -25,6 +25,9 @@ class WebsocketConnection:
         return GameMessageAdapter.validate_json(text, strict=True)
 
     async def send(self, message: AnyNeuroMessage):
+        if not self.is_connected():
+            logger.warning(f"Not connected, cannot send {message}")
+            return
         text = json.dumps(message.model_dump(mode='json'))
         # logger.debug(f'Sending: {text}')
         await self.ws.send_text(text)
