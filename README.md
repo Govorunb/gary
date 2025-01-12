@@ -32,8 +32,9 @@ That being said, it's *always* better in the long run to invest effort into refi
 Getting a less intelligent model to successfully play your game will make more intelligent models even more likely to make smarter decisions.
 
 You probably *should* consider doing the following:
-- Use direct and concise language to reduce token usage - this makes the LLM faster and sometimes reduces confusion
-	- Natural language is okay - it is a language model, after all
+- Use direct and concise language
+	- Having less text to process makes the LLM faster and sometimes reduces confusion
+	- Natural language (e.g. `Consider your goals`) is okay - it is a language model, after all
 	- Aim for high information density - consider running your prompts through a summarizer
 	- Including/omitting common-sense stuff can be hit or miss - depends on the intelligence of the LLM
 	- Flowery or long-winded descriptions should be used very sparingly - all context influences the response and context that is out-of-tone can throw off the model
@@ -47,7 +48,7 @@ You probably *should* consider doing the following:
 	- Suggest a suitable alternative in the result message
 		- For example, `"Battery C is currently charging and cannot be removed. Batteries A and B are charged and available."`
 	- Send additional context as a state reminder on failure so the model can retry with more knowledge
-	- Or, register a query-like action (e.g. `check_inventory`) that allows the model to ask about the state at any time
+	- Or, register a query-like action (e.g. `check_inventory`) that allows the model to ask about the state at any time and just hope for the best
 
 ### Known issues/todos
 - When the context window is full, it gets truncated, which wipes the LLM's memory and can rarely cause malformed action data and schema errors
@@ -55,7 +56,7 @@ You probably *should* consider doing the following:
 	- Managing the context window "properly" is currently out of scope; if it's a big issue for you, yell at me to increase motivation
 - Gary doesn't do a bunch of things that Neuro does, like:
 	- Processing other sources of information like vision/audio/chat (I don't think I'll be doing this one)
-	- Acting on a scheduler (~~periodically acting unprompted~~, generating yaps, waiting for TTS, etc)
+	- Acting on a scheduler (~~periodically acting unprompted~~, generating yaps, simulating waiting for TTS, etc)
 	- Running actions on a second thread (todo maybe, depends on the scheduler)
 - There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
 	- Basically, if the model wants something invalid, it will pick the closest valid option. For example:

@@ -39,22 +39,21 @@ class LLM:
         engine = llm_config.engine
         model = llm_config.model
 
-        engine_params = CONFIG.engine_params
-        params = {
+        params: dict[str, Any] = {
             "api_key": llm_config.api_key,
             "seed": random.randint(1, 2**32 - 1),
             "chat_template": Llama3ChatTemplate.template_str if 'Llama-3.1' in model else None,
             "enable_monitoring": False,
-            **engine_params
+            **CONFIG.engine_params
         }
         model_cls = _engine_map[engine]
         self.llm = model_cls(model, echo=False, **params) # type: ignore
-        self.token_limit = engine_params.get("n_ctx", 1 << 32) - 200
+        self.token_limit = params.get("n_ctx", 1 << 32) - 200
         self.llm.echo = False
         end = time.time()
         logger.info(f"loaded in {end-start:.2f} seconds")
         self.system_prompt()
-        self.temperature = engine_params.get("temperature", 1.0)
+        self.temperature = params.get("temperature", 1.0)
 
     def system_prompt(self):
         with system():

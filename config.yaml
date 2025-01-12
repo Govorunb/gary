@@ -11,13 +11,14 @@ default:
     n_gpu_layers: -1
     n_ctx: 8192
     temperature: 1.6
+    flash_attn: true
   gary:
     log_level_file: info
     log_level_console: debug
     enable_cot: false
     non_ephemeral_try_context: false
     scheduler:
-      idle_timeout_try: 6
+      idle_timeout_try: 3
       idle_timeout_force: 30
 phi:
   base: default
