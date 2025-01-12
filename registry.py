@@ -19,11 +19,10 @@ class Registry:
             self.games[msg.game] = game = Game(msg.game, self, conn)
         else:
             # IMPL: game already connected
-            logger.warning(f"Game {msg.game} already connected")
             if game.connection != conn:
                 if game.connection.is_connected():
                     # IMPL: different active connection
-                    logger.warning(f"Game {msg.game} is actively connected to someone else! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
+                    logger.warning(f"Game {msg.game} received startup from {conn.ws.client}, but is already actively connected to {game.connection.ws.client}!")
                     conn_to_close = game.connection if self.conflict_resolution == ExistingConnectionPolicy.DISCONNECT_EXISTING else conn
                     logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {self.conflict_resolution}")
                     close_code = 1012 # Service Restart https://github.com/Luka967/websocket-close-codes
@@ -40,9 +39,7 @@ class Registry:
             if not (game := self.games.get(msg.game, None)):
                 logger.warning(f"Game {msg.game} was somehow not connected, imitating a `startup`")
                 # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
-                # IMPL: timing for sending `actions/reregister_all`
                 await self.on_startup(Startup(game=msg.game), conn)
-                await conn.send(ReregisterAllActions())
                 await self.handle(msg, conn)
                 return
             if game.connection != conn and game.connection.is_connected(): # IMPL

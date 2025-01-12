@@ -32,19 +32,22 @@ That being said, it's *always* better in the long run to invest effort into refi
 Getting a less intelligent model to successfully play your game will make more intelligent models even more likely to make smarter decisions.
 
 You probably *should* consider doing the following:
+##### Prompting
 - Use direct and concise language
 	- Having less text to process makes the LLM faster and sometimes reduces confusion
-	- Natural language (e.g. `Consider your goals`) is okay - it is a language model, after all
 	- Aim for high information density - consider running your prompts through a summarizer
-	- Including/omitting common-sense stuff can be hit or miss - depends on the intelligence of the LLM
 	- Flowery or long-winded descriptions should be used very sparingly - all context influences the response and context that is out-of-tone can throw off the model
-	- Structuring info (e.g. with Markdown) seems to improve results - tested on instruct-tuned open models, Neuro might act differently
+- Natural language (e.g. `Consider your goals`) is okay - it is a language model, after all
+- Including/omitting common-sense stuff can be hit or miss - depends on the intelligence of the LLM
+- Structuring info (e.g. with Markdown) seems to improve results
+	- Tested on instruct-tuned open models, Neuro might act differently
+##### Context
 - Send a description of the game and its rules on startup
 - Keep context messages relevant to upcoming actions/decisions so they're closer together in the context window
 - Send reminders of rules/tips/state at breakpoints, e.g. starting a new round
 - If an action fails because of game state (e.g. trying to place an item in an occupied slot), you should attempt, preferrably in this particular order:
 	- Disallow the illegal action (by removing the illegal parameter from the schema, or by unregistering the action entirely)
-		- This is the best option
+		- This is the best option as there's no chance for mistakes at all
 	- Suggest a suitable alternative in the result message
 		- For example, `"Battery C is currently charging and cannot be removed. Batteries A and B are charged and available."`
 	- Send additional context as a state reminder on failure so the model can retry with more knowledge
@@ -53,17 +56,18 @@ You probably *should* consider doing the following:
 ### Known issues/todos
 - When the context window is full, it gets truncated, which wipes the LLM's memory and can rarely cause malformed action data and schema errors
 	- Larger context windows will get truncated less frequently
-	- Managing the context window "properly" is currently out of scope; if it's a big issue for you, yell at me to increase motivation
+	- Managing the context window "properly" is on my todo list; if it's a big issue for you, yell at me to increase motivation
 - Gary doesn't do a bunch of things that Neuro does, like:
 	- Processing other sources of information like vision/audio/chat (I don't think I'll be doing this one)
 	- Acting on a scheduler (~~periodically acting unprompted~~, generating yaps, simulating waiting for TTS, etc)
 	- Running actions on a second thread (todo maybe, depends on the scheduler)
 - There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
-	- Basically, if the model wants something invalid, it will pick the closest valid option. For example:
+	- Basically, if the model wants something invalid, it can pick a seemingly arbitrary valid option. For example:
 		- The model hallucinates about pouring drinks into a glass in its chain-of-thought
 		- The token likelihoods now favor `"glass"`, which is not a valid option (but `"gin"` is)
-		- When generating the action JSON, guidance picks `"gin"` because it's the most likely of all valid options
-	- In a case like this, it would have been better to just let it fail and retry - oh well, unlucky
+		- When generating the action JSON, guidance picks `"gin"` because (gives a long explanation)
+	- For nerds - it picks starting tokens and forwards the rest as soon as it's fully disambiguated (so e.g. `"g` has the highest likelihood, so it gets picked, and then `in"` is auto-completed because `"gin"` is the only option starting with `"g`, even though in reality the model wanted to say `"glass"`). See more [here](https://github.com/guidance-ai/guidance/issues/564).
+	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's blazingly fast
 
 #### Implementation-specific behaviour
 These are edge cases where Neuro may behave differently. For most of these, the spec doesn't say anything, so I had to pick something.

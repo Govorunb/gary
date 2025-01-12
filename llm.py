@@ -90,15 +90,6 @@ You are goal-oriented but curious. You love to explore and examine unfamiliar pl
         if self.game.connection and self.game.connection.is_connected():
             self.gaming()
 
-    async def yap(self):
-        # TODO: generate monologues (currently prioritizing iteration speed)
-        # simulate yap delay
-        squared = random.random() ** 2 # bias towards shorter
-        delay = 0.5 + 10 * squared
-        logger.info(f"yapping for {delay:.2f}")
-        await asyncio.sleep(delay)
-        logger.info(f"done yapping for {delay:.2f}")
-
     def gaming(self):
         self.context("Connected.", silent=True)
         if custom_rules := MANUAL_RULES.get(self.game.name, None):
