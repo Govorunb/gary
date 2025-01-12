@@ -3,14 +3,14 @@ default:
   fastapi:
     host: 127.0.0.1
     port: 8000
-    reload: true
+    reload: false
   llm:
     engine: llama_cpp
     model: _models/bartowski_Meta-Llama-3.1-8B-Instruct-Q5_K_L.gguf
   engine_params:
     n_gpu_layers: -1
-    n_ctx: 4096
-    temperature: 0.6
+    n_ctx: 8192
+    temperature: 1.6
   gary:
     log_level_file: info
     log_level_console: debug
@@ -29,8 +29,8 @@ phi:
       n_ctx: 8192
       temperature: 1.0
     gary:
-      enable_cot: false
-      non_ephemeral_try_context: false
+      enable_cot: true
+      non_ephemeral_try_context: true
 openai:
   base: default
   overrides:

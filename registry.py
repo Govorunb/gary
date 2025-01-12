@@ -54,6 +54,7 @@ class Game:
         self.name = name
         self.registry = registry
         self.actions: dict[str, ActionModel] = {}
+        self._seen_actions: set[str] = set()
         self.pending_actions: list[str] = [] # action IDs
         self.pending_forces: dict[str, ForceAction] = {}
         self.connection = connection
@@ -75,12 +76,14 @@ class Game:
             else: # stop making up random fields in the data. i am no longer asking
                 action.schema["additionalProperties"] = False # type: ignore
             self.actions[action.name] = action
+            if action.name not in self._seen_actions:
+                self._seen_actions.add(action.name)
+                logger.info(f"New action {action.name}: {action.description}")
         logger.info(f"Actions registered: {list(self.actions.keys())}")
     
     async def action_unregister(self, actions: list[str]):
         for action_name in actions:
-            if action_name in self.actions:
-                del self.actions[action_name]
+            self.actions.pop(action_name, None)
         logger.info(f"Actions unregistered: {actions}")
     
     async def try_action(self) -> bool:
@@ -168,6 +171,7 @@ class Game:
     def reset(self):
         self.llm.not_gaming()
         self.scheduler.stop()
+        self._seen_actions.clear()
         self.actions.clear()
         self.pending_actions.clear()
         self.pending_forces.clear()

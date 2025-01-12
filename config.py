@@ -154,4 +154,38 @@ Remember, this is a game. Stick to its mechanics and logic!
 """,
 # chatgpt-improved instructions above
 # original human-made artisanal desperation has been sent to the shadow realm (git history)
+
+# branching paths does actually have an intro explaining the game
+# but it falls out of the context window :(
+"Branching Paths": """\
+### SUMMARY
+Branching Paths is a point-and-click adventure game where you will uncover a mysterious incident.
+You play as Neuro-sama ("Neuro"), an AI. Neuro has a twin sister, Evil Neuro ("Evil"), and her father, Vedal (who is a small green turtle).
+
+### TERMINOLOGY
+- **Room**: An area in the game world. Contains interactable objects.
+- **Object**: An object or character in the room. These can be inspected to provide dialogue.
+- **Item**: An item in your inventory. Characters accompanying you are also represented as items.
+
+### IMPORTANT TIPS
+1. **Goals**:
+    - If you're lost, try talking to characters to be reminded of your next goal.
+    - Some characters will ask for items - your goal is to find the item and return to the character.
+
+2. **Items**:
+    - Items are picked up by inspecting objects. Not all objects can be picked up.
+    - Some items remain in your inventory after being used for their intended purpose. They are unlikely to be useful again.
+    - Characters may have more than one use.
+    - Items cannot be used on other items.
+
+3. **Exploration**:
+    - Check the most interesting objects first.
+    - Do not make up objects or items. What you get from 'list-objects' and 'list-items' is all that can be interacted with.
+    - When you're done exploring, leave the room.
+
+4. **Subway**:
+    - List the places you can go, then pick one and visit that place.
+    - Consider your goals when picking your next destination.
+    - Consider which places you have already visited.
+""", # can you tell i'm desperate to get my small models running on my small GPU to output literally anything useful yet
 }

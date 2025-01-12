@@ -6,7 +6,6 @@ Uses [guidance](https://github.com/guidance-ai/guidance) to coerce the LLM to ad
 This is baby's first LLM code and I haven't done Python in years so ~~don't be mean please 🥺👉👈~~ PRs are welcome.
 The project is mostly for fun but I'm open to feedback and contributions.
 
-Initially tested on [Abandoned Pub](https://pipeheads.itch.io/abandoned-pub).
 ### Features
 - Actually follows the schema[^1][^2][^3]
 - Generating JSON with guidance is faster than asking the model to adhere to a schema since it auto-inserts tokens that are "constant"
@@ -26,7 +25,7 @@ uv run main.py [--preset your_preset]
 #### Tips
 Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/guidance-gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
-Depending on your model/hardware, Larry might be dumber than a rock when it comes to strategy and decisionmaking.
+Depending on your model/hardware, Larry might be dumber than a rock when it comes to strategy and decisionmaking. Like, *worse than Randy*.
 If so, Gary probably cannot help you and you'd be better off using [Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
@@ -72,3 +71,9 @@ These are edge cases where Neuro may behave differently. For most of these, the 
 - Gary sends `actions/reregister_all` on every connect (instead of just reconnects, as in the spec)
 	- I can probably make something that figures out if it's a first launch or a reconnect but I'm too lazy
 - etc etc, just download the repo and search for "IMPL" in the code
+
+#### Acknowledgements
+Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:
+- [Abandoned Pub](https://pipeheads.itch.io/abandoned-pub)
+- [neuro scratch](https://tsgscraft.itch.io/neuro-scratch)
+- [Branching Paths](https://shardhash.itch.io/branching-paths)

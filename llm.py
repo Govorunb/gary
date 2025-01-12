@@ -43,13 +43,13 @@ class LLM:
         params = {
             "api_key": llm_config.api_key,
             "seed": random.randint(1, 2**32 - 1),
-            "chat_template": Llama3ChatTemplate() if 'Llama-3.1' in model else None,
+            "chat_template": Llama3ChatTemplate.template_str if 'Llama-3.1' in model else None,
             "enable_monitoring": False,
             **engine_params
         }
         model_cls = _engine_map[engine]
         self.llm = model_cls(model, echo=False, **params) # type: ignore
-        self.token_limit = engine_params.get("n_ctx", 1 << 32) - 500
+        self.token_limit = engine_params.get("n_ctx", 1 << 32) - 200
         self.llm.echo = False
         end = time.time()
         logger.info(f"loaded in {end-start:.2f} seconds")
@@ -59,9 +59,9 @@ class LLM:
     def system_prompt(self):
         with system():
             self.llm += """\
-You are Larry, an expert gamer AI.
-You have a deep knowledge and masterfully honed ability to perform in-game actions via sending JSON to a special software integration system called Gary.
-Every action you perform is always meticulously calculated. You always aim to keep your responses varied and entertaining."""
+You are Larry, an expert gamer AI. You have a deep knowledge and masterfully honed ability to perform in-game actions via sending JSON to a special software integration system called Gary.
+You are goal-oriented but curious. You love to explore and examine unfamiliar places and objects. You aim to keep your actions varied and entertaining.
+"""
 
     def llm_engine(self) -> models._model.Engine:
         return self.llm.engine # type: ignore
@@ -159,7 +159,7 @@ You must perform one of the following actions, given this information:
         llm = self.llm
         with assistant():
             llm += f'''\
-I have decided to perform the following action:
+My choice is:
 ```json
 {{
     "command": "action",'''
@@ -232,11 +232,16 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
         return None if decision == NO else await self.action(actions)
     
     def truncate_context(self, need_tokens: int = 0):
+        assert need_tokens >= 0
+        
         token_count = tokens(self.llm)
-        logger.debug(f"Currently using {token_count} tokens out of {self.token_limit}"
-                     + f"; also need {need_tokens} - will use {token_count + need_tokens}" if need_tokens > 0 else "")
-        if token_count + need_tokens > self.token_limit:
-            logger.warning(f"Truncating context ({token_count + need_tokens}/{self.token_limit} tokens used)")
+        used = token_count + need_tokens
+        msg = f"Currently at {used}/{self.token_limit} tokens"
+        if need_tokens > 0:
+            msg += f" (using {token_count}, need {need_tokens} more)"
+        logger.debug(msg)
+        if used > self.token_limit:
+            logger.warning(f"Truncating context ({used}/{self.token_limit} tokens used)")
             self.reset()
 
 def tokens(m: models.Model) -> int:

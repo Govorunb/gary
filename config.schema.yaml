@@ -13,11 +13,11 @@ definitions:
     properties:
       fastapi:
         type: object
-        additionalProperties: true
         properties:
           host: {type: string}
           port: {type: integer, minimum: 1, maximum: 65535}
           reload: {type: boolean}
+        additionalProperties: true
       llm:
         type: object
         properties:
@@ -30,6 +30,7 @@ definitions:
               For guidance_server, this should be the URL of the server.
           api_key: {type: string}
         required: [engine, model]
+        additionalProperties: false
       engine_params:
         type: object
         description: |
@@ -85,6 +86,7 @@ definitions:
                 oneOf:
                   - {type: number, minimum: 1}
                   - {const: 0}
+        additionalProperties: false
     additionalProperties: false
   preset_inherit:
     description: Inherit from another preset
