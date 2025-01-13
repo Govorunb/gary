@@ -36,7 +36,7 @@ def _delete_empty():
     _fh.close()
     logger.removeHandler(_fh)
     logger.info("Exiting")
-    if os.stat(LOG_FILENAME).st_size == 0:
+    if os.path.exists(LOG_FILENAME) and os.stat(LOG_FILENAME).st_size == 0:
         logger.debug("Removing empty log file")
         os.remove(LOG_FILENAME)
     _stdout.flush()

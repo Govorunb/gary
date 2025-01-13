@@ -6,6 +6,8 @@ from guidance.chat import Llama3ChatTemplate
 from guidance._grammar import Function
 import llama_cpp
 
+from gary.randy import Randy
+
 from .util import CONFIG, logger
 from .util.config import MANUAL_RULES
 from .spec import *
@@ -24,7 +26,7 @@ _engine_map = {
     "llama_cpp": models.LlamaCpp,
     "transformers": models.Transformers,
     "guidance_server": models.Model,
-    "randy": models.Mock,
+    "randy": Randy,
 }
 
 class LLM:

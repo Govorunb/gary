@@ -14,7 +14,7 @@ default:
     flash_attn: true
   gary:
     log_level_file: info
-    log_level_console: debug
+    log_level_console: info
     enable_cot: false
     non_ephemeral_try_context: false
     scheduler:
