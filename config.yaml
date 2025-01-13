@@ -20,14 +20,12 @@ default:
     scheduler:
       idle_timeout_try: 6
       idle_timeout_force: 30
-branching-paths:
+randy:
   base: default
   overrides:
-    gary:
-      log_level_console: info
-      scheduler:
-        idle_timeout_try: 3
-        idle_timeout_force: 10
+    llm:
+      engine: randy
+      model: ""
 phi:
   base: default
   overrides:

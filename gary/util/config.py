@@ -18,7 +18,7 @@ class ExistingConnectionPolicy(Enum):
 _LogLevel = Literal["all", "debug", "info", "warn", "warning", "error", "critical", "fatal", "none"] | int
 class Config(BaseModel):
     class LLMConfig(BaseModel):
-        engine: Literal["openai", "anthropic", "azure_openai", "googleai", "transformers", "llama_cpp", "guidance_server"]
+        engine: Literal["openai", "anthropic", "azure_openai", "googleai", "transformers", "llama_cpp", "guidance_server", "randy"]
         model: str
         api_key: str = ""
     class GaryConfig(BaseModel):

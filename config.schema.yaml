@@ -27,7 +27,8 @@ definitions:
             description: |
               For local engines (e.g. llama_cpp), use the local path to the model (e.g. `_models/llama-2-7b.gguf`).
               For remote services like Anthropic, use the name of the model.
-              For guidance_server, this should be the URL of the server.
+              For guidance_server (or remote llama_cpp), this should be the URL of the server.
+              Randy ignores this.
           api_key: {type: string}
         required: [engine, model]
         additionalProperties: false
@@ -95,7 +96,7 @@ definitions:
       base: {type: string}
       overrides: {$ref: "#/definitions/preset_base"}
     required: [base, overrides]
-  engine: {enum: [openai, anthropic, azure_openai, googleai, llama_cpp, transformers, guidance_server]}
+  engine: {enum: [openai, anthropic, azure_openai, googleai, llama_cpp, transformers, guidance_server, randy]}
   log_level:
     description: Minimum log level. This can be one of the given values, or a non-negative integer (refer to python's logging module).
     oneOf:

@@ -1,6 +1,7 @@
 from datetime import datetime
-import random, asyncio, time
+import random, time
 from guidance import * # type: ignore
+from pydantic import BaseModel, TypeAdapter
 from guidance.chat import Llama3ChatTemplate
 from guidance._grammar import Function
 import llama_cpp
@@ -22,7 +23,8 @@ _engine_map = {
     "googleai": models.GoogleAI,
     "llama_cpp": models.LlamaCpp,
     "transformers": models.Transformers,
-    "guidance_server": models.Model
+    "guidance_server": models.Model,
+    "randy": models.Mock,
 }
 
 class LLM:
@@ -164,8 +166,7 @@ My choice is:
             llm = time_gen(llm, f'''
     "data": {json("data", schema=actions[chosen_action].schema, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
-```
-                '''.strip())
+```''')
         data = llm['data']
         if CONFIG.gary.enable_cot:
             reasoning = llm['reasoning']
