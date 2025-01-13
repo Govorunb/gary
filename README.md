@@ -7,26 +7,24 @@ This is baby's first LLM code and I haven't done Python in years so ~~don't be m
 The project is mostly for fun but I'm open to feedback and contributions.
 
 ### Features
-- Allows you to use a bunch of model engines/providers:
+- Allows you to use a few model engines/providers:
 	- Local models (LlamaCpp, Transformers\*)
-	- Remote services† (OpenAI\*, Anthropic\*, Google\*, Azure\*)
 	- Custom remote server (Guidance server\*, LlamaCpp server\*)
 	- "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
-- **Guaranteed** to follow the schema[^1][^2][^3]
+	- Remote services (OpenAI, Anthropic, Google, Azure) are *not* supported. For more info, read the ["Remote Services?"](#remote-services-openai-anthropic-google-azure) section.
+- **Guaranteed** to follow the schema[^1][^2]
 - Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM (e.g. JSON syntax)
 - Aims to (eventually) behave (reasonably) close to Neuro for accurate testing/development
 
 <sub>\* Not tested - if you know this works (or doesn't), open an issue.</sub><br/>
-<sub>† Not supported, may be removed in the future; see this footnote: [^2]</sub>
-
-[^1]: Very very likely but not (yet) guaranteed, see [Known issues/todos](#known-issuestodos).
-[^2]: Local models only; you can configure it to use a remote service, but please note that guidance cannot enforce syntax/structured outputs if it can't hook itself into the inference process, so it'll throw exceptions on invalid output instead (allegedly, not tested). For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or the [guidance server example](https://github.com/guidance-ai/guidance/blob/727e8320062746b019d29a4cf393c88641fd7e4c/notebooks/server_anachronism.ipynb).
-[^3]: Not always the best option; see [Known issues/todos](#known-issuestodos).
 
 That said...
 > ![CAUTION]
 > The repository is currently in the early stages of development and is thus **highly unstable**.
 > I'm likely to make sweeping changes and break and fix stuff everywhere.
+
+[^1]: Very very likely but not (yet) guaranteed, see [Known issues/todos](#known-issuestodos).
+[^2]: Not always the best option; see [Known issues/todos](#known-issuestodos).
 
 ### Quick start
 1. Install [uv](https://github.com/astral-sh/uv)
@@ -38,7 +36,7 @@ uv run main.py [--preset your_preset]
 #### Tips
 Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/guidance-gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
-Depending on your model/hardware, Larry might be dumber than a rock when it comes to strategy and decisionmaking. Like, *worse than Randy*.
+Since this project is focused on local models, success will depend on your model/hardware. Larry might turn out to be dumber than a rock when it comes to strategy and decisionmaking (which is ironic because it's made of rock) - maybe even *worse than Randy*.
 If so, Gary probably cannot help you and you'd be better off using [Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
@@ -90,6 +88,9 @@ These are edge cases where Neuro may behave differently. For most of these, the 
 - Gary sends `actions/reregister_all` on every connect (instead of just reconnects, as in the spec)
 	- I can probably make something that figures out if it's a first launch or a reconnect but I'm too lazy
 - etc etc, just download the repo and search for "IMPL" in the code
+
+#### Remote services? (OpenAI, Anthropic, Google, Azure)
+Nope, local models only. Guidance lets you use remote services, but please note that guidance cannot enforce syntax/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just [throw exceptions](https://i.imgur.com/UNtnhdV.png) because of invalid output instead. For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or the [guidance server example](https://github.com/guidance-ai/guidance/blob/727e8320062746b019d29a4cf393c88641fd7e4c/notebooks/server_anachronism.ipynb).
 
 #### Acknowledgements
 Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:

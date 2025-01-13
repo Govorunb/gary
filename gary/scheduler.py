@@ -7,15 +7,23 @@ from .util import CONFIG, logger
 if TYPE_CHECKING:
     from .registry import Game
 
+_COMPLETED_TASK = asyncio.create_task(asyncio.sleep(0))
+
 class Scheduler:
     def __init__(self, game: "Game"):
         logger.info(f"Created scheduler for {game.name}")
         self.game = game
         self.idle_timeout_try = CONFIG.gary.scheduler.idle_timeout_try
         self.idle_timeout_force = CONFIG.gary.scheduler.idle_timeout_force
+        
+        if not self.idle_timeout_try:
+            logger.warning("Idle timeout (try) disabled")
+        if not self.idle_timeout_force:
+            logger.warning("Idle timeout (force) disabled")
+        
         self._active = False
-        self._try_task = asyncio.create_task(asyncio.sleep(0))
-        self._force_task = asyncio.create_task(asyncio.sleep(0))
+        self._try_task = _COMPLETED_TASK
+        self._force_task = _COMPLETED_TASK
 
     def start(self):
         if self._active:
@@ -39,24 +47,22 @@ class Scheduler:
     def _reset_idle_timers(self):
         if not self._active:
             return
-        if self.idle_timeout_try > 0:
-            self._reset_try()
-        else:
-            logger.warning("Idle timeout (try) disabled")
-        if self.idle_timeout_force > 0:
-            self._reset_force()
-        else:
-            logger.warning("Idle timeout (force) disabled")
+        self._reset_try()
+        self._reset_force()
 
     def _reset_try(self):
-        self._try_task = self._reset_task(self._try_task, self._wait_try)
+        self._try_task = self._reset_task(self._try_task, self._wait_try) \
+            if self.idle_timeout_try > 0 \
+            else _COMPLETED_TASK
     def _reset_force(self):
-        self._force_task = self._reset_task(self._force_task, self._wait_force)
+        self._force_task = self._reset_task(self._force_task, self._wait_force) \
+            if self.idle_timeout_force > 0 \
+            else _COMPLETED_TASK
 
     def _reset_task(self, task: asyncio.Task[None], fn: Callable[..., Coroutine[Any, Any, None]]) -> asyncio.Task[None]:
         task.cancel()
         if not self._active:
-            return asyncio.create_task(asyncio.sleep(0))
+            return _COMPLETED_TASK
         return asyncio.create_task(fn())
 
     async def _wait_try(self):

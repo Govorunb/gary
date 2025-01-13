@@ -29,6 +29,9 @@ randy:
     gary:
       enable_cot: false # you don't want randy with this on, trust me
       non_ephemeral_try_context: false
+      scheduler:
+        idle_timeout_try: 0
+        idle_timeout_force: 5
 phi:
   base: default
   overrides:
@@ -38,12 +41,3 @@ phi:
     gary:
       enable_cot: true
       non_ephemeral_try_context: true
-openai: # not tested
-  base: default
-  overrides:
-    llm:
-      engine: openai
-      model: gpt-4o-mini
-      api_key: $ENV:OPENAI_API_KEY
-    engine_params:
-      temperature: 0.5

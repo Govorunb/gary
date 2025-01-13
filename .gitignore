@@ -11,5 +11,6 @@ wheels/
 
 # scratchpad files
 _*
+*.env
 
 !__init__.py

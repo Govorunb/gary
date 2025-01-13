@@ -1,7 +1,7 @@
 from datetime import datetime
 import random, time
-from guidance import * # type: ignore
 from pydantic import BaseModel, TypeAdapter
+from guidance import * # type: ignore
 from guidance.chat import Llama3ChatTemplate
 from guidance._grammar import Function
 import llama_cpp
@@ -19,10 +19,10 @@ if TYPE_CHECKING:
 SchemaLike = Mapping[str, Any] | type[BaseModel] | TypeAdapter
 
 _engine_map = {
-    "openai": models.OpenAI,
-    "anthropic": models.Anthropic,
-    "azure_openai": models.AzureOpenAI,
-    "googleai": models.GoogleAI,
+    # "openai": models.OpenAI,
+    # "anthropic": models.Anthropic,
+    # "azure_openai": models.AzureOpenAI,
+    # "googleai": models.GoogleAI,
     "llama_cpp": models.LlamaCpp,
     "transformers": models.Transformers,
     "guidance_server": models.Model,
@@ -51,6 +51,7 @@ class LLM:
             **CONFIG.engine_params
         }
         model_cls = _engine_map[engine]
+
         self.llm = model_cls(model, echo=False, **params) # type: ignore
         self.token_limit = params.get("n_ctx", 1 << 32) - 200
         self.llm.echo = False
