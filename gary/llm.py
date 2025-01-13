@@ -5,11 +5,11 @@ from guidance.chat import Llama3ChatTemplate
 from guidance._grammar import Function
 import llama_cpp
 
-from config import CONFIG, MANUAL_RULES
-from logger import logger
-from spec import *
+from .util import CONFIG, logger
+from .util.config import MANUAL_RULES
+from .spec import *
 if TYPE_CHECKING:
-    from registry import Game
+    from .registry import Game
 
 # IMPL: this whole file is my implementation since uhh... yeah
 

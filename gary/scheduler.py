@@ -2,11 +2,10 @@ import asyncio
 from typing import * # type: ignore
 from collections.abc import Coroutine
 
-from config import CONFIG, Callable
-from logger import logger
+from .util import CONFIG, logger
 
 if TYPE_CHECKING:
-    from registry import Game
+    from .registry import Game
 
 class Scheduler:
     def __init__(self, game: "Game"):

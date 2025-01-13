@@ -1,9 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from llm import LLM
-from registry import Registry
-from websocket import WebsocketConnection
-from logger import logger
+from .registry import Registry
+from .util import WebsocketConnection, logger
 
 app = FastAPI()
 

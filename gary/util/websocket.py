@@ -2,9 +2,10 @@ import json
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 from typing import * # type: ignore
-from spec import *
 
-from logger import logger
+from ..spec import *
+from .logger import logger
+
 # python is just so lovely
 if TYPE_CHECKING:
     from registry import Game, Registry

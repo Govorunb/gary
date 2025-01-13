@@ -1,12 +1,10 @@
-from enum import Enum
 from typing import * # type: ignore
-from logger import logger
 
-from config import CONFIG, ExistingConnectionPolicy
-from llm import LLM
-from scheduler import Scheduler
-from spec import *
-from websocket import WebsocketConnection
+from .util import CONFIG, logger, WebsocketConnection
+from .util.config import ExistingConnectionPolicy
+from .llm import LLM
+from .scheduler import Scheduler
+from .spec import *
 
 class Registry:
     def __init__(self, *, existing_connection_policy: ExistingConnectionPolicy | None = None):

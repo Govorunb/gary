@@ -1,6 +1,6 @@
 import uvicorn
 import uvicorn.config
-from config import CONFIG
+from gary.util import CONFIG
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", **CONFIG.fastapi, reload_includes=['config.yaml'])
+    uvicorn.run("gary.app:app", **CONFIG.fastapi, reload_includes=['config.yaml'])

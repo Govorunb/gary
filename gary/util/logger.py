@@ -2,7 +2,7 @@ import os, sys, datetime, atexit
 import logging, logging.handlers
 import colorlog
 
-from config import CONFIG
+from . import CONFIG
 
 logging.addLevelName(0, "ALL")
 logging.addLevelName(999999999, "NONE")
