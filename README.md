@@ -47,7 +47,7 @@ You probably *should* consider doing the following:
 - Use direct and concise language
 	- Having less text to process makes the LLM faster and sometimes reduces confusion
 	- Aim for high information density - consider running your prompts through a summarizer
-	- Flowery or long-winded descriptions should be used very sparingly - all context influences the response and context that is out-of-tone can throw off the model
+	- (opinion) Flowery or long-winded descriptions should be used very sparingly - all context influences the response and context that is out-of-tone can throw off the model
 - Natural language (e.g. `Consider your goals`) is okay - it is a language model, after all
 - Including/omitting common-sense stuff can be hit or miss - depends on the intelligence of the LLM
 - Structuring info (e.g. with Markdown) seems to improve results
@@ -55,7 +55,7 @@ You probably *should* consider doing the following:
 
 ##### Context
 - Send a description of the game and its rules on startup
-- Keep context messages relevant to upcoming actions/decisions so they're closer together in the context window
+- Keep context messages relevant to upcoming actions/decisions
 - Send reminders of rules/tips/state at breakpoints, e.g. starting a new round
 - If an action fails because of game state (e.g. trying to place an item in an occupied slot), you should attempt, preferrably in this particular order:
 	- Disallow the illegal action (by removing the illegal parameter from the schema, or by unregistering the action entirely)
@@ -78,7 +78,7 @@ You probably *should* consider doing the following:
 		- The model hallucinates about pouring drinks into a glass in its chain-of-thought
 		- The token likelihoods now favor `"glass"`, which is not a valid option (but `"gin"` is)
 		- When generating the action JSON, guidance picks `"gin"` because (gives a long explanation)
-	- For nerds - it picks starting tokens and forwards the rest as soon as it's fully disambiguated (so e.g. `"g` has the highest likelihood, so it gets picked, and then `in"` is auto-completed because `"gin"` is the only option starting with `"g`, even though in reality the model wanted to say `"glass"`). See more [here](https://github.com/guidance-ai/guidance/issues/564).
+	- For nerds - guidance uses the model to generate the starting tokens and forwards the rest as soon as it's fully disambiguated (so e.g. `"g` has the highest likelihood, so it gets picked, and then `in"` is auto-completed because `"gin"` is the only option starting with `"g`, even though in reality the model wanted to say `"glass"`). [Learn more](https://github.com/guidance-ai/guidance/issues/564)
 	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's fast
 
 #### Implementation-specific behaviour
@@ -95,5 +95,5 @@ Nope, local models only. Guidance lets you use remote services, but please note 
 #### Acknowledgements
 Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:
 - [Abandoned Pub](https://pipeheads.itch.io/abandoned-pub)
-- [neuro scratch](https://tsgscraft.itch.io/neuro-scratch)
 - [Branching Paths](https://shardhash.itch.io/branching-paths)
+- [neuro scratch](https://tsgscraft.itch.io/neuro-scratch)
