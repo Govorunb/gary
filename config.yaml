@@ -10,7 +10,7 @@ default:
   engine_params:
     n_gpu_layers: -1
     n_ctx: 8192
-    temperature: 1.6
+    temperature: 0.8 # seems to not do much
     flash_attn: true
   gary:
     log_level_file: info
@@ -34,13 +34,10 @@ phi:
     llm:
       engine: llama_cpp
       model: _models/bartowski_Phi-3.5-mini-instruct-Q4_K_L.gguf
-    engine_params:
-      n_ctx: 4096
-      temperature: 1.0
     gary:
       enable_cot: true
       non_ephemeral_try_context: true
-openai:
+openai: # not tested
   base: default
   overrides:
     llm:

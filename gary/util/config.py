@@ -5,9 +5,11 @@ from typing import * # type: ignore
 from pydantic import BaseModel
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
 parser.add_argument("--preset", default="default", help="Preset from config.yaml to use")
 args = parser.parse_args()
 dotenv.load_dotenv(".env", override=True)
+CONFIG_PATH = args.config or environ.get("CONFIG_FILE", "config.yaml")
 
 class ExistingConnectionPolicy(Enum):
     DISCONNECT_NEW = "disconnect_new"
@@ -63,7 +65,7 @@ def _merge_nested_dicts(a: dict[str, Any], b: dict[str, Any]):
     return out
 
 def _load_config(preset_name: str):
-    with open("config.yaml") as f:
+    with open(CONFIG_PATH) as f:
         config_yaml: dict = yaml.safe_load(f)
     preset: dict
     if not (preset := config_yaml.get(preset_name, None)):

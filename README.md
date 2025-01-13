@@ -7,8 +7,9 @@ This is baby's first LLM code and I haven't done Python in years so ~~don't be m
 The project is mostly for fun but I'm open to feedback and contributions.
 
 ### Features
+- Allows you to use local models
 - Actually follows the schema[^1][^2][^3]
-- Generating JSON with guidance is faster than asking the model to adhere to a schema since it auto-inserts tokens that are "constant"
+- Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM
 - Aims to (eventually) behave (reasonably) close to Neuro for accurate testing/development
 
 [^1]: Very likely but not guaranteed, see [Known issues/todos](#known-issuestodos).
@@ -41,6 +42,7 @@ You probably *should* consider doing the following:
 - Including/omitting common-sense stuff can be hit or miss - depends on the intelligence of the LLM
 - Structuring info (e.g. with Markdown) seems to improve results
 	- Tested on instruct-tuned open models, Neuro might act differently
+
 ##### Context
 - Send a description of the game and its rules on startup
 - Keep context messages relevant to upcoming actions/decisions so they're closer together in the context window
@@ -62,12 +64,12 @@ You probably *should* consider doing the following:
 	- Acting on a scheduler (~~periodically acting unprompted~~, generating yaps, simulating waiting for TTS, etc)
 	- Running actions on a second thread (todo maybe, depends on the scheduler)
 - There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
-	- Basically, if the model wants something invalid, it can pick a seemingly arbitrary valid option. For example:
+	- Basically, if the model wants something invalid, it will pick a similar or seemingly arbitrary valid option. For example:
 		- The model hallucinates about pouring drinks into a glass in its chain-of-thought
 		- The token likelihoods now favor `"glass"`, which is not a valid option (but `"gin"` is)
 		- When generating the action JSON, guidance picks `"gin"` because (gives a long explanation)
 	- For nerds - it picks starting tokens and forwards the rest as soon as it's fully disambiguated (so e.g. `"g` has the highest likelihood, so it gets picked, and then `in"` is auto-completed because `"gin"` is the only option starting with `"g`, even though in reality the model wanted to say `"glass"`). See more [here](https://github.com/guidance-ai/guidance/issues/564).
-	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's blazingly fast
+	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's fast
 
 #### Implementation-specific behaviour
 These are edge cases where Neuro may behave differently. For most of these, the spec doesn't say anything, so I had to pick something.
