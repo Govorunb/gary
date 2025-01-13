@@ -7,14 +7,26 @@ This is baby's first LLM code and I haven't done Python in years so ~~don't be m
 The project is mostly for fun but I'm open to feedback and contributions.
 
 ### Features
-- Allows you to use local models
-- Actually follows the schema[^1][^2][^3]
-- Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM
+- Allows you to use a bunch of model engines/providers:
+	- Local models (LlamaCpp, Transformers\*)
+	- Remote services† (OpenAI\*, Anthropic\*, Google\*, Azure\*)
+	- Custom remote server (Guidance server\*, LlamaCpp server\*)
+	- "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
+- **Guaranteed** to follow the schema[^1][^2][^3]
+- Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM (e.g. JSON syntax)
 - Aims to (eventually) behave (reasonably) close to Neuro for accurate testing/development
 
-[^1]: Very likely but not guaranteed, see [Known issues/todos](#known-issuestodos).
+<sub>\* Not tested - if you know this works (or doesn't), open an issue.</sub><br/>
+<sub>† Not supported, may be removed in the future; see this footnote: [^2]</sub>
+
+[^1]: Very very likely but not (yet) guaranteed, see [Known issues/todos](#known-issuestodos).
 [^2]: Local models only; you can configure it to use a remote service, but please note that guidance cannot enforce syntax/structured outputs if it can't hook itself into the inference process, so it'll throw exceptions on invalid output instead (allegedly, not tested). For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or the [guidance server example](https://github.com/guidance-ai/guidance/blob/727e8320062746b019d29a4cf393c88641fd7e4c/notebooks/server_anachronism.ipynb).
 [^3]: Not always the best option; see [Known issues/todos](#known-issuestodos).
+
+That said...
+> ![CAUTION]
+> The repository is currently in the early stages of development and is thus **highly unstable**.
+> I'm likely to make sweeping changes and break and fix stuff everywhere.
 
 ### Quick start
 1. Install [uv](https://github.com/astral-sh/uv)
