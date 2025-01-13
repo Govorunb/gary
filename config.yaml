@@ -26,6 +26,9 @@ randy:
     llm:
       engine: randy
       model: ""
+    gary:
+      enable_cot: false # you don't want randy with this on, trust me
+      non_ephemeral_try_context: false
 phi:
   base: default
   overrides:

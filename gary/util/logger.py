@@ -16,7 +16,7 @@ LOG_FILENAME = f'_logs/log_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}.txt'
 logging.getLogger().setLevel(0)
 
 logger = logging.getLogger('gary')
-_fh = logging.FileHandler(LOG_FILENAME, mode = 'w')
+_fh = logging.FileHandler(LOG_FILENAME)
 _fh.setLevel(LOG_LEVEL_FILE)
 _fh.formatter = logging.Formatter('[%(asctime)s - %(levelname)s] %(message)s')
 _stdout = logging.StreamHandler(sys.stdout)
