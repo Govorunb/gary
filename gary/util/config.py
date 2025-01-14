@@ -190,7 +190,7 @@ You play as Neuro-sama ("Neuro"), an AI. Neuro has a twin sister, Evil Neuro ("E
     - Check the most interesting objects first.
     - Prefer interacting with objects over using items, unless it's very obvious that you should use an item.
     - If you see "Nothing happened", try something else.
-    - When you're done exploring, leave the room.
+    - When you've seen everything, leave the room with 'leave-place'.
 
 5. **Subway**:
     - List the places you can go, then pick one and visit that place.

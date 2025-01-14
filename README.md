@@ -66,9 +66,6 @@ You probably *should* consider doing the following:
 	- Or, register a query-like action (e.g. `check_inventory`) that allows the model to ask about the state at any time and just hope for the best
 
 ### Known issues/todos
-- When the context window is full, it gets truncated, which wipes the LLM's memory and can rarely cause malformed action data and schema errors
-	- Larger context windows will get truncated less frequently
-	- Managing the context window "properly" is on my todo list; if it's a big issue for you, yell at me to increase motivation
 - Gary doesn't do a bunch of things that Neuro does, like:
 	- Processing other sources of information like vision/audio/chat (I don't think I'll be doing this one)
 	- Acting on a scheduler (~~periodically acting unprompted~~, generating yaps, simulating waiting for TTS, etc)

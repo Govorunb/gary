@@ -43,14 +43,14 @@ class WebsocketConnection:
                 # IMPL: sent on every connect (not just reconnects)
                 if init:
                     await self.send(ReregisterAllActions())
-                # TODO: queue on separate thread
-                # LLM generation is synchronous and hangs the websocket
+                # FIXME: LLM generation is synchronous and hangs the websocket (Abandoned Pub disconnects)
                 msg = await self.receive()
                 if init and isinstance(msg, RegisterActions):
                     await self.registry().on_startup(Startup(game=msg.game), self)
                 init = False
                 await self.registry().handle(msg, self)
             except Exception as e:
+                logger.debug(f"Disconnecting: {e}")
                 if game := self.game():
                     game.on_disconnect()
                 if isinstance(e, WebSocketDisconnect):

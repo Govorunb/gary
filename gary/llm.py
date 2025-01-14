@@ -7,6 +7,7 @@ from guidance._grammar import Function
 import llama_cpp
 
 from gary.randy import Randy
+from gary.llarry import Llarry
 
 from .util import CONFIG, logger
 from .util.config import MANUAL_RULES
@@ -23,7 +24,7 @@ _engine_map = {
     # "anthropic": models.Anthropic,
     # "azure_openai": models.AzureOpenAI,
     # "googleai": models.GoogleAI,
-    "llama_cpp": models.LlamaCpp,
+    "llama_cpp": Llarry,
     "transformers": models.Transformers,
     "guidance_server": models.Model,
     "randy": Randy,
@@ -64,8 +65,10 @@ class LLM:
         with system():
             self.llm += """\
 You are Larry, an expert gamer AI. You have a deep knowledge and masterfully honed ability to perform in-game actions via sending JSON to a special software integration system called Gary.
-You are goal-oriented but curious. You love to explore and examine unfamiliar places and objects. You aim to keep your actions varied and entertaining.
+You are goal-oriented but curious. You aim to keep your actions varied and entertaining.
 """
+        if custom_rules := MANUAL_RULES.get(self.game.name, None):
+            self.context(custom_rules, silent=True, persistent_llarry_only=True)
 
     def llm_engine(self) -> models._model.Engine:
         return self.llm.engine # type: ignore
@@ -84,9 +87,14 @@ You are goal-oriented but curious. You love to explore and examine unfamiliar pl
             engine.model_obj.reset()
             llama_cpp.llama_kv_cache_clear(engine.model_obj.ctx)
         
-        # just pray to the GC i guess
+        # :) all this to avoid the model.LlamaCpp ctor
+        # it sure is nice that python lets you do this :)
         buh = models.Model(self.llm.engine, echo=False)
+        if isinstance(self.llm, Llarry):
+            buh.__class__ = Llarry
+            buh.persistent = self.llm.persistent.copy() # type: ignore
         self.llm = buh
+        
         assert self.llm.token_count == 0
         assert len(self.llm._current_prompt()) == 0
         logger.debug(f'truncated context to {tokens(self.llm)}')
@@ -97,13 +105,11 @@ You are goal-oriented but curious. You love to explore and examine unfamiliar pl
 
     def gaming(self):
         self.context("Connected.", silent=True)
-        if custom_rules := MANUAL_RULES.get(self.game.name, None):
-            self.context(custom_rules, silent=True)
 
     def not_gaming(self):
         self.context("Disconnected.", silent=True)
 
-    def context(self, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True) -> models.Model:
+    def context(self, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True, persistent_llarry_only: bool = False) -> models.Model:
         msg = f"[{datetime.now().strftime('%H:%M:%S')}] [{self.game.name}] {ctx}\n"
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
         self.truncate_context(tokens)
@@ -120,6 +126,12 @@ You are goal-oriented but curious. You love to explore and examine unfamiliar pl
             logger.info(f"(ctx{prefix}) {msg}")
             if tokens > 500:
                 logger.warning(f"Context '{ctx[:20].encode('unicode_escape').decode()}...' had {tokens} tokens. Are you sure this is a good idea?")
+        if persistent_llarry_only and isinstance(self.llm, Llarry):
+            out: Llarry
+            # FIXME: very silly way to get the index, optimize if needed
+            i = out._current_prompt().count("<|start_header_id|>")
+            logger.debug(f"Marking message {i} as persistent (current: {out.persistent})")
+            out.persistent.append(i)
         if not ephemeral:
             self.llm = out
         return out
@@ -193,7 +205,7 @@ My choice is:
             .decode()
             .replace("\n", "\n    "))
         ctx = f"""
-Based on previous context, decide whether you should perform any of the following actions.
+Based on previous context, decide whether you should perform any of the following actions:
 ```json
 {{
     "available_actions": {actions_json}
@@ -235,8 +247,12 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
             msg += f" (using {token_count}, need {need_tokens} more)"
         logger.debug(msg)
         if used > self.token_limit:
-            logger.warning(f"Truncating context ({used}/{self.token_limit} tokens used)")
-            self.reset()
+            if isinstance(self.llm, Llarry):
+                logger.warning(f"Trimming context ({used}/{self.token_limit} tokens used)")
+                self.llm = self.llm.trim()
+            else:
+                logger.warning(f"Truncating context ({used}/{self.token_limit} tokens used)")
+                self.reset()
 
 def tokens(m: models.Model) -> int:
     return len(m.engine.tokenizer.encode(m._current_prompt().encode())) # type: ignore
