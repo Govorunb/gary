@@ -5,11 +5,12 @@ from typing import * # type: ignore
 from pydantic import BaseModel
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
-parser.add_argument("--preset", default="default", help="Preset from config.yaml to use")
+parser.add_argument("--config", help="Path to config file (default: 'config.yaml')")
+parser.add_argument("--preset", help="Preset from config file to use (default: 'default')")
 args = parser.parse_args()
-dotenv.load_dotenv(".env", override=True)
+dotenv.load_dotenv(dotenv.find_dotenv(), override=True)
 CONFIG_PATH = args.config or environ.get("CONFIG_FILE", "config.yaml")
+PRESET = args.preset or environ.get("CONFIG_PRESET", "default")
 
 class ExistingConnectionPolicy(Enum):
     DISCONNECT_NEW = "disconnect_new"
@@ -87,7 +88,7 @@ def _load_config(preset_name: str):
     # print(preset)
     return preset
 
-CONFIG = Config(**_load_config(args.preset))
+CONFIG = Config(**_load_config(PRESET))
 
 # temp i guess
 # these are always kept in the context
