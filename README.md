@@ -7,10 +7,10 @@ This is baby's first LLM code and I haven't done Python in years so ~~don't be m
 The project is mostly for fun but I'm open to feedback and contributions.
 
 ### Features
-- Allows you to use a few model engines/providers:
+- Can use a few model engines/providers:
 	- Local models (LlamaCpp, Transformers\*)
 	- Custom remote server (Guidance server\*, LlamaCpp server\*)
-	- "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
+	- A "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
 	- Remote services (OpenAI, Anthropic, Google, Azure) are *not* supported. For more info, read the ["Remote Services?"](#remote-services-openai-anthropic-google-azure) section.
 - **Guaranteed** to follow the schema[^1][^2]
 - Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM (e.g. JSON syntax)
@@ -77,6 +77,7 @@ You probably *should* consider doing the following:
 		- When generating the action JSON, guidance picks `"gin"` because (gives a long explanation)
 	- For nerds - guidance uses the model to generate the starting tokens and forwards the rest as soon as it's fully disambiguated (so e.g. `"g` has the highest likelihood, so it gets picked, and then `in"` is auto-completed because `"gin"` is the only option starting with `"g`, even though in reality the model wanted to say `"glass"`). [Learn more](https://github.com/guidance-ai/guidance/issues/564)
 	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's fast
+- The way I trim context to keep LlamaCpp able to generate infinitely only works with local LlamaCpp (Guidance server would probably work too). LlamaCpp server/Transformers instead fully truncate their context, and may rarely fail due to overrunning their context window. Not tested.
 
 #### Implementation-specific behaviour
 These are edge cases where Neuro may behave differently. For most of these, the spec doesn't say anything, so I had to pick something.

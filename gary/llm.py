@@ -7,7 +7,7 @@ from guidance._grammar import Function
 import llama_cpp
 
 from gary.randy import Randy
-from gary.llarry import Llarry
+from gary.llarry import Llarry, StreamingLlamaCppEngine
 
 from .util import CONFIG, logger
 from .util.config import MANUAL_RULES
@@ -247,7 +247,7 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
             msg += f" (using {token_count}, need {need_tokens} more)"
         logger.debug(msg)
         if used > self.token_limit:
-            if isinstance(self.llm, Llarry):
+            if isinstance(self.llm, Llarry) and isinstance(self.llm_engine(), StreamingLlamaCppEngine):
                 logger.warning(f"Trimming context ({used}/{self.token_limit} tokens used)")
                 self.llm = self.llm.trim()
             else:
