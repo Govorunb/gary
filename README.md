@@ -19,7 +19,7 @@ The project is mostly for fun but I'm open to feedback and contributions.
 <sub>\* Not tested - if you know this works (or doesn't), open an issue.</sub><br/>
 
 That said...
-> ![CAUTION]
+> [!Caution]
 > The repository is currently in the early stages of development and is thus **highly unstable**.
 > I'm likely to make sweeping changes and break and fix stuff everywhere.
 
