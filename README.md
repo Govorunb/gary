@@ -33,7 +33,7 @@ That said...
 ```
 uv run main.py [--preset your_preset]
 ```
-#### Tips
+### Tips
 Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/guidance-gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
 Since this project is focused on local models, success will depend on your model/hardware. Larry might turn out to be dumber than a rock when it comes to strategy and decisionmaking (which is ironic because it's made of rock) - maybe even *worse than Randy*.
@@ -43,7 +43,7 @@ That being said, it's *always* better in the long run to invest effort into refi
 Getting a less intelligent model to successfully play your game will make more intelligent models even more likely to make smarter decisions.
 
 You probably *should* consider doing the following:
-##### Prompting
+#### Prompting
 - Use direct and concise language
 	- Having less text to process makes the LLM faster and sometimes reduces confusion
 	- Aim for high information density - consider running your prompts through a summarizer
@@ -53,7 +53,7 @@ You probably *should* consider doing the following:
 - Structuring info (e.g. with Markdown) seems to improve results
 	- Tested on instruct-tuned open models, Neuro might act differently
 
-##### Context
+#### Context
 - Send a description of the game and its rules on startup
 - Keep context messages relevant to upcoming actions/decisions
 - Send reminders of rules/tips/state at breakpoints, e.g. starting a new round
