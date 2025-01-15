@@ -1,10 +1,11 @@
+import time
 from typing import Self
 from guidance.models.llama_cpp._llama_cpp import LlamaCpp, LlamaCppEngine
 from guidance.models._model import Model
 from gary.util import logger
 
 class StreamingLlamaCppEngine(LlamaCppEngine):
-    def __init__(self, llama_cpp_engine: LlamaCppEngine):
+    def __init__(self, llama_cpp_engine: LlamaCppEngine, **kwargs):
         self.llama_cpp_engine = llama_cpp_engine
         # gee, llarry, how come your mom lets you have both composition *and* inheritance
         self.model = llama_cpp_engine.model
@@ -31,8 +32,8 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
         self.periodic_metrics_generator = llama_cpp_engine.periodic_metrics_generator
         self.post_exec_metrics = llama_cpp_engine.post_exec_metrics
 
-        self.default_n_keep = 500
-        self.default_n_discard = None # n_ctx // 2
+        self.default_n_keep = kwargs.get("n_keep", 500)
+        self.default_n_discard = kwargs.get("n_discard", None) # n_ctx // 2
     
     def shift_kv_cache(self, n_keep, n_discard, seq_id=0):
         self.model_obj._ctx.kv_cache_seq_rm(seq_id, n_keep, n_keep + n_discard)
@@ -44,10 +45,12 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
         n_discard = n_discard or self.default_n_discard or (self.model_obj.n_ctx() // 2)
         n_discard = min(len(token_ids) - n_keep, n_discard)
 
+        t = time.time()
         self.shift_kv_cache(n_keep, n_discard)
+        logger.debug(f"Shifted KV cache by {n_discard} in {(time.time()-t)*1000:.2f}ms")
         
         token_ids = token_ids[:n_keep] + token_ids[n_keep + n_discard:]
-        logger.warning(f"now {len(token_ids)} - let's hope this works")
+        logger.info(f"Trimmed context to {len(token_ids)} tokens")
         # logger.critical(self.tokenizer.decode(token_ids).decode())
         self._cache_token_ids.clear()
         return token_ids
@@ -55,11 +58,11 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
 _warned = False
 
 class Llarry(LlamaCpp):
-# class Llarry(LlamaCpp, Chat):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if isinstance(self.engine, LlamaCppEngine) and not isinstance(self.engine, StreamingLlamaCppEngine): # can be RemoteEngine instead
-            self.engine = StreamingLlamaCppEngine(self.engine)
+        # can be RemoteEngine instead
+        if isinstance(self.engine, LlamaCppEngine) and not isinstance(self.engine, StreamingLlamaCppEngine):
+            self.engine = StreamingLlamaCppEngine(self.engine, **kwargs)
         self.persistent: list[int] = []
 
     def trim(self) -> Self:
@@ -67,10 +70,11 @@ class Llarry(LlamaCpp):
             global _warned
             if not _warned:
                 _warned = True
-                logger.info("cannot trim remote engine")
+                logger.warning(f"only {StreamingLlamaCppEngine.__name__} can be trimmed; current engine is {type(self.engine).__name__}")
             return self
 
-        logger.warning("pray now my lord")
+        # logger.warning("pray now my lord")
+        t = time.time()
         prompt = self._current_prompt()
         tokens = self.engine.tokenizer.encode(prompt.encode())
         # TODO: see if we can maybe keep state as we add the messages
@@ -131,5 +135,6 @@ Assuming discardable!""")
         copy.persistent = [i - persist_shift for i in self.persistent if i >= i_start_discard] # immutability
         new_prompt = self.engine.tokenizer.decode(tokens).decode()
         # logger.critical(f"New prompt:\n{new_prompt}")
+        logger.debug(f"Trimmed in {(time.time()-t)*1000:.2f}ms")
         copy += new_prompt
         return copy

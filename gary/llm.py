@@ -65,7 +65,7 @@ class LLM:
         with system():
             self.llm += """\
 You are Larry, an expert gamer AI. You have a deep knowledge and masterfully honed ability to perform in-game actions via sending JSON to a special software integration system called Gary.
-You are goal-oriented but curious. You aim to keep your actions varied and entertaining.
+You are goal-oriented but curious. You aim to keep your actions varied and entertaining. Keep your reasoning short and to the point.
 """
         if custom_rules := MANUAL_RULES.get(self.game.name, None):
             self.context(custom_rules, silent=True, persistent_llarry_only=True)
@@ -121,6 +121,8 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
                 prefix += "S"
             if ephemeral:
                 prefix += "E"
+            if persistent_llarry_only:
+                prefix += "P"
             if prefix:
                 prefix = " " + prefix
             logger.info(f"(ctx{prefix}) {msg}")
@@ -136,11 +138,15 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             self.llm = out
         return out
 
-    async def force_action(self, msg: ForceAction, actions: dict[str, ActionModel]) -> tuple[str, str]:
-        assert actions, "No actions to choose from (LLM.force_action)"
+    async def force_action(self, msg: ForceAction, actions: dict[str, ActionModel]) -> tuple[str, str] | None:
+        if not actions:
+            logger.error("No actions to choose from (LLM.force_action)")
+            return None
         assert self.game.name == msg.game, f"Received ForceAction for game {msg.game} while this LLM is for {self.game.name}"
         ephemeral = msg.data.ephemeral_context or False
-        actions_for_json = [actions[name] for name in msg.data.action_names]
+        actions_for_json = [actions[name] for name in msg.data.action_names if name in actions]
+        if len(msg.data.action_names) != len(actions_for_json):
+            logger.warning(f"ForceAction contains unknown action names: {set(msg.data.action_names) - set(actions)}")
         actions_json = (TypeAdapter(list[ActionModel])
             # .dump_json(actions_for_json, indent=4)
             .dump_json(actions_for_json)
@@ -168,14 +174,14 @@ You must perform one of the following actions, given this information:
             llm += f'''\
 My choice is:
 ```json
-{{
-    "command": "action",'''
+{{'''
             if CONFIG.gary.enable_cot:
                 llm = time_gen(llm, f'''
-    "reasoning": "{gen("reasoning", stop=['.','\n','"'], temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
+    "reasoning": "{gen("reasoning", stop=['.','\n','"',"<|eot_id|>"], temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
             llm += f'''
-    "name": "{with_temperature(select(list(actions.keys()), "chosen_action"), self.temperature)}",'''
+    "chosen_action": "{with_temperature(select(list(actions.keys()), "chosen_action"), self.temperature)}",'''
             chosen_action = llm["chosen_action"]
+            # TODO: test without schema reminder
             llm += f'''
     "schema": {actions[chosen_action].schema},'''
             llm = time_gen(llm, f'''
@@ -221,7 +227,7 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
     "command": "decision","""
             if CONFIG.gary.enable_cot:
                 resp += f"""
-    "reasoning": "{gen("reasoning", stop=['\n','"'], temperature=self.temperature, max_tokens=self.max_tokens(100))}","""
+    "reasoning": "{gen("reasoning", stop=['\n','"',"<|eot_id|>"], temperature=self.temperature, max_tokens=self.max_tokens(100))}","""
             resp += f"""
     "decision": "{with_temperature(select([YES, NO], "decision"), self.temperature)}"
 }}

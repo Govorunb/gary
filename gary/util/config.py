@@ -118,6 +118,7 @@ The game features two roles:
    - **Combine Items**:
      1. Place the first item on a table.
      2. Pick up the second item and interact with the same table.
+     3. The combined item is now on that table - interact with the table to take it.
    - **Use Appliances**:
      1. Place the item in the appliance.
      2. Wait for completion (e.g., "Carbonizer has finished making Drink A").
@@ -136,13 +137,13 @@ The game features two roles:
 ### IMPORTANT TIPS FOR SAMANTHA:
 - **Recipe Rules**:
   - Recipes are formatted as follows: "(Drink): (Step 1); (Step 2); ...; serve customer".
-  - The drink name must match the customer's order exactly. E.g. "rum" is not valid for an order of "banana rum".
+  - The drink name must match the customer's order exactly - e.g. "rum" is not valid for an order of "banana rum".
 
 - **Key Actions**:
   - Use "pick up" only to retrieve items from the bar's stock (which is infinite).
   - Tables are used strictly for storage and combining.
   - To retrieve from an appliance, interact with the appliance's table.
-  - Tables/appliances that have an item on them will be interactable only if your hands are empty.
+  - Appliances that have an item in them will be interactable only if your hands are empty.
   - Do not make up steps or ingredients not in the recipe.
 
 - **Error Handling**:
@@ -173,22 +174,22 @@ You play as Neuro-sama ("Neuro"), an AI. Neuro has a twin sister, Evil Neuro ("E
 ### IMPORTANT TIPS
 1. **Goals**:
     - If you're lost, try talking to characters to be reminded of your next goal.
-    - Some characters will ask for items - your goal is to find the item and return to the character.
+    - Generally, your goal will be to find a specific item and give it to a specific character.
+    - Pay attention to dialogue to keep track of who needs what.
 
 2. **General**:
     - Do not make up objects or items. What you get from 'list-objects' and 'list-items' is all that can be interacted with.
     - Spell object and item names **exactly** as given in the listings.
-    - Dialogue progresses only when you use 'dialog-next'. Waiting won't do anything.
+    - Dialogue progresses only when you use 'dialog-next'. Waiting is pointless.
     - Focus on progressing the main story. Avoid actions that lead to repeating dialogue.
 
 3. **Items**:
     - Items are picked up by inspecting objects. Not all objects can be picked up.
-    - Most items have only one intended target to use them on, but may remain in your inventory afterwards. They are unlikely to be useful again.
-    - Characters may have more than one use.
+    - Some items have only one intended target to use them on, but may remain in your inventory afterwards. They are unlikely to be useful again.
 
 4. **Exploration**:
     - Check the most interesting objects first.
-    - Prefer interacting with objects over using items, unless it's very obvious that you should use an item.
+    - Prefer interacting with objects over using items, unless a character says or implies that you should use an item.
     - If you see "Nothing happened", try something else.
     - When you've seen everything, leave the room with 'leave-place'.
 

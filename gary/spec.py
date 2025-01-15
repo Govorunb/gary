@@ -23,8 +23,8 @@ AnyNeuroCommand = Literal[
 
 class ActionModel(BaseModel):
     name: str
-    description: str
-    schema: Mapping[str, Any] | None # type: ignore
+    description: str = "" # IMPL: description is probably not going to be optional
+    schema: Mapping[str, Any] | None = None # type: ignore
 
 class Message(BaseModel):
     command: AnyGameCommand | AnyNeuroCommand
@@ -77,7 +77,7 @@ class ActionResult(GameMessage):
     class Data(BaseModel):
         id: str
         success: bool
-        message: str | None
+        message: str | None = None
     
     command: Literal["action/result"] = "action/result"
     data: Data

@@ -10,8 +10,8 @@ default:
   engine_params:
     n_gpu_layers: -1
     n_ctx: 8192
-    temperature: 0.8 # seems to not do much
-    flash_attn: true
+    temperature: 0.3 # seems to not do much
+    flash_attn: true # speeds up inference
   gary:
     log_level_file: info
     log_level_console: info

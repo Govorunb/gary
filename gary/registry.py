@@ -64,11 +64,9 @@ class Game:
             # IMPL: overwrites existing actions
             if action.name in self.actions:
                 logger.warning(f"Action {action.name} already registered")
-            # small implementation quirk, BaseModel has a deprecated 'schema' method
-            # and if no schema is sent it doesn't get overridden
-            if isinstance(action.schema, Callable):
-                action.schema = None
-            else: # stop making up random fields in the data. i am no longer asking
+            assert action.schema is None or isinstance(action.schema, dict), "Schema must be None or dict"
+            if action.schema and action.schema.get("type", None) == "object":
+                # stop making up random fields in the data. i am no longer asking
                 action.schema["additionalProperties"] = False # type: ignore
             self.actions[action.name] = action
             if action.name not in self._seen_actions:
@@ -142,7 +140,10 @@ class Game:
         elif isinstance(msg, Context):
             await self.send_context(msg.data.message, msg.data.silent)
         elif isinstance(msg, ForceAction):
-            chosen_action, data = await self.llm.force_action(msg, self.actions)
+            ret = await self.llm.force_action(msg, self.actions)
+            if ret is None:
+                return
+            (chosen_action, data) = ret
             await self.execute_action(chosen_action, data, force=msg)
         elif isinstance(msg, ActionResult):
             await self.process_result(msg)
