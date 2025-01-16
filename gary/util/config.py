@@ -65,15 +65,20 @@ def _merge_nested_dicts(a: dict[str, Any], b: dict[str, Any]):
             out[k] = bv
     return out
 
-def _load_config(preset_name: str):
-    with open(CONFIG_PATH) as f:
-        config_yaml: dict = yaml.safe_load(f)
+def _load_config(preset_name: str, config_yaml: dict | None = None):
+    if config_yaml is None:
+        _config_yaml: dict
+        with open(CONFIG_PATH) as f:
+            _config_yaml = yaml.safe_load(f)
+        return _load_config(preset_name, _config_yaml)
+    
     preset: dict
     if not (preset := config_yaml.get(preset_name, None)):
         raise ValueError(f"Preset '{preset_name}' was not found in config.yaml")
     if base := preset.get("base", None):
-        if not (base_preset := config_yaml.get(base, None)):
+        if base not in config_yaml:
             raise ValueError(f"Base preset '{base}' (from '{preset_name}') was not found in config.yaml")
+        base_preset = _load_config(base, config_yaml)
         preset = _merge_nested_dicts(base_preset, preset["overrides"])
 
     def replace_env(d: dict[str, Any]) -> dict[str, Any]:
