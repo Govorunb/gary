@@ -1,8 +1,8 @@
 from datetime import datetime
 import random, time
 from pydantic import BaseModel, TypeAdapter
-from guidance import * # type: ignore
-from guidance.chat import Llama3ChatTemplate
+from guidance import gen, with_temperature, select, json, models, system, user, assistant
+from guidance.chat import Llama3ChatTemplate, Phi3MiniChatTemplate
 from guidance._grammar import Function
 import llama_cpp
 
@@ -47,7 +47,11 @@ class LLM:
         params: dict[str, Any] = {
             "api_key": llm_config.api_key,
             "seed": random.randint(1, 2**32 - 1),
-            "chat_template": Llama3ChatTemplate.template_str if 'Llama-3.1' in model else None,
+            "chat_template": (
+                # why is this not picked up automatically orz
+                Llama3ChatTemplate if 'Llama-3.1' in model
+                else Phi3MiniChatTemplate if 'Phi-3.' in model
+                else None),
             "enable_monitoring": False,
             **CONFIG.engine_params
         }
@@ -131,9 +135,11 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         if persistent_llarry_only and isinstance(self.llm, Llarry):
             out: Llarry
             # FIXME: very silly way to get the index, optimize if needed
-            i = out._current_prompt().count("<|start_header_id|>")
+            ends = out.get_msg_end_tokens()
+            prompt = str(out)
+            i = sum(prompt.count(end) for end in ends)
             logger.debug(f"Marking message {i} as persistent (current: {out.persistent})")
-            out.persistent.append(i)
+            out.persistent.add(i)
         if not ephemeral:
             self.llm = out
         return out
@@ -172,9 +178,9 @@ You must perform one of the following actions, given this information:
         llm = self.llm
         with assistant():
             llm += f'''\
-My choice is:
 ```json
-{{'''
+{{
+    "command": "action",'''
             if CONFIG.gary.enable_cot:
                 llm = time_gen(llm, f'''
     "reasoning": "{gen("reasoning", stop=['.','\n','"',"<|eot_id|>"], temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
@@ -261,7 +267,7 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
                 self.reset()
 
 def tokens(m: models.Model) -> int:
-    return len(m.engine.tokenizer.encode(m._current_prompt().encode())) # type: ignore
+    return len(m.engine.tokenizer.encode(str(m).encode())) # type: ignore
 
 def time_gen[M: models.Model](lm: M, gen_: Function | str) -> M:
     t0 = time.time()

@@ -162,7 +162,7 @@ class Game:
 
     def on_disconnect(self):
         self.reset()
-        self.llm.reset() # TODO: config whether to reset on disconnect
+        # self.llm.reset() # TODO: config whether to reset on disconnect
     
     def reset(self):
         self.llm.not_gaming()

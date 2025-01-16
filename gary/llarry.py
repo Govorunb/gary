@@ -34,7 +34,7 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
 
         self.default_n_keep = kwargs.get("n_keep", 500)
         self.default_n_discard = kwargs.get("n_discard", None) # n_ctx // 2
-    
+
     def shift_kv_cache(self, n_keep, n_discard, seq_id=0):
         self.model_obj._ctx.kv_cache_seq_rm(seq_id, n_keep, n_keep + n_discard)
         self.model_obj._ctx.kv_cache_seq_shift(seq_id, n_keep, -1, -n_discard)
@@ -47,8 +47,8 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
 
         t = time.time()
         self.shift_kv_cache(n_keep, n_discard)
-        logger.debug(f"Shifted KV cache by {n_discard} in {(time.time()-t)*1000:.2f}ms")
-        
+        logger.debug(f"Shifted KV cache by {n_discard} (from {n_keep}) in {(time.time()-t)*1000:.2f}ms")
+
         token_ids = token_ids[:n_keep] + token_ids[n_keep + n_discard:]
         logger.info(f"Trimmed context to {len(token_ids)} tokens")
         # logger.critical(self.tokenizer.decode(token_ids).decode())
@@ -63,7 +63,17 @@ class Llarry(LlamaCpp):
         # can be RemoteEngine instead
         if isinstance(self.engine, LlamaCppEngine) and not isinstance(self.engine, StreamingLlamaCppEngine):
             self.engine = StreamingLlamaCppEngine(self.engine, **kwargs)
-        self.persistent: list[int] = []
+        self.persistent: set[int] = set()
+
+    def get_msg_end_tokens(self):
+        ends: set[str] = set()
+        chat_template = self.engine.get_chat_template()
+        for role in ["system", "user", "assistant"]:
+            try:
+                ends.add(chat_template.get_role_end(role))
+            except Exception as e:
+                logger.debug(f"No role end for '{role}' {e}")
+        return list(ends)
 
     def trim(self) -> Self:
         if not isinstance(self.engine, StreamingLlamaCppEngine):
@@ -74,67 +84,114 @@ class Llarry(LlamaCpp):
             return self
 
         # logger.warning("pray now my lord")
-        t = time.time()
-        prompt = self._current_prompt()
-        tokens = self.engine.tokenizer.encode(prompt.encode())
+        t0 = time.time()
+        prompt = str(self) # self._current_prompt()
+        t_prompt = time.time()
         # TODO: see if we can maybe keep state as we add the messages
         # (probably not because of assistant msgs interleaving append/generate)
-        messages = prompt.split("<|start_header_id|>")
+        sys_start = None
+        len_start = 0
+        chat_template = self.engine.get_chat_template()
+        tokenizer = self.engine.tokenizer
+        # bos_token = tokenizer.bos_token_id # type: ignore
+        try:
+            sys_start = chat_template.get_role_start("system")
+            sys_start = tokenizer.encode(sys_start.encode())
+            len_start = len(sys_start)
+        except:
+            logger.warning("Could not get system role start")
+        tokens = tokenizer.encode(prompt.encode())
+        t_encode = time.time()
+        msg_ends = [tokenizer.encode(end.encode()) for end in self.get_msg_end_tokens()]
+
+        # having easily accessible utility methods like list.split is clearly not pythonic
+
         total_tokens = 0
         n_keep = 0
         max_discard = self.engine.model_obj.n_ctx() // 2
         n_discard = 0
         i_start_discard = 0
         i_end_discard = 0
-        for i, message in enumerate(messages):
+        def can_discard(i_message: int, message_span: tuple[int, int]) -> bool:
+            if i_message in self.persistent:
+                # logger.warning(f"message {i_message} is persistent ({self.persistent})")
+                return False
+            if not sys_start:
+                return True
+            (start, size) = message_span
+            if size < len_start:
+                return False
+            return tokens[start:start+len_start] != sys_start
+
+        def on_message_end(i: int, message_span: tuple[int, int]) -> bool:
+            '''
+            Returns: whether to continue parsing the next message.
+            '''
+            nonlocal n_discard, n_keep
+            nonlocal i_start_discard, i_end_discard
+            # (start, size) = span
+            # message_tokens = tokens[start:start+size]
+            # message = tokenizer.decode(message_tokens).decode()
+            # logger.info(f"message #{i}: {message}")
             if n_discard >= max_discard:
-                break
+                i_end_discard = i
+                # logger.warning("discard over max")
+                return False
             
-            if message == "<|begin_of_text|>":
-                total_tokens += 1
-                continue
-            
-            msg_toks = self.engine.tokenizer.encode(message.encode())
-            num_tokens = len(msg_toks) + 1 # count the token we split on
-            
-            can_discard: bool = True
-            try:
-                role = message[:message.index("<|end_header_id|>")]
-                can_discard = not (role == "system" or i in self.persistent)
-                # logger.debug(f"{role=};{message=}")
-            except ValueError:
-                logger.warning(f"""\
-Message {i} is malformed - has no end_header_id
-Message: <|start_header_id|>{message}
-Assuming discardable!""")
-            
-            # 1. go until first discardable; this is n_keep
-            # 2. then, find non-discardable message
+            # 1. first discardable is n_keep
+            # 2. then, find first non-discardable message
             # 3. all tokens between are discardable
+            discardable = can_discard(i, message_span)
             if n_keep == 0:
-                if can_discard:
+                if discardable:
+                    # logger.warning(f"first discardable at {total_tokens} (#{i})")
                     n_keep = total_tokens
                     i_start_discard = i
             else:
-                if can_discard:
+                if discardable:
                     n_discard = total_tokens - n_keep
                 else:
+                    # logger.warning(f"discardable span ends at {total_tokens} (#{i})")
                     i_end_discard = i
+                    return False
+            return True
+        msg_tokens = 0
+        i = 0
+        for i_tok in range(len(tokens)):
+            if any(tokens[i_tok-len(end) : i_tok] == end for end in msg_ends):
+                if not on_message_end(i, (total_tokens, msg_tokens)):
+                    # logger.warning("stopping")
                     break
-            total_tokens += num_tokens
+                # logger.warning(f"new message #{i} ({total_tokens}..{total_tokens+msg_tokens}) (discardable: {can_discard(i, (total_tokens, msg_tokens))})")
+                i += 1
+                total_tokens += msg_tokens
+                msg_tokens = 0
+            msg_tokens += 1
+        t_find = time.time()
         persist_shift = i_end_discard - i_start_discard + 1
         
-        # logger.warning(f"Trim:\n{n_keep=}\n{n_discard=}\nKept:\n{self.engine.tokenizer.decode(tokens[:n_keep]).decode()}")
-
         tokens = self.engine.trim(tokens, n_keep, n_discard)
+        t_trim = time.time()
         # this code is ok because i'm not a python dev :)
         copy = self.__new__(self.__class__)
         # initializers above Model create an Engine, we don't want that
         # literally just want to reset state
         Model.__init__(copy, self.engine, echo = False)
-        copy.persistent = [i - persist_shift for i in self.persistent if i >= i_start_discard] # immutability
-        new_prompt = self.engine.tokenizer.decode(tokens).decode()
+        copy.persistent = set(p - persist_shift if p >= i_end_discard else p for p in self.persistent) # immutability
+        t_copy = time.time()
+        new_prompt = tokenizer.decode(tokens).decode()
+        t_decode = time.time()
         # logger.critical(f"New prompt:\n{new_prompt}")
-        logger.debug(f"Trimmed in {(time.time()-t)*1000:.2f}ms")
+        timings = [
+            ("prompt", t_prompt, t0),
+            ("encode", t_encode, t_prompt),
+            ("find", t_find, t_encode),
+            ("trim", t_trim, t_find),
+            ("copy", t_copy, t_trim),
+            ("decode", t_decode, t_copy),
+            ("total", time.time(), t0),
+        ]
+        logger.debug("\n\t".join(["Trimmed in:"] + [f"{name}: {(t-t_prev)*1000:.4f}ms" for name, t, t_prev in timings]))
+        # logger.warning(f"{n_keep=} {n_discard=} {i_start_discard=} {i_end_discard=} {persist_shift=}")
         copy += new_prompt
         return copy
