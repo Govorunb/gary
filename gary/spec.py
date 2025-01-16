@@ -1,6 +1,9 @@
+import warnings
 from typing import * # type: ignore
 from uuid import uuid4
 from pydantic import BaseModel, Field, TypeAdapter
+
+warnings.filterwarnings("ignore", category=UserWarning, message='Field name "schema" in ')
 
 # pyright: reportIncompatibleVariableOverride=false
 
