@@ -2,8 +2,7 @@ from typing import * # type: ignore
 
 from .util import CONFIG, logger, WebsocketConnection
 from .util.config import ExistingConnectionPolicy
-from .llm import LLM
-from .scheduler import Scheduler
+from .llm import LLM, Scheduler
 from .spec import *
 
 class Registry:

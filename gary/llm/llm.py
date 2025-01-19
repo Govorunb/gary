@@ -1,23 +1,23 @@
-from datetime import datetime
 import random, time
+from datetime import datetime
 from pydantic import BaseModel, TypeAdapter
+
+import llama_cpp
 from guidance import gen, with_temperature, select, json, models, system, user, assistant
 from guidance.chat import Llama3ChatTemplate, Phi3MiniChatTemplate
 from guidance._grammar import Function
-import llama_cpp
 
-from gary.randy import Randy
-from gary.llarry import Llarry, StreamingLlamaCppEngine
 
-from .util import CONFIG, logger
-from .util.config import MANUAL_RULES
-from .spec import *
+from ..util import CONFIG, logger
+from ..util.config import MANUAL_RULES
+from ..spec import *
+
+from .randy import Randy
+from .llarry import Llarry, StreamingLlamaCppEngine
 if TYPE_CHECKING:
-    from .registry import Game
+    from ..registry import Game
 
 # IMPL: this whole file is my implementation since uhh... yeah
-
-SchemaLike = Mapping[str, Any] | type[BaseModel] | TypeAdapter
 
 _engine_map = {
     # "openai": models.OpenAI,

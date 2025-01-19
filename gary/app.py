@@ -7,7 +7,7 @@ app = FastAPI()
 active_connections: list[WebsocketConnection] = []
 
 @app.websocket("/")
-async def websocket_endpoint(websocket: WebSocket):
+async def game_ws(websocket: WebSocket):
     await websocket.accept()
     logger.info(f"New connection from {websocket.client}")
     connection = WebsocketConnection(websocket)

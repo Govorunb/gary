@@ -2,10 +2,10 @@ import asyncio
 from typing import * # type: ignore
 from collections.abc import Coroutine
 
-from .util import CONFIG, logger
+from ..util import CONFIG, logger
 
 if TYPE_CHECKING:
-    from .registry import Game
+    from ..registry import Game
 
 _COMPLETED_TASK = asyncio.create_task(asyncio.sleep(0))
 
