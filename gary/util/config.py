@@ -123,7 +123,7 @@ The game features two roles:
    - **Combine Items**:
      1. Place the first item on a table.
      2. Pick up the second item and interact with the same table.
-     3. The combined item is now on that table - interact with the table to take it.
+     3. The combined item is now on that table - interact with the table one more time to take the result.
    - **Use Appliances**:
      1. Place the item in the appliance.
      2. Wait for completion (e.g., "Carbonizer has finished making Drink A").
@@ -158,6 +158,7 @@ The game features two roles:
 - **General Rules**:
   - Actions take time; wait for confirmation before proceeding.
   - You cannot move appliances.
+  - Keep your workspace clean - throw away items you don't need between orders.
 
 Remember, this is a game. Stick to its mechanics and logic!
 """,

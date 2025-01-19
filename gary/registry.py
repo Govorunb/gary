@@ -171,3 +171,5 @@ class Game:
         self.actions.clear()
         self.pending_actions.clear()
         self.pending_forces.clear()
+
+REGISTRY = Registry()

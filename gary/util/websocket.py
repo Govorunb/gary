@@ -1,7 +1,6 @@
 import json
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
-from typing import * # type: ignore
 
 from ..spec import *
 from .logger import logger
@@ -13,6 +12,8 @@ if TYPE_CHECKING:
 class WebsocketConnection:
     def __init__(self, websocket: WebSocket):
         self.ws = websocket
+        from ..registry import REGISTRY
+        self.ws.state.registry = REGISTRY
 
     def registry(self) -> "Registry":
         return self.ws.state.registry

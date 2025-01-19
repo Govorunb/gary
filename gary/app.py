@@ -1,11 +1,8 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from .registry import Registry
 from .util import WebsocketConnection, logger
 
 app = FastAPI()
-
-_registry = Registry()
 
 active_connections: list[WebsocketConnection] = []
 
@@ -14,13 +11,11 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     logger.info(f"New connection from {websocket.client}")
     connection = WebsocketConnection(websocket)
-    websocket.state.registry = _registry
     active_connections.append(connection)
     try:
         await connection.lifecycle()
-        logger.info(f"Connection to {websocket.client} closed")
+        logger.info(f"Disconnected from {websocket.client}")
     except WebSocketDisconnect as e:
-        logger.error(f"Connection closed unexpectedly ([{e.code}] {e.reason})")
-        raise
+        logger.error(f"{websocket.client} disconnected ([{e.code}] {e.reason})")
     finally:
         active_connections.remove(connection)

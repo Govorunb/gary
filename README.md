@@ -9,7 +9,7 @@ The project is mostly for fun but I'm open to feedback and contributions.
 ### Features
 - Can use a few model engines/providers:
 	- Local models (LlamaCpp, Transformers\*)
-	- Custom remote server (Guidance server\*, LlamaCpp server\*)
+	- Remote Guidance server\*
 	- A "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
 	- Remote services (OpenAI, Anthropic, Google, Azure) are *not* supported. For more info, read the ["Remote Services?"](#remote-services-openai-anthropic-google-azure) section.
 - **Guaranteed** to follow the schema[^1][^2]
@@ -88,7 +88,9 @@ These are edge cases where Neuro may behave differently. For most of these, the 
 - etc etc, just download the repo and search for "IMPL" in the code
 
 #### Remote services? (OpenAI, Anthropic, Google, Azure)
-Nope, local models only. Guidance lets you use remote services, but please note that guidance cannot enforce syntax/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just [throw exceptions](https://i.imgur.com/UNtnhdV.png) because of invalid output instead. For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or the [guidance server example](https://github.com/guidance-ai/guidance/blob/727e8320062746b019d29a4cf393c88641fd7e4c/notebooks/server_anachronism.ipynb).
+Nope, local models only. Guidance lets you use remote services, but it cannot enforce grammar/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just [throw exceptions](https://i.imgur.com/UNtnhdV.png) because of invalid output instead. For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or the [guidance server example](https://github.com/guidance-ai/guidance/blob/727e8320062746b019d29a4cf393c88641fd7e4c/notebooks/server_anachronism.ipynb).
+
+Guidance does work with [Phi3 on Azure](https://github.com/microsoft/Phi-3CookBook/blob/main/code/01.Introduce/guidance.ipynb), but it's not implemented here due to lack of interest.
 
 #### Acknowledgements
 Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:
