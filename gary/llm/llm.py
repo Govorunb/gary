@@ -77,7 +77,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
 
     def llm_engine(self) -> models._model.Engine:
         return self.llm.engine # type: ignore
-    
+
     def max_tokens(self, at_most: int = 100000) -> int:
         maxtok = max(0, min(at_most, self.token_limit - tokens(self.llm)))
         logger.debug(f"Max tokens: {maxtok}")
@@ -91,7 +91,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             engine.reset_metrics()
             engine.model_obj.reset()
             llama_cpp.llama_kv_cache_clear(engine.model_obj.ctx)
-        
+
         # :) all this to avoid the model.LlamaCpp ctor
         # it sure is nice that python lets you do this :)
         buh = models.Model(self.llm.engine, echo=False)
@@ -99,7 +99,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             buh.__class__ = Llarry
             buh.persistent = self.llm.persistent.copy() # type: ignore
         self.llm = buh
-        
+
         assert self.llm.token_count == 0
         assert len(self.llm._current_prompt()) == 0
         logger.debug(f'truncated context to {tokens(self.llm)}')
@@ -249,10 +249,10 @@ Respond with either '{NO}' (to do nothing) or '{YES}' (you will then be asked to
         if CONFIG.gary.non_ephemeral_try_context:
             self.llm = llm
         return None if decision == NO else await self.action(actions)
-    
+
     def truncate_context(self, need_tokens: int = 0):
         assert need_tokens >= 0
-        
+
         token_count = tokens(self.llm)
         used = token_count + need_tokens
         msg = f"Currently at {used}/{self.token_limit} tokens"

@@ -47,21 +47,21 @@ class Context(GameMessage):
     class Data(BaseModel):
         message: str
         silent: bool
-    
+
     command: Literal["context"] = "context"
     data: Data
 
 class RegisterActions(GameMessage):
     class Data(BaseModel):
         actions: list[ActionModel]
-    
+
     command: Literal["actions/register"] = "actions/register"
     data: Data
 
 class UnregisterActions(GameMessage):
     class Data(BaseModel):
         action_names: list[str]
-    
+
     command: Literal["actions/unregister"] = "actions/unregister"
     data: Data
 
@@ -72,7 +72,7 @@ class ForceAction(GameMessage):
         ephemeral_context: bool | None
         action_names: list[str]
         main_thread: bool = True # undocumented
-    
+
     command: Literal["actions/force"] = "actions/force"
     data: Data
 
@@ -81,7 +81,7 @@ class ActionResult(GameMessage):
         id: str
         success: bool
         message: str | None = None
-    
+
     command: Literal["action/result"] = "action/result"
     data: Data
 
@@ -92,7 +92,7 @@ class Action(NeuroMessage):
         id: str = Field(default_factory=lambda: uuid4().hex)
         name: str
         data: Any | None
-    
+
     command: Literal["action"] = "action"
     data: Data
 

@@ -71,7 +71,7 @@ def _load_config(preset_name: str, config_yaml: dict | None = None):
         with open(CONFIG_PATH) as f:
             _config_yaml = yaml.safe_load(f)
         return _load_config(preset_name, _config_yaml)
-    
+
     preset: dict
     if not (preset := config_yaml.get(preset_name, None)):
         raise ValueError(f"Preset '{preset_name}' was not found in config.yaml")

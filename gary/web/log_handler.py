@@ -17,7 +17,7 @@ class ManagerLogHandler(logging.Handler):
                 message=record.getMessage(),
                 level=record.levelname))
             )
-    
+
     async def send_log(self, manager: "ManagerWSConnection", log: Log):
         if manager.is_connected():
             await manager.send(log)

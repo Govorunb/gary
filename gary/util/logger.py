@@ -3,7 +3,6 @@ import logging, logging.handlers
 import colorlog
 
 from ..web.log_handler import ManagerLogHandler
-
 from . import CONFIG
 
 logging.addLevelName(0, "ALL")

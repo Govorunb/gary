@@ -16,7 +16,7 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel]:
         self.id = uuid4().hex[:8]
         self.t_recv = t_recv
         self.t_send = t_send
-        
+
         from ..registry import REGISTRY
         self.registry = REGISTRY
 
@@ -92,7 +92,7 @@ class GameWSConnection(WSConnection[AnyGameMessage, AnyNeuroMessage]):
         await super().send(message)
         for manager in self.registry.managers.values():
             await manager.on_sent(self, message)
-    
+
     async def receive(self) -> AnyGameMessage:
         message = await super().receive()
         for manager in self.registry.managers.values():
@@ -106,7 +106,7 @@ class ManagerWSConnection(WSConnection):
 
     async def force_send_to_game(self, game: str, message: AnyNeuroMessage):
         await self.connection_for_game(game).send(message)
-    
+
     async def fake_receive_from_game(self, message: AnyGameMessage):
         conn = self.connection_for_game(message.game)
         await self.registry.handle(message, conn)
@@ -127,9 +127,9 @@ class ManagerWSConnection(WSConnection):
                 await self.fake_receive_from_game(message.message)
             case _:
                 raise Exception(f"Unhandled message type {type(message)}")
-    
+
     async def on_sent(self, conn: GameWSConnection, message: AnyNeuroMessage):
         await self.send(MessageSent(game=conn.id, message=message))
-    
+
     async def on_received(self, conn: GameWSConnection, message: AnyGameMessage):
         await self.send(MessageReceived(game=conn.id, message=message))

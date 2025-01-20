@@ -9,7 +9,7 @@ class Registry:
         self.conflict_resolution = existing_connection_policy or CONFIG.gary.existing_connection_policy
         self.connections: dict[str, WSConnection] = {}
         self.managers: dict[str, ManagerWSConnection] = {}
-    
+
     async def on_startup(self, msg: Startup, conn: GameWSConnection):
         game = self.games.get(msg.game)
         if game is None:
@@ -28,7 +28,7 @@ class Registry:
         game.connection = conn
         game.connection.ws.state.game = game
         game.connected()
-    
+
     async def handle(self, msg: AnyGameMessage, conn: GameWSConnection):
         if isinstance(msg, Startup):
             await self.on_startup(msg, conn)
@@ -42,7 +42,7 @@ class Registry:
             if game.connection != conn and game.connection.is_connected(): # IMPL
                 logger.error(f"Game {msg.game} is registered to a different active connection! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
             await game.handle(msg)
-    
+
     def connect(self, conn: WSConnection):
         conn.ws.state.registry = self
         self.connections[conn.id] = conn
@@ -64,7 +64,7 @@ class Game:
         self.connection = connection
         self.llm = LLM(self)
         self.scheduler = Scheduler(self)
-        
+
         connection.ws.state.registry = registry
         connection.ws.state.game = self
 
@@ -82,12 +82,12 @@ class Game:
                 self._seen_actions.add(action.name)
                 logger.info(f"New action {action.name}: {action.description}")
         logger.info(f"Actions registered: {list(self.actions.keys())}")
-    
+
     async def action_unregister(self, actions: list[str]):
         for action_name in actions:
             self.actions.pop(action_name, None)
         logger.info(f"Actions unregistered: {actions}")
-    
+
     async def try_action(self) -> bool:
         if not self.connection.is_connected():
             return False
@@ -100,7 +100,7 @@ class Game:
             await self.execute_action(*action)
             return True
         return False
-    
+
     async def _force_any_action(self) -> bool:
         if not self.actions:
             logger.warning("No actions to force_any")
@@ -128,7 +128,7 @@ class Game:
             logger.warning(f"Received result for unknown action {result.data.id}")
             # IMPL: result for unknown action
             return
-        
+
         # IMPL: there SHOULD be a message on failure, but success doesn't require one
         ctx = f"Result for action {result.data.id[:5]}: {"Performing" if result.data.success else "Failure"} ({result.data.message or 'no message'})"
         is_force = bool(force := self.pending_forces.pop(result.data.id, None))
@@ -137,7 +137,7 @@ class Game:
         # i have no idea if it's guaranteed by the spec or not
         if is_force and not result.data.success:
             await self.handle(force)
-    
+
     async def send_context(self, msg: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
         self.llm.context(msg, silent, ephemeral=ephemeral, do_print=do_print)
         if not silent and not await self.try_action():
@@ -159,7 +159,7 @@ class Game:
                 await self.process_result(msg)
             case _:
                 raise Exception(f"Unhandled message type {type(msg)}")
-        
+
     async def disconnect(self, code: int = 1000, reason: str = "Disconnected"):
         await self.connection.disconnect(code, reason)
 
@@ -170,7 +170,7 @@ class Game:
     def on_disconnect(self):
         self.reset()
         # self.llm.reset() # TODO: config whether to reset on disconnect
-    
+
     def reset(self):
         self.llm.not_gaming()
         self.scheduler.stop()

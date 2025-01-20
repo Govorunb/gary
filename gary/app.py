@@ -10,10 +10,10 @@ app = FastAPI()
 @app.websocket("/")
 async def game_ws(websocket: WebSocket):
     connection = GameWSConnection(websocket)
-    
+
     await websocket.accept()
     logger.info(f"New connection {connection.id} from {websocket.client}")
-    
+
     try:
         await connection.lifecycle()
         logger.info(f"Disconnected from {websocket.client}")
@@ -23,10 +23,10 @@ async def game_ws(websocket: WebSocket):
 @app.websocket("/manage")
 async def manage_ws(websocket: WebSocket):
     connection = ManagerWSConnection(websocket)
-    
+
     await websocket.accept()
     logger.info(f"Manager {connection.id} ({websocket.client}) connected")
-    
+
     try:
         await connection.lifecycle()
         logger.info(f"Disconnected manager {websocket.client}")
