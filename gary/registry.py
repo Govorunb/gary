@@ -1,6 +1,6 @@
 from typing import * # type: ignore
 
-from .util import CONFIG, logger, WebsocketConnection
+from .util import CONFIG, logger, GameWSConnection
 from .util.config import ExistingConnectionPolicy
 from .llm import LLM, Scheduler
 from .spec import *
@@ -10,7 +10,7 @@ class Registry:
         self.games: MutableMapping[str, "Game"] = {}
         self.conflict_resolution = existing_connection_policy or CONFIG.gary.existing_connection_policy
     
-    async def on_startup(self, msg: Startup, conn: WebsocketConnection):
+    async def on_startup(self, msg: Startup, conn: GameWSConnection):
         game = self.games.get(msg.game)
         if game is None:
             self.games[msg.game] = game = Game(msg.game, self, conn)
@@ -29,7 +29,7 @@ class Registry:
         game.connection.ws.state.game = game
         game.connected()
     
-    async def handle(self, msg: AnyGameMessage, conn: WebsocketConnection):
+    async def handle(self, msg: AnyGameMessage, conn: GameWSConnection):
         if isinstance(msg, Startup):
             await self.on_startup(msg, conn)
         else:
@@ -44,7 +44,7 @@ class Registry:
             await game.handle(msg)
 
 class Game:
-    def __init__(self, name: str, registry: Registry, connection: WebsocketConnection):
+    def __init__(self, name: str, registry: Registry, connection: GameWSConnection):
         self.name = name
         self.registry = registry
         self.actions: dict[str, ActionModel] = {}
@@ -84,6 +84,8 @@ class Game:
         if not self.actions:
             logger.debug("No actions to try (Game.try_action)")
             return False
+        # FIXME: LLM generation is synchronous and hangs the websocket (Abandoned Pub disconnects)
+        # scheduler issue (todo)
         if action := await self.llm.try_action(self.actions):
             await self.execute_action(*action)
             return True

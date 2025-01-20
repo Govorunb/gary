@@ -22,3 +22,6 @@ llama-cpp-python = { index = "abetlen-cu124" }
 [[tool.uv.index]]
 name = "abetlen-cu124"
 url = "https://abetlen.github.io/llama-cpp-python/whl/cu124/"
+
+[tool.ruff.lint]
+ignore = ["F403","F405"]

@@ -116,7 +116,9 @@ class ShutdownReady(GameMessage):
     command: Literal["shutdown/ready"] = "shutdown/ready"
 
 AnyGameMessage = Union[Startup, Context, RegisterActions, UnregisterActions, ForceAction, ActionResult, ShutdownReady]
+GameMessageAdapter: TypeAdapter[Annotated[AnyGameMessage, Field(discriminator="command")]]
 GameMessageAdapter = TypeAdapter(Annotated[AnyGameMessage, Field(discriminator="command")])
 
 AnyNeuroMessage = Union[Action, ReregisterAllActions, GracefulShutdown, ImmediateShutdown]
+NeuroMessageAdapter: TypeAdapter[Annotated[AnyNeuroMessage, Field(discriminator="command")]]
 NeuroMessageAdapter = TypeAdapter(Annotated[AnyNeuroMessage, Field(discriminator="command")])
