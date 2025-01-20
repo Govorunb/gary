@@ -1,7 +1,7 @@
 from typing import Annotated, Literal, Union
 from pydantic import BaseModel, Field, TypeAdapter
 
-from ..registry import AnyGameMessage, AnyNeuroMessage
+from ..spec import AnyGameMessage, AnyNeuroMessage
 
 # pyright: reportIncompatibleVariableOverride=false
 
@@ -14,7 +14,6 @@ AnyServerMessageType = Literal[
     "message_sent",
     "message_received",
     "log",
-    "metrics"
 ]
 
 class ClientMessage(BaseModel):
@@ -26,6 +25,8 @@ class ServerMessage(BaseModel):
 
 class SendToGame(ClientMessage):
     type: Literal["send"] = "send"
+    game: str
+    '''Either a connection ID (preferred) or the game name.'''
     message: AnyNeuroMessage
 
 class ReceiveFromGame(ClientMessage):
@@ -35,23 +36,25 @@ class ReceiveFromGame(ClientMessage):
 
 class MessageSent(ServerMessage):
     type: Literal["message_sent"] = "message_sent"
+    game: str
     message: AnyNeuroMessage
 
 class MessageReceived(ServerMessage):
     type: Literal["message_received"] = "message_received"
+    game: str
     message: AnyGameMessage
 
+# TODO: maybe remove (terminal output already exists)
+# TODO: batch logs (0.5s-1s interval)
 class Log(ServerMessage):
     type: Literal["log"] = "log"
+    timestamp: float # unix timestamp
     message: str
-    level: int
+    level: str | int
 
-class MetricsEvent(ServerMessage):
-    type: Literal["metrics"] = "metrics"
-    data: str # arbitrary json (for now)
 
 AnyClientMessage = Union[SendToGame, ReceiveFromGame]
-AnyServerMessage = Union[MessageSent, MessageReceived, Log, MetricsEvent]
+AnyServerMessage = Union[MessageSent, MessageReceived, Log]
 
 ClientMessageAdapter: TypeAdapter[Annotated[AnyClientMessage, Field(discriminator="type")]]
 ClientMessageAdapter = TypeAdapter(Annotated[AnyClientMessage, Field(discriminator="type")])

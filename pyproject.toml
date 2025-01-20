@@ -24,4 +24,8 @@ name = "abetlen-cu124"
 url = "https://abetlen.github.io/llama-cpp-python/whl/cu124/"
 
 [tool.ruff.lint]
-ignore = ["F403","F405"]
+ignore = [
+    "E401", # multiple imports on one line
+    "F403", # star imports
+    "F405"  # symbol from star imports
+]

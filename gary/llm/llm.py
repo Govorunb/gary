@@ -1,6 +1,7 @@
 import random, time
+from json import dumps
 from datetime import datetime
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 
 import llama_cpp
 from guidance import gen, with_temperature, select, json, models, system, user, assistant
@@ -180,7 +181,7 @@ You must perform one of the following actions, given this information:
             llm += f'''\
 ```json
 {{
-    "command": "action",'''
+    "command": "action",''' # noqa: F541
             if CONFIG.gary.enable_cot:
                 llm = time_gen(llm, f'''
     "reasoning": "{gen("reasoning", stop=['.','\n','"',"<|eot_id|>"], temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
@@ -189,7 +190,7 @@ You must perform one of the following actions, given this information:
             chosen_action = llm["chosen_action"]
             # TODO: test without schema reminder
             llm += f'''
-    "schema": {actions[chosen_action].schema},'''
+    "schema": {dumps(actions[chosen_action].schema)},'''
             llm = time_gen(llm, f'''
     "data": {json("data", schema=actions[chosen_action].schema, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
@@ -223,14 +224,14 @@ Based on previous context, decide whether you should perform any of the followin
     "available_actions": {actions_json}
 }}
 ```
-Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to choose an action to perform).
+Respond with either '{NO}' (to do nothing) or '{YES}' (you will then be asked to choose an action to perform).
 """
         llm: models.Model = self.context(ctx, silent=True, ephemeral=True, do_print=False)
         with assistant():
-            resp = f"""
+            resp = f"""\
 ```json
 {{
-    "command": "decision","""
+    "command": "decision",""" # noqa: F541
             if CONFIG.gary.enable_cot:
                 resp += f"""
     "reasoning": "{gen("reasoning", stop=['\n','"',"<|eot_id|>"], temperature=self.temperature, max_tokens=self.max_tokens(100))}","""
