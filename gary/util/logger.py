@@ -2,7 +2,6 @@ import os, sys, datetime, atexit
 import logging, logging.handlers
 import colorlog
 
-from ..web.log_handler import ManagerLogHandler
 from . import CONFIG
 
 logging.addLevelName(0, "ALL")
@@ -29,11 +28,8 @@ _stdout.formatter = colorlog.ColoredFormatter('%(log_color)s[%(levelname)-8s : %
     'ERROR': 'red',
     'CRITICAL': 'bold_red',
 })
-_manager = ManagerLogHandler()
-_manager.setLevel(0)
 logger.addHandler(_fh)
 logger.addHandler(_stdout)
-logger.addHandler(_manager)
 logger.setLevel(0) # all
 
 def _delete_empty():

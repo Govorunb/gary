@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
 # IMPL: this whole file is my implementation since uhh... yeah
 
+# pyright: reportPrivateImportUsage=false
+
 _engine_map = {
     # "openai": models.OpenAI,
     # "anthropic": models.Anthropic,

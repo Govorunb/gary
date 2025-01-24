@@ -3,15 +3,16 @@ from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 
 from ..spec import *
-from ..web.manager_spec import *
 from .logger import logger
+from .utils import HasEvents
 
 # python is just so lovely
 if TYPE_CHECKING:
     from ..registry import Game
 
-class WSConnection[TRecv: BaseModel, TSend: BaseModel]:
+class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connect", "disconnect", "receive", "send"]]):
     def __init__(self, websocket: WebSocket, t_recv: TypeAdapter[TRecv], t_send: TypeAdapter[TSend]):
+        super().__init__()
         self.ws = websocket
         self.id = uuid4().hex[:8]
         self.t_recv = t_recv
@@ -19,6 +20,8 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel]:
 
         from ..registry import REGISTRY
         self.registry = REGISTRY
+        self.subscribe("connect", lambda *_: self.registry.connect(self))
+        self.subscribe("disconnect", lambda *_: self.registry.disconnect(self))
 
     def is_connected(self):
         return self.ws.client_state == WebSocketState.CONNECTED and self.ws.application_state == WebSocketState.CONNECTED
@@ -27,6 +30,7 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel]:
         if not self.is_connected():
             return
         await self.ws.close(code, reason)
+        await self._raise_event("disconnect", code, reason, False)
 
     async def send(self, message: TSend):
         if not self.is_connected():
@@ -35,101 +39,48 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel]:
         text = json.dumps(message.model_dump(mode='json'))
         # logger.debug(f'Sending: {text}')
         await self.ws.send_text(text)
+        await self._raise_event("send", message)
 
     async def receive(self) -> TRecv:
         text = await self.ws.receive_text()
         # logger.debug(f'Received: {text}')
-        return self.t_recv.validate_json(text, strict=True)
+        model = self.t_recv.validate_json(text, strict=True)
+        await self._raise_event("receive", model)
+        return model
 
     async def lifecycle(self):
-        await self.on_connect()
+        await self._raise_event("connect")
+        CloseEvent = NamedTuple("CloseEvent", [("code", int), ("reason", str), ("client_disconnected", bool)])
+        close_event = CloseEvent(1000, "", False)
         try:
             while self.is_connected():
-                msg = await self.receive()
-                await self.handle(msg)
+                await self.receive()
         except Exception as e:
             logger.debug(f"Disconnecting: {e}")
             if isinstance(e, WebSocketDisconnect):
                 logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
+                close_event = CloseEvent(e.code, e.reason, True)
             else:
                 logger.warning(f"Message handler error: ({type(e)}) {e}")
+                close_event = CloseEvent(1011, "Internal error", False)
+                await self.ws.close(close_event.code, close_event.reason)
                 raise
         finally:
-            await self.on_disconnect()
-
-    async def handle(self, message: TRecv):
-        raise NotImplementedError
-
-    async def on_connect(self):
-        self.registry.connect(self)
-    async def on_disconnect(self):
-        self.registry.disconnect(self)
+            await self._raise_event("disconnect", close_event)
 
 class GameWSConnection(WSConnection[AnyGameMessage, AnyNeuroMessage]):
     def __init__(self, websocket: WebSocket):
         super().__init__(websocket, GameMessageAdapter, NeuroMessageAdapter)
         self.game: "Game | None" = None
 
-    async def handle(self, message: AnyGameMessage):
-        if not self.is_connected():
-            logger.warning(f"Not connected, cannot handle {message}")
-            return
-        if not self.game and isinstance(message, RegisterActions):
-            await self.registry.on_startup(Startup(game=message.game), self)
-        await self.registry.handle(message, self)
-
-    async def on_connect(self):
-        await super().on_connect()
         # IMPL: sent on every connect (not just reconnects)
+        self.subscribe('connect', self._send_reregisterall)
+
+    async def handle(self, message: AnyGameMessage):
+        if not self.game and isinstance(message, RegisterActions):
+            await self.registry.startup(Startup(game=message.game), self)
+        await self._raise_event("receive", message)
+        # await self.registry.handle(message, self)
+
+    async def _send_reregisterall(self):
         await self.send(ReregisterAllActions())
-
-    async def on_disconnect(self):
-        if self.game:
-            self.game.on_disconnect()
-        await super().on_disconnect()
-
-    async def send(self, message: AnyNeuroMessage):
-        await super().send(message)
-        for manager in self.registry.managers.values():
-            await manager.on_sent(self, message)
-
-    async def receive(self) -> AnyGameMessage:
-        message = await super().receive()
-        for manager in self.registry.managers.values():
-            await manager.on_received(self, message)
-        return message
-
-class ManagerWSConnection(WSConnection):
-    def __init__(self, manager_ws: WebSocket):
-        super().__init__(manager_ws, ClientMessageAdapter, ServerMessageAdapter)
-        self.manager_ws = manager_ws
-
-    async def force_send_to_game(self, game: str, message: AnyNeuroMessage):
-        await self.connection_for_game(game).send(message)
-
-    async def fake_receive_from_game(self, message: AnyGameMessage):
-        conn = self.connection_for_game(message.game)
-        await self.registry.handle(message, conn)
-
-    def connection_for_game(self, game: str):
-        if (game_conn := self.registry.connections.get(game, None)) and isinstance(game_conn, GameWSConnection):
-            return game_conn
-        elif game_ := self.registry.games.get(game, None):
-            return game_.connection
-        else:
-            raise Exception(f"Game {game} not found")
-
-    async def handle(self, message: AnyClientMessage):
-        match message:
-            case SendToGame():
-                await self.force_send_to_game( message.game, message.message)
-            case ReceiveFromGame():
-                await self.fake_receive_from_game(message.message)
-            case _:
-                raise Exception(f"Unhandled message type {type(message)}")
-
-    async def on_sent(self, conn: GameWSConnection, message: AnyNeuroMessage):
-        await self.send(MessageSent(game=conn.id, message=message))
-
-    async def on_received(self, conn: GameWSConnection, message: AnyGameMessage):
-        await self.send(MessageReceived(game=conn.id, message=message))

@@ -13,6 +13,7 @@ class Scheduler:
     def __init__(self, game: "Game"):
         logger.info(f"Created scheduler for {game.name}")
         self.game = game
+        # FIXME: actual scheduling (queue and such)
         self.idle_timeout_try = CONFIG.gary.scheduler.idle_timeout_try
         self.idle_timeout_force = CONFIG.gary.scheduler.idle_timeout_force
 
@@ -38,10 +39,10 @@ class Scheduler:
         self._try_task.cancel()
         self._force_task.cancel()
 
-    def on_action(self):
+    def on_action(self, *_):
         self._reset_idle_timers()
 
-    def on_context(self):
+    def on_context(self, *_):
         self._reset_try()
 
     def _reset_idle_timers(self):

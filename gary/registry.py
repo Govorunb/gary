@@ -1,72 +1,113 @@
-from .util import CONFIG, logger, WSConnection, GameWSConnection, ManagerWSConnection
+from functools import partial
+import json
+
+from .util import CONFIG, logger, WSConnection, GameWSConnection, HasEvents
 from .util.config import ExistingConnectionPolicy
 from .llm import LLM, Scheduler
 from .spec import *
 
-class Registry:
+class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconnected"]]):
     def __init__(self, *, existing_connection_policy: ExistingConnectionPolicy | None = None):
-        self.games: MutableMapping[str, "Game"] = {}
+        super().__init__()
+        self.games: dict[str, "Game"] = {}
         self.conflict_resolution = existing_connection_policy or CONFIG.gary.existing_connection_policy
         self.connections: dict[str, WSConnection] = {}
-        self.managers: dict[str, ManagerWSConnection] = {}
+        self._subscriptions: dict[str, Any] = {}
 
-    async def on_startup(self, msg: Startup, conn: GameWSConnection):
+    async def startup(self, msg: Startup, conn: GameWSConnection) -> "Game":
         game = self.games.get(msg.game)
         if game is None:
-            self.games[msg.game] = game = Game(msg.game, self, conn)
-        else:
-            # IMPL: game already connected
-            if game.connection != conn:
-                if game.connection.is_connected():
-                    # IMPL: different active connection
-                    logger.warning(f"Game {msg.game} received startup from {conn.ws.client}, but is already actively connected to {game.connection.ws.client}!")
-                    conn_to_close = game.connection if self.conflict_resolution == ExistingConnectionPolicy.DISCONNECT_EXISTING else conn
-                    logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {self.conflict_resolution}")
-                    close_code = 1012 # Service Restart https://github.com/Luka967/websocket-close-codes
-                    await conn_to_close.disconnect(close_code, "Multiple connections are not allowed")
-                del game.connection.ws.state.game
-        game.connection = conn
-        game.connection.ws.state.game = game
-        game.connected()
+            game = Game(msg.game, self, conn)
+            self.games[msg.game] = game
+            await self._raise_event("game_created", game)
+            await game._connected()
+        await game.set_connection(conn)
+        return game
 
     async def handle(self, msg: AnyGameMessage, conn: GameWSConnection):
         if isinstance(msg, Startup):
-            await self.on_startup(msg, conn)
+            await self.startup(msg, conn)
         else:
             if not (game := self.games.get(msg.game, None)):
                 # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
-                logger.warning(f"Game {msg.game} was somehow not connected, imitating a `startup`")
-                await self.on_startup(Startup(game=msg.game), conn)
-                await self.handle(msg, conn)
+                logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
+                game = await self.startup(Startup(game=msg.game), conn)
                 return
             if game.connection != conn and game.connection.is_connected(): # IMPL
                 logger.error(f"Game {msg.game} is registered to a different active connection! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
-            await game.handle(msg)
 
-    def connect(self, conn: WSConnection):
-        conn.ws.state.registry = self
+    async def connect(self, conn: WSConnection):
         self.connections[conn.id] = conn
-        if isinstance(conn, ManagerWSConnection):
-            self.managers[conn.id] = conn
+        if isinstance(conn, GameWSConnection):
+            self._subscriptions[conn.id] = conn.subscribe("receive", partial(self.handle, conn=conn))
+            await self._raise_event("game_connected", conn.game)
 
-    def disconnect(self, conn: WSConnection):
+    async def disconnect(self, conn: WSConnection):
         self.connections.pop(conn.id, None)
-        self.managers.pop(conn.id, None)
+        if isinstance(conn, GameWSConnection):
+            await self._raise_event("game_disconnected", conn.game)
+            if (unsub := self._subscriptions.pop(conn.id, None)):
+                unsub()
 
-class Game:
+type _game_events = Literal["connect", "disconnect"] | AnyGameCommand | AnyNeuroCommand
+
+class Game(HasEvents[_game_events]):
     def __init__(self, name: str, registry: Registry, connection: GameWSConnection):
+        super().__init__()
         self.name = name
         self.registry = registry
         self.actions: dict[str, ActionModel] = {}
         self._seen_actions: set[str] = set()
         self.pending_actions: dict[str, Action] = {}
         self.pending_forces: dict[str, ForceAction] = {}
-        self.connection = connection
-        self.llm = LLM(self)
+        self._connection = connection
+        self.llm = LLM(self) # TODO: single LLM (again)
         self.scheduler = Scheduler(self)
 
-        connection.ws.state.registry = registry
-        connection.ws.state.game = self
+        self.subscriptions = []
+        self._subscribe(connection)
+
+    def _unsubscribe(self):
+        for unsub in self.subscriptions:
+            unsub()
+        self.subscriptions.clear()
+
+    def _subscribe(self, connection: GameWSConnection):
+        self._unsubscribe()
+        self.subscriptions.extend([
+            connection.subscribe("receive", self.handle),
+            connection.subscribe("disconnect", self._disconnected),
+            connection.subscribe("connect", self._connected),
+        ])
+
+    @property
+    def connection(self) -> GameWSConnection:
+        return self._connection
+    async def set_connection(self, conn: GameWSConnection):
+        if self._connection is conn:
+            return
+
+        # IMPL: game already connected
+        if self._connection and self._connection.is_connected():
+            # IMPL: different active connection
+            logger.warning(f"Game '{self.name}' received startup from {conn.ws.client}, but is already actively connected to {self._connection.ws.client}!")
+            policy = CONFIG.gary.existing_connection_policy
+            conn_to_close = self._connection if policy == ExistingConnectionPolicy.DISCONNECT_EXISTING else conn
+            logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {policy}")
+            if policy == ExistingConnectionPolicy.DISCONNECT_NEW:
+                await conn.disconnect(1002, "Multiple connections are not allowed")
+                return
+            else:
+                await self._connection.disconnect(1012, "Changing connections")
+
+        self._connection = conn
+
+        if conn.game and conn.game is not self:
+            logger.error(f"set_connection: conn already has game! {conn.game.name}")
+            # conn.game._unsubscribe()
+            # conn.game._connection = None
+        conn.game = self
+        self._subscribe(conn)
 
     async def action_register(self, actions: list[ActionModel]):
         for action in actions:
@@ -80,7 +121,7 @@ class Game:
             self.actions[action.name] = action
             if action.name not in self._seen_actions:
                 self._seen_actions.add(action.name)
-                logger.info(f"New action {action.name}: {action.description}")
+                logger.info(f"New action {action.name}: {action.description}\nSchema: {json.dumps(action.schema, indent=4)}")
         logger.info(f"Actions registered: {list(self.actions.keys())}")
 
     async def action_unregister(self, actions: list[str]):
@@ -89,7 +130,7 @@ class Game:
         logger.info(f"Actions unregistered: {actions}")
 
     async def try_action(self) -> bool:
-        if not self.connection.is_connected():
+        if not self._connection.is_connected():
             return False
         if not self.actions:
             logger.debug("No actions to try (Game.try_action)")
@@ -121,7 +162,8 @@ class Game:
             self.pending_forces[msg.data.id] = force
         self.llm.context(f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}", silent=True)
         self.scheduler.on_action()
-        await self.connection.send(msg)
+        await self._raise_event("action", msg)
+        await self._connection.send(msg)
 
     async def process_result(self, result: ActionResult):
         if not self.pending_actions.pop(result.data.id, None):
@@ -145,7 +187,10 @@ class Game:
 
     async def handle(self, msg: AnyGameMessage):
         logger.debug(f'Handling {msg.command}')
+        await self._raise_event(msg.command, msg)
         match msg:
+            case Startup():
+                pass
             case RegisterActions():
                 await self.action_register(msg.data.actions)
             case UnregisterActions():
@@ -158,16 +203,16 @@ class Game:
             case ActionResult():
                 await self.process_result(msg)
             case _:
-                raise Exception(f"Unhandled message type {type(msg)}")
+                raise Exception(f"Unhandled message {msg}")
 
-    async def disconnect(self, code: int = 1000, reason: str = "Disconnected"):
-        await self.connection.disconnect(code, reason)
-
-    def connected(self):
+    async def _connected(self):
+        logger.debug(f"{self.name} connected")
         self.llm.gaming()
         self.scheduler.start()
+        await self._raise_event("connect")
 
-    def on_disconnect(self):
+    async def _disconnected(self, *_):
+        await self._raise_event("disconnect")
         self.reset()
         # self.llm.reset() # TODO: config whether to reset on disconnect
 
