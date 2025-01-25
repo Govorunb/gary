@@ -1,3 +1,4 @@
+import builtins
 import functools
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
@@ -29,7 +30,7 @@ class HasEvents[E: LiteralString]:
         '''
         self.event_handlers[event].append(handler)
         return functools.partial(self.unsubscribe, event, handler)
-    
+
     def unsubscribe(self, event: E, handler: Callable):
         try:
             self.event_handlers[event].remove(handler)
@@ -44,3 +45,13 @@ class HasEvents[E: LiteralString]:
 
         for handler in self.event_handlers[event]:
             await invoke(handler, *args, **kwargs)
+
+class NoPrint:
+    def __enter__(self):
+        self._print = builtins.print
+        def noop(*_, **__):
+            pass
+        builtins.print = noop
+
+    def __exit__(self, *_):
+        builtins.print = self._print

@@ -1,8 +1,18 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from .util import GameWSConnection, logger
+from .web.ui import add_control_panel
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.debug("Starting Panel server")
+    panel = add_control_panel('/')
+    yield
+    logger.debug("Shutting down Panel server")
+    panel.stop()
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.websocket("/")

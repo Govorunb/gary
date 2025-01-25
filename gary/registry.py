@@ -130,6 +130,7 @@ class Game(HasEvents[_game_events]):
         logger.info(f"Actions unregistered: {actions}")
 
     async def try_action(self) -> bool:
+        return False # TEMP
         if not self._connection.is_connected():
             return False
         if not self.actions:
@@ -198,6 +199,7 @@ class Game(HasEvents[_game_events]):
             case Context():
                 await self.send_context(msg.data.message, msg.data.silent)
             case ForceAction():
+                return # TEMP
                 if chosen_action := await self.llm.force_action(msg, self.actions):
                     await self.execute_action(*chosen_action, force=msg)
             case ActionResult():
