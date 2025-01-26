@@ -49,7 +49,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
             if (unsub := self._subscriptions.pop(conn.id, None)):
                 unsub()
 
-type _game_events = Literal["connect", "disconnect"] | AnyGameCommand | AnyNeuroCommand
+type _game_events = Literal["connect", "disconnect", "llm_context"] | AnyGameCommand | AnyNeuroCommand
 
 class Game(HasEvents[_game_events]):
     def __init__(self, name: str, registry: Registry, connection: GameWSConnection):
@@ -161,7 +161,10 @@ class Game(HasEvents[_game_events]):
         self.pending_actions[msg.data.id] = msg
         if force:
             self.pending_forces[msg.data.id] = force
-        self.llm.context(f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}", silent=True)
+        ctx = f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}"
+        # TODO: raise from LLM instead of game
+        await self._raise_event("llm_context", ctx, True, False)
+        self.llm.context(ctx, silent=True)
         self.scheduler.on_action()
         await self._raise_event("action", msg)
         await self._connection.send(msg)
@@ -181,8 +184,9 @@ class Game(HasEvents[_game_events]):
         if is_force and not result.data.success:
             await self.handle(force)
 
-    async def send_context(self, msg: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
-        self.llm.context(msg, silent, ephemeral=ephemeral, do_print=do_print)
+    async def send_context(self, ctx: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
+        await self._raise_event("llm_context", ctx, silent, ephemeral)
+        self.llm.context(ctx, silent, ephemeral=ephemeral, do_print=do_print)
         if not silent and not await self.try_action():
             self.scheduler.on_context()
 

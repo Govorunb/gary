@@ -1,5 +1,6 @@
 import json
 import panel as pn
+from panel.reactive import Syncable
 import param
 from collections.abc import Mapping
 from typing import Any
@@ -12,7 +13,7 @@ from ...registry import Game
 from ...spec import ActionModel
 
 
-class ActionView(PyComponent):
+class ActionView(PyComponent, Syncable):
     STYLE = """
 :host(.force) {
     background-color: #ffaaaa;
@@ -90,7 +91,7 @@ class ActionView(PyComponent):
                 # self._create_modal(),
                 pn.Row(send_button, randy_button),
                 title="Manual Send",
-                collapsed=True,
+                collapsed=False,
             ) if schema else send_button,
             stylesheets=[ActionView.STYLE],
             max_width=600,
@@ -164,3 +165,6 @@ class ActionView(PyComponent):
                 return param.Selector(objects=enum, **params)
             case _:
                 raise ValueError(f"Invalid schema; must contain a 'type' or 'enum' key (schema: {json_schema})")
+
+    def __repr__(self, *_):
+        return f"ActionView({self._action.name})"
