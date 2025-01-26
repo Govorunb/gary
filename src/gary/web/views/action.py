@@ -1,11 +1,11 @@
-from collections.abc import Mapping
 import json
-import random
-from typing import Any
-from jsonschema import ValidationError, validate
-from panel.custom import PyComponent
 import panel as pn
 import param
+from collections.abc import Mapping
+from typing import Any
+from jsf import JSF
+from jsonschema import ValidationError, validate
+from panel.custom import PyComponent
 
 from ...util import logger
 from ...registry import Game
@@ -29,7 +29,7 @@ class ActionView(PyComponent):
 
     def __panel__(self):
         name = self._action.name
-        schema = self._action.schema
+        schema: dict[str, Any] | None = self._action.schema # type: ignore
         
         # no 'properties'
         if schema and schema.get("type", None) == "object" and not schema.get("properties", {}):
@@ -37,9 +37,10 @@ class ActionView(PyComponent):
         
         description = self._action.description
         
+        jsf = JSF(schema or {"additionalProperties": False}) if schema else None
         data = pn.widgets.JSONEditor(
             schema=schema,
-            value=self.prefill_default(schema),
+            value=jsf.generate() if jsf else None,
             mode='text',
             sizing_mode='stretch_width',
         )
@@ -70,7 +71,7 @@ class ActionView(PyComponent):
 
         randy_button = pn.widgets.Button(name="Random", button_type='light')
         def reroll(*e):
-            data.value = self.prefill_default(schema)
+            data.value = jsf.generate() if jsf else None
         randy_button.on_click(reroll)
 
         card = pn.Column(
@@ -161,41 +162,5 @@ class ActionView(PyComponent):
                 return param.List(bounds=bounds, **params)
             case None if (enum := json_schema.get("enum", None)):
                 return param.Selector(objects=enum, **params)
-            case _:
-                raise ValueError(f"Invalid schema; must contain a 'type' or 'enum' key (schema: {json_schema})")
-
-    def prefill_default(self, json_schema: Mapping[str, Any] | None):
-        if json_schema is None:
-            return None
-        match (type_ := json_schema.get("type", None)):
-            case "string":
-                return ""
-            case "number" | "integer":
-                (min_value, min_is_inclusive)=self._bounds_val(json_schema, "minimum")
-                (max_value, max_is_inclusive)=self._bounds_val(json_schema, "maximum")
-                min_value = min_value or 0
-                max_value = max_value or 1
-                if not min_is_inclusive:
-                    min_value += 1 if type_ == "integer" else 0.0001
-                if not max_is_inclusive:
-                    max_value -= 1 if type_ == "integer" else 0.0001
-                return random.randint(min_value, max_value) if type_ == "integer" else random.uniform(min_value, max_value) # type: ignore
-            case "boolean":
-                return random.choice([False, True])
-            case "object":
-                props = json_schema.get("properties", {})
-                return {
-                    prop_name: self.prefill_default(prop_schema)
-                    for prop_name, prop_schema in props.items()
-                }
-            case "array":
-                if not (items_schema := json_schema.get("items", None)): # noqa: F841
-                    raise ValueError(f"Invalid schema; array properties must be constrained by 'items' key (schema: {json_schema})")
-                if (min_items := json_schema.get("minItems", None)) is not None:
-                    return [self.prefill_default(items_schema) for _ in range(min_items)]
-                # TODO: 'unique' constraint (low ROI)
-                return []
-            case None if (enum := json_schema.get("enum", None)):
-                return random.choice(enum)
             case _:
                 raise ValueError(f"Invalid schema; must contain a 'type' or 'enum' key (schema: {json_schema})")
