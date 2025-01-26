@@ -27,12 +27,17 @@ That said...
 [^2]: Not always the best option; see [Known issues/todos](#known-issuestodos).
 
 ### Quick start
-1. Install [uv](https://github.com/astral-sh/uv)
+1. Install [uv](https://github.com/astral-sh/uv#installation)
 2. Configure stuff in `config.yaml` (use a YAML language server that supports schemas for an easier time)
 3. Run the following command:
 ```
-uv run main.py [--preset your_preset]
+uv run gary [--preset your_preset] [--config _my_config.yaml]
 ```
+Instead of modifying `config.yaml` (which would get picked up by git) you should make a copy prefixed with an underscore (e.g. `_my_config.yaml`) and point Gary at it with either the `--config` flag or the `CONFIG_FILE` environment variable. Gary reads dotenv so you can make a `.env` file with the following contents:
+```
+CONFIG_FILE=_my_config.yaml
+```
+
 ### Tips
 Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/guidance-gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
