@@ -75,10 +75,11 @@ class ActionView(PyComponent, Syncable):
             data.value = jsf.generate() if jsf else None
         randy_button.on_click(reroll)
 
-        card = pn.Column(
-            f"## `{name}`",
+        card = pn.Card(
             description,
             pn.Card(
+                # FIXME: jsoneditor breaks the page clientside when you try to remove it (something about `this.editor`)
+                # currently worked around by not removing elements
                 pn.widgets.JSONEditor(value=schema, disabled=True, search=False, menu=False, sizing_mode='stretch_width'),
                 title="Schema",
                 collapsed=True
@@ -93,6 +94,8 @@ class ActionView(PyComponent, Syncable):
                 title="Manual Send",
                 collapsed=False,
             ) if schema else send_button,
+            title=name,
+            collapsed=True,
             stylesheets=[ActionView.STYLE],
             max_width=600,
             margin=20,
