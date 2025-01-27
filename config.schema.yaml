@@ -72,7 +72,7 @@ definitions:
               What to do when someone tries to connect to a game that already has an active connection.
           scheduler:
             type: object
-            properties: 
+            properties:
               idle_timeout_try:
                 description: |
                   If the LLM does not act for this many seconds, ask it to act (it may still decide not to).
@@ -96,7 +96,7 @@ definitions:
       base: {type: string}
       overrides: {$ref: "#/definitions/preset_base"}
     required: [base, overrides]
-  engine: 
+  engine:
     enum: [
       llama_cpp, transformers,
       randy,

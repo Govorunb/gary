@@ -9,12 +9,18 @@ dependencies = [
     "guidance-stitch>=0.1.0",
     "guidance>=0.2.0",
     "llama-cpp-python>=0.3.4",
-    "setuptools>=75.7.0",
-    "fastapi[standard]>=0.115.6",
+    "setuptools>=75.8.0",
+    "fastapi[standard]>=0.115.7",
     "pydantic>=2.10.4",
-    "websockets>=14.1",
+    "websockets>=14.2",
     "colorlog>=6.9.0",
+    "panel>=1.6.0",
+    "jsonschema>=4.23.0",
+    "jsf>=0.11.2",
 ]
+
+[project.scripts]
+gary = "gary.__main__:start"
 
 [tool.uv.sources]
 llama-cpp-python = { index = "abetlen-cu124" }
@@ -22,3 +28,16 @@ llama-cpp-python = { index = "abetlen-cu124" }
 [[tool.uv.index]]
 name = "abetlen-cu124"
 url = "https://abetlen.github.io/llama-cpp-python/whl/cu124/"
+
+[tool.ruff.lint]
+ignore = [
+    "E401", # multiple imports on one line
+    "F403", # star imports
+    "F405"  # symbol from star imports
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+    "jupyter-bokeh>=4.0.5",
+]

@@ -1,23 +1,26 @@
-from datetime import datetime
 import random, time
-from pydantic import BaseModel, TypeAdapter
+from json import dumps
+from datetime import datetime
+from pydantic import TypeAdapter
+
+import llama_cpp
 from guidance import gen, with_temperature, select, json, models, system, user, assistant
 from guidance.chat import Llama3ChatTemplate, Phi3MiniChatTemplate
 from guidance._grammar import Function
-import llama_cpp
 
-from gary.randy import Randy
-from gary.llarry import Llarry, StreamingLlamaCppEngine
 
-from .util import CONFIG, logger
-from .util.config import MANUAL_RULES
-from .spec import *
+from ..util import CONFIG, logger
+from ..util.config import MANUAL_RULES
+from ..spec import *
+
+from .randy import Randy
+from .llarry import Llarry, StreamingLlamaCppEngine
 if TYPE_CHECKING:
-    from .registry import Game
+    from ..registry import Game
 
 # IMPL: this whole file is my implementation since uhh... yeah
 
-SchemaLike = Mapping[str, Any] | type[BaseModel] | TypeAdapter
+# pyright: reportPrivateImportUsage=false
 
 _engine_map = {
     # "openai": models.OpenAI,
@@ -76,7 +79,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
 
     def llm_engine(self) -> models._model.Engine:
         return self.llm.engine # type: ignore
-    
+
     def max_tokens(self, at_most: int = 100000) -> int:
         maxtok = max(0, min(at_most, self.token_limit - tokens(self.llm)))
         logger.debug(f"Max tokens: {maxtok}")
@@ -90,7 +93,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             engine.reset_metrics()
             engine.model_obj.reset()
             llama_cpp.llama_kv_cache_clear(engine.model_obj.ctx)
-        
+
         # :) all this to avoid the model.LlamaCpp ctor
         # it sure is nice that python lets you do this :)
         buh = models.Model(self.llm.engine, echo=False)
@@ -98,7 +101,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             buh.__class__ = Llarry
             buh.persistent = self.llm.persistent.copy() # type: ignore
         self.llm = buh
-        
+
         assert self.llm.token_count == 0
         assert len(self.llm._current_prompt()) == 0
         logger.debug(f'truncated context to {tokens(self.llm)}')
@@ -180,7 +183,7 @@ You must perform one of the following actions, given this information:
             llm += f'''\
 ```json
 {{
-    "command": "action",'''
+    "command": "action",''' # noqa: F541
             if CONFIG.gary.enable_cot:
                 llm = time_gen(llm, f'''
     "reasoning": "{gen("reasoning", stop=['.','\n','"',"<|eot_id|>"], temperature=self.temperature, max_tokens=self.max_tokens(100))}",''')
@@ -189,7 +192,7 @@ You must perform one of the following actions, given this information:
             chosen_action = llm["chosen_action"]
             # TODO: test without schema reminder
             llm += f'''
-    "schema": {actions[chosen_action].schema},'''
+    "schema": {dumps(actions[chosen_action].schema)},'''
             llm = time_gen(llm, f'''
     "data": {json("data", schema=actions[chosen_action].schema, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
@@ -223,14 +226,14 @@ Based on previous context, decide whether you should perform any of the followin
     "available_actions": {actions_json}
 }}
 ```
-Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to choose an action to perform).
+Respond with either '{NO}' (to do nothing) or '{YES}' (you will then be asked to choose an action to perform).
 """
         llm: models.Model = self.context(ctx, silent=True, ephemeral=True, do_print=False)
         with assistant():
-            resp = f"""
+            resp = f"""\
 ```json
 {{
-    "command": "decision","""
+    "command": "decision",""" # noqa: F541
             if CONFIG.gary.enable_cot:
                 resp += f"""
     "reasoning": "{gen("reasoning", stop=['\n','"',"<|eot_id|>"], temperature=self.temperature, max_tokens=self.max_tokens(100))}","""
@@ -248,10 +251,10 @@ Respond with either 'wait' (to do nothing) or 'act' (you will then be asked to c
         if CONFIG.gary.non_ephemeral_try_context:
             self.llm = llm
         return None if decision == NO else await self.action(actions)
-    
+
     def truncate_context(self, need_tokens: int = 0):
         assert need_tokens >= 0
-        
+
         token_count = tokens(self.llm)
         used = token_count + need_tokens
         msg = f"Currently at {used}/{self.token_limit} tokens"

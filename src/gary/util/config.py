@@ -19,7 +19,12 @@ class ExistingConnectionPolicy(Enum):
 _LogLevel = Literal["all", "debug", "info", "warn", "warning", "error", "critical", "fatal", "none"] | int
 class Config(BaseModel):
     class LLMConfig(BaseModel):
-        engine: Literal["openai", "anthropic", "azure_openai", "googleai", "transformers", "llama_cpp", "guidance_server", "randy"]
+        engine: Literal[
+            "llama_cpp", "transformers",
+            "randy",
+            # "openai", "anthropic", "azure_openai", "googleai",
+            "guidance_server",
+        ]
         model: str
         api_key: str = ""
     class GaryConfig(BaseModel):
@@ -71,7 +76,7 @@ def _load_config(preset_name: str, config_yaml: dict | None = None):
         with open(CONFIG_PATH) as f:
             _config_yaml = yaml.safe_load(f)
         return _load_config(preset_name, _config_yaml)
-    
+
     preset: dict
     if not (preset := config_yaml.get(preset_name, None)):
         raise ValueError(f"Preset '{preset_name}' was not found in config.yaml")

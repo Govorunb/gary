@@ -1,9 +1,10 @@
 import uvicorn
 import uvicorn.config
-from gary.util import CONFIG
-from gary.util.config import CONFIG_PATH
+from .util import CONFIG
+from .util.config import CONFIG_PATH
 
-if __name__ == "__main__":
+
+def start():
     # uvicorn calls logging.dictConfig
     #   -> existing log handlers are cleared
     #     -> our file logger's stream gets closed
@@ -12,4 +13,12 @@ if __name__ == "__main__":
     # really great that it doesn't raise an exception or anything
     # and it *only* started happening once i moved logger.py to a submodule
     # i love python and its ecosystem
-    uvicorn.run("gary.app:app", **CONFIG.fastapi, reload_includes=[CONFIG_PATH])
+    uvicorn.run(
+        "gary.app:app",
+        **CONFIG.fastapi,
+        reload_includes=[CONFIG_PATH],
+        # reload_excludes=["gary/web/ui.py"]
+    )
+
+if __name__ == "__main__":
+    start()

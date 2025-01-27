@@ -14,3 +14,4 @@ _*
 *.env
 
 !__init__.py
+!__main__.py

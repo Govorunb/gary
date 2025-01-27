@@ -2,10 +2,10 @@ import asyncio
 from typing import * # type: ignore
 from collections.abc import Coroutine
 
-from .util import CONFIG, logger
+from ..util import CONFIG, logger
 
 if TYPE_CHECKING:
-    from .registry import Game
+    from ..registry import Game
 
 _COMPLETED_TASK = asyncio.create_task(asyncio.sleep(0))
 
@@ -13,14 +13,15 @@ class Scheduler:
     def __init__(self, game: "Game"):
         logger.info(f"Created scheduler for {game.name}")
         self.game = game
+        # FIXME: actual scheduling (queue and such)
         self.idle_timeout_try = CONFIG.gary.scheduler.idle_timeout_try
         self.idle_timeout_force = CONFIG.gary.scheduler.idle_timeout_force
-        
+
         if not self.idle_timeout_try:
             logger.warning("Idle timeout (try) disabled")
         if not self.idle_timeout_force:
             logger.warning("Idle timeout (force) disabled")
-        
+
         self._active = False
         self._try_task = _COMPLETED_TASK
         self._force_task = _COMPLETED_TASK
@@ -38,10 +39,10 @@ class Scheduler:
         self._try_task.cancel()
         self._force_task.cancel()
 
-    def on_action(self):
+    def on_action(self, *_):
         self._reset_idle_timers()
 
-    def on_context(self):
+    def on_context(self, *_):
         self._reset_try()
 
     def _reset_idle_timers(self):

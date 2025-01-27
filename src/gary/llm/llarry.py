@@ -98,7 +98,7 @@ class Llarry(LlamaCpp):
             sys_start = chat_template.get_role_start("system")
             sys_start = tokenizer.encode(sys_start.encode())
             len_start = len(sys_start)
-        except:
+        except Exception:
             logger.warning("Could not get system role start")
         tokens = tokenizer.encode(prompt.encode())
         t_encode = time.time()
@@ -137,7 +137,7 @@ class Llarry(LlamaCpp):
                 i_end_discard = i
                 # logger.warning("discard over max")
                 return False
-            
+
             # 1. first discardable is n_keep
             # 2. then, find first non-discardable message
             # 3. all tokens between are discardable
@@ -169,7 +169,7 @@ class Llarry(LlamaCpp):
             msg_tokens += 1
         t_find = time.time()
         persist_shift = i_end_discard - i_start_discard + 1
-        
+
         tokens = self.engine.trim(tokens, n_keep, n_discard)
         t_trim = time.time()
         # this code is ok because i'm not a python dev :)

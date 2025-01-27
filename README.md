@@ -15,6 +15,7 @@ The project is mostly for fun but I'm open to feedback and contributions.
 - **Guaranteed** to follow the schema[^1][^2]
 - Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM (e.g. JSON syntax)
 - Aims to (eventually) behave (reasonably) close to Neuro for accurate testing/development
+- Offers a web interface (**WIP**) for [Tony](https://github.com/Pasu4/neuro-api-tony)-like manual action sending
 
 <sub>\* Not tested - if you know this works (or doesn't), open an issue.</sub><br/>
 
@@ -27,12 +28,18 @@ That said...
 [^2]: Not always the best option; see [Known issues/todos](#known-issuestodos).
 
 ### Quick start
-1. Install [uv](https://github.com/astral-sh/uv)
+1. Install [uv](https://github.com/astral-sh/uv#installation)
 2. Configure stuff in `config.yaml` (use a YAML language server that supports schemas for an easier time)
 3. Run the following command:
 ```
-uv run main.py [--preset your_preset]
+uv run gary [--preset your_preset] [--config _my_config.yaml]
 ```
+Instead of modifying `config.yaml` (which would get picked up by git) you should make a copy prefixed with an underscore (e.g. `_my_config.yaml`) and point Gary at it with either the `--config` flag or the `CONFIG_FILE` environment variable. Gary reads dotenv so you can make a `.env` file with the following contents:
+```
+CONFIG_FILE=_my_config.yaml
+CONFIG_PRESET=randy
+```
+
 ### Tips
 Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/guidance-gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
