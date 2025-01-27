@@ -180,7 +180,7 @@ def create_tabs():
     )
 
 def create_web_ui():
-    extensions = ['gridstack', 'ace', 'codeeditor']
+    extensions = ['gridstack', 'floatpanel', 'ace', 'codeeditor']
     pn.extension(
         *extensions,
         template='material',

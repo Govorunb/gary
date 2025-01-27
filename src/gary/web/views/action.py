@@ -1,8 +1,9 @@
+import jsf.schema_types.string_utils.content_type.text__plain as jsf_text_utils
 import json
 import panel as pn
 import param
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal
 from jsf import JSF
 from jsonschema import ValidationError, validate
 from panel.custom import PyComponent
@@ -12,6 +13,14 @@ from ...util import logger
 from ...registry import Game
 from ...spec import ActionModel
 
+def _monkey_patch():
+    _old = jsf_text_utils.random_fixed_length_sentence
+    def generate_empty(_min: int = 0, _max: int = 0):
+        if _min == 0:
+            return ""
+        return _old(_min, _max)
+    jsf_text_utils.random_fixed_length_sentence = generate_empty
+_monkey_patch()
 
 class ActionView(PyComponent, Syncable):
     STYLE = """
@@ -27,6 +36,7 @@ class ActionView(PyComponent, Syncable):
         self._action = action
         self._game = game
         # TODO: upgrade from JSON text editor to auto-generated forms
+        # (maybe, it's a lot of work and JSON is lowkey good enough)
         self._parameterized = None
         # self._parameterized = self.parametrize(action.schema, [action.name], True)
 
@@ -41,25 +51,31 @@ class ActionView(PyComponent, Syncable):
         description = self._action.description
 
         jsf = JSF(schema or {"additionalProperties": False}) if schema else None
-        # TODO: figure out CodeEditor (can't find ace clientside)
-        data_input = pn.widgets.TextAreaInput(sizing_mode='stretch_width', auto_grow=True)
+        # data_input = pn.widgets.TextAreaInput(sizing_mode='stretch_width', auto_grow=True)
+        # TODO: shrink/grow to fit text
+        # TODO: Ctrl+Enter to submit
+        data_input = pn.widgets.CodeEditor(sizing_mode='stretch_width', language='json')
 
         def reroll(*_):
-            data_input.value = json.dumps(jsf.generate(), indent=2) if jsf else ""
+            val = json.dumps(jsf.generate(), indent=2) if jsf else ""
+            data_input.value = val
         reroll()
 
         send_button = pn.widgets.Button(name="Send", button_type='primary')
         randy_button = pn.widgets.Button(name="Random", button_type='light')
         error_text = pn.widgets.StaticText(value="", sizing_mode='stretch_width', styles={'color': 'red'})
 
-        def validate_json(val: str):
+        def validate_json(val: str) -> str | Literal[""]:
+            '''Returns: error message, if any.'''
             if not schema or val is None:
                 return ""
             try:
                 validate(json.loads(val), schema or {})
                 return ""
-            except ValidationError as e:
-                return e.message
+            except ValidationError as v:
+                return v.message
+            except json.JSONDecodeError as j:
+                return j.msg
         error_text.value = pn.bind(validate_json, data_input)
         send_button.disabled = error_text.param.value.rx.bool()
         randy_button.rx.watch(reroll)
@@ -72,12 +88,10 @@ class ActionView(PyComponent, Syncable):
         card = pn.Card(
             description,
             pn.Card(
-                # FIXME: jsoneditor breaks the page clientside when you try to remove it (something about `this.editor`)
-                # currently worked around by not removing elements
-                # pn.widgets.JSONEditor(value=schema, disabled=True, search=False, menu=False, sizing_mode='stretch_width'),
-                f"```json\n{json.dumps(schema, indent=4)}\n```",
+                pn.pane.Markdown(f"```json\n{json.dumps(schema, indent=2)}\n```", sizing_mode='stretch_width'),
                 title="Schema",
-                collapsed=True
+                collapsed=True,
+                sizing_mode='stretch_width',
             ) if schema else None,
             pn.Card(
                 pn.Row(
