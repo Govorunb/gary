@@ -133,7 +133,7 @@ def create_game_tab(game: Game):
 
     mute_toggle = pn.widgets.Checkbox(name="Mute LLM", value=True)
     enable_resize = pn.widgets.Checkbox(name="Allow resizing", value=True)
-    enable_drag = pn.widgets.Checkbox(name="Allow dragging (interferes with JSON editor)", value=False)
+    enable_drag = pn.widgets.Checkbox(name="Allow dragging", value=False)
     def update_mute(muted):
         from ..registry import REGISTRY
         REGISTRY.mute_llm = muted
