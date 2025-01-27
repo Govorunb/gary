@@ -13,6 +13,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
         self.conflict_resolution = existing_connection_policy or CONFIG.gary.existing_connection_policy
         self.connections: dict[str, WSConnection] = {}
         self._subscriptions: dict[str, Any] = {}
+        self.mute_llm = False
 
     async def startup(self, msg: Startup, conn: GameWSConnection) -> "Game":
         game = self.games.get(msg.game)
@@ -130,11 +131,12 @@ class Game(HasEvents[_game_events]):
         logger.info(f"Actions unregistered: {actions}")
 
     async def try_action(self) -> bool:
-        return False # TEMP
         if not self._connection.is_connected():
             return False
         if not self.actions:
             logger.debug("No actions to try (Game.try_action)")
+            return False
+        if self.registry.mute_llm:
             return False
         # FIXME: LLM generation is synchronous and hangs the websocket (Abandoned Pub disconnects)
         # scheduler issue (todo)
@@ -203,7 +205,8 @@ class Game(HasEvents[_game_events]):
             case Context():
                 await self.send_context(msg.data.message, msg.data.silent)
             case ForceAction():
-                return # TEMP
+                if self.registry.mute_llm:
+                    return False
                 if chosen_action := await self.llm.force_action(msg, self.actions):
                     await self.execute_action(*chosen_action, force=msg)
             case ActionResult():

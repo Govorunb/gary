@@ -126,28 +126,33 @@ def create_game_tab(game: Game):
                 # ctx_log.scroll_to(len(ctx_log.objects)-1) # type: ignore
             await asyncio.sleep(1)
 
+    grid = pn.GridStack(sizing_mode='stretch_both')
+
     actions = pn.Column("# Actions", live_actions_view, styles=css)
     context = pn.Column("# Context", live_context_log, styles=css)
-    
-    grid = pn.GridStack(sizing_mode='stretch_both')
+
+    mute_toggle = pn.widgets.Checkbox(name="Mute LLM", value=True)
     enable_resize = pn.widgets.Checkbox(name="Allow resizing", value=True)
     enable_drag = pn.widgets.Checkbox(name="Allow dragging (interferes with JSON editor)", value=False)
+    def update_mute(muted):
+        from ..registry import REGISTRY
+        REGISTRY.mute_llm = muted
     def update_resize(can_resize):
         grid.allow_resize = can_resize
     def update_drag(can_drag):
         grid.allow_drag = can_drag
-    
+
     config = pn.Column(
         "# Config",
         pn.Accordion(
             ("LLM", pn.Column(
-                pn.widgets.Checkbox(name="Mute LLM", value=True), # TODO
+                # FIXME: binds show up as empty space and idk how to hide them
+                pn.Row(mute_toggle, pn.bind(update_mute, mute_toggle)),
                 margin=(5, 10),
             )),
             ("Layout", pn.Column(
-                enable_resize, enable_drag,
-                # FIXME: these show up as empty space and i don't know how to hide them
-                pn.bind(update_resize, enable_resize), pn.bind(update_drag, enable_drag),
+                pn.Row(enable_resize, pn.bind(update_resize, enable_resize)),
+                pn.Row(enable_drag, pn.bind(update_drag, enable_drag)),
                 margin=(5, 10),
             )),
             sizing_mode='stretch_width',
@@ -156,7 +161,7 @@ def create_game_tab(game: Game):
         sizing_mode='stretch_both',
         styles=css,
     )
-    
+
     grid[0:10, 0:4] = actions
     grid[0:10, 4:8] = context
     grid[0:10, 8:10] = config
