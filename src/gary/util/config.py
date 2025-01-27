@@ -12,9 +12,9 @@ dotenv.load_dotenv(dotenv.find_dotenv(), override=True)
 CONFIG_PATH = args.config or environ.get("CONFIG_FILE", "config.yaml")
 PRESET = args.preset or environ.get("CONFIG_PRESET", "default")
 
-class ExistingConnectionPolicy(Enum):
-    DISCONNECT_NEW = "disconnect_new"
-    DISCONNECT_EXISTING = "disconnect_existing"
+class ConflictResolutionPolicy(Enum):
+    DROP_INCOMING = "drop_incoming"
+    DROP_EXISTING = "drop_existing"
 
 _LogLevel = Literal["all", "debug", "info", "warn", "warning", "error", "critical", "fatal", "none"] | int
 class Config(BaseModel):
@@ -35,8 +35,10 @@ class Config(BaseModel):
             '''If the LLM does not act for this many seconds, force it to pick an action to perform.'''
         log_level_file: _LogLevel = "info"
         log_level_console: _LogLevel = "debug"
-        existing_connection_policy: ExistingConnectionPolicy = ExistingConnectionPolicy.DISCONNECT_EXISTING
+        existing_connection_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING
         '''What to do when someone tries to connect to a game that already has an active connection.'''
+        existing_action_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING
+        '''What to do when an action is registered but there's already an action with that name.'''
         enable_cot: bool = False
         '''
         Enable poor man's chain-of-thought.

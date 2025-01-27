@@ -2,15 +2,14 @@ from functools import partial
 import json
 
 from .util import CONFIG, logger, WSConnection, GameWSConnection, HasEvents
-from .util.config import ExistingConnectionPolicy
+from .util.config import ConflictResolutionPolicy
 from .llm import LLM, Scheduler
 from .spec import *
 
 class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconnected"]]):
-    def __init__(self, *, existing_connection_policy: ExistingConnectionPolicy | None = None):
+    def __init__(self):
         super().__init__()
         self.games: dict[str, "Game"] = {}
-        self.conflict_resolution = existing_connection_policy or CONFIG.gary.existing_connection_policy
         self.connections: dict[str, WSConnection] = {}
         self._subscriptions: dict[str, Any] = {}
         self.mute_llm = False
@@ -93,9 +92,9 @@ class Game(HasEvents[_game_events]):
             # IMPL: different active connection
             logger.warning(f"Game '{self.name}' received startup from {conn.ws.client}, but is already actively connected to {self._connection.ws.client}!")
             policy = CONFIG.gary.existing_connection_policy
-            conn_to_close = self._connection if policy == ExistingConnectionPolicy.DISCONNECT_EXISTING else conn
+            conn_to_close = self._connection if policy == ConflictResolutionPolicy.DROP_EXISTING else conn
             logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {policy}")
-            if policy == ExistingConnectionPolicy.DISCONNECT_NEW:
+            if policy == ConflictResolutionPolicy.DROP_INCOMING:
                 await conn.disconnect(1002, "Multiple connections are not allowed")
                 return
             else:
@@ -112,9 +111,16 @@ class Game(HasEvents[_game_events]):
 
     async def action_register(self, actions: list[ActionModel]):
         for action in actions:
-            # IMPL: overwrites existing actions
+            # IMPL: action register conflict
+            # i think dropping existing actions is more sensible
+            # that said, neither behaviour should be relied upon
             if action.name in self.actions:
                 logger.warning(f"Action {action.name} already registered")
+                policy = CONFIG.gary.existing_action_policy
+                if policy == ConflictResolutionPolicy.DROP_INCOMING:
+                    logger.info(f"Ignoring incoming action {action.name} according to policy {policy}")
+                    continue
+                logger.info(f"Overwriting existing action {action.name} according to policy {policy}")
             assert action.schema is None or isinstance(action.schema, dict), "Schema must be None or dict"
             if action.schema and action.schema.get("type", None) == "object":
                 # stop making up random fields in the data. i am no longer asking

@@ -20,9 +20,12 @@ The project is mostly for fun but I'm open to feedback and contributions.
 <sub>\* Not tested - if you know this works (or doesn't), open an issue.</sub><br/>
 
 That said...
-> [!Caution]
-> The repository is currently in the early stages of development and is thus **highly unstable**.
-> I'm likely to make sweeping changes and break and fix stuff everywhere.
+> [!Note]
+> The project is currently in the early stages of development and is thus **unstable**.
+>
+> Some areas or systems may change their behaviour and/or internals (especially internals).
+>
+> Take a look at the [Known issues/todos](#known-issuestodos) section for an idea of what might change in the future.
 
 [^1]: Very very likely but not (yet) guaranteed, see [Known issues/todos](#known-issuestodos).
 [^2]: Not always the best option; see [Known issues/todos](#known-issuestodos).
@@ -47,7 +50,7 @@ Since this project is focused on local models, success will depend on your model
 If so, Gary probably cannot help you and you'd be better off using [Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
-Getting a less intelligent model to successfully play your game will make more intelligent models even more likely to make smarter decisions.
+Getting a less intelligent model to successfully play your game will help more intelligent models make even smarter decisions.
 
 You probably *should* consider doing the following:
 #### Prompting
@@ -76,26 +79,35 @@ You probably *should* consider doing the following:
 - Gary doesn't do a bunch of things that Neuro does, like:
 	- Processing other sources of information like vision/audio/chat (I don't think I'll be doing this one)
 	- Acting on a scheduler (~~periodically acting unprompted~~, generating yaps, simulating waiting for TTS, etc)
-	- Running actions on a second thread (todo maybe, depends on the scheduler)
+	- Running actions off the main thread (todo maybe, depends on the scheduler)
 - There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
 	- Basically, if the model wants something invalid, it will pick a similar or seemingly arbitrary valid option. For example:
 		- The model hallucinates about pouring drinks into a glass in its chain-of-thought
 		- The token likelihoods now favor `"glass"`, which is not a valid option (but `"gin"` is)
-		- When generating the action JSON, guidance picks `"gin"` because (gives a long explanation)
+		- When generating the action JSON, guidance picks `"gin"` because *(gives a long explanation)*
 	- For nerds - guidance uses the model to generate the starting tokens and forwards the rest as soon as it's fully disambiguated (so e.g. `"g` has the highest likelihood, so it gets picked, and then `in"` is auto-completed because `"gin"` is the only option starting with `"g`, even though in reality the model wanted to say `"glass"`). [Learn more](https://github.com/guidance-ai/guidance/issues/564)
 	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's fast
-- The way I trim context to keep LlamaCpp able to generate infinitely only works with local LlamaCpp (Guidance server would probably work too). LlamaCpp server/Transformers instead fully truncate their context, and may rarely fail due to overrunning their context window. Not tested.
+- The way I trim context to keep LlamaCpp able to generate infinitely only works with local LlamaCpp (Guidance server would probably work too). Transformers will instead fully truncate context, and may rarely fail due to overrunning the context window. Not tested.
+- The web interface can be a bit flaky - keep an eye out for any exceptions in the terminal window and, when in doubt, refresh the page
+	- There's a non-zero chance I won't be able to polish it up to an acceptable level - if so, I'll probably ragequit the current implementation (using [panel](https://github.com/holoviz/panel/)) and go write a TS frontend or something instead. Send thoughts and prayers please
 
 #### Implementation-specific behaviour
-These are edge cases where Neuro may behave differently. For most of these, the spec doesn't say anything, so I had to pick something.
-- Registering an action with an existing name will replace the old one
+These are edge cases where Neuro may behave differently.
+- Registering an action with an existing name will replace the old one (by default)
+	- [The spec](https://github.com/VedalAI/neuro-game-sdk/blob/8c0f682c5d4fa804119e7168a558e8c0568fe1fb/API/SPECIFICATION.md#parameters-3) suggests the exact opposite - that the incoming action should be discarded
+	- I'm making the "wrong" behaviour default on purpose because I think it's the more natural of the two - but frankly, relying on either behaviour is not good
+	- You can switch to follow the spec by setting `(preset).gary.existing_action_policy` to `drop_incoming` in your `config.yaml`
 - Only one active websocket connection is allowed per game; when another tries to connect, either the old or the new connection will be closed (configurable in `config.yaml`)
 - Gary sends `actions/reregister_all` on every connect (instead of just reconnects, as in the spec)
 	- I can probably make something that figures out if it's a first launch or a reconnect but I'm too lazy
 - etc etc, just download the repo and search for "IMPL" in the code
 
 #### Remote services? (OpenAI, Anthropic, Google, Azure)
-Nope, local models only. Guidance lets you use remote services, but it cannot enforce grammar/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just [throw exceptions](https://i.imgur.com/UNtnhdV.png) because of invalid output instead. For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or the [guidance server example](https://github.com/guidance-ai/guidance/blob/727e8320062746b019d29a4cf393c88641fd7e4c/notebooks/server_anachronism.ipynb).
+Only local models (and guidance server) are supported. Guidance lets you use remote services, but it cannot enforce grammar/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just throw exceptions because of invalid output instead.
+
+![log excerpt showing remote generation failed after exceeding the limit of 10 attempts](https://i.imgur.com/UNtnhdV.png)
+
+For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or the [guidance server example](https://github.com/guidance-ai/guidance/blob/727e8320062746b019d29a4cf393c88641fd7e4c/notebooks/server_anachronism.ipynb).
 
 Guidance does work with [Phi3 on Azure](https://github.com/microsoft/Phi-3CookBook/blob/main/code/01.Introduce/guidance.ipynb), but it's not implemented here due to lack of interest.
 
@@ -104,3 +116,4 @@ Thanks to all these lovely games for having Neuro integration so I didn't have t
 - [Abandoned Pub](https://pipeheads.itch.io/abandoned-pub)
 - [Branching Paths](https://shardhash.itch.io/branching-paths)
 - [neuro scratch](https://tsgscraft.itch.io/neuro-scratch)
+- and more!
