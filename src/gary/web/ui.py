@@ -180,10 +180,9 @@ def create_tabs():
     )
 
 def create_web_ui():
+    extensions = ['gridstack', 'ace', 'codeeditor']
     pn.extension(
-        # if i had a nickel for each time python devs half assed typing their libraries
-        # i would invest them all back into open source to raise the average software quality
-        'gridstack', 'ace', 'jsoneditor', # type: ignore
+        *extensions,
         template='material',
         throttled=True,
         notifications=True,

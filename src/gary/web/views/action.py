@@ -1,12 +1,12 @@
 import json
 import panel as pn
-from panel.reactive import Syncable
 import param
 from collections.abc import Mapping
 from typing import Any
 from jsf import JSF
 from jsonschema import ValidationError, validate
 from panel.custom import PyComponent
+from panel.reactive import Syncable
 
 from ...util import logger
 from ...registry import Game
@@ -26,71 +26,66 @@ class ActionView(PyComponent, Syncable):
         super().__init__(**params)
         self._action = action
         self._game = game
-        self._parameterized = self.parametrize(action.schema, [action.name], True)
+        # TODO: upgrade from JSON text editor to auto-generated forms
+        self._parameterized = None
+        # self._parameterized = self.parametrize(action.schema, [action.name], True)
 
     def __panel__(self):
         name = self._action.name
         schema: dict[str, Any] | None = self._action.schema # type: ignore
-        
+
         # no 'properties'
         if schema and schema.get("type", None) == "object" and not schema.get("properties", {}):
             schema = None
-        
-        description = self._action.description
-        
-        jsf = JSF(schema or {"additionalProperties": False}) if schema else None
-        data = pn.widgets.JSONEditor(
-            schema=schema,
-            value=jsf.generate() if jsf else None,
-            mode='text',
-            sizing_mode='stretch_width',
-        )
-        send_button = pn.widgets.Button(name="Send", button_type='primary')
 
-        def validate_json(val):
-            if not schema:
-                return False
-            if val is None:
-                return True
-            
+        description = self._action.description
+
+        jsf = JSF(schema or {"additionalProperties": False}) if schema else None
+        # TODO: figure out CodeEditor (can't find ace clientside)
+        data_input = pn.widgets.TextAreaInput(sizing_mode='stretch_width', auto_grow=True)
+
+        def reroll(*_):
+            data_input.value = json.dumps(jsf.generate(), indent=2) if jsf else ""
+        reroll()
+
+        send_button = pn.widgets.Button(name="Send", button_type='primary')
+        randy_button = pn.widgets.Button(name="Random", button_type='light')
+        error_text = pn.widgets.StaticText(value="", sizing_mode='stretch_width', styles={'color': 'red'})
+
+        def validate_json(val: str):
+            if not schema or val is None:
+                return ""
             try:
-                validate(val, schema or {})
-                return False
-            except ValidationError:
-                return True
-        if data:
-            send_button.disabled = pn.bind(validate_json, data)
+                validate(json.loads(val), schema or {})
+                return ""
+            except ValidationError as e:
+                return e.message
+        error_text.value = pn.bind(validate_json, data_input)
+        send_button.disabled = error_text.param.value.rx.bool()
+        randy_button.rx.watch(reroll)
 
         @send_button.on_click
         async def _(*e):
-            if schema:
-                print(f"{data.value=}")
-                j = json.dumps(data.value)
-            else:
-                j = "{}"
-            await self._game.execute_action(name, j)
-
-        randy_button = pn.widgets.Button(name="Random", button_type='light')
-        def reroll(*e):
-            data.value = jsf.generate() if jsf else None
-        randy_button.on_click(reroll)
+            data: str = data_input.value if schema else "{}" # type: ignore
+            await self._game.execute_action(name, data)
 
         card = pn.Card(
             description,
             pn.Card(
                 # FIXME: jsoneditor breaks the page clientside when you try to remove it (something about `this.editor`)
                 # currently worked around by not removing elements
-                pn.widgets.JSONEditor(value=schema, disabled=True, search=False, menu=False, sizing_mode='stretch_width'),
+                # pn.widgets.JSONEditor(value=schema, disabled=True, search=False, menu=False, sizing_mode='stretch_width'),
+                f"```json\n{json.dumps(schema, indent=4)}\n```",
                 title="Schema",
                 collapsed=True
             ) if schema else None,
             pn.Card(
                 pn.Row(
                     # data.controls(),
-                    data
+                    data_input
                 ),
                 # self._create_modal(),
-                pn.Row(send_button, randy_button),
+                pn.Row(send_button, randy_button, error_text),
                 title="Manual Send",
                 collapsed=False,
             ) if schema else send_button,
