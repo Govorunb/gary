@@ -4,7 +4,7 @@ import re
 import panel as pn
 
 from panel.io.server import Server
-from panel.template import VanillaTemplate
+from panel.template import FastListTemplate
 
 from .views import ActionView
 
@@ -18,6 +18,8 @@ def create_game_tab(game: Game):
         "border-radius": "5px",
         "overflow": "scroll",
     }
+
+    # TODO: class
     async def live_actions_view():
         needs_update = False
         tracked_actions: dict[str, ActionView] = {
@@ -76,6 +78,7 @@ def create_game_tab(game: Game):
                 yield actions
             await asyncio.sleep(1)
 
+    # TODO: class
     async def live_context_log():
         needs_update = False
 
@@ -131,28 +134,35 @@ def create_game_tab(game: Game):
     actions = pn.Column("# Actions", live_actions_view, styles=css)
     context = pn.Column("# Context", live_context_log, styles=css)
 
-    mute_toggle = pn.widgets.Checkbox(name="Mute LLM", value=True)
-    enable_resize = pn.widgets.Checkbox(name="Allow resizing", value=True)
-    enable_drag = pn.widgets.Checkbox(name="Allow dragging", value=False)
+    mute_toggle = pn.widgets.Checkbox(name="Mute LLM")
+    enable_resize = pn.widgets.Checkbox(name="Allow resizing")
+    enable_drag = pn.widgets.Checkbox(name="Allow dragging")
+    
     def update_mute(muted):
         from ..registry import REGISTRY
         REGISTRY.mute_llm = muted
-    def update_resize(can_resize):
-        grid.allow_resize = can_resize
-    def update_drag(can_drag):
-        grid.allow_drag = can_drag
+
+    mute_toggle.rx.watch(update_mute)
+    enable_resize.link(grid, value='allow_resize', bidirectional=True)
+    enable_drag.link(grid, value='allow_drag', bidirectional=True)
+    
+    # TODO: localstorage for preferences?
+    mute_toggle.value = True
+    # checkbox initial value is False; grid properties' initial value is True
+    # reactive programming claims yet another victim (nobody found out because there was no change notification)
+    enable_resize.value = grid.allow_resize = True
+    enable_drag.value = grid.allow_drag = False
 
     config = pn.Column(
         "# Config",
         pn.Accordion(
             ("LLM", pn.Column(
-                # FIXME: binds show up as empty space and idk how to hide them
-                pn.Row(mute_toggle, pn.bind(update_mute, mute_toggle)),
+                mute_toggle,
                 margin=(5, 10),
             )),
             ("Layout", pn.Column(
-                pn.Row(enable_resize, pn.bind(update_resize, enable_resize)),
-                pn.Row(enable_drag, pn.bind(update_drag, enable_drag)),
+                enable_resize,
+                enable_drag,
                 margin=(5, 10),
             )),
             sizing_mode='stretch_width',
@@ -189,7 +199,7 @@ def create_web_ui():
         disconnect_notification="Disconnected from server.\nPlease make sure the server is running, then refresh this page",
         ready_notification="Application loaded.",
     )
-    template = VanillaTemplate(title="Gary Control Panel")
+    template = FastListTemplate(title="Gary Control Panel")
     template.main.append(create_tabs()) # type: ignore
     return template
 

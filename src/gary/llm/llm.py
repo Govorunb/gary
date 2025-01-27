@@ -278,7 +278,7 @@ def time_gen[M: models.Model](lm: M, gen_: Function | str) -> M:
     out: M = lm + gen_
     generation_took = time.time() - t0
     tokens_input: int = out.metrics.engine_input_tokens
-    tokens_generated: int = out.token_count - prev_tokens_generated
+    tokens_generated: int = out.token_count - prev_tokens_generated # FIXME: value is not correct
     tps: float = tokens_generated / generation_took
     logger.debug(f'output {tokens_generated} tokens in {generation_took:.2f}s'
         + f' ({tps:.2f} tok/s)' if tps >= 0.5 else f' ({1/tps:.2f} s/tok)'

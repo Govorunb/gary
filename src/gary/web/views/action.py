@@ -1,28 +1,39 @@
 import jsf.schema_types.string_utils.content_type.text__plain as jsf_text_utils
-import json
 import panel as pn
+
+import sys
+import json
 import param
+
 from collections.abc import Mapping
 from typing import Any, Literal
 from jsf import JSF
 from jsonschema import ValidationError, validate
-from panel.custom import PyComponent
-from panel.reactive import Syncable
 
 from ...util import logger
 from ...registry import Game
 from ...spec import ActionModel
 
 def _monkey_patch():
+    '''
+    Patch a JSF utility method to generate nothing if possible.
+    Having to manually delete the prefilled Lorem Ipsum is annoying.
+    '''
     _old = jsf_text_utils.random_fixed_length_sentence
-    def generate_empty(_min: int = 0, _max: int = 0):
+    
+    def _patch(_min: int = 0, _max: int = 0):
         if _min == 0:
             return ""
         return _old(_min, _max)
-    jsf_text_utils.random_fixed_length_sentence = generate_empty
+    
+    jsf_text_utils.random_fixed_length_sentence = _patch
+    for module in sys.modules.values():
+        if hasattr(module, 'random_fixed_length_sentence') and module.random_fixed_length_sentence is _old:
+            setattr(module, 'random_fixed_length_sentence', _patch)
+
 _monkey_patch()
 
-class ActionView(PyComponent, Syncable):
+class ActionView(pn.custom.PyComponent, pn.reactive.Syncable):
     STYLE = """
 :host(.force) {
     background-color: #ffaaaa;
@@ -51,9 +62,8 @@ class ActionView(PyComponent, Syncable):
         description = self._action.description
 
         jsf = JSF(schema or {"additionalProperties": False}) if schema else None
-        # data_input = pn.widgets.TextAreaInput(sizing_mode='stretch_width', auto_grow=True)
         # TODO: shrink/grow to fit text
-        # TODO: Ctrl+Enter to submit
+        # TODO: Ctrl+Enter to submit (this is impossible in panel. wtf)
         data_input = pn.widgets.CodeEditor(sizing_mode='stretch_width', language='json')
 
         def reroll(*_):
