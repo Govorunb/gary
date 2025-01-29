@@ -54,7 +54,7 @@ class Config(BaseModel):
         You should play around with this.
         '''
         scheduler: SchedulerConfig = SchedulerConfig()
-    fastapi: dict[str, Any] = {}
+    api: dict[str, Any] = {}
     llm: LLMConfig
     engine_params: dict[str, Any] = {}
     gary: GaryConfig = GaryConfig()

@@ -15,7 +15,7 @@ def start():
     # i love python and its ecosystem
     uvicorn.run(
         "gary.app:app",
-        **CONFIG.fastapi,
+        **CONFIG.api,
         reload_includes=[CONFIG_PATH],
         # reload_excludes=["gary/web/ui.py"]
     )

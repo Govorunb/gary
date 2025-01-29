@@ -216,7 +216,7 @@ def add_control_panel(path: str):
         'autoreload': False,
         # required - otherwise the fastapi app calls this from inside an event loop
         # (and the server here tries to start its own event loop)
-        'threaded': not CONFIG.fastapi['reload'],
+        'threaded': not CONFIG.api['reload'],
         'verbose': False,
         'show': False,
         'admin': True,

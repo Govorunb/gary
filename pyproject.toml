@@ -19,6 +19,9 @@ dependencies = [
     "jsf>=0.11.2",
 ]
 
+[tool.uv]
+package = true
+
 [project.scripts]
 gary = "gary.__main__:start"
 

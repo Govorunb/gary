@@ -11,7 +11,7 @@ definitions:
     description: Preset
     type: object
     properties:
-      fastapi:
+      api:
         type: object
         properties:
           host: {type: string}
