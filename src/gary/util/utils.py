@@ -5,11 +5,9 @@ from collections.abc import Callable, Coroutine
 from typing import Any, overload, LiteralString
 
 @overload
-async def invoke[U](fn: Callable[..., Coroutine[Any, Any, U]], *args, **kwargs) -> U:
-    ...
+async def invoke[U](fn: Callable[..., Coroutine[Any, Any, U]], *args, **kwargs) -> U: ...
 @overload
-async def invoke[U](fn: Callable[..., U], *args, **kwargs) -> U:
-    ...
+async def invoke[U](fn: Callable[..., U], *args, **kwargs) -> U: ...
 
 async def invoke[U](fn: Callable[..., U] | Callable[..., Coroutine[Any, Any, U]], *args, **kwargs) -> U:
     ret = fn(*args, **kwargs)
@@ -24,11 +22,16 @@ class HasEvents[E: LiteralString]:
     def __init__(self):
         self.event_handlers = defaultdict(list)
 
-    def subscribe(self, event: E, handler: Callable):
+    def subscribe(self, event: E, handler: Callable) -> Callable:
         '''
-        Returns a function which unsubscribes the handler.
+        Returns:
+            A callable object tracking the subscription.
+            When called, it will unsubscribe the handler.
         '''
         self.event_handlers[event].append(handler)
+        # MAYBE: actual object representing the subscription
+        # it can let us do things like:
+        # - async generator that yields on each raised event
         return functools.partial(self.unsubscribe, event, handler)
 
     def unsubscribe(self, event: E, handler: Callable):

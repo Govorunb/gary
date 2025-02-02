@@ -5,12 +5,12 @@ from typing import * # type: ignore
 from pydantic import BaseModel
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--config", help="Path to config file (default: 'config.yaml')")
-parser.add_argument("--preset", help="Preset from config file to use (default: 'default')")
+parser.add_argument("--config", help="Path to config file (default: 'config.yaml')", default=None)
+parser.add_argument("--preset", help="Preset from config file to use (default: 'default')", default=None)
 args = parser.parse_args()
 dotenv.load_dotenv(dotenv.find_dotenv(), override=True)
-CONFIG_PATH = args.config or environ.get("CONFIG_FILE", "config.yaml")
-PRESET = args.preset or environ.get("CONFIG_PRESET", "default")
+CONFIG_PATH = args.config or environ.get("GARY_CONFIG_FILE", "config.yaml")
+PRESET = args.preset or environ.get("GARY_CONFIG_PRESET", "default")
 
 class ConflictResolutionPolicy(Enum):
     DROP_INCOMING = "drop_incoming"

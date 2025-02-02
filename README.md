@@ -37,10 +37,10 @@ That said...
 ```
 uv run gary [--preset your_preset] [--config _my_config.yaml]
 ```
-Instead of modifying `config.yaml` (which would get picked up by git) you should make a copy prefixed with an underscore (e.g. `_my_config.yaml`) and point Gary at it with either the `--config` flag or the `CONFIG_FILE` environment variable. Gary reads dotenv so you can make a `.env` file with the following contents:
+Instead of modifying `config.yaml` (which would get picked up by git) you should make a copy prefixed with an underscore (e.g. `_my_config.yaml`) and point Gary at it with either the `--config` flag or the `GARY_CONFIG_FILE` environment variable. Gary reads dotenv so you can make a `.env` file with the following contents:
 ```
-CONFIG_FILE=_my_config.yaml
-CONFIG_PRESET=randy
+GARY_CONFIG_FILE=_my_config.yaml
+GARY_CONFIG_PRESET=randy
 ```
 
 ### Tips

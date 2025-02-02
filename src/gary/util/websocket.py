@@ -75,12 +75,11 @@ class GameWSConnection(WSConnection[AnyGameMessage, AnyNeuroMessage]):
 
         # IMPL: sent on every connect (not just reconnects)
         self.subscribe('connect', self._send_reregisterall)
+        self.subscribe('receive', self.handle)
 
     async def handle(self, message: AnyGameMessage):
         if not self.game and isinstance(message, RegisterActions):
             await self.registry.startup(Startup(game=message.game), self)
-        await self._raise_event("receive", message)
-        # await self.registry.handle(message, self)
 
     async def _send_reregisterall(self):
         await self.send(ReregisterAllActions())

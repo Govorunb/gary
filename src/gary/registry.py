@@ -15,9 +15,8 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
         self.mute_llm = False
 
     async def startup(self, msg: Startup, conn: GameWSConnection) -> "Game":
-        game = self.games.get(msg.game)
-        if game is None:
-            game = Game(msg.game, self, conn)
+        if not (game := self.games.get(msg.game)):
+            game = Game(msg.game, self)
             self.games[msg.game] = game
             await self._raise_event("game_created", game)
             await game._connected()
@@ -52,7 +51,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
 type _game_events = Literal["connect", "disconnect", "llm_context"] | AnyGameCommand | AnyNeuroCommand
 
 class Game(HasEvents[_game_events]):
-    def __init__(self, name: str, registry: Registry, connection: GameWSConnection):
+    def __init__(self, name: str, registry: Registry):
         super().__init__()
         self.name = name
         self.registry = registry
@@ -60,12 +59,11 @@ class Game(HasEvents[_game_events]):
         self._seen_actions: set[str] = set()
         self.pending_actions: dict[str, Action] = {}
         self.pending_forces: dict[str, ForceAction] = {}
-        self._connection = connection
         self.llm = LLM(self) # TODO: single LLM (again)
         self.scheduler = Scheduler(self)
 
+        self._connection: GameWSConnection = None # type: ignore
         self.subscriptions = []
-        self._subscribe(connection)
 
     def _unsubscribe(self):
         for unsub in self.subscriptions:
@@ -85,6 +83,7 @@ class Game(HasEvents[_game_events]):
         return self._connection
     async def set_connection(self, conn: GameWSConnection):
         if self._connection is conn:
+            logger.debug(f"connection is already {conn.id}")
             return
 
         # IMPL: game already connected

@@ -7,7 +7,7 @@ from ..util import CONFIG, logger
 if TYPE_CHECKING:
     from ..registry import Game
 
-_COMPLETED_TASK = asyncio.create_task(asyncio.sleep(0))
+_COMPLETED_TASK = asyncio.Task(asyncio.sleep(0))
 
 class Scheduler:
     def __init__(self, game: "Game"):
