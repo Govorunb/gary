@@ -4,16 +4,13 @@ import colorlog
 
 from . import CONFIG
 
-logging.addLevelName(0, "ALL")
+logging.addLevelName(1, "ALL")
 logging.addLevelName(999999999, "NONE")
 def map_log_level(level: str | int):
     return level if isinstance(level, int) else level.upper()
 LOG_LEVEL_FILE = map_log_level(CONFIG.gary.log_level_file)
 LOG_LEVEL_CONSOLE = map_log_level(CONFIG.gary.log_level_console)
 LOG_FILENAME = f'_logs/log_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}.txt'
-
-# loggers with level NOTSET will inherit from parent
-logging.getLogger().setLevel(0)
 
 logger = logging.getLogger('gary')
 _fh = logging.FileHandler(LOG_FILENAME)
@@ -30,7 +27,7 @@ _stdout.formatter = colorlog.ColoredFormatter('%(log_color)s[%(levelname)-8s : %
 })
 logger.addHandler(_fh)
 logger.addHandler(_stdout)
-logger.setLevel(0) # all
+logger.setLevel(1) # all
 
 def _delete_empty():
     _fh.close()

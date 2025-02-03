@@ -1,9 +1,7 @@
 import asyncio
-import logging
 import re
 import panel as pn
 
-from panel.io.server import Server
 from panel.template import FastListTemplate
 
 from .views import ActionView
@@ -64,7 +62,7 @@ def create_game_tab(game: Game):
             nonlocal actions, tracked_actions
             for a in actions:
                 a.css_classes = ["unregistered"]
-            tracked_actions.clear()
+            # tracked_actions.clear()
 
         game.subscribe("actions/register", register)
         game.subscribe("actions/unregister", unregister)
@@ -86,7 +84,7 @@ def create_game_tab(game: Game):
             nonlocal needs_update
             needs_update = True
             classes = []
-            if (m := re.match(r"Result for action (?:[0-9a-f]{5}): (?P<res>Performing|Failure)", ctx)):
+            if (m := re.match(r"Result for action (?:[^:])+: (?P<res>Performing|Failure)", ctx)):
                 classes.append("success" if m.group("res") == "Performing" else "failure")
             if silent:
                 classes.append("silent")
@@ -131,15 +129,14 @@ def create_game_tab(game: Game):
 
     grid = pn.GridStack(sizing_mode='stretch_both')
 
-    actions = pn.Column("# Actions", live_actions_view, styles=css)
-    context = pn.Column("# Context", live_context_log, styles=css)
+    actions = pn.Column("<h1>Actions</h1>", live_actions_view, styles=css)
+    context = pn.Column("<h1>Context</h1>", live_context_log, styles=css)
 
     mute_toggle = pn.widgets.Checkbox(name="Mute LLM")
     enable_resize = pn.widgets.Checkbox(name="Allow resizing")
     enable_drag = pn.widgets.Checkbox(name="Allow dragging")
     
     def update_mute(muted):
-        from ..registry import REGISTRY
         REGISTRY.mute_llm = muted
 
     mute_toggle.rx.watch(update_mute)
@@ -154,7 +151,7 @@ def create_game_tab(game: Game):
     enable_drag.value = grid.allow_drag = False
 
     config = pn.Column(
-        "# Config",
+        "<h1>Config</h1>",
         pn.Accordion(
             ("LLM", pn.Column(
                 mute_toggle,
@@ -172,50 +169,85 @@ def create_game_tab(game: Game):
         styles=css,
     )
 
-    grid[0:10, 0:4] = actions
-    grid[0:10, 4:8] = context
-    grid[0:10, 8:10] = config
+    # NOTE: max 12 columns
+    # https://github.com/gridstack/gridstack.js?tab=readme-ov-file#custom-columns-css
+    grid[0:12, 0:5] = actions
+    grid[0:12, 5:10] = context
+    grid[0:12, 10:12] = config
+
+    def live_tab_header():
+        connected = pn.rx(game.connection.is_connected())
+        def update():
+            connected.rx.value = game.connection.is_connected()
+
+        game.subscribe("connect", update)
+        game.subscribe("disconnect", update)
+
+        tab_header = pn.Row(
+            game.name,
+            pn.indicators.BooleanStatus(value=connected, width=16, height=16)
+        )
+        return tab_header
+
+    # FIXME: tab header restricted to string
     return (game.name, grid)
 
-def create_tabs():
-    # TODO: single tab view
-    # something like:
-    #      | LLM 'chat' log | metrics
-    #      |                |
-    # logs |________________|
-    #      |Game1|Game2|    |________
-    #      |actions         | config
-    return pn.Tabs(
-        *(create_game_tab(game) for game in REGISTRY.games.values()),
+async def create_tabs():
+    needs_update = True
+    welcome_msg = pn.Column(
+            pn.panel(
+                """<h1>Welcome!</h1>\n\n<h3>Waiting for game...</h3>""",
+                align='center',
+                styles={
+                    "text-align": 'center',
+                    "align-content": 'center',
+                },
+                stylesheets=["""div {text-align: center; align-content: center;}"""],
+                sizing_mode='stretch_both',
+            ),
+            sizing_mode='stretch_both',
+        )
+
+    tabs = pn.Tabs(
+        *(create_game_tab(game) for game in REGISTRY.games.values())
     )
+    if len(tabs) == 0:
+        tabs.append(("Welcome", welcome_msg))
+    def _add_tab(game: Game):
+        if tabs[0] is welcome_msg:
+            tabs.pop(0)
+        tabs.append(create_game_tab(game))
+        nonlocal needs_update
+        needs_update = True
+    REGISTRY.subscribe("game_created", _add_tab)
+    while True:
+        if needs_update:
+            needs_update = False
+            yield tabs
+        await asyncio.sleep(0.5)
 
 def create_web_ui():
     extensions = ['gridstack', 'floatpanel', 'ace', 'codeeditor']
     pn.extension(
         *extensions,
-        template='material',
+        template='fast',
         throttled=True,
         notifications=True,
         disconnect_notification="Disconnected from server.\nPlease make sure the server is running, then refresh this page",
         ready_notification="Application loaded.",
     )
     template = FastListTemplate(title="Gary Control Panel")
-    template.main.append(create_tabs()) # type: ignore
+    template.main.append(pn.Column(create_tabs, sizing_mode='stretch_both')) # type: ignore
     return template
 
 def add_control_panel(path: str):
-    logging.getLogger('bokeh').setLevel("WARNING")
-    logging.getLogger('markdown_it').setLevel("WARNING")
-    # TODO config
-    port = 8001
+    port = CONFIG.api.get('port', 8000) + 1 # TODO: separate config?
     args: dict = {
         'port': port,
-        # panel's autoreload puts the process in the background in the terminal
-        # ew
-        # 'autoreload': not CONFIG.fastapi['reload'],
-        'autoreload': False,
+        # panel's autoreload puts the process in the background in the terminal (ew)
+        'autoreload': False, # not CONFIG.fastapi['reload'],
         # required - otherwise the fastapi app calls this from inside an event loop
-        # (and the server here tries to start its own event loop)
+        # (and the server here tries to start its own event loop - can't have two loops)
         'threaded': not CONFIG.api['reload'],
         'verbose': False,
         'show': False,
@@ -223,8 +255,7 @@ def add_control_panel(path: str):
         'admin_log_level': "INFO",
     }
 
-    # with NoPrint():
-    server: Server = pn.serve({path: create_web_ui}, **args) # type: ignore
+    server = pn.serve({path: create_web_ui}, **args)
 
-    print(f"Serving control panel at http://localhost:{port}")
+    print(f"Serving control panel at http://localhost:{port}/?theme=dark")
     return server
