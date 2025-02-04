@@ -1,14 +1,12 @@
 import asyncio
 import re
 import panel as pn
-
 from panel.template import FastListTemplate
 
-from .views import ActionView
-
+from ..util import CONFIG, logger
 from ..registry import REGISTRY, Game
 from ..spec import *
-from ..util import CONFIG
+from .views import ActionView
 
 def create_game_tab(game: Game):
     css = {
@@ -29,7 +27,7 @@ def create_game_tab(game: Game):
             stylesheets=[
                 """
                 .unregistered {
-                    text-decoration: line-through;
+                    text-decoration: line-through !important;
                     opacity: 0.5;
                     background-color: rgba(0, 0, 0, 0.1);
                 }
@@ -42,26 +40,28 @@ def create_game_tab(game: Game):
             nonlocal needs_update
             needs_update = True
 
+        @pn.io.hold()
         def register(msg: RegisterActions):
-            update()
             for a in msg.data.actions:
-                if not (t := tracked_actions.get(a.name, None)):
+                if not (t := tracked_actions.get(a.name)):
                     t = tracked_actions[a.name] = ActionView(action=a, game=game)
-                    actions.append(tracked_actions[a.name])
+                    actions.append(t)
                 else:
-                    t.css_classes = []
-
-        def unregister(msg: UnregisterActions):
+                    t.action = a
+                    t.is_registered = True
             update()
+
+        @pn.io.hold()
+        def unregister(msg: UnregisterActions):
             for name in msg.data.action_names:
-                if (t := tracked_actions.get(name, None)):
-                    t.css_classes = ["unregistered"]
+                if (t := tracked_actions.get(name)):
+                    t.is_registered = False
+            update()
 
         def clear(*_):
             update()
-            nonlocal actions, tracked_actions
-            for a in actions:
-                a.css_classes = ["unregistered"]
+            for a in tracked_actions.values():
+                a.is_registered = False
             # tracked_actions.clear()
 
         game.subscribe("actions/register", register)
@@ -124,7 +124,6 @@ def create_game_tab(game: Game):
             if needs_update:
                 needs_update = False
                 yield ctx_log
-                # ctx_log.scroll_to(len(ctx_log.objects)-1) # type: ignore
             await asyncio.sleep(1)
 
     grid = pn.GridStack(sizing_mode='stretch_both')
@@ -135,14 +134,15 @@ def create_game_tab(game: Game):
     mute_toggle = pn.widgets.Checkbox(name="Mute LLM")
     enable_resize = pn.widgets.Checkbox(name="Allow resizing")
     enable_drag = pn.widgets.Checkbox(name="Allow dragging")
-    
+
     def update_mute(muted):
+        logger.info(f"User {'un' if not muted else ''}muted LLM in web UI")
         REGISTRY.mute_llm = muted
 
     mute_toggle.rx.watch(update_mute)
     enable_resize.link(grid, value='allow_resize', bidirectional=True)
     enable_drag.link(grid, value='allow_drag', bidirectional=True)
-    
+
     # TODO: localstorage for preferences?
     mute_toggle.value = True
     # checkbox initial value is False; grid properties' initial value is True

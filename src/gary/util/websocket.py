@@ -1,6 +1,7 @@
 import json
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
+from typing import TYPE_CHECKING, NamedTuple
 
 from ..spec import *
 from .logger import logger

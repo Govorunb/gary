@@ -27,7 +27,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
         if isinstance(msg, Startup):
             await self.startup(msg, conn)
         else:
-            if not (game := self.games.get(msg.game, None)):
+            if not (game := self.games.get(msg.game)):
                 # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
                 logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
                 game = await self.startup(Startup(game=msg.game), conn)
@@ -48,7 +48,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
             if (unsub := self._subscriptions.pop(conn.id, None)):
                 unsub()
 
-type _game_events = Literal["connect", "disconnect", "llm_context"] | AnyGameCommand | AnyNeuroCommand
+type _game_events = Literal["connect", "disconnect", "llm_context"] | GameCommand | NeuroCommand
 
 class Game(HasEvents[_game_events]):
     def __init__(self, name: str, registry: Registry):
@@ -117,17 +117,17 @@ class Game(HasEvents[_game_events]):
                 logger.warning(f"Action {action.name} already registered")
                 policy = CONFIG.gary.existing_action_policy
                 if policy == ConflictResolutionPolicy.DROP_INCOMING:
-                    logger.info(f"Ignoring incoming action {action.name} according to policy {policy}")
+                    logger.debug(f"Ignoring incoming action {action.name} according to policy {policy}")
                     continue
-                logger.info(f"Overwriting existing action {action.name} according to policy {policy}")
-            assert action.schema is None or isinstance(action.schema, dict), "Schema must be None or dict"
-            if action.schema and action.schema.get("type", None) == "object":
+                logger.debug(f"Overwriting existing action {action.name} according to policy {policy}")
+            assert action.schema_ is None or isinstance(action.schema_, dict), "Schema must be None or dict"
+            if action.schema_ and action.schema_.get("type") == "object":
                 # stop making up random fields in the data. i am no longer asking
-                action.schema["additionalProperties"] = False # type: ignore
+                action.schema_["additionalProperties"] = False # type: ignore
             self.actions[action.name] = action
             if action.name not in self._seen_actions:
                 self._seen_actions.add(action.name)
-                logger.info(f"New action {action.name}: {action.description}\nSchema: {json.dumps(action.schema, indent=4)}")
+                logger.info(f"New action {action.name}: {action.description}\nSchema: {json.dumps(action.schema_, indent=4)}")
         logger.info(f"Actions registered: {list(self.actions.keys())}")
 
     async def action_unregister(self, actions: list[str]):
@@ -199,7 +199,6 @@ class Game(HasEvents[_game_events]):
 
     async def handle(self, msg: AnyGameMessage):
         logger.debug(f'Handling {msg.command}')
-        await self._raise_event(msg.command, msg)
         match msg:
             case Startup():
                 pass
@@ -218,6 +217,7 @@ class Game(HasEvents[_game_events]):
                 await self.process_result(msg)
             case _:
                 raise Exception(f"Unhandled message {msg}")
+        await self._raise_event(msg.command, msg)
 
     async def _connected(self):
         logger.debug(f"{self.name} connected")

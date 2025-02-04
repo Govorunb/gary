@@ -1,6 +1,7 @@
 import random, time
 from json import dumps
 from datetime import datetime
+from typing import TYPE_CHECKING
 from pydantic import TypeAdapter
 
 import llama_cpp
@@ -74,7 +75,7 @@ class LLM:
 You are Larry, an expert gamer AI. You have a deep knowledge and masterfully honed ability to perform in-game actions via sending JSON to a special software integration system called Gary.
 You are goal-oriented but curious. You aim to keep your actions varied and entertaining. Keep your reasoning short and to the point.
 """
-        if custom_rules := MANUAL_RULES.get(self.game.name, None):
+        if custom_rules := MANUAL_RULES.get(self.game.name):
             self.context(custom_rules, silent=True, persistent_llarry_only=True)
 
     def llm_engine(self) -> models._model.Engine:
@@ -133,7 +134,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             if prefix:
                 prefix = " " + prefix
             logger.info(f"(ctx{prefix}) {msg}")
-            if tokens > 500:
+            if tokens > 500 and not persistent_llarry_only:
                 logger.warning(f"Context '{ctx[:20].encode('unicode_escape').decode()}...' had {tokens} tokens. Are you sure this is a good idea?")
         if persistent_llarry_only and isinstance(self.llm, Llarry):
             out: Llarry
@@ -192,9 +193,9 @@ You must perform one of the following actions, given this information:
             chosen_action = llm["chosen_action"]
             # TODO: test without schema reminder
             llm += f'''
-    "schema": {dumps(actions[chosen_action].schema)},'''
+    "schema": {dumps(actions[chosen_action].schema_)},'''
             llm = time_gen(llm, f'''
-    "data": {json("data", schema=actions[chosen_action].schema, temperature=self.temperature, max_tokens=self.max_tokens())}
+    "data": {json("data", schema=actions[chosen_action].schema_, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
 ```''')
         data = llm['data']

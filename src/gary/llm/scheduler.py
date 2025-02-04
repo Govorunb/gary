@@ -18,9 +18,9 @@ class Scheduler:
         self.idle_timeout_force = CONFIG.gary.scheduler.idle_timeout_force
 
         if not self.idle_timeout_try:
-            logger.warning("Idle timeout (try) disabled")
+            logger.info("Idle timeout (try) disabled")
         if not self.idle_timeout_force:
-            logger.warning("Idle timeout (force) disabled")
+            logger.info("Idle timeout (force) disabled")
 
         self._active = False
         self._try_task = _COMPLETED_TASK

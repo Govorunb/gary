@@ -59,15 +59,17 @@ class Config(BaseModel):
     engine_params: dict[str, Any] = {}
     gary: GaryConfig = GaryConfig()
 
-def _merge_nested_dicts(a: dict[str, Any], b: dict[str, Any]):
+def _merge_nested_dicts(a: dict | None, b: dict | None):
     if not a:
+        if not b:
+            raise ValueError("Nothing to merge")
         return b
     if not b:
         return a
     out = dict(a)
     for k, bv in b.items():
         if isinstance(bv, dict):
-            out[k] = _merge_nested_dicts(a.get(k, None), bv)
+            out[k] = _merge_nested_dicts(a.get(k), bv)
         else:
             out[k] = bv
     return out
@@ -80,15 +82,15 @@ def _load_config(preset_name: str, config_yaml: dict | None = None):
         return _load_config(preset_name, _config_yaml)
 
     preset: dict
-    if not (preset := config_yaml.get(preset_name, None)):
+    if not (preset := config_yaml.get(preset_name, None)): # keeping ", None" because type inference no worky goodly
         raise ValueError(f"Preset '{preset_name}' was not found in config.yaml")
-    if base := preset.get("base", None):
+    if base := preset.get("base"):
         if base not in config_yaml:
-            raise ValueError(f"Base preset '{base}' (from '{preset_name}') was not found in config.yaml")
+            raise ValueError(f"Base preset '{base}' (referenced in '{preset_name}') was not found in config.yaml")
         base_preset = _load_config(base, config_yaml)
         preset = _merge_nested_dicts(base_preset, preset["overrides"])
 
-    def replace_env(d: dict[str, Any]) -> dict[str, Any]:
+    def replace_env(d: dict) -> dict:
         out = {}
         for k, v in d.items():
             out[k] = replace_env(v) if isinstance(v, dict)\

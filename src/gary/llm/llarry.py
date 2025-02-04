@@ -33,7 +33,7 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
         self.post_exec_metrics = llama_cpp_engine.post_exec_metrics
 
         self.default_n_keep = kwargs.get("n_keep", 500)
-        self.default_n_discard = kwargs.get("n_discard", None) # n_ctx // 2
+        self.default_n_discard = kwargs.get("n_discard") # n_ctx // 2
 
     def shift_kv_cache(self, n_keep, n_discard, seq_id=0):
         self.model_obj._ctx.kv_cache_seq_rm(seq_id, n_keep, n_keep + n_discard)

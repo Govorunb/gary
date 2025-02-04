@@ -1,13 +1,16 @@
+from typing import Annotated, Any, Literal, Union
 import warnings
-from typing import * # type: ignore
 from uuid import uuid4
 from pydantic import BaseModel, Field, TypeAdapter
 
 warnings.filterwarnings("ignore", category=UserWarning, message='Field name "schema" in ')
 
 # pyright: reportIncompatibleVariableOverride=false
+# the fields are *not* mutated, ever
+# there's the option to make the base classes generic
+# but pydantic doesn't pass overrides with default values down to the parent ctor)
 
-AnyGameCommand = Literal[
+type GameCommand = Literal[
     "startup",
     "context",
     "actions/register",
@@ -17,7 +20,7 @@ AnyGameCommand = Literal[
     "shutdown/ready",
 ]
 
-AnyNeuroCommand = Literal[
+type NeuroCommand = Literal[
     "action",
     "actions/reregister_all",
     "shutdown/graceful",
@@ -27,17 +30,17 @@ AnyNeuroCommand = Literal[
 class ActionModel(BaseModel):
     name: str
     description: str = "" # IMPL: description is probably not going to be optional
-    schema: Mapping[str, Any] | None = None # type: ignore
+    schema_: Annotated[dict[str, Any] | None, Field(alias="schema")]
 
 class Message(BaseModel):
-    command: AnyGameCommand | AnyNeuroCommand
+    command: GameCommand | NeuroCommand
 
 class GameMessage(Message):
-    command: AnyGameCommand
+    command: GameCommand
     game: str
 
 class NeuroMessage(Message):
-    command: AnyNeuroCommand
+    command: NeuroCommand
 
 # Game messages
 class Startup(GameMessage):

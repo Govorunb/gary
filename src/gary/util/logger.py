@@ -29,6 +29,10 @@ logger.addHandler(_fh)
 logger.addHandler(_stdout)
 logger.setLevel(1) # all
 
+# https://github.com/bokeh/bokeh/blob/604e6f801974cedd6000835923bfb9030b64d461/src/bokeh/document/document.py#L377
+# https://github.com/python/cpython/blob/506c76f1bd252aeefb3b488903a9a1092e55ae04/Lib/logging/__init__.py#L2179
+logging.getLogger().addHandler(logging.NullHandler())
+
 def _delete_empty():
     _fh.close()
     logger.removeHandler(_fh)
