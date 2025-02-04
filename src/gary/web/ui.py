@@ -27,7 +27,6 @@ def create_game_tab(game: Game):
             stylesheets=[
                 """
                 .unregistered {
-                    text-decoration: line-through !important;
                     opacity: 0.5;
                     background-color: rgba(0, 0, 0, 0.1);
                 }
