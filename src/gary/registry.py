@@ -60,7 +60,7 @@ class Game(HasEvents[_game_events]):
         self.pending_forces: dict[str, ForceAction] = {}
         self.llm = LLM(self) # TODO: single LLM (again)
         self.scheduler = Scheduler(self)
-        self.mute_llm = False
+        self._mute_llm = False
 
         self._connection: GameWSConnection = None # type: ignore
         self.subscriptions = []
@@ -77,6 +77,20 @@ class Game(HasEvents[_game_events]):
             connection.subscribe("disconnect", self._disconnected),
             connection.subscribe("connect", self._connected),
         ])
+
+    @property
+    def mute_llm(self):
+        return self._mute_llm
+
+    @mute_llm.setter
+    def mute_llm(self, muted: bool):
+        if self._mute_llm == muted:
+            return
+        self._mute_llm = muted
+        if muted:
+            self.scheduler.stop()
+        else:
+            self.scheduler.start()
 
     @property
     def connection(self) -> GameWSConnection:
@@ -127,7 +141,7 @@ class Game(HasEvents[_game_events]):
             self.actions[action.name] = action
             if action.name not in self._seen_actions:
                 self._seen_actions.add(action.name)
-                logger.info(f"New action {action.name}: {action.description}\nSchema: {json.dumps(action.schema_, indent=4)}")
+                logger.debug(f"New action {action.name}: {action.description}\nSchema: {json.dumps(action.schema_, indent=4)}")
         logger.info(f"Actions registered: {list(self.actions.keys())}")
 
     async def action_unregister(self, actions: list[str]):
@@ -222,7 +236,8 @@ class Game(HasEvents[_game_events]):
     async def _connected(self):
         logger.debug(f"{self.name} connected")
         self.llm.gaming()
-        self.scheduler.start()
+        if not self.mute_llm:
+            self.scheduler.start()
         await self._raise_event("connect")
 
     async def _disconnected(self, *_):

@@ -1,5 +1,7 @@
 import asyncio
 import panel as pn
+from bokeh.models import Tooltip
+from bokeh.models.dom import HTML
 from panel.template import FastListTemplate
 
 from ..util import CONFIG, logger
@@ -21,7 +23,7 @@ def create_game_tab(game: Game):
     actions = pn.Column("<h1>Actions</h1>", ActionsList(game), styles=css, sizing_mode='stretch_both')
     context = pn.Column("<h1>Context</h1>", ContextLog(game), styles=css, sizing_mode='stretch_both')
 
-    mute_toggle = pn.widgets.Checkbox(name="Mute LLM")
+    mute_toggle = pn.widgets.Switch(name="Tony Mode")
     enable_resize = pn.widgets.Checkbox(name="Allow resizing")
     enable_drag = pn.widgets.Checkbox(name="Allow dragging")
 
@@ -46,7 +48,21 @@ def create_game_tab(game: Game):
         "<h1>Config</h1>",
         pn.Accordion(
             ("LLM", pn.Column(
-                mute_toggle,
+                pn.Row(
+                    mute_toggle,
+                    pn.widgets.StaticText(value=mute_toggle.name),
+                    pn.indicators.TooltipIcon(
+                        value=Tooltip(
+                            # yes there is no other way to pass newlines into this thing
+                            # it is very funny
+                            content=HTML(html="Mutes the model, preventing it from performing any actions.<br/>"
+                                              "Makes it easier to send actions manually."),
+                            position='top',
+                            attachment='above',
+                        ),
+                        margin=0,
+                    ),
+                ),
                 margin=(5, 10),
             )),
             ("Layout", pn.Column(
@@ -63,9 +79,9 @@ def create_game_tab(game: Game):
 
     # NOTE: max 12 columns
     # https://github.com/gridstack/gridstack.js?tab=readme-ov-file#custom-columns-css
-    grid[0:12, 0:5] = actions
-    grid[0:12, 5:10] = context
-    grid[0:12, 10:12] = config
+    grid[0:12, 0:4] = actions
+    grid[0:12, 4:9] = context
+    grid[0:12, 9:12] = config
 
     def live_tab_header():
         connected = pn.rx(game.connection.is_connected())
@@ -125,9 +141,10 @@ def create_web_ui():
         template='fast',
         throttled=True,
         notifications=True,
-        disconnect_notification="Disconnected from server.\nPlease make sure the server is running, then refresh this page",
-        ready_notification="Application loaded.",
+        disconnect_notification="Disconnected from server.\nPlease refresh the page",
+        ready_notification="Connected",
     )
+
     template = FastListTemplate(title="Gary Control Panel")
     template.main.append(pn.Column(create_tabs, sizing_mode='stretch_both')) # type: ignore
     return template
@@ -145,9 +162,27 @@ def add_control_panel(path: str):
         'show': False,
         'admin': True,
         'admin_log_level': "INFO",
+        'unused_session_lifetime_milliseconds': 1000, # would've been 1 or 500 but sometimes a session can get DC'd while connecting
+        'check_unused_sessions_milliseconds': 500,
     }
 
     server = pn.serve({path: create_web_ui}, **args)
+
+    connected_clients = 0
+    def on_connect(_):
+        nonlocal connected_clients
+        connected_clients += 1
+        logger.debug(f"(Web UI) Client connected, now {connected_clients} total")
+    def on_disconnect(_):
+        nonlocal connected_clients
+        connected_clients -= 1
+        logger.debug(f"(Web UI) Client disconnected, now {connected_clients} total")
+        if connected_clients == 0:
+            logger.info("(Web UI) All clients disconnected, unmuting all")
+            for game in REGISTRY.games.values():
+                game.mute_llm = False
+    pn.state.on_session_created(on_connect)
+    pn.state.on_session_destroyed(on_disconnect)
 
     print(f"Serving control panel at http://localhost:{port}/?theme=dark")
     return server
