@@ -12,7 +12,6 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
         self.games: dict[str, "Game"] = {}
         self.connections: dict[str, WSConnection] = {}
         self._subscriptions: dict[str, Any] = {}
-        self.mute_llm = False
 
     async def startup(self, msg: Startup, conn: GameWSConnection) -> "Game":
         if not (game := self.games.get(msg.game)):
@@ -61,6 +60,7 @@ class Game(HasEvents[_game_events]):
         self.pending_forces: dict[str, ForceAction] = {}
         self.llm = LLM(self) # TODO: single LLM (again)
         self.scheduler = Scheduler(self)
+        self.mute_llm = False
 
         self._connection: GameWSConnection = None # type: ignore
         self.subscriptions = []
@@ -141,7 +141,7 @@ class Game(HasEvents[_game_events]):
         if not self.actions:
             logger.debug("No actions to try (Game.try_action)")
             return False
-        if self.registry.mute_llm:
+        if self.mute_llm:
             return False
         # FIXME: LLM generation is synchronous and hangs the websocket (Abandoned Pub disconnects)
         # scheduler issue (todo)
@@ -209,7 +209,7 @@ class Game(HasEvents[_game_events]):
             case Context():
                 await self.send_context(msg.data.message, msg.data.silent)
             case ForceAction():
-                if self.registry.mute_llm:
+                if self.mute_llm:
                     return False
                 if chosen_action := await self.llm.force_action(msg, self.actions):
                     await self.execute_action(*chosen_action, force=msg)

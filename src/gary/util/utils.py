@@ -1,17 +1,17 @@
 import builtins
 import functools
 from collections import defaultdict
-from collections.abc import Callable, Coroutine
-from typing import Any, overload, LiteralString
+from collections.abc import Callable
+from typing import Awaitable, overload, LiteralString
 
 @overload
-async def invoke[U](fn: Callable[..., Coroutine[Any, Any, U]], *args, **kwargs) -> U: ...
+async def invoke[U](fn: Callable[..., Awaitable[U]], *args, **kwargs) -> U: ...
 @overload
 async def invoke[U](fn: Callable[..., U], *args, **kwargs) -> U: ...
 
-async def invoke[U](fn: Callable[..., U] | Callable[..., Coroutine[Any, Any, U]], *args, **kwargs) -> U:
+async def invoke[U](fn: Callable[..., U] | Callable[..., Awaitable[U]], *args, **kwargs) -> U:
     ret = fn(*args, **kwargs)
-    if isinstance(ret, Coroutine):
+    if isinstance(ret, Awaitable):
         return await ret
     return ret
 

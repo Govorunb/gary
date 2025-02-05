@@ -138,7 +138,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             collapsed=True,
             css_classes=self.param.is_registered.rx.where([], ["unregistered"]),
             sizing_mode='stretch_width',
-            margin=20,
+            margin=(5, 20),
         )
         return card
 
