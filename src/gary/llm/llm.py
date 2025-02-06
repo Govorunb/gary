@@ -1,5 +1,5 @@
 import random, time
-from json import dumps
+from orjson import dumps
 from datetime import datetime
 from typing import TYPE_CHECKING
 from pydantic import TypeAdapter
@@ -86,10 +86,10 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         logger.debug(f"Max tokens: {maxtok}")
         return maxtok
 
-    def reset(self):
-        # i sure love it when other people handle the low level stuff for me
-        # and abstract everything away so that i don't have to deal with any of it
+    def reset(self, llarry_keep_persistent=False):
         engine = self.llm_engine()
+        if llarry_keep_persistent and isinstance(self.llm, Llarry):
+            logger.debug("TODO: keep persistent messages on reset")
         if isinstance(engine, models.llama_cpp._llama_cpp.LlamaCppEngine):
             engine.reset_metrics()
             engine.model_obj.reset()
@@ -104,7 +104,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         self.llm = buh
 
         assert self.llm.token_count == 0
-        assert len(self.llm._current_prompt()) == 0
+        assert len(str(self.llm)) == 0
         logger.debug(f'truncated context to {tokens(self.llm)}')
 
         self.system_prompt()
@@ -193,7 +193,7 @@ You must perform one of the following actions, given this information:
             chosen_action = llm["chosen_action"]
             # TODO: test without schema reminder
             llm += f'''
-    "schema": {dumps(actions[chosen_action].schema_)},'''
+    "schema": {dumps(actions[chosen_action].schema_).decode()},'''
             llm = time_gen(llm, f'''
     "data": {json("data", schema=actions[chosen_action].schema_, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
@@ -248,7 +248,7 @@ Respond with either '{NO}' (to do nothing) or '{YES}' (you will then be asked to
             reasoning = llm['reasoning']
             logger.info(f"try_act {reasoning=}")
         logger.info(f"{decision=}")
-        # logger.debug(llm._current_prompt())
+        # logger.debug(str(llm))
         if CONFIG.gary.non_ephemeral_try_context:
             self.llm = llm
         return None if decision == NO else await self.action(actions)

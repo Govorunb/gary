@@ -1,3 +1,4 @@
+from collections import namedtuple
 import time
 from typing import Self
 from guidance.models.llama_cpp._llama_cpp import LlamaCpp, LlamaCppEngine
@@ -75,6 +76,22 @@ class Llarry(LlamaCpp):
                 logger.debug(f"No role end for '{role}' {e}")
         return list(ends)
 
+    Message = namedtuple("Message", "all_tokens start size")\
+
+    def iter_messages(self):
+        tokenizer = self.engine.tokenizer
+        msg_ends = [tokenizer.encode(end.encode()) for end in self.get_msg_end_tokens()]
+        prompt = str(self)
+        tokens = tokenizer.encode(prompt.encode())
+        start = 0
+        size = 0
+        for i_tok in range(len(tokens)):
+            if any(tokens[i_tok-len(end) : i_tok] == end for end in msg_ends):
+                yield Llarry.Message(tokens, start, size)
+                start += size
+                size = 0
+            size += 1
+
     def trim(self) -> Self:
         if not isinstance(self.engine, StreamingLlamaCppEngine):
             global _warned
@@ -85,113 +102,87 @@ class Llarry(LlamaCpp):
 
         # logger.warning("pray now my lord")
         t0 = time.time()
-        prompt = str(self) # self._current_prompt()
-        t_prompt = time.time()
         # TODO: see if we can maybe keep state as we add the messages
         # (probably not because of assistant msgs interleaving append/generate)
-        sys_start = None
-        len_start = 0
+        sys_begin = None
+        len_sys_begin = 0
         chat_template = self.engine.get_chat_template()
         tokenizer = self.engine.tokenizer
-        # bos_token = tokenizer.bos_token_id # type: ignore
         try:
-            sys_start = chat_template.get_role_start("system")
-            sys_start = tokenizer.encode(sys_start.encode())
-            len_start = len(sys_start)
+            sys_begin = chat_template.get_role_start("system")
+            sys_begin = tokenizer.encode(sys_begin.encode())
+            len_sys_begin = len(sys_begin)
         except Exception:
             logger.warning("Could not get system role start")
-        tokens = tokenizer.encode(prompt.encode())
-        t_encode = time.time()
-        msg_ends = [tokenizer.encode(end.encode()) for end in self.get_msg_end_tokens()]
-
         # having easily accessible utility methods like list.split is clearly not pythonic
-
-        total_tokens = 0
         n_keep = 0
         max_discard = self.engine.model_obj.n_ctx() // 2
         n_discard = 0
         i_start_discard = 0
         i_end_discard = 0
-        def can_discard(i_message: int, message_span: tuple[int, int]) -> bool:
+        def can_discard(i_message: int, msg: Llarry.Message) -> bool:
             if i_message in self.persistent:
                 # logger.warning(f"message {i_message} is persistent ({self.persistent})")
                 return False
-            if not sys_start:
-                return True
-            (start, size) = message_span
-            if size < len_start:
+            if n_discard >= max_discard:
+                # logger.warning("discard over max")
                 return False
-            return tokens[start:start+len_start] != sys_start
 
-        def on_message_end(i: int, message_span: tuple[int, int]) -> bool:
+            if not sys_begin:
+                return True
+            # theoretically can happen in a weird case with two msg end tokens close together
+            # mostly just a bounds check
+            if msg.size < len_sys_begin:
+                return True
+            return msg.all_tokens[msg.start : msg.start+len_sys_begin] != sys_begin
+
+        def on_message_end(i: int, msg: Llarry.Message) -> bool:
             '''
-            Returns: whether to continue parsing the next message.
+            Returns:
+                Whether to continue iterating to the next message.
             '''
             nonlocal n_discard, n_keep
             nonlocal i_start_discard, i_end_discard
-            # (start, size) = span
-            # message_tokens = tokens[start:start+size]
+            # (toks, start, size) = msg
+            # message_tokens = toks[start:start+size]
             # message = tokenizer.decode(message_tokens).decode()
             # logger.info(f"message #{i}: {message}")
-            if n_discard >= max_discard:
-                i_end_discard = i
-                # logger.warning("discard over max")
-                return False
 
             # 1. first discardable is n_keep
             # 2. then, find first non-discardable message
             # 3. all tokens between are discardable
-            discardable = can_discard(i, message_span)
+            discardable = can_discard(i, msg)
             if n_keep == 0:
                 if discardable:
-                    # logger.warning(f"first discardable at {total_tokens} (#{i})")
-                    n_keep = total_tokens
+                    # logger.warning(f"first discardable at {msg.start} (#{i})")
+                    n_keep = msg.start
                     i_start_discard = i
             else:
                 if discardable:
-                    n_discard = total_tokens - n_keep
+                    n_discard = msg.start - n_keep
                 else:
-                    # logger.warning(f"discardable span ends at {total_tokens} (#{i})")
+                    # logger.warning(f"discardable span ends at {msg.start} (#{i})")
                     i_end_discard = i
                     return False
             return True
-        msg_tokens = 0
-        i = 0
-        for i_tok in range(len(tokens)):
-            if any(tokens[i_tok-len(end) : i_tok] == end for end in msg_ends):
-                if not on_message_end(i, (total_tokens, msg_tokens)):
-                    # logger.warning("stopping")
-                    break
-                # logger.warning(f"new message #{i} ({total_tokens}..{total_tokens+msg_tokens}) (discardable: {can_discard(i, (total_tokens, msg_tokens))})")
-                i += 1
-                total_tokens += msg_tokens
-                msg_tokens = 0
-            msg_tokens += 1
-        t_find = time.time()
+        for i, msg in enumerate(self.iter_messages()):
+            if not on_message_end(i, msg):
+                break
+        else:
+            logger.debug("nothing to trim, aborting")
+            return self
+
         persist_shift = i_end_discard - i_start_discard + 1
 
-        tokens = self.engine.trim(tokens, n_keep, n_discard)
-        t_trim = time.time()
+        tokens = self.engine.trim(msg.all_tokens, n_keep, n_discard)
         # this code is ok because i'm not a python dev :)
         copy = self.__new__(self.__class__)
         # initializers above Model create an Engine, we don't want that
         # literally just want to reset state
         Model.__init__(copy, self.engine, echo = False)
         copy.persistent = set(p - persist_shift if p >= i_end_discard else p for p in self.persistent) # immutability
-        t_copy = time.time()
         new_prompt = tokenizer.decode(tokens).decode()
-        t_decode = time.time()
-        # logger.critical(f"New prompt:\n{new_prompt}")
-        timings = [
-            ("prompt", t_prompt, t0),
-            ("encode", t_encode, t_prompt),
-            ("find", t_find, t_encode),
-            ("trim", t_trim, t_find),
-            ("copy", t_copy, t_trim),
-            ("decode", t_decode, t_copy),
-            ("total", time.time(), t0),
-        ]
-        logger.debug("\n\t".join(["Trimmed in:"] + [f"{name}: {(t-t_prev)*1000:.4f}ms" for name, t, t_prev in timings]))
+        logger.debug("Trimmed in {:.4f}ms".format((time.time()-t0)*1000))
         # logger.warning(f"{n_keep=} {n_discard=} {i_start_discard=} {i_end_discard=} {persist_shift=}")
         copy += new_prompt
         return copy

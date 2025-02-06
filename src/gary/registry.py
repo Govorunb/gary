@@ -1,5 +1,5 @@
 from functools import partial
-import json
+import orjson
 
 from .util import CONFIG, logger, WSConnection, GameWSConnection, HasEvents
 from .util.config import ConflictResolutionPolicy
@@ -141,7 +141,7 @@ class Game(HasEvents[_game_events]):
             self.actions[action.name] = action
             if action.name not in self._seen_actions:
                 self._seen_actions.add(action.name)
-                logger.debug(f"New action {action.name}: {action.description}\nSchema: {json.dumps(action.schema_, indent=4)}")
+                logger.debug(f"New action {action.name}: {action.description}\nSchema: {orjson.dumps(action.schema_, option=orjson.OPT_INDENT_2).decode()}")
         logger.info(f"Actions registered: {list(self.actions.keys())}")
 
     async def action_unregister(self, actions: list[str]):

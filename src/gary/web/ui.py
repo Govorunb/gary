@@ -20,10 +20,57 @@ def create_game_tab(game: Game):
 
     grid = pn.GridStack(sizing_mode='stretch_both')
 
-    actions = pn.Column("<h1>Actions</h1>", ActionsList(game), styles=css, sizing_mode='stretch_both')
-    context = pn.Column("<h1>Context</h1>", ContextLog(game), styles=css, sizing_mode='stretch_both')
-
+    actions = ActionsList(game)
     mute_toggle = pn.widgets.Switch(name="Tony Mode")
+    mute_toggle_with_tooltip = pn.Row(
+        mute_toggle,
+        pn.widgets.StaticText(value=mute_toggle.name),
+        pn.indicators.TooltipIcon(
+            value=Tooltip(
+                # yes there is no other way to pass newlines into this thing
+                # it is very funny
+                content=HTML(html="Mutes the model, preventing it from performing any actions.<br/>"
+                                    "Makes it easier to send actions manually."),
+                position='top',
+                attachment='above',
+            ),
+            margin=0,
+        ),
+    )
+    actions = pn.Column(
+        "<h1>Actions</h1>",
+        actions,
+        pn.Row(
+            mute_toggle_with_tooltip
+        ),
+
+        styles=css, sizing_mode='stretch_both'
+    )
+
+    ctx_log = ContextLog(game)
+    clear_context = pn.widgets.Button(
+        name="Clear Context",
+        button_type='primary',
+        description="Clear the model's context (working memory).\n"
+                    "Use this if the model gets into a loop of bad decisions.",
+    )
+    @clear_context.on_click
+    async def _(*_):
+        # FIXME: LLM desperately needs to be moved off-thread
+        with clear_context.param.update(name="Clearing...", disabled=True):
+            await asyncio.sleep(0.1)
+            game.llm.reset(True)
+            ctx_log.logs = []
+    context = pn.Column(
+        "<h1>Context</h1>",
+        ctx_log,
+        pn.Row(
+            clear_context
+        ),
+
+        styles=css, sizing_mode='stretch_both'
+    )
+
     enable_resize = pn.widgets.Checkbox(name="Allow resizing")
     enable_drag = pn.widgets.Checkbox(name="Allow dragging")
 
@@ -46,25 +93,11 @@ def create_game_tab(game: Game):
 
     config = pn.Column(
         "<h1>Config</h1>",
+        "These settings are mostly for playing around and do not persist",
         pn.Accordion(
-            ("LLM", pn.Column(
-                pn.Row(
-                    mute_toggle,
-                    pn.widgets.StaticText(value=mute_toggle.name),
-                    pn.indicators.TooltipIcon(
-                        value=Tooltip(
-                            # yes there is no other way to pass newlines into this thing
-                            # it is very funny
-                            content=HTML(html="Mutes the model, preventing it from performing any actions.<br/>"
-                                              "Makes it easier to send actions manually."),
-                            position='top',
-                            attachment='above',
-                        ),
-                        margin=0,
-                    ),
-                ),
-                margin=(5, 10),
-            )),
+            # ("LLM", pn.Column(
+            #     margin=(5, 10),
+            # )),
             ("Layout", pn.Column(
                 enable_resize,
                 enable_drag,
@@ -73,6 +106,7 @@ def create_game_tab(game: Game):
             sizing_mode='stretch_width',
         ),
         pn.VSpacer(),
+        "If stuff breaks, try refreshing the page",
         sizing_mode='stretch_both',
         styles=css,
     )
@@ -161,7 +195,7 @@ def add_control_panel(path: str):
         'verbose': False,
         'show': False,
         'admin': True,
-        'admin_log_level': "INFO",
+        'admin_log_level': 'INFO',
         'unused_session_lifetime_milliseconds': 1000, # would've been 1 or 500 but sometimes a session can get DC'd while connecting
         'check_unused_sessions_milliseconds': 500,
     }

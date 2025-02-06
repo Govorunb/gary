@@ -1,4 +1,4 @@
-import json
+import orjson
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 from typing import TYPE_CHECKING, NamedTuple
@@ -37,7 +37,7 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
         if not self.is_connected():
             logger.warning(f"Not connected, cannot send {message}")
             return
-        text = json.dumps(message.model_dump(mode='json'))
+        text = orjson.dumps(message.model_dump(mode='json')).decode()
         # logger.debug(f'Sending: {text}')
         await self.ws.send_text(text)
         await self._raise_event("send", message)

@@ -3,7 +3,7 @@ import panel as pn
 
 import param
 import sys
-import json
+import orjson
 import jsonschema
 
 from typing import Any, Literal
@@ -60,11 +60,13 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
     def __panel__(self):
         def filter_schema(schema: dict[str, Any] | None):
             # no 'properties'
-            # TODO: {enum: [null]} (maybe)
             if not schema or (schema.get("type") == "object" and not schema.get("properties")):
                 return None
+            # TODO: filter out {enum: [null]} (maybe)
             
-            schema.pop('additionalProperties', None) # hide our injection
+            schema = orjson.loads(orjson.dumps(schema))
+            assert schema
+            schema.pop('additionalProperties', None) # hide our injection to reduce confusion
             return schema
         # someone get me out
         # python rx is so ass
@@ -75,7 +77,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             if not schema:
                 return None
             return pn.Card(
-                pn.pane.Markdown(f"```json\n{json.dumps(schema, indent=2)}\n```", sizing_mode='stretch_width'),
+                pn.pane.Markdown(f"```json\n{orjson.dumps(schema, option=orjson.OPT_INDENT_2).decode()}\n```", sizing_mode='stretch_width'),
                 title="Schema",
                 collapsed=True,
                 sizing_mode='stretch_width',
@@ -100,7 +102,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             data_input = pn.widgets.CodeEditor(sizing_mode='stretch_width', language='json', min_height=100)
 
             def reroll(*_):
-                data_input.value = json.dumps(jsf.generate(), indent=2) if jsf else "{}"
+                data_input.value = orjson.dumps(jsf.generate(), option=orjson.OPT_INDENT_2).decode() if jsf else "{}"
             reroll()
 
             randy_button = pn.widgets.Button(name="Random", button_type='light')
@@ -113,11 +115,11 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
                 '''
                 assert schema, f"schema should have been filtered {schema=} {val=}"
                 try:
-                    jsonschema.validate(json.loads(val), schema)
+                    jsonschema.validate(orjson.loads(val), schema)
                     return ""
                 except jsonschema.ValidationError as v:
                     return v.message
-                except json.JSONDecodeError as j:
+                except orjson.JSONDecodeError as j:
                     return j.msg
             error_text.value = pn.bind(validate_json, data_input)
             send_button.disabled = error_text.rx.bool()
