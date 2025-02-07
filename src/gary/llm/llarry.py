@@ -184,5 +184,4 @@ class Llarry(LlamaCpp):
         new_prompt = tokenizer.decode(tokens).decode()
         logger.debug("Trimmed in {:.4f}ms".format((time.time()-t0)*1000))
         # logger.warning(f"{n_keep=} {n_discard=} {i_start_discard=} {i_end_discard=} {persist_shift=}")
-        copy += new_prompt
-        return copy
+        return copy + new_prompt

@@ -1,7 +1,7 @@
 import random, time
 from orjson import dumps
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from pydantic import TypeAdapter
 
 import llama_cpp
@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 # IMPL: this whole file is my implementation since uhh... yeah
 
 # pyright: reportPrivateImportUsage=false
+
+# pyright: reportOperatorIssue=false
+# __add__ without an explicit __iadd__ impl surely means you cannot use +=. it is illegal and your code will explode
 
 _engine_map = {
     # "openai": models.OpenAI,
@@ -122,7 +125,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
         self.truncate_context(tokens)
         with user():
-            out = self.llm + msg
+            out = cast(models.Model, self.llm + msg) # pylance infers NoReturn (literally how???)
         if do_print:
             prefix = ""
             if silent:
@@ -136,12 +139,8 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             logger.info(f"(ctx{prefix}) {msg}")
             if tokens > 500 and not persistent_llarry_only:
                 logger.warning(f"Context '{ctx[:20].encode('unicode_escape').decode()}...' had {tokens} tokens. Are you sure this is a good idea?")
-        if persistent_llarry_only and isinstance(self.llm, Llarry):
-            out: Llarry
-            # FIXME: very silly way to get the index, optimize if needed
-            ends = out.get_msg_end_tokens()
-            prompt = str(out)
-            i = sum(prompt.count(end) for end in ends)
+        if persistent_llarry_only and isinstance(out, Llarry):
+            i = sum(1 for _ in out.iter_messages()) # woooow no builtin to count an iterator so pythonic
             logger.debug(f"Marking message {i} as persistent (current: {out.persistent})")
             out.persistent.add(i)
         if not ephemeral:
