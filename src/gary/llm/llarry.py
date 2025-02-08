@@ -46,9 +46,9 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
         n_discard = n_discard or self.default_n_discard or (self.model_obj.n_ctx() // 2)
         n_discard = min(len(token_ids) - n_keep, n_discard)
 
-        t = time.time()
+        t = time.perf_counter()
         self.shift_kv_cache(n_keep, n_discard)
-        logger.debug(f"Shifted KV cache by {n_discard} (from {n_keep}) in {(time.time()-t)*1000:.2f}ms")
+        logger.debug(f"Shifted KV cache by {n_discard} (from {n_keep}) in {(time.perf_counter()-t)*1000:.2f}ms")
 
         token_ids = token_ids[:n_keep] + token_ids[n_keep + n_discard:]
         logger.info(f"Trimmed context to {len(token_ids)} tokens")
@@ -101,7 +101,7 @@ class Llarry(LlamaCpp):
             return self
 
         # logger.warning("pray now my lord")
-        t0 = time.time()
+        t0 = time.perf_counter()
         # TODO: see if we can maybe keep state as we add the messages
         # (probably not because of assistant msgs interleaving append/generate)
         sys_begin = None
@@ -182,6 +182,6 @@ class Llarry(LlamaCpp):
         Model.__init__(copy, self.engine, echo = False)
         copy.persistent = set(p - persist_shift if p >= i_end_discard else p for p in self.persistent) # immutability
         new_prompt = tokenizer.decode(tokens).decode()
-        logger.debug("Trimmed in {:.4f}ms".format((time.time()-t0)*1000))
+        logger.debug("Trimmed in {:.4f}ms".format((time.perf_counter()-t0)*1000))
         # logger.warning(f"{n_keep=} {n_discard=} {i_start_discard=} {i_end_discard=} {persist_shift=}")
         return copy + new_prompt

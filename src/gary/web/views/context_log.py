@@ -37,17 +37,17 @@ class ContextLog(pn.viewable.Viewer):
         self.game.subscribe("llm_context", self.receive_context)
 
     def __panel__(self):
-        # FIXME: scroll resets every time since this is a new instance
-        def _(logs):
-            return pn.Column(
-                *logs,
-                auto_scroll_limit=100,
-                scroll_button_threshold=3,
-                view_latest=True,
-                sizing_mode='stretch_width',
-            )
+        logs_col = pn.Column(
+            auto_scroll_limit=100,
+            scroll_button_threshold=3,
+            sizing_mode='stretch_width',
+        )
+        # NOTE: scroll resets every time
+        def _reset(_):
+            logs_col[:] = self.logs # type: ignore
+        self.param.watch(_reset, 'logs')
         return pn.Column(
-            pn.bind(_, self.param.logs),
+            logs_col,
             styles={'flex': '1'}
         )
 
@@ -59,4 +59,4 @@ class ContextLog(pn.viewable.Viewer):
             silent=silent,
             ephemeral=ephemeral
         )
-        self.logs = self.logs[-100:] + [new_log] # type: ignore
+        self.logs += [new_log] # type: ignore

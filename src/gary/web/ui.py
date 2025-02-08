@@ -51,8 +51,11 @@ def create_game_tab(game: Game):
     clear_context = pn.widgets.Button(
         name="Clear Context",
         button_type='primary',
-        description="Clear the model's context (working memory).\n"
-                    "Use this if the model gets into a loop of bad decisions.",
+        description=Tooltip(
+            content=HTML(html="Clear the model's context (working memory). Use this if the model gets into a loop of bad decisions.<br/>"
+                            "Testing/development only - you can't do this with Neuro!"),
+            position='right',
+        ),
     )
     @clear_context.on_click
     async def _(*_):

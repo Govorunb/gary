@@ -1,7 +1,5 @@
 import asyncio
-from typing import * # type: ignore
-from collections.abc import Coroutine
-
+from typing import TYPE_CHECKING, Any, Callable, Coroutine
 from ..util import CONFIG, logger
 
 if TYPE_CHECKING:

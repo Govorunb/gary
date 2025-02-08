@@ -29,7 +29,7 @@ class ActionsList(pn.viewable.Viewer):
                 else:
                     v.is_registered = True
                     v.action = a
-            self.param.trigger('update_event')
+        self.param.trigger('update_event')
 
     def unregister(self, msg: UnregisterActions):
         self._unregister(msg.data.action_names)
@@ -38,7 +38,7 @@ class ActionsList(pn.viewable.Viewer):
             for name in action_names:
                 if (t := self.actions_by_name.get(name)):
                     t.is_registered = False
-            self.param.trigger('update_event')
+        self.param.trigger('update_event')
 
     def clear(self, *_):
         for a in self.actions_by_name.values():
@@ -46,20 +46,22 @@ class ActionsList(pn.viewable.Viewer):
         self.param.trigger('update_event')
 
     def __panel__(self):
-        def _(_event):
-            return pn.Column(
-                *self.actions,
-                stylesheets=[
-                    """
-                    .unregistered {
-                        opacity: 0.5;
-                        background-color: rgba(0, 0, 0, 0.1);
-                    }
-                    """
-                ],
-                scroll=True,
-            )
+        actions_col = pn.Column(
+            objects=self.actions,
+            stylesheets=[
+                """
+                .unregistered {
+                    opacity: 0.5;
+                    background-color: rgba(0, 0, 0, 0.1);
+                }
+                """
+            ],
+            scroll=True,
+        )
+        def _update(_event):
+            actions_col[:] = _event.new
+        self.param.watch(_update, 'actions')
         return pn.Column(
-            pn.bind(_, self.param.update_event),
+            actions_col,
             styles={'flex': '1'}
         )
