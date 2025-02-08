@@ -50,7 +50,7 @@ def create_game_tab(game: Game):
     ctx_log = ContextLog(game)
     clear_context = pn.widgets.Button(
         name="Clear Context",
-        button_type='primary',
+        button_type='default',
         description=Tooltip(
             content=HTML(html="Clear the model's context (working memory). Use this if the model gets into a loop of bad decisions.<br/>"
                             "Testing/development only - you can't do this with Neuro!"),
@@ -64,11 +64,34 @@ def create_game_tab(game: Game):
             await asyncio.sleep(0.1)
             game.llm.reset(True)
             ctx_log.logs = []
+
+    say_input = pn.widgets.TextInput(placeholder="Add message to context")
+    say_button = pn.widgets.Button(
+        name="Say",
+        button_type='primary',
+        description="Add a message to the model's context.",
+    )
+
+    async def _(*_):
+        if not say_input.value:
+            return
+        msg = say_input.value
+        say_input.value = ""
+        with say_button.param.update(name="Sending...", disabled=True):
+            # FIXME: scheduler! move LLM off the main thread!
+            # ui can only show the sent context AFTER the LLM generates/acts since it's blocking
+            await game.send_context("(SYSTEM) " + msg, silent=True)
+    
+    say_button.on_click(_)
+    say_input.param.watch(_, 'enter_pressed')
+    
     context = pn.Column(
         "<h1>Context</h1>",
         ctx_log,
         pn.Row(
-            clear_context
+            clear_context,
+            say_input,
+            say_button,
         ),
 
         styles=css, sizing_mode='stretch_both'
@@ -107,6 +130,7 @@ def create_game_tab(game: Game):
                 margin=(5, 10),
             )),
             sizing_mode='stretch_width',
+            active=[0], # start with top card open
         ),
         pn.VSpacer(),
         "If stuff breaks, try refreshing the page",
