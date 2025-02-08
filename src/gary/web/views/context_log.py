@@ -34,7 +34,8 @@ class ContextLog(pn.viewable.Viewer):
     def __init__(self, game: Game, *a, **kw):
         super().__init__(*a, **kw)
         self.game = game
-        self.game.subscribe("llm_context", self.receive_context)
+        self.game.llm.subscribe("context", self.on_context)
+        self.game.llm.subscribe("say", self.on_say)
 
     def __panel__(self):
         logs_col = pn.Column(
@@ -51,12 +52,21 @@ class ContextLog(pn.viewable.Viewer):
             styles={'flex': '1'}
         )
 
-    def receive_context(self, ctx: str, silent: bool = False, ephemeral: bool = False):
+    def on_context(self, ctx: str, silent: bool = False, ephemeral: bool = False):
         m = re.match(r"Result for action (?:[^:])+: (?P<res>Performing|Failure)", ctx)
         new_log = LogEntry(
             value=ctx,
             success=m.group("res") == "Performing" if m else None,
             silent=silent,
             ephemeral=ephemeral
+        )
+        self.logs += [new_log] # type: ignore
+    
+    def on_say(self, msg: str):
+        new_log = LogEntry(
+            value='> '+msg,
+            success=None,
+            silent=False,
+            ephemeral=False
         )
         self.logs += [new_log] # type: ignore

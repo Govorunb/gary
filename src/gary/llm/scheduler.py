@@ -70,7 +70,7 @@ class Scheduler:
         if not self.game.connection.is_connected():
             self.stop()
             return
-        if not self.game.actions:
+        if not self.game.actions and not CONFIG.gary.allow_yapping:
             logger.info(f"Idled for {delay}s, but no actions")
             self._reset_try()
             return

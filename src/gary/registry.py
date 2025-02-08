@@ -47,7 +47,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
             if (unsub := self._subscriptions.pop(conn.id, None)):
                 unsub()
 
-type _game_events = Literal["connect", "disconnect", "llm_context"] | GameCommand | NeuroCommand
+type _game_events = Literal["connect", "disconnect"] | GameCommand | NeuroCommand
 
 class Game(HasEvents[_game_events]):
     def __init__(self, name: str, registry: Registry):
@@ -152,7 +152,7 @@ class Game(HasEvents[_game_events]):
     async def try_action(self) -> bool:
         if not self._connection.is_connected():
             return False
-        if not self.actions:
+        if not self.actions and not CONFIG.gary.allow_yapping:
             logger.debug("No actions to try (Game.try_action)")
             return False
         if self.mute_llm:
@@ -183,8 +183,6 @@ class Game(HasEvents[_game_events]):
         if force:
             self.pending_forces[msg.data.id] = force
         ctx = f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}"
-        # TODO: raise from LLM instead of game
-        await self._raise_event("llm_context", ctx, True, False)
         self.llm.context(ctx, silent=True)
         self.scheduler.on_action()
         await self._raise_event("action", msg)
@@ -206,8 +204,7 @@ class Game(HasEvents[_game_events]):
             await self.handle(force)
 
     async def send_context(self, ctx: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
-        await self._raise_event("llm_context", ctx, silent, ephemeral)
-        self.llm.context(ctx, silent, ephemeral=ephemeral, do_print=do_print)
+        self.llm.context(ctx, silent, ephemeral=ephemeral, do_print=do_print, notify=True)
         if not silent and not await self.try_action():
             self.scheduler.on_context()
 

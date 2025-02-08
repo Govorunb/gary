@@ -30,15 +30,21 @@ class Config(BaseModel):
     class GaryConfig(BaseModel):
         class SchedulerConfig(BaseModel):
             idle_timeout_try: float = 5.0
-            '''If the LLM does not act for this many seconds, manually ask it to act (it may decide not to).'''
+            '''If the model does not act for this many seconds, manually ask it to act (it may decide not to).'''
             idle_timeout_force: float = 30.0
-            '''If the LLM does not act for this many seconds, force it to pick an action to perform.'''
+            '''If the model does not act for this many seconds, force it to pick an action to perform.'''
         log_level_file: _LogLevel = "info"
         log_level_console: _LogLevel = "debug"
         existing_connection_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING
         '''What to do when someone tries to connect to a game that already has an active connection.'''
         existing_action_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING
         '''What to do when an action is registered but there's already an action with that name.'''
+        allow_yapping: bool = False
+        '''
+        Allow the model to choose to say something instead of performing an action.
+        Eats through tokens and very likely to distract the model. Only enable this for "realism".
+        Should be combined with `non_ephemeral_try_context`, otherwise the model will repeat itself a lot.
+        '''
         enable_cot: bool = False
         '''
         Enable poor man's chain-of-thought.
@@ -50,7 +56,7 @@ class Config(BaseModel):
         Don't discard context from picking whether to act or not. This can eat up a lot of tokens.
         If the model happens to generate good reasoning for it, this will help when picking the action.
         If your model hallucinates a lot, it will very much not help.
-        Requires `enable_cot` to have any effect.
+        Should be combined with `allow_yapping` or `enable_cot`.
         You should play around with this.
         '''
         scheduler: SchedulerConfig = SchedulerConfig()

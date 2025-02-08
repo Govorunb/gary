@@ -42,6 +42,12 @@ definitions:
         properties:
           log_level_file: {$ref: "#/definitions/log_level"}
           log_level_console: {$ref: "#/definitions/log_level"}
+          allow_yapping:
+            type: boolean
+            description: |
+              Allow the model to choose to say something instead of performing an action.
+              Eats through tokens and very likely to distract the model. Only enable this for "realism".
+              Should be combined with `non_ephemeral_try_context`, otherwise the model will repeat itself a lot.
           enable_cot:
             type: boolean
             description: |
@@ -54,18 +60,8 @@ definitions:
               Don't discard context from picking whether to act or not. This can eat up a lot of tokens.
               If the model happens to generate good reasoning for it, this will help when picking the action.
               If your model hallucinates a lot, it will very much not help.
-              Requires `enable_cot` to have any effect.
+              Should be combined with `allow_yapping` or `enable_cot`.
               You should play around with this.
-          act_on_context:
-            type: boolean
-            description: |
-              Try to act on receiving (non-silent) context.
-              Can make decisions marginally smarter since the most relevant information is closest to the end of the context.
-          try_on_register:
-            type: boolean
-            description: |
-              After receiving `actions/register`, try to act immediately.
-              Can be hit or miss.
           existing_connection_policy:
             $ref: "#/definitions/conflict_resolution_policy"
             description: |
@@ -79,14 +75,14 @@ definitions:
             properties:
               idle_timeout_try:
                 description: |
-                  If the LLM does not act for this many seconds, ask it to act (it may still decide not to).
+                  If the model does not act for this many seconds, ask it to act (it may still decide not to).
                   1s minimum, 0 to disable.
                 oneOf:
                   - {type: number, minimum: 1}
                   - {const: 0}
               idle_timeout_force:
                 description: |
-                  If the LLM does not act for this many seconds, force it to pick an action to perform.
+                  If the model does not act for this many seconds, force it to pick an action to perform.
                   1s minimum, 0 to disable.
                 oneOf:
                   - {type: number, minimum: 1}
