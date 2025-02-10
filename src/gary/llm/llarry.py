@@ -130,8 +130,10 @@ class Llarry(LlamaCpp):
             len_sys_begin = len(sys_begin)
         except Exception:
             logger.warning("Could not get system role start")
-        # having easily accessible utility methods like list.split is clearly not pythonic
-        n_keep = n_discard = -1
+        # having easily accessible utility methods to do common things like split a list is clearly not pythonic
+        n_keep = -1
+        n_discard = 0
+        # TODO: rework "max discard" to keep the most recent context instead
         max_discard = self.engine.model_obj.n_ctx() // 2
         i_start_discard = i_end_discard = 0
         def can_discard(i_message: int, msg: Llarry.Message) -> bool:
@@ -143,10 +145,6 @@ class Llarry(LlamaCpp):
                 return False
 
             if not sys_begin:
-                return True
-            # theoretically can happen in a weird case with two msg end tokens close together
-            # mostly just a bounds check
-            if msg.size < len_sys_begin:
                 return True
             msg_begin = msg.all_tokens[msg.start : msg.start+len_sys_begin]
             # logger.debug(f"i={i_message} begin={msg_begin} is_system={msg_begin == sys_begin}")
@@ -173,26 +171,36 @@ class Llarry(LlamaCpp):
                     # logger.warning(f"first discardable at {msg.start} (#{i})")
                     n_keep = msg.start
                     i_start_discard = i
+                return True
+            if discardable:
+                n_discard = msg.start - n_keep
             else:
-                if discardable:
-                    n_discard = msg.start - n_keep
-                else:
-                    # logger.warning(f"discardable span ends at {msg.start} (#{i})")
-                    i_end_discard = i
-                    return False
-            return True
+                # logger.warning(f"discardable span ends at {msg.start} (#{i})")
+                i_end_discard = i
+            return discardable
+
         has_any = False
+        i_msg = 0 # just so it's not unbounded if there's no messages
         for i_msg, msg in enumerate(self.iter_messages()):
             has_any = True
             if not on_message_end(i_msg, msg):
                 break
         else:
-            i_end_discard = i_msg # type: ignore
+            i_end_discard = i_msg
         if not has_any:
-            logger.debug("nothing to trim, aborting")
+            logger.debug("Nothing to trim, aborting")
             return self
 
         persist_shift = i_end_discard - i_start_discard + 1
+
+        if n_keep == -1:
+            n_keep = 0
+            logger.fatal(
+                "Didn't find a single discardable message!"
+                f"\nPrompt: {str(self)}"
+                f"\nMessages: {[tokenizer.decode(msg.all_tokens[msg.start, msg.start+msg.size]).decode() for msg in self.iter_messages()]}"
+            )
+            logger.warning("Attempting to continue, but you may not like the result")
 
         tokens = self.engine.trim(msg.all_tokens, n_keep, n_discard) # type: ignore (zero depth flow control analysis)
         # this code is ok because i'm not a python dev :)
