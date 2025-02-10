@@ -1,3 +1,4 @@
+import asyncio
 from functools import partial
 import orjson
 
@@ -91,6 +92,7 @@ class Game(HasEvents[_game_events]):
             self.scheduler.stop()
         else:
             self.scheduler.start()
+            asyncio.create_task(self.try_action())
 
     @property
     def connection(self) -> GameWSConnection:
