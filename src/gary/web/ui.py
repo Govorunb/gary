@@ -200,6 +200,7 @@ def create_web_ui():
     pn.extension(
         *extensions,
         template='fast',
+        theme='dark',
         throttled=True,
         notifications=True,
         disconnect_notification="Disconnected from server.\nPlease refresh the page",
@@ -245,5 +246,5 @@ def add_control_panel(path: str):
     pn.state.on_session_created(on_connect)
     pn.state.on_session_destroyed(on_disconnect)
 
-    print(f"Serving control panel at http://localhost:{port}/?theme=dark")
+    print(f"Serving control panel at http://localhost:{port}/")
     return server

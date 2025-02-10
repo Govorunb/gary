@@ -1,8 +1,11 @@
 from collections import namedtuple
+import functools
 import time
-from typing import Self
-from guidance.models.llama_cpp._llama_cpp import LlamaCpp, LlamaCppEngine
+from typing import Self, Sequence, cast
+from guidance.chat import ChatTemplate
+from guidance.models.llama_cpp._llama_cpp import LlamaCpp, LlamaCppEngine, LlamaCppTokenizer
 from guidance.models._model import Model
+from llama_cpp import Llama
 from gary.util import logger
 
 class StreamingLlamaCppEngine(LlamaCppEngine):
@@ -15,7 +18,8 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
         self._cache_token_ids = llama_cpp_engine._cache_token_ids
         self._n_vocab = llama_cpp_engine._n_vocab
 
-        self.tokenizer = llama_cpp_engine.tokenizer
+        parent_tokenizer: LlamaCppTokenizer = cast(LlamaCppTokenizer, llama_cpp_engine.tokenizer)
+        self.tokenizer = LlarryTokenizer(parent_tokenizer._model_obj, parent_tokenizer._chat_template) # type: ignore
         self.compute_log_probs = llama_cpp_engine.compute_log_probs
         self._enable_backtrack = llama_cpp_engine._enable_backtrack
         self._enable_ff_tokens = llama_cpp_engine._enable_ff_tokens
@@ -66,6 +70,7 @@ class Llarry(LlamaCpp):
             self.engine = StreamingLlamaCppEngine(self.engine, **kwargs)
         self.persistent: set[int] = set()
 
+    @functools.cache
     def get_msg_end_tokens(self):
         ends: set[str] = set()
         chat_template = self.engine.get_chat_template()
@@ -76,21 +81,31 @@ class Llarry(LlamaCpp):
                 logger.debug(f"No role end for '{role}' {e}")
         return list(ends)
 
-    Message = namedtuple("Message", "all_tokens start size")\
+    Message = namedtuple("Message", "all_tokens start size")
 
     def iter_messages(self):
         tokenizer = self.engine.tokenizer
         msg_ends = [tokenizer.encode(end.encode()) for end in self.get_msg_end_tokens()]
+        # logger.debug(f"{msg_ends=} / {self.get_msg_end_tokens()=}")
         prompt = str(self)
         tokens = tokenizer.encode(prompt.encode())
-        start = 0
-        size = 0
+        # logger.debug(f"{tokens[:50]=}")
+        start = size = 0
         for i_tok in range(len(tokens)):
-            if any(tokens[i_tok-len(end) : i_tok] == end for end in msg_ends):
+            size += 1
+            # technically if ends share tokens they can overlap, yielding trash
+            # but realistically who would ever make their chat template this way
+            if any(tokens[i_tok+1-len(end) : i_tok+1] == end for end in msg_ends):
                 yield Llarry.Message(tokens, start, size)
                 start += size
                 size = 0
-            size += 1
+        if size > 0:
+            logger.warning("Last message was not terminated by a message end token.\n"
+                "Don't forget to add an empty string after exiting the role context manager so guidance can add the role closer.")
+            last_msg = tokenizer.decode(tokens[start:start+size])
+            logger.debug(f"Last message:\n{last_msg}")
+            # logger.debug(f"Prompt:\n{prompt}")
+            yield Llarry.Message(tokens, start, size)
 
     def trim(self) -> Self:
         if not isinstance(self.engine, StreamingLlamaCppEngine):
@@ -107,19 +122,18 @@ class Llarry(LlamaCpp):
         sys_begin = None
         len_sys_begin = 0
         chat_template = self.engine.get_chat_template()
+
         tokenizer = self.engine.tokenizer
         try:
-            sys_begin = chat_template.get_role_start("system")
-            sys_begin = tokenizer.encode(sys_begin.encode())
+            sys_begin_text = chat_template.get_role_start("system")
+            sys_begin = tokenizer.encode(sys_begin_text.encode())
             len_sys_begin = len(sys_begin)
         except Exception:
             logger.warning("Could not get system role start")
         # having easily accessible utility methods like list.split is clearly not pythonic
-        n_keep = 0
+        n_keep = n_discard = -1
         max_discard = self.engine.model_obj.n_ctx() // 2
-        n_discard = 0
-        i_start_discard = 0
-        i_end_discard = 0
+        i_start_discard = i_end_discard = 0
         def can_discard(i_message: int, msg: Llarry.Message) -> bool:
             if i_message in self.persistent:
                 # logger.warning(f"message {i_message} is persistent ({self.persistent})")
@@ -134,7 +148,9 @@ class Llarry(LlamaCpp):
             # mostly just a bounds check
             if msg.size < len_sys_begin:
                 return True
-            return msg.all_tokens[msg.start : msg.start+len_sys_begin] != sys_begin
+            msg_begin = msg.all_tokens[msg.start : msg.start+len_sys_begin]
+            # logger.debug(f"i={i_message} begin={msg_begin} is_system={msg_begin == sys_begin}")
+            return msg_begin != sys_begin
 
         def on_message_end(i: int, msg: Llarry.Message) -> bool:
             '''
@@ -152,7 +168,7 @@ class Llarry(LlamaCpp):
             # 2. then, find first non-discardable message
             # 3. all tokens between are discardable
             discardable = can_discard(i, msg)
-            if n_keep == 0:
+            if n_keep == -1:
                 if discardable:
                     # logger.warning(f"first discardable at {msg.start} (#{i})")
                     n_keep = msg.start
@@ -165,23 +181,64 @@ class Llarry(LlamaCpp):
                     i_end_discard = i
                     return False
             return True
-        for i, msg in enumerate(self.iter_messages()):
-            if not on_message_end(i, msg):
+        has_any = False
+        for i_msg, msg in enumerate(self.iter_messages()):
+            has_any = True
+            if not on_message_end(i_msg, msg):
                 break
         else:
+            i_end_discard = i_msg # type: ignore
+        if not has_any:
             logger.debug("nothing to trim, aborting")
             return self
 
         persist_shift = i_end_discard - i_start_discard + 1
 
-        tokens = self.engine.trim(msg.all_tokens, n_keep, n_discard)
+        tokens = self.engine.trim(msg.all_tokens, n_keep, n_discard) # type: ignore (zero depth flow control analysis)
         # this code is ok because i'm not a python dev :)
         copy = self.__new__(self.__class__)
         # initializers above Model create an Engine, we don't want that
         # literally just want to reset state
         Model.__init__(copy, self.engine, echo = False)
         copy.persistent = set(p - persist_shift if p >= i_end_discard else p for p in self.persistent) # immutability
+
         new_prompt = tokenizer.decode(tokens).decode()
         logger.debug("Trimmed in {:.4f}ms".format((time.perf_counter()-t0)*1000))
-        # logger.warning(f"{n_keep=} {n_discard=} {i_start_discard=} {i_end_discard=} {persist_shift=}")
+        # logger.debug(f"{n_keep=} {n_discard=} {i_start_discard=} {i_end_discard=} {persist_shift=}")
+        # logger.debug(f"Previous prompt:\n{str(self)}")
+        # logger.debug(f"New tokens:\n{tokens[:50]}")
+        # logger.debug(f"New prompt:\n{new_prompt[:50]}")
         return copy + new_prompt
+
+class LlarryTokenizer(LlamaCppTokenizer):
+    def __init__(self, model_obj: Llama, chat_template: ChatTemplate | str | None):
+        super().__init__(model_obj, chat_template)
+        self._is_phi = "phi" in model_obj.model_path.lower()\
+            or "phi" in model_obj.metadata.get("general.architecture", "").lower()
+
+    def decode(self, tokens: Sequence[int]) -> bytes:
+        out = super().decode(tokens)
+        # failsafe for workaround in encode()
+        if self._is_phi:
+            out = out.replace(b"|> \n", b"|>\n")
+        return out
+
+    def encode(self, byte_string: bytes) -> list[int]:
+        tokens = super().encode(byte_string)
+        out = tokens
+        # workaround https://github.com/ggerganov/llama.cpp/issues/7938
+        # TLDR: Phi3's tokenizer inserts spaces after special tokens
+        # e.g. Phi3 system start message is "<|system|>\n"
+        #   which should be [32006] since the token has the 'rstrip' flag - or, at *worst*, [32006, 13]
+        # but it tokenizes to [32006, 29871, 13] which is "<|system|> \n"
+        # on re-encode it inserts another space ([32006, 259, 13] - "<|system|>  \n")
+        # which obviously breaks round tripping and kv-caching and everything else
+        if self._is_phi:
+            out = []
+            for i, t in enumerate(tokens):
+                # replaces [..., <|special_token|>, 29871, 13, ...] with [..., <|special token|>, 13, ...]
+                if i >= 2 and t == 13 and out[-1] == 29871 and out[-2] in range(32000, 32011):
+                    out[-1] = 13
+                    continue
+                out.append(t)
+        return out

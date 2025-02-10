@@ -75,14 +75,15 @@ class LLM(HasEvents[Literal['context', 'say']]):
         self.temperature = params.get("temperature", 1.0)
 
     def system_prompt(self):
-        with system():
-            self.llm += """\
+        sys_prompt = """\
 You are Larry, an expert gamer AI. You have a deep knowledge and masterfully honed ability to perform in-game actions via sending JSON to a special software integration system called Gary.
 You are goal-oriented but curious. You aim to keep your actions varied and entertaining."""
         if CONFIG.gary.enable_cot:
-            self.llm += " Keep your reasoning short and to the point."
+            sys_prompt += " Keep your reasoning short and to the point."
         if CONFIG.gary.allow_yapping:
-            self.llm += "\nYour only means of interacting with the game is through 'act'ing. You can also choose to 'say' something out loud. In-game characters CANNOT hear you."
+            sys_prompt += "\nYour only means of interacting with the game is through actions. You can also choose to 'say' something out loud. In-game characters cannot hear you."
+        with system():
+            self.llm += sys_prompt
         if custom_rules := MANUAL_RULES.get(self.game.name):
             self.context(custom_rules, silent=True, persistent_llarry_only=True, notify=False)
 
@@ -120,17 +121,20 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             self.gaming()
 
     def gaming(self):
-        self.context("Connected.", silent=True)
+        self.context(f"Connected. You are now playing {self.game.name}", silent=True)
 
     def not_gaming(self):
         self.context("Disconnected.", silent=True)
 
     def context(self, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True, persistent_llarry_only: bool = False, notify: bool = True) -> models.Model:
-        msg = f"[{datetime.now().strftime('%H:%M:%S')}] [{self.game.name}] {ctx}\n"
+        msg = f"[{self.game.name}] {ctx}"
+        if True: # yes i'm manually flipping this in code, i can't decide if it's a waste of tokens or not
+            msg = f"[{datetime.now().strftime('%H:%M:%S')}] " + msg
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
         self.truncate_context(tokens)
         with user():
-            out = cast(models.Model, self.llm + msg) # pylance infers NoReturn (literally how???)
+            out = cast(models.Model, self.llm + msg + "\n") # pyright infers NoReturn (literally how???)
+        out += "" # add anything after the context manager exits so guidance can add the role closer
         if do_print:
             prefix = ""
             if silent:
@@ -145,7 +149,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             if tokens > 500 and not persistent_llarry_only:
                 logger.warning(f"Context '{ctx[:20].encode('unicode_escape').decode()}...' had {tokens} tokens. Are you sure this is a good idea?")
         if persistent_llarry_only and isinstance(out, Llarry):
-            i = sum(1 for _ in out.iter_messages()) # woooow no builtin to count an iterator so pythonic
+            i = sum(1 for _ in out.iter_messages())-1 # woooow no builtin to count an iterator so pythonic
             logger.debug(f"Marking message {i} as persistent (current: {out.persistent})")
             out.persistent.add(i)
         if notify:
