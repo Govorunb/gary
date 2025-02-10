@@ -169,7 +169,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             logger.warning(f"ForceAction contains unknown action names: {set(msg.data.action_names) - set(actions)}")
         actions_json = (TypeAdapter(list[ActionModel])
             # .dump_json(actions_for_json, indent=4)
-            .dump_json(actions_for_json)
+            .dump_json(actions_for_json, by_alias=True)
             .decode()
             .replace("\n", "\n    "))
         await self.context(f"""
@@ -220,22 +220,22 @@ You must perform one of the following actions, given this information:
     async def try_action(self, actions: dict[str, ActionModel], allow_yapping: bool = True) -> tuple[str, str] | None:
         if isinstance(self.llm, Randy):
             allow_yapping = False # no thank you
-        
+
         await self.truncate_context(1000 if CONFIG.gary.enable_cot or allow_yapping else 300) # leave room for action() afterwards
         if not actions and not allow_yapping:
             logger.info("No actions to choose from (LLM.try_action)")
             return None
-        (ACT, SAY, WAIT) = ("act", "say", "wait")
+        (ACT, SAY, WAIT) = ('act', 'say', 'wait')
         ctx = "Based on previous context, decide what to do next."
         if actions:
             # actions_for_json = {name: {"name": name, "description": action.description} for name, action in actions.items()}
             actions_for_json = list(actions.values())
             actions_json = (TypeAdapter(list[ActionModel])
                 # .dump_json(actions_for_json, indent=4)
-                .dump_json(actions_for_json)
+                .dump_json(actions_for_json, by_alias=True)
                 .decode()
                 .replace("\n", "\n    "))
-            ctx = f"""
+            ctx += f"""
 The following actions are available to you:
 ```json
 {{
