@@ -71,10 +71,10 @@ class LLM(HasEvents[Literal['context', 'say']]):
         self.llm.echo = False
         end = time.time()
         logger.info(f"loaded in {end-start:.2f} seconds")
-        self.system_prompt()
+        asyncio.create_task(self.system_prompt())
         self.temperature = params.get("temperature", 1.0)
 
-    def system_prompt(self):
+    async def system_prompt(self):
         sys_prompt = """\
 You are Larry, an expert gamer AI. You have a deep knowledge and masterfully honed ability to perform in-game actions via sending JSON to a special software integration system called Gary.
 You are goal-oriented but curious. You aim to keep your actions varied and entertaining."""
@@ -85,7 +85,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         with system():
             self.llm += sys_prompt
         if custom_rules := MANUAL_RULES.get(self.game.name):
-            self.context(custom_rules, silent=True, persistent_llarry_only=True, notify=False)
+            await self.context(custom_rules, silent=True, persistent_llarry_only=True, notify=False)
 
     def llm_engine(self) -> models._model.Engine:
         return self.llm.engine # type: ignore
@@ -95,7 +95,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         logger.debug(f"Max tokens: {maxtok}")
         return maxtok
 
-    def reset(self, llarry_keep_persistent=False):
+    async def reset(self, llarry_keep_persistent=False):
         engine = self.llm_engine()
         if llarry_keep_persistent and isinstance(self.llm, Llarry):
             logger.debug("TODO: keep persistent messages on reset")
@@ -116,22 +116,22 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         assert len(str(self.llm)) == 0
         logger.debug(f'truncated context to {tokens(self.llm)}')
 
-        self.system_prompt()
+        await self.system_prompt()
         if self.game.connection and self.game.connection.is_connected():
-            self.gaming()
+            await self.gaming()
 
-    def gaming(self):
-        self.context(f"Connected. You are now playing {self.game.name}", silent=True)
+    async def gaming(self):
+        await self.context(f"Connected. You are now playing {self.game.name}", silent=True)
 
-    def not_gaming(self):
-        self.context("Disconnected.", silent=True)
+    async def not_gaming(self):
+        await self.context("Disconnected.", silent=True)
 
-    def context(self, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True, persistent_llarry_only: bool = False, notify: bool = True) -> models.Model:
+    async def context(self, ctx: str, silent: bool = False, *, ephemeral: bool = False, do_print: bool = True, persistent_llarry_only: bool = False, notify: bool = True) -> models.Model:
         msg = f"[{self.game.name}] {ctx}"
         if True: # yes i'm manually flipping this in code, i can't decide if it's a waste of tokens or not
             msg = f"[{datetime.now().strftime('%H:%M:%S')}] " + msg
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
-        self.truncate_context(tokens)
+        await self.truncate_context(tokens)
         with user():
             out = cast(models.Model, self.llm + msg + "\n") # pyright infers NoReturn (literally how???)
         out += "" # add anything after the context manager exits so guidance can add the role closer
@@ -153,7 +153,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             logger.debug(f"Marking message {i} as persistent (current: {out.persistent})")
             out.persistent.add(i)
         if notify:
-            asyncio.create_task(self._raise_event('context', ctx, silent, ephemeral))
+            await self._raise_event('context', ctx, silent, ephemeral)
         if not ephemeral:
             self.llm = out
         return out
@@ -172,7 +172,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             .dump_json(actions_for_json)
             .decode()
             .replace("\n", "\n    "))
-        self.context(f"""
+        await self.context(f"""
 You must perform one of the following actions, given this information:
 ```json
 {{
@@ -188,7 +188,7 @@ You must perform one of the following actions, given this information:
     async def action(self, actions: dict[str, ActionModel], *, ephemeral: bool = False) -> tuple[str, str]:
         if not actions:
             raise Exception("No actions to choose from (LLM.action)")
-        self.truncate_context(500 if CONFIG.gary.enable_cot else 150)
+        await self.truncate_context(500 if CONFIG.gary.enable_cot else 150)
         llm = self.llm
         with assistant():
             llm += f'''\
@@ -221,7 +221,7 @@ You must perform one of the following actions, given this information:
         if isinstance(self.llm, Randy):
             allow_yapping = False # no thank you
         
-        self.truncate_context(1000 if CONFIG.gary.enable_cot or allow_yapping else 300) # leave room for action() afterwards
+        await self.truncate_context(1000 if CONFIG.gary.enable_cot or allow_yapping else 300) # leave room for action() afterwards
         if not actions and not allow_yapping:
             logger.info("No actions to choose from (LLM.try_action)")
             return None
@@ -251,7 +251,7 @@ The following actions are available to you:
         ctx += f"""
 Respond with one of these options: {options}
 """
-        llm: models.Model = self.context(ctx, silent=True, ephemeral=True, do_print=False, notify=False)
+        llm: models.Model = await self.context(ctx, silent=True, ephemeral=True, do_print=False, notify=False)
         with assistant():
             resp = """\
 ```json
@@ -261,7 +261,7 @@ Respond with one of these options: {options}
                 resp += f"""
     "reasoning": "{gen("reasoning", stop=['\n','"',"<|eot_id|>"], temperature=self.temperature, max_tokens=self.max_tokens(100))}","""
             resp += f"""
-    "decision": "{with_temperature(select([ACT, SAY, WAIT] if allow_yapping else [ACT, WAIT], "decision"), self.temperature)}\""""
+    "decision": "{with_temperature(select(options, "decision"), self.temperature)}\""""
             llm = time_gen(llm, resp)
             decision = llm['decision']
             if CONFIG.gary.enable_cot:
@@ -287,7 +287,7 @@ Respond with one of these options: {options}
             await self._raise_event('say', said) # type: ignore
         return await self.action(actions) if decision == ACT else None
 
-    def truncate_context(self, need_tokens: int = 0):
+    async def truncate_context(self, need_tokens: int = 0):
         assert need_tokens >= 0
 
         token_count = tokens(self.llm)
@@ -302,7 +302,7 @@ Respond with one of these options: {options}
                 self.llm = self.llm.trim()
             else:
                 logger.warning(f"Truncating context ({used}/{self.token_limit} tokens used)")
-                self.reset()
+                await self.reset()
 
 def tokens(m: models.Model) -> int:
     return len(m.engine.tokenizer.encode(str(m).encode())) # type: ignore

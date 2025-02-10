@@ -62,7 +62,7 @@ def create_game_tab(game: Game):
         # FIXME: LLM desperately needs to be moved off-thread
         with clear_context.param.update(name="Clearing...", disabled=True):
             await asyncio.sleep(0.1)
-            game.llm.reset(True)
+            await game.llm.reset(True)
             ctx_log.logs = []
 
     say_input = pn.widgets.TextInput(placeholder="Add message to context")

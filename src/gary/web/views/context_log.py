@@ -34,8 +34,8 @@ class ContextLog(pn.viewable.Viewer):
     def __init__(self, game: Game, *a, **kw):
         super().__init__(*a, **kw)
         self.game = game
-        self.game.llm.subscribe("context", self.on_context)
-        self.game.llm.subscribe("say", self.on_say)
+        self.game.llm.subscribe('context', self.on_context)
+        self.game.llm.subscribe('say', self.on_say)
 
     def __panel__(self):
         logs_col = pn.Column(

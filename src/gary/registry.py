@@ -183,7 +183,7 @@ class Game(HasEvents[_game_events]):
         if force:
             self.pending_forces[msg.data.id] = force
         ctx = f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}"
-        self.llm.context(ctx, silent=True)
+        await self.llm.context(ctx, silent=True)
         self.scheduler.on_action()
         await self._raise_event("action", msg)
         await self._connection.send(msg)
@@ -204,12 +204,13 @@ class Game(HasEvents[_game_events]):
             await self.handle(force)
 
     async def send_context(self, ctx: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
-        self.llm.context(ctx, silent, ephemeral=ephemeral, do_print=do_print, notify=True)
+        await self.llm.context(ctx, silent, ephemeral=ephemeral, do_print=do_print, notify=True)
         if not silent and not await self.try_action():
             self.scheduler.on_context()
 
     async def handle(self, msg: AnyGameMessage):
         logger.debug(f'Handling {msg.command}')
+        await self._raise_event(msg.command, msg)
         match msg:
             case Startup():
                 pass
@@ -228,22 +229,21 @@ class Game(HasEvents[_game_events]):
                 await self.process_result(msg)
             case _:
                 raise Exception(f"Unhandled message {msg}")
-        await self._raise_event(msg.command, msg)
 
     async def _connected(self):
         logger.debug(f"{self.name} connected")
-        self.llm.gaming()
+        await self.llm.gaming()
         if not self.mute_llm:
             self.scheduler.start()
         await self._raise_event("connect")
 
     async def _disconnected(self, *_):
         await self._raise_event("disconnect")
-        self.reset()
+        await self.reset()
         # self.llm.reset() # TODO: config whether to reset on disconnect
 
-    def reset(self):
-        self.llm.not_gaming()
+    async def reset(self):
+        await self.llm.not_gaming()
         self.scheduler.stop()
         self._seen_actions.clear()
         self.actions.clear()
