@@ -16,7 +16,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
 
     async def startup(self, msg: Startup, conn: GameWSConnection) -> "Game":
         if not (game := self.games.get(msg.game)):
-            game = Game(msg.game, self)
+            game = await Game.create(msg.game, self)
             self.games[msg.game] = game
             await self._raise_event("game_created", game)
             await game._connected()
@@ -59,12 +59,18 @@ class Game(HasEvents[_game_events]):
         self._seen_actions: set[str] = set()
         self.pending_actions: dict[str, Action] = {}
         self.pending_forces: dict[str, ForceAction] = {}
-        self.llm = LLM(self) # TODO: single LLM (again)
+        self.llm: LLM
         self.scheduler = Scheduler(self)
         self._mute_llm = False
 
         self._connection: GameWSConnection = None # type: ignore
         self.subscriptions = []
+
+    @classmethod
+    async def create(cls, name: str, registry: Registry):
+        game = cls(name, registry)
+        game.llm = await LLM.create(game) # TODO: single LLM (again)
+        return game
 
     def _unsubscribe(self):
         for unsub in self.subscriptions:

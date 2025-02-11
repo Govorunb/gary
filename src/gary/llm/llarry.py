@@ -97,6 +97,8 @@ class Llarry(LlamaCpp):
             # technically if ends share tokens they can overlap, yielding trash
             # but realistically who would ever make their chat template this way
             if any(tokens[i_tok+1-len(end) : i_tok+1] == end for end in msg_ends):
+                # msg_text = tokenizer.decode(tokens[start:start+size]).decode()
+                # logger.debug(f"Message: [{start}..{start+size}]\nText:{msg_text}")
                 yield Llarry.Message(tokens, start, size)
                 start += size
                 size = 0

@@ -1,4 +1,3 @@
-import asyncio
 import random, time
 from orjson import dumps
 from datetime import datetime
@@ -77,8 +76,13 @@ class LLM(HasEvents[Literal['context', 'say']]):
         self.llm.echo = False
         end = time.time()
         logger.info(f"loaded in {end-start:.2f} seconds")
-        asyncio.create_task(self.system_prompt())
         self.temperature = params.get("temperature", 1.0)
+    
+    @classmethod
+    async def create(cls, game: "Game"):
+        llm = cls(game)
+        await llm.system_prompt()
+        return llm
 
     async def system_prompt(self):
         sys_prompt = """\
@@ -103,6 +107,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         engine = self.llm_engine()
         if llarry_keep_persistent and isinstance(self.llm, Llarry):
             logger.debug("TODO: keep persistent messages on reset")
+            self.llm.persistent.clear()
         if isinstance(engine, models.llama_cpp._llama_cpp.LlamaCppEngine):
             engine.reset_metrics()
             engine.model_obj.reset()
