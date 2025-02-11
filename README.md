@@ -1,7 +1,7 @@
-## Guidance Gary
+## Gaming Gary
 
 An implementation of the LLM side of the [Neuro-sama game SDK](https://github.com/VedalAI/neuro-game-sdk) to test game integrations.
-Uses [guidance](https://github.com/guidance-ai/guidance) to coerce the LLM to adhere to the appropriate JSON schema for actions. This works best with a local model (or as I like to refer to it, `Llarry` (Local Larry)).
+Uses [guidance](https://github.com/guidance-ai/guidance) to coerce the LLM to adhere to the appropriate JSON schema for actions. This works best with a local model.
 
 This is baby's first LLM code and I haven't done Python in years so ~~don't be mean please 🥺👉👈~~ PRs are welcome.
 The project is mostly for fun but I'm open to feedback and contributions.
@@ -45,7 +45,7 @@ GARY_CONFIG_PRESET=randy
 ```
 
 ### Tips
-Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/guidance-gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
+Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
 Since this project is focused on local models, success will depend on your model/hardware. Larry might turn out to be dumber than a rock when it comes to strategy and decisionmaking (which is ironic because it's made of rock) - maybe even *worse than Randy*.
 If so, Gary probably cannot help you and you'd be better off using [Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
@@ -79,7 +79,7 @@ You probably *should* consider doing the following:
 ### Known issues/todos
 - Gary doesn't do a bunch of things that Neuro does, like:
 	- Processing other sources of information like vision/audio/chat (I don't think I'll be doing this one)
-	- Acting on a scheduler (~~periodically acting unprompted~~, generating yaps, simulating waiting for TTS, etc)
+	- Acting on a scheduler (~~periodically acting unprompted~~, ~~generating yaps~~, simulating waiting for TTS, etc)
 	- Running actions off the main thread (todo maybe, depends on the scheduler)
 - There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
 	- Basically, if the model wants something invalid, it will pick a similar or seemingly arbitrary valid option. For example:
@@ -88,7 +88,7 @@ You probably *should* consider doing the following:
 		- When generating the action JSON, guidance picks `"gin"` because *(gives a long explanation)*
 	- For nerds - guidance uses the model to generate the starting tokens and forwards the rest as soon as it's fully disambiguated (so e.g. `"g` has the highest likelihood, so it gets picked, and then `in"` is auto-completed because `"gin"` is the only option starting with `"g`, even though in reality the model wanted to say `"glass"`). [Learn more](https://github.com/guidance-ai/guidance/issues/564)
 	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's fast
-- The way I trim context to keep LlamaCpp able to generate infinitely only works with local LlamaCpp (Guidance server would probably work too). Transformers will instead fully truncate context, and may rarely fail due to overrunning the context window. Not tested.
+- The way I trim context to keep LlamaCpp able to generate infinitely only works with local LlamaCpp. Other model engines will instead fully truncate context, and may rarely fail due to overrunning the context window. Not tested.
 - The web interface can be a bit flaky - keep an eye out for any exceptions in the terminal window and, when in doubt, refresh the page
 	- There's a non-zero chance I won't be able to polish it up to an acceptable level - if so, I'll probably ragequit the current implementation (using [panel](https://github.com/holoviz/panel/)) and go write a TS frontend or something instead. Send thoughts and prayers please
 
@@ -102,6 +102,7 @@ These are edge cases where Neuro may behave differently.
 - Gary sends `actions/reregister_all` on every connect (instead of just reconnects, as in the spec)
 	- I can probably make something that figures out if it's a first launch or a reconnect but I'm too lazy
 - etc etc, just download the repo and search for "IMPL" in the code
+- This section should shrink once [v2](https://github.com/VedalAI/neuro-game-sdk/discussions/58) of the API is out
 
 #### Remote services? (OpenAI, Anthropic, Google, Azure)
 Only local models (and guidance server) are supported. Guidance lets you use remote services, but it cannot enforce grammar/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just throw exceptions because of invalid output instead.
@@ -109,8 +110,6 @@ Only local models (and guidance server) are supported. Guidance lets you use rem
 ![log excerpt showing remote generation failed after exceeding the limit of 10 attempts](https://i.imgur.com/UNtnhdV.png)
 
 For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or the [guidance server example](https://github.com/guidance-ai/guidance/blob/727e8320062746b019d29a4cf393c88641fd7e4c/notebooks/server_anachronism.ipynb).
-
-Guidance does work with [Phi3 on Azure](https://github.com/microsoft/Phi-3CookBook/blob/main/code/01.Introduce/guidance.ipynb), but it's not implemented here due to lack of interest.
 
 #### Acknowledgements
 Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:

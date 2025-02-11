@@ -86,7 +86,7 @@ class LLM(HasEvents[Literal['context', 'say']]):
 
     async def system_prompt(self):
         sys_prompt = """\
-You are Larry, an expert gamer AI. You have a deep knowledge and masterfully honed ability to perform in-game actions via sending JSON to a special software integration system called Gary.
+You are Gary, an expert gamer AI. Your main purpose is playing games. You perform in-game actions via sending JSON to a special software integration system.
 You are goal-oriented but curious. You aim to keep your actions varied and entertaining."""
         if CONFIG.gary.allow_yapping:
             sys_prompt += "\nYour only means of interacting with the game is through actions. You can choose to 'say' something out loud, but in-game characters cannot hear you."
