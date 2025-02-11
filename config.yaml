@@ -15,8 +15,7 @@ default:
   gary:
     log_level_file: info
     log_level_console: info
-    enable_cot: false
-    non_ephemeral_try_context: false
+    allow_yapping: false
     scheduler:
       idle_timeout_try: 6
       idle_timeout_force: 30
@@ -27,8 +26,7 @@ randy:
       engine: randy
       model: ""
     gary:
-      enable_cot: false # you don't want randy with this on, trust me
-      non_ephemeral_try_context: false
+      allow_yapping: false # you don't want randy with this on, trust me
       scheduler:
         idle_timeout_try: 0
         idle_timeout_force: 5
@@ -39,5 +37,4 @@ phi:
       engine: llama_cpp
       model: _models/bartowski_Phi-3.5-mini-instruct-Q4_K_L.gguf
     gary:
-      enable_cot: true
-      non_ephemeral_try_context: true
+      allow_yapping: true

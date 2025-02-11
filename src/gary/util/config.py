@@ -42,22 +42,7 @@ class Config(BaseModel):
         allow_yapping: bool = False
         '''
         Allow the model to choose to say something instead of performing an action.
-        Eats through tokens and very likely to distract the model. Only enable this for "realism".
-        Should be combined with `non_ephemeral_try_context`, otherwise the model will repeat itself a lot.
-        '''
-        enable_cot: bool = False
-        '''
-        Enable poor man's chain-of-thought.
-        In my testing, this just consumes a bunch more tokens without a tangible difference.
-        A lot of the time, the 'reasoning' is full of hallucinations and the model chooses to do something irrelevant anyway.
-        '''
-        non_ephemeral_try_context: bool = False
-        '''
-        Don't discard context from picking whether to act or not. This can eat up a lot of tokens.
-        If the model happens to generate good reasoning for it, this will help when picking the action.
-        If your model hallucinates a lot, it will very much not help.
-        Should be combined with `allow_yapping` or `enable_cot`.
-        You should play around with this.
+        Eats through tokens, likely to distract the model. Only enable this for "realism".
         '''
         scheduler: SchedulerConfig = SchedulerConfig()
     api: dict[str, Any] = {}

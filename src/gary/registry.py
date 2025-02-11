@@ -206,7 +206,7 @@ class Game(HasEvents[_game_events]):
             await self.handle(force)
 
     async def send_context(self, ctx: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
-        await self.llm.context(ctx, silent, ephemeral=ephemeral, do_print=do_print, notify=True)
+        await self.llm.context(ctx, silent=silent, ephemeral=ephemeral, do_print=do_print, notify=True)
         if not silent and not await self.try_action():
             self.scheduler.on_context()
 

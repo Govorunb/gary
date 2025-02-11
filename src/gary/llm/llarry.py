@@ -1,5 +1,6 @@
 from collections import namedtuple
 import functools
+import re
 import time
 from typing import Self, Sequence, cast
 from guidance.chat import ChatTemplate
@@ -83,7 +84,7 @@ class Llarry(LlamaCpp):
 
     Message = namedtuple("Message", "all_tokens start size")
 
-    def iter_messages(self):
+    def iter_messages_tokens(self):
         tokenizer = self.engine.tokenizer
         msg_ends = [tokenizer.encode(end.encode()) for end in self.get_msg_end_tokens()]
         # logger.debug(f"{msg_ends=} / {self.get_msg_end_tokens()=}")
@@ -106,6 +107,12 @@ class Llarry(LlamaCpp):
             logger.debug(f"Last message:\n{last_msg}")
             # logger.debug(f"Prompt:\n{prompt}")
             yield Llarry.Message(tokens, start, size)
+
+    def iter_messages_text(self):
+        msg_ends = self.get_msg_end_tokens()
+        prompt = str(self)
+        out = re.split('|'.join(re.escape(e) for e in msg_ends), prompt)
+        return out[:-1] if out[-1] == '' else out
 
     def trim(self) -> Self:
         if not isinstance(self.engine, StreamingLlamaCppEngine):
@@ -157,10 +164,6 @@ class Llarry(LlamaCpp):
             '''
             nonlocal n_discard, n_keep
             nonlocal i_start_discard, i_end_discard
-            # (toks, start, size) = msg
-            # message_tokens = toks[start:start+size]
-            # message = tokenizer.decode(message_tokens).decode()
-            # logger.info(f"message #{i}: {message}")
 
             # 1. first discardable is n_keep
             # 2. then, find first non-discardable message
@@ -181,8 +184,12 @@ class Llarry(LlamaCpp):
 
         has_any = False
         i_msg = 0 # just so it's not unbounded if there's no messages
-        for i_msg, msg in enumerate(self.iter_messages()):
+        for i_msg, msg in enumerate(self.iter_messages_tokens()):
             has_any = True
+            # (toks, start, size) = msg
+            # message_tokens = toks[start:start+size]
+            # message = tokenizer.decode(message_tokens).decode()
+            # logger.info(f"message #{i}: {message}")
             if not on_message_end(i_msg, msg):
                 break
         else:
@@ -198,7 +205,7 @@ class Llarry(LlamaCpp):
             logger.fatal(
                 "Didn't find a single discardable message!"
                 f"\nPrompt: {str(self)}"
-                f"\nMessages: {[tokenizer.decode(msg.all_tokens[msg.start, msg.start+msg.size]).decode() for msg in self.iter_messages()]}"
+                f"\nMessages: {[tokenizer.decode(msg.all_tokens[msg.start, msg.start+msg.size]).decode() for msg in self.iter_messages_tokens()]}"
             )
             logger.warning("Attempting to continue, but you may not like the result")
 

@@ -24,7 +24,7 @@ class LogEntry(pn.viewable.Viewer):
             styles['text-decoration'] = 'line-through'
 
         return pn.widgets.StaticText(
-            value=self.value,
+            value=self.value, # TODO: html escape (sigh)
             styles=styles
         )
 
@@ -43,7 +43,7 @@ class ContextLog(pn.viewable.Viewer):
             scroll_button_threshold=3,
             sizing_mode='stretch_width',
         )
-        # NOTE: scroll resets every time
+        # FIXME: scroll resets every time
         def _reset(_):
             logs_col[:] = self.logs # type: ignore
         self.param.watch(_reset, 'logs')
@@ -63,10 +63,5 @@ class ContextLog(pn.viewable.Viewer):
         self.logs += [new_log] # type: ignore
     
     def on_say(self, msg: str):
-        new_log = LogEntry(
-            value='> '+msg,
-            success=None,
-            silent=False,
-            ephemeral=False
-        )
+        new_log = LogEntry(value='> ' + msg)
         self.logs += [new_log] # type: ignore
