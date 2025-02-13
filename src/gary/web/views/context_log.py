@@ -34,6 +34,7 @@ class LogEntry(pn.viewable.Viewer):
 
 class ContextLog(pn.viewable.Viewer):
     logs = param.List(default=[], item_type=LogEntry)
+    new_log = param.Event()
 
     def __init__(self, game: Game, *a, **kw):
         super().__init__(*a, **kw)
@@ -47,10 +48,12 @@ class ContextLog(pn.viewable.Viewer):
             scroll_button_threshold=3,
             sizing_mode='stretch_width',
         )
-        # FIXME: scroll resets every time
         def _reset(_):
             logs_col[:] = self.logs # type: ignore
+        def _append(_):
+            logs_col.append(self.logs[-1]) # type: ignore
         self.param.watch(_reset, 'logs')
+        self.param.watch(_append, 'new_log')
         return pn.Column(
             logs_col,
             styles={'flex': '1'}
@@ -64,8 +67,11 @@ class ContextLog(pn.viewable.Viewer):
             silent=silent,
             ephemeral=ephemeral
         )
-        self.logs += [new_log] # type: ignore
+        self._add_log(new_log)
     
     def on_say(self, msg: str):
-        new_log = LogEntry(value='> ' + msg)
-        self.logs += [new_log] # type: ignore
+        self._add_log(LogEntry(value='> ' + msg))
+    
+    def _add_log(self, log: LogEntry):
+        self.logs.append(log) # type: ignore
+        self.param.trigger('new_log')
