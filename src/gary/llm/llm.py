@@ -306,8 +306,8 @@ The following actions are available to you:
         llm += "" # FIXME: wrap ctxmgr for role closer
         said = llm['say']
         logger.info(f"{said=}")
-        for msg in cast(Llarry, llm).iter_messages_text()[-3:]:
-            logger.debug(f"{msg}\n\n{msg.encode()}")
+        # for msg in cast(Llarry, llm).iter_messages_text()[-3:]:
+        #     logger.debug(f"{msg}\n\n{msg.encode()}")
         await self._raise_event('say', said)
         return llm
 

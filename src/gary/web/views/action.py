@@ -1,3 +1,4 @@
+import html
 import jsf.schema_types.string_utils.content_type.text__plain as jsf_text_utils
 import panel as pn
 
@@ -63,10 +64,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             if not schema or (schema.get("type") == "object" and not schema.get("properties")):
                 return None
             # TODO: filter out {enum: [null]} (maybe)
-            
-            schema = orjson.loads(orjson.dumps(schema))
-            assert schema
-            schema.pop('additionalProperties', None) # hide our injection to reduce confusion
+
             return schema
         # someone get me out
         # python rx is so ass
@@ -76,6 +74,9 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
         def schema_card(schema: dict[str, Any] | None):
             if not schema:
                 return None
+            schema = orjson.loads(orjson.dumps(schema)) # to not mutate the original
+            assert schema
+            schema.pop('additionalProperties', None) # hide our injection to reduce confusion
             return pn.Card(
                 pn.pane.Markdown(f"```json\n{orjson.dumps(schema, option=orjson.OPT_INDENT_2).decode()}\n```", sizing_mode='stretch_width'),
                 title="Schema",
@@ -87,9 +88,10 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             send_button = pn.widgets.Button(name="Send", button_type='primary')
             @send_button.on_click
             async def _(*_):
+                # IMPL: null vs {} if no schema
                 data: str = data_input.value if schema else "{}" # type: ignore
                 await self._game.execute_action(self.action_name, data) # type: ignore
-            
+
             if not schema:
                 return pn.Row(send_button, margin=10)
 
@@ -106,7 +108,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             reroll()
 
             randy_button = pn.widgets.Button(name="Random", button_type='light')
-            error_text = pn.widgets.StaticText(value="", sizing_mode='stretch_width', styles={'color': 'red'})
+            error_text = pn.widgets.StaticText(sizing_mode='stretch_width', styles={'color': 'red'})
 
             def validate_json(val: str) -> str | Literal[""]:
                 '''
@@ -121,10 +123,10 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
                     return v.message
                 except orjson.JSONDecodeError as j:
                     return j.msg
-            error_text.value = pn.bind(validate_json, data_input)
+            error_text.value = data_input.param.value.rx.pipe(validate_json).rx.pipe(html.escape)
             send_button.disabled = error_text.rx.bool()
             randy_button.rx.watch(reroll)
-            
+
             return pn.Card(
                 data_input,
                 pn.Row(send_button, randy_button, error_text),
@@ -133,10 +135,10 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             )
 
         card = pn.Card(
-            pn.widgets.StaticText(value=self.param.action_description, margin=10),
+            pn.widgets.StaticText(value=self.param.action_description.rx.pipe(html.escape), margin=10),
             pn.bind(schema_card, filtered_schema),
             pn.bind(manual_send_card, filtered_schema),
-            title=self.param.action_name,
+            title=self.param.action_name.rx.pipe(html.escape),
             collapsed=True,
             css_classes=self.param.is_registered.rx.where([], ["unregistered"]),
             sizing_mode='stretch_width',

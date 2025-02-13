@@ -1,6 +1,7 @@
 import re
 import param
 import panel as pn
+import html
 
 from ...registry import Game
 
@@ -24,7 +25,10 @@ class LogEntry(pn.viewable.Viewer):
             styles['text-decoration'] = 'line-through'
 
         return pn.widgets.StaticText(
-            value=self.value, # TODO: html escape (sigh)
+            # it is a *text* widget, not an "i'll happily render anything as html" widget
+            # why on earth would you not sanitize it internally
+            # now i have to go and check every other place where text is displayed
+            value=self.param.value.rx.pipe(html.escape),
             styles=styles
         )
 
