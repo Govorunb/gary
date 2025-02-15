@@ -260,6 +260,8 @@ class Scheduler:
         self._try_timer.reset()
 
     def _on_say(self, said: str):
+        if not CONFIG.gary.scheduler.sleep_after_say:
+            return
         # very sophisticated
         duration = len(said) * 0.1
         self.enqueue(Sleep(duration))

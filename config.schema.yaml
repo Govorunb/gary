@@ -72,6 +72,11 @@ definitions:
                 oneOf:
                   - {type: number, minimum: 1}
                   - {const: 0}
+              sleep_after_say:
+                type: boolean
+                description: |
+                  Sleep after saying something to simulate waiting for TTS.
+                  Duration is based on message length.
         additionalProperties: false
     additionalProperties: false
   preset_inherit:
