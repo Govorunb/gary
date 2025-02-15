@@ -2,6 +2,7 @@ from queue import Empty, PriorityQueue
 import asyncio
 import logging
 import threading
+import time
 import traceback
 from typing import TYPE_CHECKING
 
@@ -18,11 +19,13 @@ class Scheduler:
         self._active = False
         self._busy = False
         self._muted = False
+        self._sleeping = False
         self._event_loop: asyncio.AbstractEventLoop | None = None
         self._worker_thread: threading.Thread | None = None
         self._logger = logging.getLogger(__name__)
         game.subscribe('action', self._on_action)
         game.llm.subscribe('context', self._on_context)
+        self.game.llm.subscribe('say', self._on_say)
 
         # Initialize idle timers
         idle_timeout_try = CONFIG.gary.scheduler.idle_timeout_try
@@ -56,12 +59,30 @@ class Scheduler:
     def muted(self):
         return self._muted
 
+    @property
+    def sleeping(self):
+        return self._sleeping
+
+    @property
+    def can_act(self):
+        return not self._muted and not self._sleeping
+
     @muted.setter
     def muted(self, muted: bool):
         if self._muted == muted:
             return
         self._muted = muted
-        if muted:
+        self._update_mute()
+
+    @sleeping.setter
+    def sleeping(self, sleeping: bool):
+        if self._sleeping == sleeping:
+            return
+        self._sleeping = sleeping
+        self._update_mute()
+
+    def _update_mute(self):
+        if not self.can_act:
             self._try_timer.stop()
             self._force_timer.stop()
         else:
@@ -175,14 +196,14 @@ class Scheduler:
             if not actions and not allow_yapping:
                 self._logger.error("TryAction with nothing to do")
                 return
-            if self._muted:
-                self._logger.info("TryAction event ignored - muted")
+            if not self.can_act:
+                self._logger.info(f"TryAction event ignored - {'muted' if self.muted else 'sleeping'}")
                 return
             act = await self.game.llm.try_action(actions, allow_yapping=allow_yapping)
             await self.game.execute_action(act)
         elif isinstance(event, ForceAction):
-            if self._muted:
-                self._logger.info("ForceAction event ignored - muted")
+            if not self.can_act:
+                self._logger.info(f"ForceAction event ignored - {'muted' if self.muted else 'sleeping'}")
                 return
             if event.force_message:
                 act = await self.game.llm.force_action(event.force_message)
@@ -191,12 +212,20 @@ class Scheduler:
                 act = await self.game.llm.action(actions)
             await self.game.execute_action(act)
         elif isinstance(event, Say):
-            if not event.message and self._muted:
-                self._logger.warning(f"Tried to generate Say but muted - Say event from {event.timestamp}")
+            if not event.message and not self.can_act:
+                self._logger.warning(f"Tried to generate Say but {'muted' if self.muted else 'sleeping'} - Say event from {event.timestamp}")
                 return
             await self.game.llm.say(message=event.message, ephemeral=event.ephemeral)
         elif isinstance(event, Sleep):
-            await asyncio.sleep(event.duration)
+            async def sleep(duration: float):
+                self.sleeping = True
+                await asyncio.sleep(duration)
+                self.sleeping = False
+                self._logger.debug(f"Woke up from Sleep sent at {event.timestamp.time()}")
+            sleep_until = event.timestamp.timestamp() + event.duration
+            sleep_for = sleep_until - time.time()
+            self._logger.debug(f"Sleeping for {sleep_for:.2f}s (Sleep for {event.duration:2f} sent at {event.timestamp.time()})")
+            asyncio.create_task(sleep(sleep_for))
         else:
             self._logger.warning(f"Unknown event type: {type(event)}")
 
@@ -220,3 +249,8 @@ class Scheduler:
     def _on_action(self, *_):
         self._force_timer.reset()
         self._try_timer.reset()
+
+    def _on_say(self, said: str):
+        # very sophisticated
+        duration = len(said) * 0.1
+        self.enqueue(Sleep(duration))
