@@ -13,17 +13,17 @@ CONFIG_PATH = args.config or environ.get("GARY_CONFIG_FILE", "config.yaml")
 PRESET = args.preset or environ.get("GARY_CONFIG_PRESET", "default")
 
 class ConflictResolutionPolicy(Enum):
-    DROP_INCOMING = "drop_incoming"
-    DROP_EXISTING = "drop_existing"
+    DROP_INCOMING = 'drop_incoming'
+    DROP_EXISTING = 'drop_existing'
 
-_LogLevel = Literal["all", "debug", "info", "warn", "warning", "error", "critical", "fatal", "none"] | int
+_LogLevel = Literal['all', 'debug', 'info', 'warn', 'warning', 'error', 'critical', 'fatal', 'none'] | int
 class Config(BaseModel):
     class LLMConfig(BaseModel):
         engine: Literal[
-            "llama_cpp", "transformers",
-            "randy",
-            # "openai", "anthropic", "azure_openai", "googleai",
-            "guidance_server",
+            'llama_cpp', 'transformers',
+            'randy',
+            # 'openai', 'anthropic', 'azure_openai', 'googleai',
+            'guidance_server',
         ]
         model: str
         api_key: str = ""
@@ -35,8 +35,9 @@ class Config(BaseModel):
             '''If the model does not act for this many seconds, force it to pick an action to perform.'''
             sleep_after_say: bool = False
             '''Sleep after saying something to simulate waiting for TTS.'''
-        log_level_file: _LogLevel = "info"
-        log_level_console: _LogLevel = "debug"
+            log_level: _LogLevel = 'info'
+        log_level_file: _LogLevel = 'info'
+        log_level_console: _LogLevel = 'debug'
         existing_connection_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING
         '''What to do when someone tries to connect to a game that already has an active connection.'''
         existing_action_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING
@@ -77,11 +78,11 @@ def _load_config(preset_name: str, config_yaml: dict | None = None):
     preset: dict
     if not (preset := config_yaml.get(preset_name, None)): # keeping ", None" because type inference no worky goodly
         raise ValueError(f"Preset '{preset_name}' was not found in config.yaml")
-    if base := preset.get("base"):
+    if base := preset.get('base'):
         if base not in config_yaml:
             raise ValueError(f"Base preset '{base}' (referenced in '{preset_name}') was not found in config.yaml")
         base_preset = _load_config(base, config_yaml)
-        preset = _merge_nested_dicts(base_preset, preset["overrides"])
+        preset = _merge_nested_dicts(base_preset, preset['overrides'])
 
     def replace_env(d: dict) -> dict:
         out = {}

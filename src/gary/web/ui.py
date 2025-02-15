@@ -59,7 +59,6 @@ def create_game_tab(game: Game):
     )
     @clear_context.on_click
     async def _(*_):
-        # FIXME: LLM desperately needs to be moved off-thread
         with clear_context.param.update(name="Clearing...", disabled=True):
             await asyncio.sleep(0.1)
             await game.llm.reset(True)
@@ -78,8 +77,6 @@ def create_game_tab(game: Game):
         msg = say_input.value
         say_input.value = ""
         with say_button.param.update(name="Sending...", disabled=True):
-            # FIXME: scheduler! move LLM off the main thread!
-            # ui can only show the sent context AFTER the LLM generates/acts since it's blocking
             await game.send_context("(SYSTEM) " + msg, silent=True)
     
     say_button.on_click(_)

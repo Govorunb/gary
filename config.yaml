@@ -40,3 +40,4 @@ phi:
       allow_yapping: true
       scheduler:
         sleep_after_say: true
+        log_level: info

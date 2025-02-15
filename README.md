@@ -77,10 +77,10 @@ You probably *should* consider doing the following:
 	- Or, register a query-like action (e.g. `check_inventory`) that allows the model to ask about the state at any time and just hope for the best
 
 ### Known issues/todos
-- Gary doesn't do a bunch of things that Neuro does, like:
-	- Processing other sources of information like vision/audio/chat (I don't think I'll be doing this one)
-	- Acting on a scheduler (~~periodically acting unprompted~~, ~~generating yaps~~, simulating waiting for TTS, etc)
-	- Running actions off the main thread (todo maybe, depends on the scheduler)
+- Gary will always behave differently from Neuro in some aspects, specifically:
+	- Processing other sources of information like vision/audio/chat (for obvious reasons)
+	- Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
+	- Myriad other things
 - There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
 	- Basically, if the model wants something invalid, it will pick a similar or seemingly arbitrary valid option. For example:
 		- The model hallucinates about pouring drinks into a glass in its chain-of-thought

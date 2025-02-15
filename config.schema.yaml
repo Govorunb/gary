@@ -77,6 +77,7 @@ definitions:
                 description: |
                   Sleep after saying something to simulate waiting for TTS.
                   Duration is based on message length.
+              log_level: {$ref: "#/definitions/log_level"}
         additionalProperties: false
     additionalProperties: false
   preset_inherit:

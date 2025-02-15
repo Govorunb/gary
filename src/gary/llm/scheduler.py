@@ -23,6 +23,7 @@ class Scheduler:
         self._event_loop: asyncio.AbstractEventLoop | None = None
         self._worker_thread: threading.Thread | None = None
         self._logger = logging.getLogger(__name__)
+        self._logger.setLevel(CONFIG.gary.scheduler.log_level)
         self._has_pending_try_action = False
         game.subscribe('action', self._on_action)
         game.llm.subscribe('context', self._on_context)
@@ -242,14 +243,14 @@ class Scheduler:
         if not self.game.actions and not CONFIG.gary.allow_yapping:
             self._logger.info(f"Idled for {self._try_timer.interval}s, but no actions")
             return True
-        self._logger.warning(f"Idled for {self._try_timer.interval}s, trying action")
+        self._logger.info(f"Idled for {self._try_timer.interval}s, trying action")
         return self.enqueue(TryAction())
 
     async def _force(self) -> bool:
         if not self.game.actions:
             self._logger.info(f"Didn't do anything for {self._force_timer.interval}s! But nothing to force")
             return True
-        self._logger.error(f"Didn't do anything after {self._force_timer.interval}s! Forcing")
+        self._logger.warning(f"Didn't do anything after {self._force_timer.interval}s! Forcing")
         return self.enqueue(ForceAction())
 
     def _on_context(self, *_):
