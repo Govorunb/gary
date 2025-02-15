@@ -61,7 +61,6 @@ class Game(HasEvents[_game_events]):
         self.pending_forces: dict[str, ForceAction] = {}
         self.llm: LLM
         self.scheduler: Scheduler2
-        self._mute_llm = False
 
         self._connection: GameWSConnection = None # type: ignore
         self.subscriptions = []
@@ -85,21 +84,6 @@ class Game(HasEvents[_game_events]):
             connection.subscribe("disconnect", self._disconnected),
             connection.subscribe("connect", self._connected),
         ])
-
-    @property
-    def mute_llm(self):
-        return self._mute_llm
-
-    @mute_llm.setter
-    def mute_llm(self, muted: bool):
-        if self._mute_llm == muted:
-            return
-        self._mute_llm = muted
-        if muted:
-            self.scheduler.stop()
-        else:
-            self.scheduler.start()
-            self.scheduler.enqueue(TryAction())
 
     @property
     def connection(self) -> GameWSConnection:
@@ -165,8 +149,6 @@ class Game(HasEvents[_game_events]):
         if not self.actions and not CONFIG.gary.allow_yapping:
             logger.debug("No actions to try (Game.try_action)")
             return False
-        if self.mute_llm:
-            return False
         self.scheduler.enqueue(TryAction())
         return True
 
@@ -231,8 +213,6 @@ class Game(HasEvents[_game_events]):
             case Context():
                 await self.send_context(msg.data.message, msg.data.silent)
             case ForceAction():
-                if self.mute_llm:
-                    return False
                 self.scheduler.enqueue(ForceActionEvent(force_message=msg))
             case ActionResult():
                 await self.process_result(msg)
@@ -242,8 +222,7 @@ class Game(HasEvents[_game_events]):
     async def _connected(self):
         logger.debug(f"{self.name} connected")
         await self.llm.gaming()
-        if not self.mute_llm:
-            self.scheduler.start()
+        self.scheduler.start()
         await self._raise_event("connect")
 
     async def _disconnected(self, *_):

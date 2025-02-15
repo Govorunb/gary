@@ -17,6 +17,7 @@ class Scheduler2:
         self._game = game
         self._active = False
         self._busy = False
+        self._muted = False
         self._event_loop: asyncio.AbstractEventLoop | None = None
         self._worker_thread: threading.Thread | None = None
         self._logger = logging.getLogger(__name__)
@@ -47,6 +48,27 @@ class Scheduler2:
     def game(self) -> "Game":
         return self._game
 
+    @property
+    def busy(self):
+        return self._busy
+
+    @property
+    def muted(self):
+        return self._muted
+
+    @muted.setter
+    def muted(self, muted: bool):
+        if self._muted == muted:
+            return
+        self._muted = muted
+        if muted:
+            self._try_timer.stop()
+            self._force_timer.stop()
+        else:
+            self._try_timer.start()
+            self._force_timer.start()
+            self.enqueue(TryAction())
+
     def start(self) -> None:
         """Start the event processing loop in a separate thread."""
         if self._active:
@@ -54,8 +76,9 @@ class Scheduler2:
         self._active = True
         self._worker_thread = threading.Thread(target=self._run_event_loop, daemon=True)
         self._worker_thread.start()
-        self._try_timer.start()
-        self._force_timer.start()
+        if not self._muted:
+            self._try_timer.start()
+            self._force_timer.start()
 
     def stop(self) -> None:
         """Stop the event processing loop."""
@@ -144,15 +167,23 @@ class Scheduler2:
                 persistent_llarry_only=event.persistent_llarry_only,
                 notify=event.notify
             )
+            if not event.silent:
+                self.enqueue(TryAction())
         elif isinstance(event, TryAction):
             actions = event.actions or list(self.game.actions.values())
             allow_yapping = event.allow_yapping if event.allow_yapping is not None else CONFIG.gary.allow_yapping
             if not actions and not allow_yapping:
-                self._logger.debug("TryAction with nothing to do")
+                self._logger.error("TryAction with nothing to do")
+                return
+            if self._muted:
+                self._logger.info("TryAction event ignored - muted")
                 return
             act = await self.game.llm.try_action(actions, allow_yapping=allow_yapping)
             await self.game.execute_action(act)
         elif isinstance(event, ForceAction):
+            if self._muted:
+                self._logger.info("ForceAction event ignored - muted")
+                return
             if event.force_message:
                 act = await self.game.llm.force_action(event.force_message)
             else:
@@ -160,6 +191,9 @@ class Scheduler2:
                 act = await self.game.llm.action(actions)
             await self.game.execute_action(act)
         elif isinstance(event, Say):
+            if not event.message and self._muted:
+                self._logger.warning(f"Tried to generate Say but muted - Say event from {event.timestamp}")
+                return
             await self.game.llm.say(message=event.message, ephemeral=event.ephemeral)
         elif isinstance(event, Sleep):
             await asyncio.sleep(event.duration)
