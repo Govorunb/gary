@@ -86,7 +86,7 @@ class Scheduler:
         self._update_mute()
 
     def _update_mute(self):
-        if not self.can_act:
+        if not self.can_act or not self.game.connection.is_connected():
             self._try_timer.stop()
             self._force_timer.stop()
         else:
