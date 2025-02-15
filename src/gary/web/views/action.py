@@ -10,6 +10,7 @@ import jsonschema
 from typing import Any, Literal
 from jsf import JSF
 
+from ...llm import Act
 from ...registry import Game
 from ...spec import ActionModel
 
@@ -89,8 +90,9 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             @send_button.on_click
             async def _(*_):
                 # IMPL: null vs {} if no schema
+                name: str = self.action_name # type: ignore
                 data: str = data_input.value if schema else "{}" # type: ignore
-                await self._game.execute_action(self.action_name, data) # type: ignore
+                await self._game.execute_action(Act(name, data))
 
             if not schema:
                 return pn.Row(send_button, margin=10)

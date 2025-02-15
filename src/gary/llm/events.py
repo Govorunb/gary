@@ -52,7 +52,7 @@ class Context(BaseEvent):
 @dataclass
 class TryAction(BaseEvent):
     '''Prompt the model to act.'''
-    actions: dict[str, ActionModel] | None = None
+    actions: list[ActionModel] | None = None
     '''Override for actions to choose from.'''
     allow_yapping: bool | None = None
     '''

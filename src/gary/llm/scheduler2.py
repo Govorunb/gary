@@ -39,18 +39,21 @@ class Scheduler2:
         self._event_loop = None
         self._worker_thread = None
 
-    def add_event(self, event: BaseEvent) -> None:
+    def enqueue(self, event: BaseEvent) -> bool:
         """Add an event to the queue.
         
         Events are processed in priority order (lower priority value = higher priority).
         Within the same priority level, events are processed in FIFO order.
         """
+        if not self._game.connection.is_connected():
+            return False
         self._queue.put_nowait(event)
         # Wake up the event loop if it's waiting
         if self._event_loop:
             self._event_loop.call_soon_threadsafe(self._process_events)
+        return True
 
-    def get_event(self) -> BaseEvent | None:
+    def _pop(self) -> BaseEvent | None:
         """Get the next event from the queue."""
         try:
             return self._queue.get_nowait()
@@ -80,7 +83,7 @@ class Scheduler2:
                 await asyncio.sleep(0.1)
                 continue
 
-            event = self.get_event()
+            event = self._pop()
             if not event:
                 # If no events, wait a bit before checking again
                 await asyncio.sleep(0.1)
@@ -107,20 +110,21 @@ class Scheduler2:
                 notify=event.notify
             )
         elif isinstance(event, TryAction):
-            actions = event.actions or self._game.actions
+            actions = event.actions or list(self._game.actions.values())
             allow_yapping = event.allow_yapping if event.allow_yapping is not None else CONFIG.gary.allow_yapping
-            await self._game.llm.try_action(actions, allow_yapping=allow_yapping)
+            act = await self._game.llm.try_action(actions, allow_yapping=allow_yapping)
+            await self._game.execute_action(act)
         elif isinstance(event, ForceAction):
             if event.force_message:
-                await self._game.llm.force_action(event.force_message, self._game.actions)
+                act = await self._game.llm.force_action(event.force_message)
             else:
-                await self._game._force_any_action()
+                actions = list(self._game.actions.values())
+                act = await self._game.llm.action(actions)
+            await self._game.execute_action(act)
         elif isinstance(event, Say):
-            if event.message:
-                # TODO: Implement direct message sending
-                self._logger.warning("Direct message sending not yet implemented")
-            await self._game.llm.say()
+            await self._game.llm.say(message=event.message, ephemeral=event.ephemeral)
         elif isinstance(event, Sleep):
             await asyncio.sleep(event.duration)
         else:
             self._logger.warning(f"Unknown event type: {type(event)}")
+

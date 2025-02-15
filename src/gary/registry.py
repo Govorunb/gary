@@ -1,10 +1,10 @@
-import asyncio
 from functools import partial
 import orjson
 
 from .util import CONFIG, logger, WSConnection, GameWSConnection, HasEvents
 from .util.config import ConflictResolutionPolicy
-from .llm import LLM, Scheduler
+from .llm import LLM, Scheduler2, Act
+from .llm.events import Context as ContextEvent, TryAction, ForceAction as ForceActionEvent
 from .spec import *
 
 class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconnected"]]):
@@ -60,7 +60,7 @@ class Game(HasEvents[_game_events]):
         self.pending_actions: dict[str, Action] = {}
         self.pending_forces: dict[str, ForceAction] = {}
         self.llm: LLM
-        self.scheduler = Scheduler(self)
+        self.scheduler = Scheduler2(self)
         self._mute_llm = False
 
         self._connection: GameWSConnection = None # type: ignore
@@ -98,11 +98,12 @@ class Game(HasEvents[_game_events]):
             self.scheduler.stop()
         else:
             self.scheduler.start()
-            asyncio.create_task(self.try_action())
+            self.scheduler.enqueue(TryAction())
 
     @property
     def connection(self) -> GameWSConnection:
         return self._connection
+
     async def set_connection(self, conn: GameWSConnection):
         if self._connection is conn:
             logger.debug(f"connection is already {conn.id}")
@@ -165,24 +166,20 @@ class Game(HasEvents[_game_events]):
             return False
         if self.mute_llm:
             return False
-        # FIXME: LLM generation is synchronous and hangs the websocket (Abandoned Pub disconnects)
-        # scheduler issue (todo)
-        if action := await self.llm.try_action(self.actions):
-            await self.execute_action(*action)
-            return True
-        return False
+        self.scheduler.enqueue(TryAction())
+        return True
 
     async def _force_any_action(self) -> bool:
         if not self.actions:
             logger.warning("No actions to force_any")
             return False
-        if action := await self.llm.action(self.actions):
-            await self.execute_action(*action)
-            return True
-        logger.warning("Tried force_any but no action. unlucky")
-        return False
+        self.scheduler.enqueue(ForceActionEvent())
+        return True
 
-    async def execute_action(self, name: str, data: str | None = None, *, force: ForceAction | None = None):
+    async def execute_action(self, act: Act | None, *, force: ForceAction | None = None):
+        if not act:
+            return
+        (name, data) = act
         if name not in self.actions:
             logger.error(f"Executing unregistered action {name}")
         # IMPL: not validating data against stored action schema (guidance is just perfect like that (clueless))
@@ -191,8 +188,7 @@ class Game(HasEvents[_game_events]):
         if force:
             self.pending_forces[msg.data.id] = force
         ctx = f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}"
-        await self.llm.context(ctx, silent=True)
-        self.scheduler.on_action()
+        self.scheduler.enqueue(ContextEvent(ctx, silent=True))
         await self._raise_event("action", msg)
         await self._connection.send(msg)
 
@@ -211,10 +207,15 @@ class Game(HasEvents[_game_events]):
         if is_force and not result.data.success:
             await self.handle(force)
 
-    async def send_context(self, ctx: str, silent: bool = False, ephemeral: bool = False, do_print: bool = True):
-        await self.llm.context(ctx, silent=silent, ephemeral=ephemeral, do_print=do_print, notify=True)
-        if not silent and not await self.try_action():
-            self.scheduler.on_context()
+    async def send_context(self, ctx: str, silent: bool = False, ephemeral: bool = False):
+        event = ContextEvent(
+            ctx,
+            silent=silent,
+            ephemeral=ephemeral,
+        )
+        self.scheduler.enqueue(event)
+        if not silent:
+            self.scheduler.enqueue(TryAction())
 
     async def handle(self, msg: AnyGameMessage):
         logger.debug(f'Handling {msg.command}')
@@ -231,8 +232,7 @@ class Game(HasEvents[_game_events]):
             case ForceAction():
                 if self.mute_llm:
                     return False
-                if chosen_action := await self.llm.force_action(msg, self.actions):
-                    await self.execute_action(*chosen_action, force=msg)
+                self.scheduler.enqueue(ForceActionEvent(force_message=msg))
             case ActionResult():
                 await self.process_result(msg)
             case _:
