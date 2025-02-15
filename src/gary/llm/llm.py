@@ -214,10 +214,11 @@ You must perform one of the following actions, given this information:
     "action_name": "{with_temperature(select([a.name for a in actions], "action_name"), self.temperature)}",'''
             action_name = llm["action_name"]
             # TODO: test without schema reminder; theoretically it makes responses better but not sure how much (or if it's worth the tokens)
+            chosen_action = next(a for a in actions if a.name == action_name)
             llm += f'''
-    "schema": {dumps(actions[action_name].schema_).decode()},'''
+    "schema": {dumps(chosen_action.schema_).decode()},'''
             llm = time_gen(llm, f'''
-    "data": {json("data", schema=actions[action_name].schema_, temperature=self.temperature, max_tokens=self.max_tokens())}
+    "data": {json("data", schema=chosen_action.schema_, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
 ```''')
         llm += "" # role closer
