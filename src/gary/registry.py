@@ -3,7 +3,7 @@ import orjson
 
 from .util import CONFIG, logger, WSConnection, GameWSConnection, HasEvents
 from .util.config import ConflictResolutionPolicy
-from .llm import LLM, Scheduler2, Act
+from .llm import LLM, Scheduler, Act
 from .llm.events import Context as ContextEvent, TryAction, ForceAction as ForceActionEvent
 from .spec import *
 
@@ -60,7 +60,7 @@ class Game(HasEvents[_game_events]):
         self.pending_actions: dict[str, Action] = {}
         self.pending_forces: dict[str, ForceAction] = {}
         self.llm: LLM
-        self.scheduler: Scheduler2
+        self.scheduler: Scheduler
 
         self._connection: GameWSConnection = None # type: ignore
         self.subscriptions = []
@@ -69,7 +69,7 @@ class Game(HasEvents[_game_events]):
     async def create(cls, name: str, registry: Registry):
         game = cls(name, registry)
         game.llm = await LLM.create(game) # TODO: single LLM (again)
-        game.scheduler = Scheduler2(game)
+        game.scheduler = Scheduler(game)
         return game
 
     def _unsubscribe(self):

@@ -11,7 +11,7 @@ from .events import BaseEvent, Context, TryAction, ForceAction, Say, Sleep
 if TYPE_CHECKING:
     from ..registry import Game
 
-class Scheduler2:
+class Scheduler:
     def __init__(self, game: "Game"):
         self._queue: PriorityQueue[BaseEvent] = PriorityQueue()
         self._game = game
