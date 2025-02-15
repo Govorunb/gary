@@ -148,9 +148,9 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
     ) -> models.Model:
         # TODO: option to skip decorating message with the game/date
         # so try/force_action prompts don't appear as though they come from the game
-        msg = f"[{self.game.name}] {ctx}"
+        msg = f"[ {self.game.name} ] {ctx}"
         if True: # yes i'm manually flipping this in code, i can't decide if it's a waste of tokens or not
-            msg = f"[{datetime.now().strftime('%H:%M:%S')}] " + msg
+            msg = f"[ {datetime.now().strftime('%H:%M:%S')} - " + msg[2:]
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
         await self.truncate_context(tokens)
         with user():
@@ -190,7 +190,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             .decode())
         # FIXME: omit "query"/"state" if empty
         # FIXME: unicode escape
-        await self.context(f"""
+        ctx_msg = f"""
 You must perform one of the following actions, given this information:
 ```json
 {{
@@ -199,9 +199,15 @@ You must perform one of the following actions, given this information:
     "available_actions": {actions_json}
 }}
 ```
-""",
-        silent=True, ephemeral=ephemeral, do_print=False, notify=False)
-        return await self.action(actions, ephemeral=ephemeral)
+"""
+        # self.action doesn't take a model param, so ephemerality here is done by setting/resetting self.llm
+        # good thing model objects are immutable
+        llm_ephemeral_restore = self.llm
+        self.llm = await self.context(ctx_msg, silent=True, ephemeral=ephemeral, do_print=False, notify=True)
+        act = await self.action(actions, ephemeral=ephemeral)
+        if ephemeral:
+            self.llm = llm_ephemeral_restore
+        return act
 
     async def action(self, actions: list[ActionModel], *, ephemeral: bool = False) -> Act:
         if not actions:
@@ -272,7 +278,7 @@ The following actions are available to you:
             llm += """
 }
 ```"""
-
+        llm += "" # role closer
         # TODO: command handlers
         if decision == ACT:
             return await self.action(actions)

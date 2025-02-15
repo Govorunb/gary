@@ -47,7 +47,7 @@ GARY_CONFIG_PRESET=randy
 ### Tips
 Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
-Since this project is focused on local models, success will depend on your model/hardware. Larry might turn out to be dumber than a rock when it comes to strategy and decisionmaking (which is ironic because it's made of rock) - maybe even *worse than Randy*.
+Since this project is focused on local models, success will depend on your model/hardware. Gary might turn out to be dumber than a rock when it comes to strategy and decisionmaking (which is ironic because it's made of rock) - maybe even *worse than Randy*.
 If so, Gary probably cannot help you and you'd be better off using [Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
@@ -77,10 +77,6 @@ You probably *should* consider doing the following:
 	- Or, register a query-like action (e.g. `check_inventory`) that allows the model to ask about the state at any time and just hope for the best
 
 ### Known issues/todos
-- Gary will always behave differently from Neuro in some aspects, specifically:
-	- Processing other sources of information like vision/audio/chat (for obvious reasons)
-	- Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
-	- Myriad other things
 - There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
 	- Basically, if the model wants something invalid, it will pick a similar or seemingly arbitrary valid option. For example:
 		- The model hallucinates about pouring drinks into a glass in its chain-of-thought
@@ -93,15 +89,19 @@ You probably *should* consider doing the following:
 	- There's a non-zero chance I won't be able to polish it up to an acceptable level - if so, I'll probably ragequit the current implementation (using [panel](https://github.com/holoviz/panel/)) and go write a TS frontend or something instead. Send thoughts and prayers please
 
 #### Implementation-specific behaviour
-These are edge cases where Neuro may behave differently.
+There may be cases where other backends (including Neuro) may behave differently.
+- Gary will always be different from Neuro in some aspects, specifically:
+	- Processing other sources of information like vision/audio/chat (for obvious reasons)
+	- Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
+	- Myriad other things like response timings
 - Registering an action with an existing name will replace the old one (by default)
 	- [The spec](https://github.com/VedalAI/neuro-game-sdk/blob/8c0f682c5d4fa804119e7168a558e8c0568fe1fb/API/SPECIFICATION.md#parameters-3) suggests the exact opposite - that the incoming action should be discarded
 	- I'm making the "wrong" behaviour default on purpose because I think it's the more natural of the two - but frankly, relying on either behaviour is not good
 	- You can switch to follow the spec by setting `(preset).gary.existing_action_policy` to `drop_incoming` in your `config.yaml`
-- Only one active websocket connection is allowed per game; when another tries to connect, either the old or the new connection will be closed (configurable in `config.yaml`)
+- Only one active websocket connection is allowed per game; when another tries to connect, either the old or the new connection will be closed (configurable in `config.yaml` the same way as above)
 - Gary sends `actions/reregister_all` on every connect (instead of just reconnects, as in the spec)
 	- I can probably make something that figures out if it's a first launch or a reconnect but I'm too lazy
-- etc etc, just download the repo and search for "IMPL" in the code
+- etc etc, just search for "IMPL" in the code
 - This section should shrink once [v2](https://github.com/VedalAI/neuro-game-sdk/discussions/58) of the API is out
 
 #### Remote services? (OpenAI, Anthropic, Google, Azure)
