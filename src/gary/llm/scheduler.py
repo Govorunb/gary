@@ -23,6 +23,7 @@ class Scheduler:
         self._event_loop: asyncio.AbstractEventLoop | None = None
         self._worker_thread: threading.Thread | None = None
         self._logger = logging.getLogger(__name__)
+        self._has_pending_try_action = False
         game.subscribe('action', self._on_action)
         game.llm.subscribe('context', self._on_context)
         self.game.llm.subscribe('say', self._on_say)
@@ -124,6 +125,12 @@ class Scheduler:
         if not self.game.connection.is_connected():
             return False
 
+        if isinstance(event, TryAction):
+            if self._has_pending_try_action:
+                self._logger.debug("Skipping duplicate TryAction - one already pending")
+                return False
+            self._has_pending_try_action = True
+        
         self._queue.put_nowait(event)
         return True
 
@@ -171,6 +178,8 @@ class Scheduler:
             try:
                 self._busy = True
                 self._logger.debug(f"Processing {type(event).__name__} event with priority {event.priority.name}")
+                if isinstance(event, TryAction):
+                    self._has_pending_try_action = False
                 await self._handle_event(event)
             except Exception as e:
                 self._logger.error(f"Error processing event: {e}\nTraceback:\n{traceback.format_exc()}")
@@ -224,7 +233,7 @@ class Scheduler:
                 self._logger.debug(f"Woke up from Sleep sent at {event.timestamp.time()}")
             sleep_until = event.timestamp.timestamp() + event.duration
             sleep_for = sleep_until - time.time()
-            self._logger.debug(f"Sleeping for {sleep_for:.2f}s (Sleep for {event.duration:2f} sent at {event.timestamp.time()})")
+            self._logger.debug(f"Sleeping for {sleep_for:.2f}s (Sleep for {event.duration:.2f} sent at {event.timestamp.time()})")
             asyncio.create_task(sleep(sleep_for))
         else:
             self._logger.warning(f"Unknown event type: {type(event)}")

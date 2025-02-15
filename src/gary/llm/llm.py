@@ -213,8 +213,8 @@ You must perform one of the following actions, given this information:
     "command": "action",
     "action_name": "{with_temperature(select([a.name for a in actions], "action_name"), self.temperature)}",'''
             action_name = llm["action_name"]
-            # TODO: test without schema reminder; theoretically it makes responses better but not sure how much (or if it's worth the tokens)
             chosen_action = next(a for a in actions if a.name == action_name)
+            # TODO: test without schema reminder; theoretically it makes responses better but not sure how much (or if it's worth the tokens)
             llm += f'''
     "schema": {dumps(chosen_action.schema_).decode()},'''
             llm = time_gen(llm, f'''
