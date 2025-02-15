@@ -6,8 +6,10 @@ import time
 import traceback
 from typing import TYPE_CHECKING
 
+from gary.util.logger import map_log_level
+
 from ..util import CONFIG, PeriodicTimer
-from .events import BaseEvent, Context, TryAction, ForceAction, Say, Sleep
+from .events import BaseEvent, ClearContext, Context, TryAction, ForceAction, Say, Sleep
 
 if TYPE_CHECKING:
     from ..registry import Game
@@ -23,7 +25,7 @@ class Scheduler:
         self._event_loop: asyncio.AbstractEventLoop | None = None
         self._worker_thread: threading.Thread | None = None
         self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(CONFIG.gary.scheduler.log_level)
+        self._logger.setLevel(map_log_level(CONFIG.gary.scheduler.log_level))
         self._has_pending_try_action = False
         game.subscribe('action', self._on_action)
         game.llm.subscribe('context', self._on_context)
@@ -236,6 +238,8 @@ class Scheduler:
             sleep_for = sleep_until - time.time()
             self._logger.debug(f"Sleeping for {sleep_for:.2f}s (Sleep for {event.duration:.2f} sent at {event.timestamp.time()})")
             asyncio.create_task(sleep(sleep_for))
+        elif isinstance(event, ClearContext):
+            await self.game.llm.reset(True)
         else:
             self._logger.warning(f"Unknown event type: {type(event)}")
 

@@ -4,6 +4,7 @@ from bokeh.models import Tooltip
 from bokeh.models.dom import HTML
 from panel.template import FastListTemplate
 
+from ..llm.events import ClearContext
 from ..util import CONFIG, logger
 from ..registry import REGISTRY, Game
 from ..spec import *
@@ -61,7 +62,7 @@ def create_game_tab(game: Game):
     async def _(*_):
         with clear_context.param.update(name="Clearing...", disabled=True):
             await asyncio.sleep(0.1)
-            await game.llm.reset(True)
+            game.scheduler.enqueue(ClearContext())
             ctx_log.logs = []
 
     say_input = pn.widgets.TextInput(placeholder="Add message to context")
