@@ -33,6 +33,8 @@ class Config(BaseModel):
             '''If the model does not act for this many seconds, manually ask it to act (it may decide not to).'''
             idle_timeout_force: float = 30.0
             '''If the model does not act for this many seconds, force it to pick an action to perform.'''
+            sleep_after_say: bool = False
+            '''Sleep after saying something to simulate waiting for TTS.'''
         log_level_file: _LogLevel = "info"
         log_level_console: _LogLevel = "debug"
         existing_connection_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING

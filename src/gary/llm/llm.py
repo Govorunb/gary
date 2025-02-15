@@ -174,17 +174,17 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             self.llm = out
         return out
 
-    async def force_action(self, msg: ForceAction, actions: dict[str, ActionModel]) -> Act | None:
-        if not actions:
+    async def force_action(self, msg: ForceAction) -> Act | None:
+        if not self.game.actions:
             logger.error("No actions to choose from (LLM.force_action)")
             return None
         assert self.game.name == msg.game, f"Received ForceAction for game {msg.game} while this LLM is for {self.game.name}"
         ephemeral = msg.data.ephemeral_context or False
-        actions_for_json = [actions[name] for name in msg.data.action_names if name in actions]
-        if len(msg.data.action_names) != len(actions_for_json):
-            logger.warning(f"ForceAction contains unknown action names: {set(msg.data.action_names) - set(actions)}")
+        actions = [self.game.actions[name] for name in msg.data.action_names if name in self.game.actions]
+        if len(msg.data.action_names) != len(actions):
+            logger.warning(f"ForceAction contains unknown action names: {set(msg.data.action_names) - set(a.name for a in actions)}")
         actions_json = (TypeAdapter(list[ActionModel])
-            .dump_json(actions_for_json, by_alias=True)
+            .dump_json(actions, by_alias=True)
             .decode())
         # FIXME: omit "query"/"state" if empty
         # FIXME: unicode escape
@@ -201,7 +201,7 @@ You must perform one of the following actions, given this information:
         silent=True, ephemeral=ephemeral, do_print=False, notify=False)
         return await self.action(actions, ephemeral=ephemeral)
 
-    async def action(self, actions: dict[str, ActionModel], *, ephemeral: bool = False) -> Act:
+    async def action(self, actions: list[ActionModel], *, ephemeral: bool = False) -> Act:
         if not actions:
             raise Exception("No actions to choose from (LLM.action)")
         await self.truncate_context(200)
@@ -210,15 +210,15 @@ You must perform one of the following actions, given this information:
             llm += f'''\
 ```json
 {{
-    "command": "action",''' # noqa: F541
-            llm += f'''
-    "action_name": "{with_temperature(select(list(actions.keys()), "action_name"), self.temperature)}",'''
+    "command": "action",
+    "action_name": "{with_temperature(select([a.name for a in actions], "action_name"), self.temperature)}",'''
             action_name = llm["action_name"]
+            chosen_action = next(a for a in actions if a.name == action_name)
             # TODO: test without schema reminder; theoretically it makes responses better but not sure how much (or if it's worth the tokens)
             llm += f'''
-    "schema": {dumps(actions[action_name].schema_).decode()},'''
+    "schema": {dumps(chosen_action.schema_).decode()},'''
             llm = time_gen(llm, f'''
-    "data": {json("data", schema=actions[action_name].schema_, temperature=self.temperature, max_tokens=self.max_tokens())}
+    "data": {json("data", schema=chosen_action.schema_, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
 ```''')
         llm += "" # role closer
@@ -228,7 +228,7 @@ You must perform one of the following actions, given this information:
             self.llm = llm
         return Act(action_name, data)
 
-    async def try_action(self, actions: dict[str, ActionModel], allow_yapping: bool = True) -> Act | None:
+    async def try_action(self, actions: list[ActionModel], allow_yapping: bool = True) -> Act | None:
         if isinstance(self.llm, Randy):
             allow_yapping = False # no thank you
 
@@ -238,11 +238,8 @@ You must perform one of the following actions, given this information:
             return None
         ctx = "Decide what to do next based on previous context."
         if actions:
-            # actions_for_json = {name: {"name": name, "description": action.description} for name, action in actions.items()}
-            actions_for_json = list(actions.values())
             actions_json = (TypeAdapter(list[ActionModel])
-                # .dump_json(actions_for_json, indent=4)
-                .dump_json(actions_for_json, by_alias=True)
+                .dump_json(actions, by_alias=True)
                 .decode()
                 .replace("\n", "\n    "))
             ctx += f"""
@@ -283,22 +280,24 @@ The following actions are available to you:
             # TODO: persist only the actual decision
             # e.g. remove "available_actions" prompt, "schema" reminder after picking action, etc
             # TODO: append after "command": "select(options)" directly instead of this weird generate-then-discard-then-forward-what-was-generated thing
-            self.llm = await self.say(pre_resp)
+            await self.say(pre_resp)
             return None
         elif decision == WAIT:
             return None
         logger.error(f"unhandled decision '{decision}'")
         return None
 
-    async def say[TModel: models.Model](self, model: TModel | None = None) -> TModel:
+    async def say[TModel: models.Model](self, model: TModel | None = None, message: str | None = None, ephemeral: bool = False) -> TModel:
         await self.truncate_context(520)
         llm: Any = model or self.llm
+
+        msg = message or gen('say', stop=['\n','"'], temperature=self.temperature, max_tokens=self.max_tokens(500))
         
         gen_ = f'''
 ```json
 {{
     "command": "say",
-    "message": "{gen('say', stop=['\n','"'], temperature=self.temperature, max_tokens=self.max_tokens(500))}"
+    "message": "{msg}"
 }}
 ```'''
         with assistant():
@@ -309,6 +308,8 @@ The following actions are available to you:
         # for msg in cast(Llarry, llm).iter_messages_text()[-3:]:
         #     logger.debug(f"{msg}\n\n{msg.encode()}")
         await self._raise_event('say', said)
+        if not ephemeral:
+            self.llm = llm
         return llm
 
     async def truncate_context(self, need_tokens: int = 0):

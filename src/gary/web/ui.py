@@ -101,10 +101,10 @@ def create_game_tab(game: Game):
     enable_drag = pn.widgets.Checkbox(name="Allow dragging")
 
     def update_mute(muted):
-        if game.mute_llm == muted:
+        if game.scheduler.muted == muted:
             return
-        logger.info(f"(Web UI) {'un' if not muted else ''}muted LLM for {game.name}")
-        game.mute_llm = muted
+        logger.info(f"(Web UI) {'un' if not muted else ''}muted '{game.name}'")
+        game.scheduler.muted = muted
 
     mute_toggle.rx.watch(update_mute)
     enable_resize.link(grid, value='allow_resize', bidirectional=True)
@@ -242,7 +242,7 @@ def add_control_panel(path: str):
         if connected_clients == 0:
             logger.info("(Web UI) All clients disconnected, unmuting all")
             for game in REGISTRY.games.values():
-                game.mute_llm = False
+                game.scheduler.muted = False
     pn.state.on_session_created(on_connect)
     pn.state.on_session_destroyed(on_disconnect)
 

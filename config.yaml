@@ -38,3 +38,5 @@ phi:
       model: _models/bartowski_Phi-3.5-mini-instruct-Q4_K_L.gguf
     gary:
       allow_yapping: true
+      scheduler:
+        sleep_after_say: true
