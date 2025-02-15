@@ -1,4 +1,5 @@
 from collections import namedtuple
+import logging
 import functools
 import re
 import time
@@ -7,7 +8,8 @@ from guidance.chat import ChatTemplate
 from guidance.models.llama_cpp._llama_cpp import LlamaCpp, LlamaCppEngine, LlamaCppTokenizer
 from guidance.models._model import Model
 from llama_cpp import Llama
-from gary.util import logger
+
+_logger = logging.getLogger(__name__)
 
 class StreamingLlamaCppEngine(LlamaCppEngine):
     def __init__(self, llama_cpp_engine: LlamaCppEngine, **kwargs):
@@ -53,11 +55,11 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
 
         t = time.perf_counter()
         self.shift_kv_cache(n_keep, n_discard)
-        logger.debug(f"Shifted KV cache by {n_discard} (from {n_keep}) in {(time.perf_counter()-t)*1000:.2f}ms")
+        _logger.debug(f"Shifted KV cache by {n_discard} (from {n_keep}) in {(time.perf_counter()-t)*1000:.2f}ms")
 
         token_ids = token_ids[:n_keep] + token_ids[n_keep + n_discard:]
-        logger.info(f"Trimmed context to {len(token_ids)} tokens")
-        # logger.critical(self.tokenizer.decode(token_ids).decode())
+        _logger.info(f"Trimmed context to {len(token_ids)} tokens")
+        # _logger.critical(self.tokenizer.decode(token_ids).decode())
         self._cache_token_ids.clear()
         return token_ids
 
@@ -79,7 +81,7 @@ class Llarry(LlamaCpp):
             try:
                 ends.add(chat_template.get_role_end(role))
             except Exception as e:
-                logger.debug(f"No role end for '{role}' {e}")
+                _logger.debug(f"No role end for '{role}' {e}")
         return list(ends)
 
     Message = namedtuple("Message", "all_tokens start size")
@@ -87,10 +89,10 @@ class Llarry(LlamaCpp):
     def iter_messages_tokens(self):
         tokenizer = self.engine.tokenizer
         msg_ends = [tokenizer.encode(end.encode()) for end in self.get_msg_end_tokens()]
-        # logger.debug(f"{msg_ends=} / {self.get_msg_end_tokens()=}")
+        # _logger.debug(f"{msg_ends=} / {self.get_msg_end_tokens()=}")
         prompt = str(self)
         tokens = tokenizer.encode(prompt.encode())
-        # logger.debug(f"{tokens[:50]=}")
+        # _logger.debug(f"{tokens[:50]=}")
         start = size = 0
         for i_tok in range(len(tokens)):
             size += 1
@@ -98,16 +100,16 @@ class Llarry(LlamaCpp):
             # but realistically who would ever make their chat template this way
             if any(tokens[i_tok+1-len(end) : i_tok+1] == end for end in msg_ends):
                 # msg_text = tokenizer.decode(tokens[start:start+size]).decode()
-                # logger.debug(f"Message: [{start}..{start+size}]\nText:{msg_text}")
+                # _logger.debug(f"Message: [{start}..{start+size}]\nText:{msg_text}")
                 yield Llarry.Message(tokens, start, size)
                 start += size
                 size = 0
         if size > 0:
-            logger.warning("Last message was not terminated by a message end token.\n"
+            _logger.warning("Last message was not terminated by a message end token.\n"
                 "Don't forget to add an empty string after exiting the role context manager so guidance can add the role closer.")
             last_msg = tokenizer.decode(tokens[start:start+size])
-            logger.debug(f"Last message:\n{last_msg}")
-            # logger.debug(f"Prompt:\n{prompt}")
+            _logger.debug(f"Last message:\n{last_msg}")
+            # _logger.debug(f"Prompt:\n{prompt}")
             yield Llarry.Message(tokens, start, size)
 
     def iter_messages_text(self):
@@ -121,10 +123,10 @@ class Llarry(LlamaCpp):
             global _warned
             if not _warned:
                 _warned = True
-                logger.warning(f"only {StreamingLlamaCppEngine.__name__} can be trimmed; current engine is {type(self.engine).__name__}")
+                _logger.warning(f"only {StreamingLlamaCppEngine.__name__} can be trimmed; current engine is {type(self.engine).__name__}")
             return self
 
-        # logger.warning("pray now my lord")
+        # _logger.warning("pray now my lord")
         t0 = time.perf_counter()
         # TODO: see if we can maybe keep state as we add the messages
         # (probably not because of assistant msgs interleaving append/generate)
@@ -138,7 +140,7 @@ class Llarry(LlamaCpp):
             sys_begin = tokenizer.encode(sys_begin_text.encode())
             len_sys_begin = len(sys_begin)
         except Exception:
-            logger.warning("Could not get system role start")
+            _logger.warning("Could not get system role start")
         # having easily accessible utility methods to do common things like split a list is clearly not pythonic
         n_keep = -1
         n_discard = 0
@@ -147,16 +149,16 @@ class Llarry(LlamaCpp):
         i_start_discard = i_end_discard = 0
         def can_discard(i_message: int, msg: Llarry.Message) -> bool:
             if i_message in self.persistent:
-                # logger.warning(f"message {i_message} is persistent ({self.persistent})")
+                # _logger.warning(f"message {i_message} is persistent ({self.persistent})")
                 return False
             if n_discard >= max_discard:
-                # logger.warning("discard over max")
+                # _logger.warning("discard over max")
                 return False
 
             if not sys_begin:
                 return True
             msg_begin = msg.all_tokens[msg.start : msg.start+len_sys_begin]
-            # logger.debug(f"i={i_message} begin={msg_begin} is_system={msg_begin == sys_begin}")
+            # _logger.debug(f"i={i_message} begin={msg_begin} is_system={msg_begin == sys_begin}")
             return msg_begin != sys_begin
 
         def on_message_end(i: int, msg: Llarry.Message) -> bool:
@@ -173,14 +175,14 @@ class Llarry(LlamaCpp):
             discardable = can_discard(i, msg)
             if n_keep == -1:
                 if discardable:
-                    # logger.warning(f"first discardable at {msg.start} (#{i})")
+                    # _logger.warning(f"first discardable at {msg.start} (#{i})")
                     n_keep = msg.start
                     i_start_discard = i
                 return True
             if discardable:
                 n_discard = msg.start - n_keep
             else:
-                # logger.warning(f"discardable span ends at {msg.start} (#{i})")
+                # _logger.warning(f"discardable span ends at {msg.start} (#{i})")
                 i_end_discard = i
             return discardable
 
@@ -191,25 +193,25 @@ class Llarry(LlamaCpp):
             # (toks, start, size) = msg
             # message_tokens = toks[start:start+size]
             # message = tokenizer.decode(message_tokens).decode()
-            # logger.info(f"message #{i}: {message}")
+            # _logger.info(f"message #{i}: {message}")
             if not on_message_end(i_msg, msg):
                 break
         else:
             i_end_discard = i_msg
         if not has_any:
-            logger.debug("Nothing to trim, aborting")
+            _logger.debug("Nothing to trim, aborting")
             return self
 
         persist_shift = i_end_discard - i_start_discard + 1
 
         if n_keep == -1:
             n_keep = 0
-            logger.fatal(
+            _logger.fatal(
                 "Didn't find a single discardable message!"
                 f"\nPrompt: {str(self)}"
                 f"\nMessages: {[tokenizer.decode(msg.all_tokens[msg.start, msg.start+msg.size]).decode() for msg in self.iter_messages_tokens()]}"
             )
-            logger.warning("Attempting to continue, but you may not like the result")
+            _logger.warning("Attempting to continue, but you may not like the result")
 
         tokens = self.engine.trim(msg.all_tokens, n_keep, n_discard) # type: ignore (zero depth flow control analysis)
         # this code is ok because i'm not a python dev :)
@@ -220,11 +222,11 @@ class Llarry(LlamaCpp):
         copy.persistent = set(p - persist_shift if p >= i_end_discard else p for p in self.persistent) # immutability
 
         new_prompt = tokenizer.decode(tokens).decode()
-        logger.debug("Trimmed in {:.4f}ms".format((time.perf_counter()-t0)*1000))
-        # logger.debug(f"{n_keep=} {n_discard=} {i_start_discard=} {i_end_discard=} {persist_shift=}")
-        # logger.debug(f"Previous prompt:\n{str(self)}")
-        # logger.debug(f"New tokens:\n{tokens[:50]}")
-        # logger.debug(f"New prompt:\n{new_prompt[:50]}")
+        _logger.debug("Trimmed in {:.4f}ms".format((time.perf_counter()-t0)*1000))
+        # _logger.debug(f"{n_keep=} {n_discard=} {i_start_discard=} {i_end_discard=} {persist_shift=}")
+        # _logger.debug(f"Previous prompt:\n{str(self)}")
+        # _logger.debug(f"New tokens:\n{tokens[:50]}")
+        # _logger.debug(f"New prompt:\n{new_prompt[:50]}")
         return copy + new_prompt
 
 class LlarryTokenizer(LlamaCppTokenizer):

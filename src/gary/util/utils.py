@@ -42,9 +42,9 @@ class HasEvents[E: LiteralString]:
 
     async def _raise_event(self, event: E, /, *args, **kwargs):
         # import traceback
-        # from .logger import logger
+        # import logging
         # stack_trace = "".join(traceback.format_stack()[-9:-4])
-        # logger.debug(f"{self} raising event {event} on {len(self.event_handlers[event])} handlers with args {args} and kwargs {kwargs}\nStack trace: {stack_trace}")
+        # logging.getLogger(__name__).debug(f"{self} raising event {event} on {len(self.event_handlers[event])} handlers with args {args} and kwargs {kwargs}\nStack trace: {stack_trace}")
 
         for handler in self.event_handlers[event]:
             await invoke(handler, *args, **kwargs)

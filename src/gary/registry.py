@@ -1,11 +1,14 @@
-from functools import partial
+import logging
 import orjson
+from functools import partial
 
-from .util import CONFIG, logger, WSConnection, GameWSConnection, HasEvents
+from .util import CONFIG, WSConnection, GameWSConnection, HasEvents
 from .util.config import ConflictResolutionPolicy
 from .llm import LLM, Scheduler, Act
 from .llm.events import Context as ContextEvent, TryAction, ForceAction as ForceActionEvent
 from .spec import *
+
+_logger = logging.getLogger(__name__)
 
 class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconnected"]]):
     def __init__(self):
@@ -29,11 +32,11 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
         else:
             if not (game := self.games.get(msg.game)):
                 # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
-                logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
+                _logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
                 game = await self.startup(Startup(game=msg.game), conn)
                 return
             if game.connection != conn and game.connection.is_connected(): # IMPL
-                logger.error(f"Game {msg.game} is registered to a different active connection! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
+                _logger.error(f"Game {msg.game} is registered to a different active connection! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
 
     async def connect(self, conn: WSConnection):
         self.connections[conn.id] = conn
@@ -91,16 +94,16 @@ class Game(HasEvents[_game_events]):
 
     async def set_connection(self, conn: GameWSConnection):
         if self._connection is conn:
-            logger.debug(f"connection is already {conn.id}")
+            _logger.debug(f"connection is already {conn.id}")
             return
 
         # IMPL: game already connected
         if self._connection and self._connection.is_connected():
             # IMPL: different active connection
-            logger.warning(f"Game '{self.name}' received startup from {conn.ws.client}, but is already actively connected to {self._connection.ws.client}!")
+            _logger.warning(f"Game '{self.name}' received startup from {conn.ws.client}, but is already actively connected to {self._connection.ws.client}!")
             policy = CONFIG.gary.existing_connection_policy
             conn_to_close = self._connection if policy == ConflictResolutionPolicy.DROP_EXISTING else conn
-            logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {policy}")
+            _logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {policy}")
             if policy == ConflictResolutionPolicy.DROP_INCOMING:
                 await conn.disconnect(1002, "Multiple connections are not allowed")
                 return
@@ -110,7 +113,7 @@ class Game(HasEvents[_game_events]):
         self._connection = conn
 
         if conn.game and conn.game is not self:
-            logger.error(f"set_connection: conn already has game! {conn.game.name}")
+            _logger.error(f"set_connection: conn already has game! {conn.game.name}")
             # conn.game._unsubscribe()
             # conn.game._connection = None
         conn.game = self
@@ -122,12 +125,12 @@ class Game(HasEvents[_game_events]):
             # i think dropping existing actions is more sensible
             # that said, neither behaviour should be relied upon
             if action.name in self.actions:
-                logger.warning(f"Action {action.name} already registered")
+                _logger.warning(f"Action {action.name} already registered")
                 policy = CONFIG.gary.existing_action_policy
                 if policy == ConflictResolutionPolicy.DROP_INCOMING:
-                    logger.debug(f"Ignoring incoming action {action.name} according to policy {policy}")
+                    _logger.debug(f"Ignoring incoming action {action.name} according to policy {policy}")
                     continue
-                logger.debug(f"Overwriting existing action {action.name} according to policy {policy}")
+                _logger.debug(f"Overwriting existing action {action.name} according to policy {policy}")
             assert action.schema_ is None or isinstance(action.schema_, dict), "Schema must be None or dict"
             if action.schema_ and action.schema_.get("type") == "object":
                 # stop making up random fields in the data. i am no longer asking
@@ -135,26 +138,26 @@ class Game(HasEvents[_game_events]):
             self.actions[action.name] = action
             if action.name not in self._seen_actions:
                 self._seen_actions.add(action.name)
-                logger.debug(f"New action {action.name}: {action.description}\nSchema: {orjson.dumps(action.schema_, option=orjson.OPT_INDENT_2).decode()}")
-        logger.info(f"Actions registered: {list(self.actions.keys())}")
+                _logger.debug(f"New action {action.name}: {action.description}\nSchema: {orjson.dumps(action.schema_, option=orjson.OPT_INDENT_2).decode()}")
+        _logger.info(f"Actions registered: {list(self.actions.keys())}")
 
     async def action_unregister(self, actions: list[str]):
         for action_name in actions:
             self.actions.pop(action_name, None)
-        logger.info(f"Actions unregistered: {actions}")
+        _logger.info(f"Actions unregistered: {actions}")
 
     async def try_action(self) -> bool:
         if not self._connection.is_connected():
             return False
         if not self.actions and not CONFIG.gary.allow_yapping:
-            logger.debug("No actions to try (Game.try_action)")
+            _logger.debug("No actions to try (Game.try_action)")
             return False
         self.scheduler.enqueue(TryAction())
         return True
 
     async def _force_any_action(self) -> bool:
         if not self.actions:
-            logger.warning("No actions to force_any")
+            _logger.warning("No actions to force_any")
             return False
         self.scheduler.enqueue(ForceActionEvent())
         return True
@@ -164,7 +167,7 @@ class Game(HasEvents[_game_events]):
             return
         (name, data) = act
         if name not in self.actions:
-            logger.error(f"Executing unregistered action {name}")
+            _logger.error(f"Executing unregistered action {name}")
         # IMPL: not validating data against stored action schema (guidance is just perfect like that (clueless))
         msg = Action(data=Action.Data(name=name, data=data))
         self.pending_actions[msg.data.id] = msg
@@ -177,7 +180,7 @@ class Game(HasEvents[_game_events]):
 
     async def process_result(self, result: ActionResult):
         if not self.pending_actions.pop(result.data.id, None):
-            logger.warning(f"Received result for unknown action {result.data.id}")
+            _logger.warning(f"Received result for unknown action {result.data.id}")
             # IMPL: result for unknown action
             return
 
@@ -201,7 +204,7 @@ class Game(HasEvents[_game_events]):
             self.scheduler.enqueue(TryAction())
 
     async def handle(self, msg: AnyGameMessage):
-        logger.debug(f'Handling {msg.command}')
+        _logger.debug(f'Handling {msg.command}')
         await self._raise_event(msg.command, msg)
         match msg:
             case Startup():
@@ -220,7 +223,7 @@ class Game(HasEvents[_game_events]):
                 raise Exception(f"Unhandled message {msg}")
 
     async def _connected(self):
-        logger.debug(f"{self.name} connected")
+        _logger.debug(f"{self.name} connected")
         await self.llm.gaming()
         self.scheduler.start()
         await self._raise_event("connect")

@@ -1,11 +1,14 @@
 import orjson
+import logging
+
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 from typing import TYPE_CHECKING, NamedTuple
 
 from ..spec import *
-from .logger import logger
 from .utils import HasEvents
+
+_logger = logging.getLogger(__name__)
 
 # python is just so lovely
 if TYPE_CHECKING:
@@ -35,16 +38,16 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
 
     async def send(self, message: TSend):
         if not self.is_connected():
-            logger.warning(f"Not connected, cannot send {message}")
+            _logger.warning(f"Not connected, cannot send {message}")
             return
         text = orjson.dumps(message.model_dump(mode='json')).decode()
-        # logger.debug(f'Sending: {text}')
+        # _logger.debug(f'Sending: {text}')
         await self.ws.send_text(text)
         await self._raise_event("send", message)
 
     async def receive(self) -> TRecv:
         text = await self.ws.receive_text()
-        # logger.debug(f'Received: {text}')
+        # _logger.debug(f'Received: {text}')
         model = self.t_recv.validate_json(text, strict=True)
         await self._raise_event("receive", model)
         return model
@@ -57,12 +60,12 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
             while self.is_connected():
                 await self.receive()
         except Exception as e:
-            logger.debug(f"Disconnecting: {e}")
+            _logger.debug(f"Disconnecting: {e}")
             if isinstance(e, WebSocketDisconnect):
-                logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
+                _logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
                 close_event = CloseEvent(e.code, e.reason, True)
             else:
-                logger.warning(f"Message handler error: ({type(e)}) {e}")
+                _logger.warning(f"Message handler error: ({type(e)}) {e}")
                 close_event = CloseEvent(1011, "Internal error", False)
                 await self.ws.close(close_event.code, close_event.reason)
                 raise
