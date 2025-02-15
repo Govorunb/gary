@@ -20,6 +20,8 @@ class Scheduler2:
         self._event_loop: asyncio.AbstractEventLoop | None = None
         self._worker_thread: threading.Thread | None = None
         self._logger = logging.getLogger(__name__)
+        game.subscribe('action', self._on_action)
+        game.llm.subscribe('context', self._on_context)
 
         # Initialize idle timers
         idle_timeout_try = CONFIG.gary.scheduler.idle_timeout_try
@@ -40,7 +42,7 @@ class Scheduler2:
             self._force,
             name="force_timer",
         )
-        
+
     @property
     def game(self) -> "Game":
         return self._game
@@ -71,16 +73,14 @@ class Scheduler2:
 
     def enqueue(self, event: BaseEvent) -> bool:
         """Add an event to the queue.
-        
+
         Events are processed in priority order (lower priority value = higher priority).
         Within the same priority level, events are processed in FIFO order.
         """
         if not self.game.connection.is_connected():
             return False
+
         self._queue.put_nowait(event)
-        # Wake up the event loop if it's waiting
-        if self._event_loop:
-            self._event_loop.call_soon_threadsafe(self._process_events)
         return True
 
     def _pop(self) -> BaseEvent | None:
@@ -98,9 +98,14 @@ class Scheduler2:
         """Run the event loop in a separate thread."""
         self._event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._event_loop)
-        
+
         try:
             self._event_loop.run_until_complete(self._process_events())
+        except RuntimeError as e:
+            # Ignore "Event loop stopped before Future completed" error
+            # This happens during normal shutdown when the loop is stopped while processing events
+            if str(e) != 'Event loop stopped before Future completed.':
+                self._logger.error(f"Error in event loop: {e}\nTraceback:\n{traceback.format_exc()}")
         finally:
             self._event_loop.close()
             self._event_loop = None
@@ -139,7 +144,6 @@ class Scheduler2:
                 persistent_llarry_only=event.persistent_llarry_only,
                 notify=event.notify
             )
-            self._try_timer.reset()
         elif isinstance(event, TryAction):
             actions = event.actions or list(self.game.actions.values())
             allow_yapping = event.allow_yapping if event.allow_yapping is not None else CONFIG.gary.allow_yapping
@@ -147,8 +151,6 @@ class Scheduler2:
                 self._logger.debug("TryAction with nothing to do")
                 return
             act = await self.game.llm.try_action(actions, allow_yapping=allow_yapping)
-            if act:
-                self._force_timer.reset()
             await self.game.execute_action(act)
         elif isinstance(event, ForceAction):
             if event.force_message:
@@ -156,8 +158,6 @@ class Scheduler2:
             else:
                 actions = list(self.game.actions.values())
                 act = await self.game.llm.action(actions)
-                if act:
-                    self._force_timer.reset()
             await self.game.execute_action(act)
         elif isinstance(event, Say):
             await self.game.llm.say(message=event.message, ephemeral=event.ephemeral)
@@ -179,3 +179,10 @@ class Scheduler2:
             return True
         self._logger.error(f"Didn't do anything after {self._force_timer.interval}s! Forcing")
         return self.enqueue(ForceAction())
+
+    def _on_context(self, *_):
+        self._try_timer.reset()
+
+    def _on_action(self, *_):
+        self._force_timer.reset()
+        self._try_timer.reset()

@@ -60,7 +60,7 @@ class Game(HasEvents[_game_events]):
         self.pending_actions: dict[str, Action] = {}
         self.pending_forces: dict[str, ForceAction] = {}
         self.llm: LLM
-        self.scheduler = Scheduler2(self)
+        self.scheduler: Scheduler2
         self._mute_llm = False
 
         self._connection: GameWSConnection = None # type: ignore
@@ -70,6 +70,7 @@ class Game(HasEvents[_game_events]):
     async def create(cls, name: str, registry: Registry):
         game = cls(name, registry)
         game.llm = await LLM.create(game) # TODO: single LLM (again)
+        game.scheduler = Scheduler2(game)
         return game
 
     def _unsubscribe(self):
