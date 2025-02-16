@@ -1,6 +1,5 @@
 import logging, random, time
 from orjson import dumps
-from datetime import datetime
 from typing import TYPE_CHECKING, NamedTuple, cast
 from pydantic import TypeAdapter
 
@@ -91,7 +90,8 @@ class LLM(HasEvents[Literal['context', 'say']]):
 You are Gary, an expert gamer AI. Your main purpose is playing games. You perform in-game actions via sending JSON to a special software integration system.
 You are goal-oriented but curious. You aim to keep your actions varied and entertaining."""
         if CONFIG.gary.allow_yapping:
-            sys_prompt += "\nYour only means of interacting with the game is through actions. You can choose to 'say' something out loud, but in-game characters cannot hear you."
+            sys_prompt += "\nYou can choose to 'say' something, whether to communicate with the human running your software or just to think out loud."
+            sys_prompt += "\nRemember that your only means of interacting with the game is 'action'. In-game characters cannot hear you."
         with system():
             self.llm += sys_prompt
         if custom_rules := MANUAL_RULES.get(self.game.name):
@@ -146,11 +146,10 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         persistent_llarry_only: bool = False,
         notify: bool = True
     ) -> models.Model:
-        # TODO: option to skip decorating message with the game/date
+        # TODO: options for decorating the message
         # so try/force_action prompts don't appear as though they come from the game
-        msg = f"[ {self.game.name} ] {ctx}"
-        if True: # yes i'm manually flipping this in code, i can't decide if it's a waste of tokens or not
-            msg = f"[ {datetime.now().strftime('%H:%M:%S')} - " + msg[2:]
+        # (+ manual send from webui)
+        msg = f"[{self.game.name}] {ctx}"
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
         await self.truncate_context(tokens)
         with user():
@@ -231,7 +230,7 @@ You must perform one of the following actions, given this information:
 ```''')
         llm += "" # role closer
         data = llm['data']
-        _logger.info(f"chosen action: {action_name}; data: {data}")
+        _logger.debug(f"chosen action: {action_name}; data: {data}")
         if not ephemeral:
             self.llm = llm
         return Act(action_name, data)
@@ -274,7 +273,7 @@ The following actions are available to you:
         with assistant():
             llm = time_gen(pre_resp, resp)
             decision = llm['decision']
-            _logger.info(f"{decision=}")
+            _logger.debug(f"{decision=}")
             llm += """
 }
 ```"""
