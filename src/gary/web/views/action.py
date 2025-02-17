@@ -7,12 +7,13 @@ import sys
 import orjson
 import jsonschema
 
-from typing import Any, Literal
+from typing import Any
 from jsf import JSF
 
 from ...llm import Act
 from ...registry import Game
 from ...spec import ActionModel
+from .schema_form import SchemaForm
 
 def _monkey_patch():
     '''
@@ -87,50 +88,47 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
 
         def manual_send_card(schema: dict[str, Any] | None):
             send_button = pn.widgets.Button(name="Send", button_type='primary')
+            form = None
             @send_button.on_click
             async def _(*_):
                 # IMPL: null vs {} if no schema
                 name: str = self.action_name # type: ignore
-                data: str = data_input.value if schema else "{}" # type: ignore
-                await self._game.execute_action(Act(name, data))
+                data = form.get_value() if form else {}
+                await self._game.execute_action(Act(name, orjson.dumps(data).decode()))
 
             if not schema:
                 return pn.Row(send_button, margin=10)
 
             # TODO: handle {enum: [...]} (e.g. {enum: [null]})
             jsf = JSF(schema) if schema else None
-            # TODO: upgrade from JSON text editor to auto-generated forms
-            # (maybe, it's a lot of work and JSON is lowkey good enough)
-            # TODO: shrink/grow vertically to fit text
-            # TODO: Ctrl+Enter to submit (panel doesn't support key events. wtf)
-            data_input = pn.widgets.CodeEditor(sizing_mode='stretch_width', language='json', min_height=100)
+            form = SchemaForm(schema=schema)
 
             def reroll(*_):
-                data_input.value = orjson.dumps(jsf.generate(), option=orjson.OPT_INDENT_2).decode() if jsf else "{}"
+                form.value = jsf.generate() if jsf else {}
             reroll()
 
             randy_button = pn.widgets.Button(name="Random", button_type='light')
             error_text = pn.widgets.StaticText(sizing_mode='stretch_width', styles={'color': 'red'})
 
-            def validate_json(val: str) -> str | Literal[""]:
+            def validate_json(val: Any) -> str:
                 '''
                 Returns:
                     Error message, if any.
                 '''
                 assert schema, f"schema should have been filtered {schema=} {val=}"
                 try:
-                    jsonschema.validate(orjson.loads(val), schema)
+                    jsonschema.validate(val, schema)
                     return ""
                 except jsonschema.ValidationError as v:
                     return v.message
                 except orjson.JSONDecodeError as j:
                     return j.msg
-            error_text.value = data_input.param.value.rx.pipe(validate_json).rx.pipe(html.escape)
+            error_text.value = form.param.value.rx.pipe(validate_json).rx.pipe(html.escape)
             # send_button.disabled = error_text.rx.bool()
             randy_button.rx.watch(reroll)
 
             return pn.Card(
-                data_input,
+                form,
                 pn.Row(send_button, randy_button, error_text),
                 title="Manual Send",
                 collapsed=False,
