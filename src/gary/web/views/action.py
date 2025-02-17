@@ -126,7 +126,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
                 except orjson.JSONDecodeError as j:
                     return j.msg
             error_text.value = data_input.param.value.rx.pipe(validate_json).rx.pipe(html.escape)
-            send_button.disabled = error_text.rx.bool()
+            # send_button.disabled = error_text.rx.bool()
             randy_button.rx.watch(reroll)
 
             return pn.Card(

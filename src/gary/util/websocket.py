@@ -47,6 +47,8 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
 
     async def receive(self) -> TRecv:
         text = await self.ws.receive_text()
+        if not text:
+            raise ValueError("Received empty message")
         # _logger.debug(f'Received: {text}')
         model = self.t_recv.validate_json(text, strict=True)
         await self._raise_event("receive", model)
