@@ -93,7 +93,8 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             async def _(*_):
                 # IMPL: null vs {} if no schema
                 name: str = self.action_name # type: ignore
-                data = form.get_value() if form else {}
+                data = form.value if form else {}
+                # print(f"{data=}")
                 await self._game.execute_action(Act(name, orjson.dumps(data).decode()))
 
             if not schema:
@@ -101,7 +102,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
 
             # TODO: handle {enum: [...]} (e.g. {enum: [null]})
             jsf = JSF(schema) if schema else None
-            form = SchemaForm(schema=schema)
+            form = SchemaForm(schema=schema, name="data")
 
             def reroll(*_):
                 form.value = jsf.generate() if jsf else {}
