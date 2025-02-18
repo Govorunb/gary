@@ -81,6 +81,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
                 pn.pane.Markdown(f"```json\n{orjson.dumps(schema, option=orjson.OPT_INDENT_2).decode()}\n```", sizing_mode='stretch_width'),
                 title="Schema",
                 collapsed=True,
+                styles={"max-height": 'none'},
                 sizing_mode='stretch_width',
             )
 
@@ -112,6 +113,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
                 form,
                 pn.Row(send_button, randy_button, error_text),
                 title="Manual Send",
+                styles={"max-height": 'none'},
                 collapsed=False,
             )
 
@@ -123,6 +125,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             collapsed=True,
             css_classes=self.param.is_registered.rx.where([], ["unregistered"]),
             sizing_mode='stretch_width',
+            styles={"max-height": 'none'},
             margin=(5, 20),
         )
         return card

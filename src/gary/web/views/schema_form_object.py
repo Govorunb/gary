@@ -1,4 +1,5 @@
 import functools
+import html
 import logging
 from typing import Any
 import panel as pn
@@ -24,8 +25,6 @@ class ObjectSchemaForm(SchemaForm):
             self._widgets[prop_name] = subform
 
             def _ui_update(prop, evt):
-                if prop in self.value and self.value[prop] == evt.new:
-                    return
                 self.value[prop] = evt.new # type: ignore
                 self.param.trigger('value')
 
@@ -44,7 +43,7 @@ class ObjectSchemaForm(SchemaForm):
         for prop_name, widget in self._widgets.items():
             items.append(
                 pn.Row(
-                    pn.pane.Markdown(f"**{prop_name}**", margin=(0,10)),
+                    pn.pane.Markdown(f"**{html.escape(prop_name)}**", margin=(0,10)),
                     widget,
                     sizing_mode="stretch_width"
                 )
@@ -57,5 +56,6 @@ class ObjectSchemaForm(SchemaForm):
                 "border": "1px solid #3a3a3a",
                 "border-radius": "5px",
                 "padding": "2px",
+                "max-height": 'none',
             }
         )

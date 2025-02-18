@@ -98,5 +98,6 @@ class ArraySchemaForm(SchemaForm):
                 margin=(0, 10),
                 sizing_mode="stretch_width"
             ),
-            sizing_mode="stretch_width"
+            sizing_mode="stretch_width",
+            styles={"max-height": 'none'},
         )
