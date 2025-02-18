@@ -3,7 +3,7 @@ import html
 import logging
 from typing import Any
 import panel as pn
-from .schema_form_base import SchemaForm
+from . import SchemaForm
 
 _logger = logging.getLogger(__name__)
 

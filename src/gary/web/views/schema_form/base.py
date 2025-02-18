@@ -16,10 +16,10 @@ class SchemaForm(pn.viewable.Viewer):
     def create(cls, schema: dict[str, Any], **params) -> 'SchemaForm':
         """Factory method to create the appropriate schema form based on the schema type"""
         # Import here to avoid circular imports
-        from .schema_form_enum import EnumSchemaForm
-        from .schema_form_primitive import PrimitiveSchemaForm
-        from .schema_form_array import ArraySchemaForm
-        from .schema_form_object import ObjectSchemaForm
+        from .enum import EnumSchemaForm
+        from .primitive import PrimitiveSchemaForm
+        from .array import ArraySchemaForm
+        from .object import ObjectSchemaForm
 
         if "enum" in schema:
             return EnumSchemaForm(schema=schema, **params)

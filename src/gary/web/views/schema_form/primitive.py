@@ -1,6 +1,6 @@
 import math
 import panel as pn
-from .schema_form_base import SchemaForm
+from . import SchemaForm
 
 class PrimitiveSchemaForm(SchemaForm):
     def _create_widgets(self):

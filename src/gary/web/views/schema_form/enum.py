@@ -1,6 +1,6 @@
 import html
 import panel as pn
-from .schema_form_base import SchemaForm
+from . import SchemaForm
 
 class EnumSchemaForm(SchemaForm):
     def _create_widgets(self):
