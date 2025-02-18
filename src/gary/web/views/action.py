@@ -5,10 +5,8 @@ import panel as pn
 import param
 import sys
 import orjson
-import jsonschema
 
 from typing import Any
-from jsf import JSF
 
 from ...llm import Act
 from ...registry import Game
@@ -91,42 +89,24 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             form = None
             @send_button.on_click
             async def _(*_):
-                # IMPL: null vs {} if no schema
                 name: str = self.action_name # type: ignore
+                # IMPL: null vs {} if no schema
                 data = form.value if form else {}
-                # print(f"{data=}")
+                print(f"{data=}")
                 await self._game.execute_action(Act(name, orjson.dumps(data).decode()))
 
             if not schema:
                 return pn.Row(send_button, margin=10)
 
             # TODO: handle {enum: [...]} (e.g. {enum: [null]})
-            jsf = JSF(schema) if schema else None
             form = SchemaForm(schema=schema, name="data")
-
-            def reroll(*_):
-                form.value = jsf.generate() if jsf else {}
-            reroll()
 
             randy_button = pn.widgets.Button(name="Random", button_type='light')
             error_text = pn.widgets.StaticText(sizing_mode='stretch_width', styles={'color': 'red'})
 
-            def validate_json(val: Any) -> str:
-                '''
-                Returns:
-                    Error message, if any.
-                '''
-                assert schema, f"schema should have been filtered {schema=} {val=}"
-                try:
-                    jsonschema.validate(val, schema)
-                    return ""
-                except jsonschema.ValidationError as v:
-                    return v.message
-                except orjson.JSONDecodeError as j:
-                    return j.msg
-            error_text.value = form.param.value.rx.pipe(validate_json).rx.pipe(html.escape)
+            error_text.value = form.param.error.rx.pipe(html.escape)
             # send_button.disabled = error_text.rx.bool()
-            randy_button.rx.watch(reroll)
+            randy_button.rx.watch(lambda _: form.randomize_value())
 
             return pn.Card(
                 form,
