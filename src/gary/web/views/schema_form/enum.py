@@ -16,14 +16,12 @@ class EnumSchemaForm(SchemaForm):
             if val is None:
                 widget = pn.pane.Markdown("*(null)*")
             else:
-                if isinstance(val, str):
-                    val = html.escape(val)
-                widget = pn.widgets.StaticText(value=val)
+                widget = pn.widgets.StaticText(value=html.escape(str(val)))
         else:
             widget = pn.widgets.Select(
                 options=enum_values,
-                value=enum_values[0] if enum_values else None,
-                # size=len(enum_values), # sizing issues - elements overlap (ui issues in ui library, unlucky)
+                value=enum_values[0],
+                size=len(enum_values),
                 margin=(10, 10),
                 name="",
                 sizing_mode="stretch_width"
