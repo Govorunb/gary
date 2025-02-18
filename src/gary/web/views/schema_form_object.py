@@ -41,4 +41,13 @@ class ObjectSchemaForm(SchemaForm):
                     sizing_mode="stretch_width"
                 )
             )
-        return pn.WidgetBox(*items, name=self.param.name, sizing_mode="stretch_width")
+        return pn.WidgetBox(
+            *items,
+            name=self.param.name,
+            sizing_mode="stretch_width",
+            styles={
+                "border": "1px solid #3a3a3a",
+                "border-radius": "5px",
+                "padding": "2px",
+            }
+        )

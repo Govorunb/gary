@@ -92,8 +92,10 @@ class ArraySchemaForm(SchemaForm):
         return pn.Column(
             pn.bind(self._get_items_widgets, self._widgets["items"]),
             pn.Row(
+                pn.layout.HSpacer(),
                 self._widgets["add"],
                 self._widgets["remove"],
+                margin=(0, 10),
                 sizing_mode="stretch_width"
             ),
             sizing_mode="stretch_width"
