@@ -36,9 +36,9 @@ class ObjectSchemaForm(SchemaForm):
         for prop_name, widget in self._widgets.items():
             items.append(
                 pn.Row(
-                    pn.pane.Markdown(f"**{prop_name}**", margin=(5,10)),
+                    pn.pane.Markdown(f"**{prop_name}**", margin=(0,10)),
                     widget,
                     sizing_mode="stretch_width"
                 )
             )
-        return pn.Column(*items, sizing_mode="stretch_width")
+        return pn.WidgetBox(*items, name=self.param.name, sizing_mode="stretch_width")

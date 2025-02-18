@@ -14,60 +14,62 @@ class ArraySchemaForm(SchemaForm):
         min_items = max(0, self.schema.get("minItems", 0))
         max_items = self.schema.get("maxItems", None)
 
-        self.value = []
+        self.value: list = []
         items = pn.rx([])
         watchers = []
 
-        def can_add(items_):
+        def _ui_update(*_):
+            self.value = [widget.value for widget in items.rx.value] # type: ignore
+
+        def can_push(items_):
             return max_items is None or len(items_) < max_items
 
-        def can_remove(items_):
+        def can_pop(items_):
             return len(items_) > min_items
 
-        def add_item(_):
-            if not can_add(items.rx.value):
+        def push_item(_):
+            widgets: list[SchemaForm] = items.rx.value # type: ignore
+            if not can_push(widgets):
                 return
-            i = len(items.rx.value)  # type: ignore
-            subform = SchemaForm.create(schema=items_schema, name=self.name+f"[{i}]")  # type: ignore
-            items.rx.value += [subform]  # type: ignore
-            val: list = self.value  # type: ignore
+            i = len(widgets)
+            subform = SchemaForm.create(schema=items_schema, name=self.name+f"[{i}]") # type: ignore
+            items.rx.value = widgets + [subform]
+            val: list = self.value
             if i == len(val):
-                val.append(subform.value)  # type: ignore
-
-            def _ui_update(evt):
-                self.value[i] = evt.new  # type: ignore
-                self.param.trigger('value')
+                val.append(subform.value)
+            elif i < len(val):
+                subform.value = val[i]
+            else: # uhhhhhh
+                _logger.error(f"{ArraySchemaForm.__name__}: push_item {i=} > {len(self.value)=} (value was trimmed but extra widgets weren't removed?)")
 
             watchers.append(subform.param.watch(_ui_update, ['value']))
 
-        def remove_item(_):
-            if not can_remove(items.rx.value):
+        def pop_item(_):
+            widgets: list[SchemaForm] = items.rx.value # type: ignore
+            if not can_pop(widgets):
                 return
-            subform: SchemaForm = items.rx.value[-1]  # type: ignore
+            subform = widgets.pop()
             subform.param.unwatch(watchers.pop())
-            items.rx.value = items.rx.value[:-1]  # type: ignore
-            val: list = self.value  # type: ignore
-            while len(val) > len(items.rx.value):  # type: ignore
-                val.pop()
+            items.rx.value = widgets.copy() # trigger watchers
+            while len(self.value) > len(items.rx.value):
+                self.value.pop()
 
         for _ in range(max(1, min_items)):
-            add_item(None)
+            push_item(None)
         self._widgets["items"] = items
 
-        self.value = [widget.value for widget in items.rx.value]  # type: ignore
-
+        _ui_update()
         def _model_update(evt):
-            len_new = len(evt.new)
-            len_old = len(items.rx.value)  # type: ignore
-            updated_count = min(len_old, len_new)
-            for i in range(updated_count):
-                widget = items.rx.value[i]  # type: ignore
-                widget.value = evt.new[i]  # type: ignore
-            len_diff = len_new - len_old
-            for _ in range(len_diff):
-                add_item(None)
-            for _ in range(-len_diff):
-                remove_item(None)
+            i = 0
+            widgets: list[SchemaForm] = items.rx.value # type: ignore
+            for i, v in enumerate(evt.new):
+                if i >= len(widgets):
+                    push_item(None)
+                elif v != widgets[i]:
+                    widget = widgets[i]
+                    widget.value = v
+            for _ in range(i+1, len(widgets)):
+                pop_item(None)
 
         self.param.watch(_model_update, 'value')
 
@@ -77,11 +79,11 @@ class ArraySchemaForm(SchemaForm):
         self._widgets["add"] = add_btn
         self._widgets["remove"] = remove_btn
 
-        add_btn.disabled = items.rx.pipe(can_add).rx.not_()
-        remove_btn.disabled = items.rx.pipe(can_remove).rx.not_()
+        add_btn.disabled = items.rx.pipe(can_push).rx.not_()
+        remove_btn.disabled = items.rx.pipe(can_pop).rx.not_()
 
-        add_btn.on_click(add_item)
-        remove_btn.on_click(remove_item)
+        add_btn.on_click(push_item)
+        remove_btn.on_click(pop_item)
 
     def _get_items_widgets(self, items):
         return pn.Column(*items, sizing_mode="stretch_width")

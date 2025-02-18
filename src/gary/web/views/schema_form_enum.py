@@ -12,6 +12,7 @@ class EnumSchemaForm(SchemaForm):
             options=enum_values,
             value=enum_values[0] if enum_values else None,
             size=len(enum_values),
+            margin=(10, 10),
             name="",
             sizing_mode="stretch_width"
         )
@@ -19,4 +20,4 @@ class EnumSchemaForm(SchemaForm):
         widget.link(self, value='value', bidirectional=True)
 
     def __panel__(self):
-        return self._widgets.get("value", pn.Column())
+        return self._widgets.get("value", pn.pane.Markdown(f"Invalid schema type for {EnumSchemaForm.__name__}"))
