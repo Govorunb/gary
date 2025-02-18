@@ -70,9 +70,9 @@ class UnregisterActions(GameMessage):
 
 class ForceAction(GameMessage):
     class Data(BaseModel):
-        state: str | None
+        state: str | None = None
         query: str
-        ephemeral_context: bool | None
+        ephemeral_context: bool | None = None
         action_names: list[str]
         main_thread: bool = True # undocumented
 
