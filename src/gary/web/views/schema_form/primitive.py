@@ -1,11 +1,12 @@
+import html
 import math
 import panel as pn
+
 from . import SchemaForm
 
 class PrimitiveSchemaForm(SchemaForm):
     def _create_widgets(self):
-        """Create widget for primitive types"""
-        if not self.schema or "type" not in self.schema:
+        if not self.schema or self.schema.get("type") not in ("string", "number", "integer", "boolean"):
             return
 
         schema_type = self.schema.get("type")
@@ -36,7 +37,7 @@ class PrimitiveSchemaForm(SchemaForm):
         elif schema_type == "boolean":
             widget = pn.widgets.Checkbox(name="")
         else:
-            widget = pn.pane.Markdown(value=f"**Unsupported property type: {schema_type}**")
+            widget = pn.pane.Markdown(value=f"**Unsupported property type: {html.escape(str(schema_type))}**")
 
         widget.margin = (10, 10)
         self._widgets["value"] = widget

@@ -1,8 +1,9 @@
 import logging
-from jsf import JSF
 import jsonschema
 import param
 import panel as pn
+
+from jsf import JSF
 from typing import Any, Type
 
 _logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ class SchemaForm(pn.viewable.Viewer):
     @classmethod
     def create(cls, schema: dict[str, Any], **params) -> 'SchemaForm':
         """Factory method to create the appropriate schema form based on the schema type"""
-        # Import here to avoid circular imports
+        # circular import
         from .enum import EnumSchemaForm
         from .primitive import PrimitiveSchemaForm
         from .array import ArraySchemaForm
@@ -23,7 +24,7 @@ class SchemaForm(pn.viewable.Viewer):
 
         if "enum" in schema:
             return EnumSchemaForm(schema=schema, **params)
-        
+
         schema_type = schema.get("type")
         if not schema_type:
             return cls(schema=schema, **params)
@@ -59,10 +60,10 @@ class SchemaForm(pn.viewable.Viewer):
 
     def _validate_json(self, evt):
         if not self.schema:
+            self.error = ""
             return
-        val = evt.new
         try:
-            jsonschema.validate(val, self.schema)
+            jsonschema.validate(evt.new, self.schema)
         except jsonschema.ValidationError as v:
             self.error = v.message
         else:

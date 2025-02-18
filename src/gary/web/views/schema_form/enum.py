@@ -1,10 +1,10 @@
 import html
 import panel as pn
+
 from . import SchemaForm
 
 class EnumSchemaForm(SchemaForm):
     def _create_widgets(self):
-        """Create widgets for enum types"""
         if not self.schema or "enum" not in self.schema:
             return
 

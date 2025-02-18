@@ -1,27 +1,27 @@
 import functools
 import html
 import logging
-from typing import Any
 import panel as pn
+
+from typing import Any
+
 from . import SchemaForm
 
 _logger = logging.getLogger(__name__)
 
 class ObjectSchemaForm(SchemaForm):
     def _create_widgets(self):
-        """Create widgets for object properties"""
         if not self.schema or self.schema.get("type") != "object":
             return
 
         properties = self.schema.get("properties", {})
-        # TODO: optionals
         # required = self.schema.get("required", [])
         # TODO: additionalProperties
 
         self.value: dict[str, Any]
 
         for prop_name, prop_schema in properties.items():
-            subform = SchemaForm.create(schema=prop_schema, name=self.name+f".{prop_name}") # type: ignore
+            subform = SchemaForm.create(schema=prop_schema, name=f"{self.name}.{prop_name}")
             self._widgets[prop_name] = subform
 
             def _ui_update(prop, evt):
@@ -32,7 +32,7 @@ class ObjectSchemaForm(SchemaForm):
 
         def _model_update(evt):
             for prop_name, widget in self._widgets.items():
-                val = evt.new[prop_name]
+                val = evt.new[prop_name] # TODO: optionals
                 if widget.value != val:
                     widget.value = val
 
@@ -43,7 +43,7 @@ class ObjectSchemaForm(SchemaForm):
         for prop_name, widget in self._widgets.items():
             items.append(
                 pn.Row(
-                    pn.pane.Markdown(f"**{html.escape(prop_name)}**", margin=(0,10)),
+                    pn.pane.HTML(f"<b>{html.escape(prop_name)}</b>", margin=(0,10)),
                     widget,
                     sizing_mode="stretch_width"
                 )
@@ -55,7 +55,7 @@ class ObjectSchemaForm(SchemaForm):
             styles={
                 "border": "1px solid #3a3a3a",
                 "border-radius": "5px",
-                "padding": "2px",
+                "padding": "3px",
                 "max-height": 'none',
             }
         )

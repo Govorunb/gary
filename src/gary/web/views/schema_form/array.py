@@ -1,18 +1,21 @@
 import logging
 import panel as pn
+
 from . import SchemaForm
 
 _logger = logging.getLogger(__name__)
 
 class ArraySchemaForm(SchemaForm):
     def _create_widgets(self):
-        """Create widgets for array items"""
         if not self.schema or self.schema.get("type") != "array":
             return
 
         items_schema = self.schema.get("items", {})
-        min_items = max(0, self.schema.get("minItems", 0))
-        max_items = self.schema.get("maxItems", None)
+        # allow sending invalid data (validation is still performed and any errors are displayed)
+        min_items = 1
+        max_items = None
+        # min_items = max(0, self.schema.get("minItems", 0))
+        # max_items = self.schema.get("maxItems", None)
 
         self.value: list = []
         items = pn.rx([])
@@ -27,7 +30,7 @@ class ArraySchemaForm(SchemaForm):
         def can_pop(items_):
             return len(items_) > min_items
 
-        def push_item(_):
+        def push_item(*_):
             widgets: list[SchemaForm] = items.rx.value # type: ignore
             if not can_push(widgets):
                 return
@@ -44,7 +47,7 @@ class ArraySchemaForm(SchemaForm):
 
             watchers.append(subform.param.watch(_ui_update, ['value']))
 
-        def pop_item(_):
+        def pop_item(*_):
             widgets: list[SchemaForm] = items.rx.value # type: ignore
             if not can_pop(widgets):
                 return
@@ -55,7 +58,7 @@ class ArraySchemaForm(SchemaForm):
                 self.value.pop()
 
         for _ in range(max(1, min_items)):
-            push_item(None)
+            push_item()
         self._widgets["items"] = items
 
         _ui_update()
@@ -64,16 +67,15 @@ class ArraySchemaForm(SchemaForm):
             widgets: list[SchemaForm] = items.rx.value # type: ignore
             for i, v in enumerate(evt.new):
                 if i >= len(widgets):
-                    push_item(None)
+                    push_item()
                 elif v != widgets[i]:
                     widget = widgets[i]
                     widget.value = v
             for _ in range(i+1, len(widgets)):
-                pop_item(None)
+                pop_item()
 
         self.param.watch(_model_update, 'value')
 
-        # Add/Remove buttons
         add_btn = pn.widgets.Button(name="+", button_type="light", width=30)
         remove_btn = pn.widgets.Button(name="-", button_type="light", width=30)
         self._widgets["add"] = add_btn
