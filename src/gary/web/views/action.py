@@ -99,7 +99,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
                 return pn.Row(send_button, margin=10)
 
             # TODO: handle {enum: [...]} (e.g. {enum: [null]})
-            form = SchemaForm(schema=schema, name="data")
+            form = SchemaForm.create(schema=schema, name="data")
 
             randy_button = pn.widgets.Button(name="Random", button_type='light')
             error_text = pn.widgets.StaticText(sizing_mode='stretch_width', styles={'color': 'red'})
