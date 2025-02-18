@@ -23,7 +23,7 @@ class PrimitiveSchemaForm(SchemaForm):
         elif schema_type == "boolean":
             widget = pn.widgets.Checkbox(name="")
         else:
-            widget = pn.widgets.StaticText(value=f"Unsupported property type: {schema_type}")
+            widget = pn.pane.Markdown(value=f"**Unsupported property type: {schema_type}**")
 
         widget.margin = (10, 10)
         self._widgets["value"] = widget

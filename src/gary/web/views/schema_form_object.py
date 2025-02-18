@@ -1,5 +1,6 @@
 import functools
 import logging
+from typing import Any
 import panel as pn
 from .schema_form_base import SchemaForm
 
@@ -16,18 +17,25 @@ class ObjectSchemaForm(SchemaForm):
         # required = self.schema.get("required", [])
         # TODO: additionalProperties
 
+        self.value: dict[str, Any]
+
         for prop_name, prop_schema in properties.items():
-            subform = SchemaForm.create(schema=prop_schema, name=self.name+f".{prop_name}")  # type: ignore
+            subform = SchemaForm.create(schema=prop_schema, name=self.name+f".{prop_name}") # type: ignore
             self._widgets[prop_name] = subform
 
             def _ui_update(prop, evt):
-                self.value[prop] = evt.new  # type: ignore
+                if prop in self.value and self.value[prop] == evt.new:
+                    return
+                self.value[prop] = evt.new # type: ignore
+                self.param.trigger('value')
 
             subform.param.watch(functools.partial(_ui_update, prop_name), ['value'])
 
         def _model_update(evt):
             for prop_name, widget in self._widgets.items():
-                widget.value = evt.new[prop_name]  # type: ignore
+                val = evt.new[prop_name]
+                if widget.value != val:
+                    widget.value = val
 
         self.param.watch(_model_update, ['value'])
 
