@@ -83,7 +83,6 @@ class Game(HasEvents[_game_events]):
         self.subscriptions.extend([
             connection.subscribe("receive", self.handle),
             connection.subscribe("disconnect", self._disconnected),
-            connection.subscribe("connect", self._connected),
         ])
 
     @property
@@ -116,6 +115,7 @@ class Game(HasEvents[_game_events]):
             # conn.game._connection = None
         conn.game = self
         self._subscribe(conn)
+        await self._connected()
 
     async def action_register(self, actions: list[ActionModel]):
         for action in actions:

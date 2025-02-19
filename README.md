@@ -93,7 +93,7 @@ There may be cases where other backends (including Neuro) may behave differently
 - Gary will always be different from Neuro in some aspects, specifically:
 	- Processing other sources of information like vision/audio/chat (for obvious reasons)
 	- Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
-	- Myriad other things like response timings
+	- Myriad other things like response timings, text filters, allowed JSON schema keywords
 - Registering an action with an existing name will replace the old one (by default)
 	- [The spec](https://github.com/VedalAI/neuro-game-sdk/blob/8c0f682c5d4fa804119e7168a558e8c0568fe1fb/API/SPECIFICATION.md#parameters-3) suggests the exact opposite - that the incoming action should be discarded
 	- I'm making the "wrong" behaviour default on purpose because I think it's the more natural of the two - but frankly, relying on either behaviour is not good

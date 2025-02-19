@@ -58,7 +58,7 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
         _logger.debug(f"Shifted KV cache by {n_discard} (from {n_keep}) in {(time.perf_counter()-t)*1000:.2f}ms")
 
         token_ids = token_ids[:n_keep] + token_ids[n_keep + n_discard:]
-        _logger.info(f"Trimmed context to {len(token_ids)} tokens")
+        _logger.success(f"Trimmed context to {len(token_ids)} tokens")
         # _logger.critical(self.tokenizer.decode(token_ids).decode())
         self._cache_token_ids.clear()
         return token_ids

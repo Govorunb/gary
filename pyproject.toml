@@ -26,6 +26,7 @@ package = true
 
 [project.scripts]
 gary = "gary.__main__:start"
+schema_test = "schema_test:start"
 
 [tool.uv.sources]
 llama-cpp-python = { index = "abetlen-cu124" }

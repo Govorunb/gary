@@ -37,7 +37,7 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
         if not self.is_connected():
             logger.warning(f"Not connected, cannot send {message}")
             return
-        text = orjson.dumps(message.model_dump(mode='json')).decode()
+        text = orjson.dumps(message.model_dump(mode='json', by_alias=True)).decode()
         logger.trace(f'Sending: {text}')
         await self.ws.send_text(text)
         await self._raise_event("send", message)

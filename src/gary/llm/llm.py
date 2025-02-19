@@ -330,7 +330,7 @@ The following actions are available to you:
         logger.debug(msg)
         if used > self.token_limit:
             if isinstance(self.llm, Llarry) and isinstance(self.llm_engine(), StreamingLlamaCppEngine):
-                logger.warning(f"Trimming context ({used}/{self.token_limit} tokens used)")
+                logger.info(f"Trimming context ({used}/{self.token_limit} tokens used)")
                 self.llm = self.llm.trim()
             else:
                 logger.warning(f"Truncating context ({used}/{self.token_limit} tokens used)")
