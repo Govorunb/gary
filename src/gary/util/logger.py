@@ -33,7 +33,7 @@ def configure_logging():
     logger.add(LOG_FILENAME,
         level=LOG_LEVEL_FILE,
         filter=_level_filtering,
-        format='[{time:YYYY-MM-DD HH:mm:ss}|{level:<8}|{name}] {message}',
+        format='[{time:YYYY-MM-DD HH:mm:ss}|{level:<8}|{name}:{line}] {message}',
         delay=True, # goated library
     )
 

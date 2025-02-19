@@ -229,7 +229,6 @@ class Game(HasEvents[_game_events]):
     async def _disconnected(self, *_):
         await self._raise_event("disconnect")
         await self.reset()
-        # self.llm.reset() # TODO: config whether to reset on disconnect
 
     async def reset(self):
         await self.llm.not_gaming()

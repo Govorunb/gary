@@ -90,6 +90,9 @@ class Scheduler:
             self._try_timer.start()
             self._force_timer.start()
             self.enqueue(TryAction())
+    
+    def _awake_str(self):
+        return 'muted' if self.muted else 'sleeping' if self.sleeping else 'awake'
 
     def start(self) -> None:
         """Start the event processing loop in a separate thread."""
@@ -187,6 +190,7 @@ class Scheduler:
                 self._busy = False
                 self._queue.task_done()
 
+    @logger.catch()
     async def _handle_event(self, event: BaseEvent) -> None:
         """Handle a single event based on its type."""
         if isinstance(event, Context):
@@ -206,13 +210,13 @@ class Scheduler:
                 logger.error("TryAction with nothing to do")
                 return
             if not self.can_act:
-                logger.debug(f"TryAction event ignored - {'muted' if self.muted else 'sleeping'}")
+                logger.debug(f"TryAction event ignored - {self._awake_str()}")
                 return
             act = await self.game.llm.try_action(actions, allow_yapping=allow_yapping)
             await self.game.execute_action(act)
         elif isinstance(event, ForceAction):
             if not self.can_act:
-                logger.debug(f"ForceAction event ignored - {'muted' if self.muted else 'sleeping'}")
+                logger.debug(f"ForceAction event ignored - {self._awake_str()}")
                 return
             if event.force_message:
                 act = await self.game.llm.force_action(event.force_message)
@@ -222,7 +226,7 @@ class Scheduler:
             await self.game.execute_action(act)
         elif isinstance(event, Say):
             if not event.message and not self.can_act:
-                logger.warning(f"Tried to generate Say but {'muted' if self.muted else 'sleeping'} - Say event from {event.timestamp}")
+                logger.warning(f"Tried to generate Say but {self._awake_str()} - Say event from {event.timestamp}")
                 return
             await self.game.llm.say(message=event.message, ephemeral=event.ephemeral)
         elif isinstance(event, Sleep):
