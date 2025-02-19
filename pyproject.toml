@@ -18,6 +18,7 @@ dependencies = [
     "jsonschema>=4.23.0",
     "jsf>=0.11.2",
     "orjson>=3.10.15",
+    "loguru>=0.7.3",
 ]
 
 [tool.uv]

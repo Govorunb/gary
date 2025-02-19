@@ -403,6 +403,7 @@ dependencies = [
     { name = "jsf" },
     { name = "jsonschema" },
     { name = "llama-cpp-python" },
+    { name = "loguru" },
     { name = "orjson" },
     { name = "panel" },
     { name = "pydantic" },
@@ -426,6 +427,7 @@ requires-dist = [
     { name = "jsf", specifier = ">=0.11.2" },
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "llama-cpp-python", specifier = ">=0.3.4", index = "https://abetlen.github.io/llama-cpp-python/whl/cu124/" },
+    { name = "loguru", specifier = ">=0.7.3" },
     { name = "orjson", specifier = ">=3.10.15" },
     { name = "panel", specifier = ">=1.6.0" },
     { name = "pydantic", specifier = ">=2.10.4" },
@@ -788,6 +790,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/51/a7/aef02e828e66611991d11efc0d80264ab931b9b710f060efe4c581612f18/llguidance-0.5.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f8073c83a1b1cb325f10a215b3626a078728b87c2cd1f30a08ab8dcff0de1cc1", size = 2370046 },
     { url = "https://files.pythonhosted.org/packages/2d/63/c7df8bc34ff65e5ad2e496d4b222034ac00472425009d3721669a17509a5/llguidance-0.5.1-cp39-abi3-win32.whl", hash = "sha256:1fce5ba5a5dd97ad297e02add471dd7a97fca72469fac872992c29d126e8cccb", size = 2016772 },
     { url = "https://files.pythonhosted.org/packages/ec/b1/970d9b4a6b4fddeb2f9d5b637a1190156dbd047ca0aac7977a5277d14be6/llguidance-0.5.1-cp39-abi3-win_amd64.whl", hash = "sha256:01358a7acb97b9b8ddb92830e615849a00234a24affcd1d4fb7129cda5c12c44", size = 2182366 },
+]
+
+[[package]]
+name = "loguru"
+version = "0.7.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "win32-setctime", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3a/05/a1dae3dffd1116099471c643b8924f5aa6524411dc6c63fdae648c4f1aca/loguru-0.7.3.tar.gz", hash = "sha256:19480589e77d47b8d85b2c827ad95d49bf31b0dcde16593892eb51dd18706eb6", size = 63559 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl", hash = "sha256:31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c", size = 61595 },
 ]
 
 [[package]]
@@ -1854,6 +1869,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/56/fc/238c424fd7f4ebb25f8b1da9a934a3ad7c848286732ae04263661eb0fc03/widgetsnbextension-4.0.13.tar.gz", hash = "sha256:ffcb67bc9febd10234a362795f643927f4e0c05d9342c727b65d2384f8feacb6", size = 1164730 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/21/02/88b65cc394961a60c43c70517066b6b679738caf78506a5da7b88ffcb643/widgetsnbextension-4.0.13-py3-none-any.whl", hash = "sha256:74b2692e8500525cc38c2b877236ba51d34541e6385eeed5aec15a70f88a6c71", size = 2335872 },
+]
+
+[[package]]
+name = "win32-setctime"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/8f/705086c9d734d3b663af0e9bb3d4de6578d08f46b1b101c2442fd9aecaa2/win32_setctime-1.2.0.tar.gz", hash = "sha256:ae1fdf948f5640aae05c511ade119313fb6a30d7eabe25fef9764dca5873c4c0", size = 4867 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/07/c6fe3ad3e685340704d314d765b7912993bcb8dc198f0e7a89382d37974b/win32_setctime-1.2.0-py3-none-any.whl", hash = "sha256:95d644c4e708aba81dc3704a116d8cbc974d70b3bdb8be1d150e36be6e9d1390", size = 4083 },
 ]
 
 [[package]]

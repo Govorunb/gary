@@ -1,8 +1,6 @@
 from guidance.models._mock import Mock, MockEngine
 import numpy as np
-import logging
-
-_logger = logging.getLogger(__name__)
+from loguru import logger
 
 class Randy(Mock):
     def __init__(self, *args, echo: bool = False, **kwargs):
@@ -11,6 +9,6 @@ class Randy(Mock):
 
 class RandyEngine(MockEngine):
     def __init__(self, *args, seed: int = 42, **kwargs):
-        _logger.info(f"Randy's seed: {seed}")
+        logger.info(f"Randy's seed: {seed}")
         super().__init__(*args)
         self._rand_generator = np.random.default_rng(seed)

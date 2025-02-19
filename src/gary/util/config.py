@@ -16,7 +16,7 @@ class ConflictResolutionPolicy(Enum):
     DROP_INCOMING = 'drop_incoming'
     DROP_EXISTING = 'drop_existing'
 
-_LogLevel = Literal['all', 'debug', 'info', 'warn', 'warning', 'error', 'critical', 'fatal', 'none'] | int
+_LogLevel = Literal['all', 'trace', 'debug', 'info', 'success', 'warn', 'warning', 'error', 'critical', 'fatal', 'none'] | int
 class Config(BaseModel):
     class LLMConfig(BaseModel):
         engine: Literal[
@@ -35,9 +35,14 @@ class Config(BaseModel):
             '''If the model does not act for this many seconds, force it to pick an action to perform.'''
             sleep_after_say: bool = False
             '''Sleep after saying something to simulate waiting for TTS.'''
-            log_level: _LogLevel = 'info'
-        log_level_file: _LogLevel = 'info'
-        log_level_console: _LogLevel = 'debug'
+        class LoggingConfig(BaseModel):
+            log_level_file: _LogLevel = 'info'
+            log_level_console: _LogLevel = 'debug'
+            log_levels: dict[str, _LogLevel] = {
+                'gary.llm.scheduler': 'warning',
+                'gary.llm.llm': 'info',
+            }
+        logging: LoggingConfig = LoggingConfig()
         existing_connection_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING
         '''What to do when someone tries to connect to a game that already has an active connection.'''
         existing_action_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING

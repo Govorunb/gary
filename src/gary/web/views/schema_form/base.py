@@ -1,12 +1,9 @@
-import logging
 import jsonschema
 import param
 import panel as pn
 
 from jsf import JSF
 from typing import Any, Type
-
-_logger = logging.getLogger(__name__)
 
 class SchemaForm(pn.viewable.Viewer):
     schema = param.Dict() # type: ignore

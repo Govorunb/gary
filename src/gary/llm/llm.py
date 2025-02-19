@@ -1,7 +1,8 @@
-import logging, random, time
+import random, time
 from orjson import dumps
 from typing import TYPE_CHECKING, NamedTuple, cast
 from pydantic import TypeAdapter
+from loguru import logger
 
 import llama_cpp
 from guidance import gen, with_temperature, select, json, models, system, user, assistant
@@ -24,8 +25,6 @@ if TYPE_CHECKING:
 
 # pyright: reportOperatorIssue=false
 # __add__ without an explicit __iadd__ impl surely means you cannot use +=. it is illegal and your code will explode
-
-_logger = logging.getLogger(__name__)
 
 _engine_map = {
     # "openai": models.OpenAI,
@@ -53,7 +52,7 @@ class LLM(HasEvents[Literal['context', 'say']]):
     def __init__(self, game: "Game"):
         super().__init__()
         self.game = game
-        _logger.info(f"loading model for {game.name}")
+        logger.info(f"loading model for {game.name}")
         start = time.time()
         llm_config = CONFIG.llm
         engine = llm_config.engine
@@ -76,7 +75,7 @@ class LLM(HasEvents[Literal['context', 'say']]):
         self.token_limit = params.get("n_ctx", 1 << 32) - 200
         self.llm.echo = False
         end = time.time()
-        _logger.info(f"loaded in {end-start:.2f} seconds")
+        logger.info(f"loaded in {end-start:.2f} seconds")
         self.temperature = params.get("temperature", 1.0)
     
     @classmethod
@@ -102,13 +101,13 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
 
     def max_tokens(self, at_most: int = 100000) -> int:
         maxtok = max(0, min(at_most, self.token_limit - tokens(self.llm)))
-        _logger.debug(f"Max tokens: {maxtok}")
+        logger.debug(f"Max tokens: {maxtok}")
         return maxtok
 
     async def reset(self, llarry_keep_persistent=False):
         engine = self.llm_engine()
         if llarry_keep_persistent and isinstance(self.llm, Llarry):
-            _logger.debug("TODO: keep persistent messages on reset")
+            logger.debug("TODO: keep persistent messages on reset")
             self.llm.persistent.clear()
         if isinstance(engine, models.llama_cpp._llama_cpp.LlamaCppEngine):
             engine.reset_metrics()
@@ -125,7 +124,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
 
         assert self.llm.token_count == 0
         assert len(str(self.llm)) == 0
-        _logger.debug(f'truncated context to {tokens(self.llm)}')
+        logger.debug(f'truncated context to {tokens(self.llm)}')
 
         await self.system_prompt()
         if self.game.connection and self.game.connection.is_connected():
@@ -162,12 +161,12 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
                 "P": persistent_llarry_only,
             }
             prefix = "".join(c for c,f in map_.items() if f)
-            _logger.info(f"(ctx{prefix}) {msg}")
+            logger.info(f"(ctx{prefix}) {msg}")
             if tokens > 500 and not persistent_llarry_only:
-                _logger.warning(f"Context '{ctx[:20].encode('unicode_escape').decode()}...' had {tokens} tokens. Are you sure this is a good idea?")
+                logger.warning(f"Context '{ctx[:20].encode('unicode_escape').decode()}...' had {tokens} tokens. Are you sure this is a good idea?")
         if persistent_llarry_only and isinstance(out, Llarry):
             i = sum(1 for _ in out.iter_messages_tokens())-1 # woooow no builtin to count an iterator so pythonic
-            _logger.debug(f"Marking message {i} as persistent (current: {out.persistent})")
+            logger.debug(f"Marking message {i} as persistent (current: {out.persistent})")
             out.persistent.add(i)
         if notify:
             await self._raise_event('context', ctx, silent, ephemeral)
@@ -177,13 +176,13 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
 
     async def force_action(self, msg: ForceAction) -> Act | None:
         if not self.game.actions:
-            _logger.error("No actions to choose from (LLM.force_action)")
+            logger.error("No actions to choose from (LLM.force_action)")
             return None
         assert self.game.name == msg.game, f"Received ForceAction for game {msg.game} while this LLM is for {self.game.name}"
         ephemeral = msg.data.ephemeral_context or False
         actions = [self.game.actions[name] for name in msg.data.action_names if name in self.game.actions]
         if len(msg.data.action_names) != len(actions):
-            _logger.warning(f"ForceAction contains unknown action names: {set(msg.data.action_names) - set(a.name for a in actions)}")
+            logger.warning(f"ForceAction contains unknown action names: {set(msg.data.action_names) - set(a.name for a in actions)}")
         actions_json = (TypeAdapter(list[ActionModel])
             .dump_json(actions, by_alias=True)
             .decode())
@@ -230,7 +229,7 @@ You must perform one of the following actions, given this information:
 ```''')
         llm += "" # role closer
         data = llm['data']
-        _logger.debug(f"chosen action: {action_name}; data: {data}")
+        logger.debug(f"chosen action: {action_name}; data: {data}")
         if not ephemeral:
             self.llm = llm
         return Act(action_name, data)
@@ -241,7 +240,7 @@ You must perform one of the following actions, given this information:
 
         await self.truncate_context(1000 if allow_yapping else 500) # leave room for action() afterwards
         if not actions and not allow_yapping:
-            _logger.info("No actions to choose from (LLM.try_action)")
+            logger.info("No actions to choose from (LLM.try_action)")
             return None
         ctx = "Decide what to do next based on previous context."
         if actions:
@@ -273,7 +272,7 @@ The following actions are available to you:
         with assistant():
             llm = time_gen(pre_resp, resp)
             decision = llm['decision']
-            _logger.debug(f"{decision=}")
+            logger.info(f"{decision=}")
             llm += """
 }
 ```"""
@@ -291,7 +290,7 @@ The following actions are available to you:
             return None
         elif decision == WAIT:
             return None
-        _logger.error(f"unhandled decision '{decision}'")
+        logger.error(f"unhandled decision '{decision}'")
         return None
 
     async def say[TModel: models.Model](self, model: TModel | None = None, message: str | None = None, ephemeral: bool = False) -> TModel:
@@ -311,7 +310,7 @@ The following actions are available to you:
             llm = time_gen(llm, gen_)
         llm += "" # FIXME: wrap ctxmgr for role closer
         said = llm['say']
-        _logger.info(f"{said=}")
+        logger.opt(colors=True).info(f"> <lc>{said}</>")
         # for msg in cast(Llarry, llm).iter_messages_text()[-3:]:
         #     _logger.debug(f"{msg}\n\n{msg.encode()}")
         await self._raise_event('say', said)
@@ -328,13 +327,13 @@ The following actions are available to you:
         msg = f"Currently at {used}/{self.token_limit} tokens"
         if need_tokens > 0:
             msg += f" (using {token_count}, need {need_tokens} more)"
-        _logger.debug(msg)
+        logger.debug(msg)
         if used > self.token_limit:
             if isinstance(self.llm, Llarry) and isinstance(self.llm_engine(), StreamingLlamaCppEngine):
-                _logger.warning(f"Trimming context ({used}/{self.token_limit} tokens used)")
+                logger.warning(f"Trimming context ({used}/{self.token_limit} tokens used)")
                 self.llm = self.llm.trim()
             else:
-                _logger.warning(f"Truncating context ({used}/{self.token_limit} tokens used)")
+                logger.warning(f"Truncating context ({used}/{self.token_limit} tokens used)")
                 await self.reset()
 
 def tokens(m: models.Model, s: str | None = None) -> int:
@@ -350,7 +349,7 @@ def time_gen[M: models.Model](lm: M, gen_: Function | str) -> M:
     tokens_in: int = out.metrics.engine_input_tokens - prev_tokens_in
     tokens_out: int = out.metrics.engine_output_tokens - prev_tokens_generated
     tps: float = tokens_out / generation_took
-    _logger.debug(
+    logger.debug(
         f'input {tokens_in} and output {tokens_out} tokens in {generation_took:.2f}s'
         + (f' ({tps:.2f} tok/s)' if tps >= 0.5 else f' ({1/tps:.2f} s/tok)' if tps != 0 else '')
     )

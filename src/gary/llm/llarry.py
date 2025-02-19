@@ -1,5 +1,5 @@
 from collections import namedtuple
-import logging
+import loguru
 import functools
 import re
 import time
@@ -9,7 +9,7 @@ from guidance.models.llama_cpp._llama_cpp import LlamaCpp, LlamaCppEngine, Llama
 from guidance.models._model import Model
 from llama_cpp import Llama
 
-_logger = logging.getLogger(__name__)
+_logger = loguru.logger
 
 class StreamingLlamaCppEngine(LlamaCppEngine):
     def __init__(self, llama_cpp_engine: LlamaCppEngine, **kwargs):
@@ -206,7 +206,7 @@ class Llarry(LlamaCpp):
 
         if n_keep == -1:
             n_keep = 0
-            _logger.fatal(
+            _logger.critical(
                 "Didn't find a single discardable message!"
                 f"\nPrompt: {str(self)}"
                 f"\nMessages: {[tokenizer.decode(msg.all_tokens[msg.start, msg.start+msg.size]).decode() for msg in self.iter_messages_tokens()]}"

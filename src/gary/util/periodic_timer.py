@@ -1,10 +1,9 @@
 import asyncio
-import logging
 from typing import Any, Callable, Coroutine
+from loguru import logger
 
 _COMPLETED_TASK = asyncio.Task(asyncio.sleep(0))
 _DEBUG = False
-_logger = logging.getLogger(__name__)
 
 class PeriodicTimer:
     def __init__(self, interval: float, callback: Callable[..., Coroutine[Any, Any, bool]], name: str = "timer", start_immediately: bool = False):
@@ -66,4 +65,4 @@ class PeriodicTimer:
     def _debug(self, msg: str) -> None:
         if not self.debug:
             return
-        _logger.debug(msg)
+        logger.debug(msg)

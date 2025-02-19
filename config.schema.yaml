@@ -40,8 +40,14 @@ definitions:
       gary:
         type: object
         properties:
-          log_level_file: {$ref: "#/definitions/log_level"}
-          log_level_console: {$ref: "#/definitions/log_level"}
+          logging:
+            type: object
+            properties:
+              log_level_file: {$ref: "#/definitions/log_level"}
+              log_level_console: {$ref: "#/definitions/log_level"}
+              log_levels:
+                type: object
+                additionalProperties: {$ref: "#/definitions/log_level"}
           allow_yapping:
             type: boolean
             description: |
@@ -95,9 +101,9 @@ definitions:
       guidance_server,
     ]
   log_level:
-    description: Minimum log level. This can be one of the given values, or a non-negative integer (refer to python's logging module).
+    description: Minimum log level. This can be one of the given values, or a non-negative integer (refer to the [Loguru](https://loguru.readthedocs.io/en/stable/api/logger.html#levels) documentation).
     oneOf:
-      - enum: [all, debug, info, warn, warning, error, critical, fatal, none]
+      - enum: [all, trace, debug, info, success, warn, warning, error, critical, fatal, none]
       - type: integer
         minimum: 0
   conflict_resolution_policy:

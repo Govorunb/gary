@@ -1,17 +1,15 @@
 import asyncio
-import logging
 import panel as pn
 from bokeh.models import Tooltip
 from bokeh.models.dom import HTML
 from panel.template import FastListTemplate
+from loguru import logger
 
 from ..llm.events import ClearContext
 from ..util import CONFIG
 from ..registry import REGISTRY, Game
 from ..spec import *
 from .views import ContextLog, ActionsList
-
-_logger = logging.getLogger(__name__)
 
 def create_game_tab(game: Game):
     css = {
@@ -103,7 +101,7 @@ def create_game_tab(game: Game):
     def update_mute(muted):
         if game.scheduler.muted == muted:
             return
-        _logger.info(f"(Web UI) {'un' if not muted else ''}muted '{game.name}'")
+        logger.info(f"(Web UI) {'un' if not muted else ''}muted '{game.name}'")
         game.scheduler.muted = muted
 
     mute_toggle.rx.watch(update_mute)
@@ -234,13 +232,13 @@ def add_control_panel(path: str):
     def on_connect(_):
         nonlocal connected_clients
         connected_clients += 1
-        _logger.debug(f"(Web UI) Client connected, now {connected_clients} total")
+        logger.debug(f"(Web UI) Client connected, now {connected_clients} total")
     def on_disconnect(_):
         nonlocal connected_clients
         connected_clients -= 1
-        _logger.debug(f"(Web UI) Client disconnected, now {connected_clients} total")
+        logger.debug(f"(Web UI) Client disconnected, now {connected_clients} total")
         if connected_clients == 0:
-            _logger.info("(Web UI) All clients disconnected, unmuting all")
+            logger.info("(Web UI) All clients disconnected, unmuting all")
             for game in REGISTRY.games.values():
                 game.scheduler.muted = False
     pn.state.on_session_created(on_connect)

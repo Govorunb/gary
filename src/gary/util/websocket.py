@@ -1,14 +1,11 @@
 import orjson
-import logging
-
+from loguru import logger
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 from typing import TYPE_CHECKING, NamedTuple
 
 from ..spec import *
 from .utils import HasEvents
-
-_logger = logging.getLogger(__name__)
 
 # python is just so lovely
 if TYPE_CHECKING:
@@ -38,10 +35,10 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
 
     async def send(self, message: TSend):
         if not self.is_connected():
-            _logger.warning(f"Not connected, cannot send {message}")
+            logger.warning(f"Not connected, cannot send {message}")
             return
         text = orjson.dumps(message.model_dump(mode='json')).decode()
-        # _logger.debug(f'Sending: {text}')
+        logger.trace(f'Sending: {text}')
         await self.ws.send_text(text)
         await self._raise_event("send", message)
 
@@ -49,7 +46,7 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
         text = await self.ws.receive_text()
         if not text:
             raise ValueError("Received empty message")
-        # _logger.debug(f'Received: {text}')
+        logger.trace(f'Received: {text}')
         model = self.t_recv.validate_json(text, strict=True)
         await self._raise_event("receive", model)
         return model
@@ -62,12 +59,12 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
             while self.is_connected():
                 await self.receive()
         except Exception as e:
-            _logger.debug(f"Disconnecting: {e}")
+            logger.trace(f"Disconnecting: {e}")
             if isinstance(e, WebSocketDisconnect):
-                _logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
+                logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
                 close_event = CloseEvent(e.code, e.reason, True)
             else:
-                _logger.warning(f"Message handler error: ({type(e)}) {e}")
+                logger.warning(f"Message handler error: ({type(e)}) {e}")
                 close_event = CloseEvent(1011, "Internal error", False)
                 await self.ws.close(close_event.code, close_event.reason)
                 raise

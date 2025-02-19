@@ -1,12 +1,11 @@
 from queue import Empty, PriorityQueue
 import asyncio
-import logging
 import threading
 import time
 import traceback
-from typing import TYPE_CHECKING
 
-from gary.util.logger import map_log_level
+from typing import TYPE_CHECKING
+from loguru import logger
 
 from ..util import CONFIG, PeriodicTimer
 from .events import BaseEvent, ClearContext, Context, TryAction, ForceAction, Say, Sleep
@@ -24,8 +23,6 @@ class Scheduler:
         self._sleeping = False
         self._event_loop: asyncio.AbstractEventLoop | None = None
         self._worker_thread: threading.Thread | None = None
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(map_log_level(CONFIG.gary.scheduler.log_level))
         self._has_pending_try_action = False
         game.subscribe('action', self._on_action)
         game.llm.subscribe('context', self._on_context)
@@ -36,9 +33,9 @@ class Scheduler:
         idle_timeout_force = CONFIG.gary.scheduler.idle_timeout_force
 
         if not idle_timeout_try:
-            self._logger.info("Idle timeout (try) disabled")
+            logger.debug("Idle timeout (try) disabled")
         if not idle_timeout_force:
-            self._logger.info("Idle timeout (force) disabled")
+            logger.debug("Idle timeout (force) disabled")
 
         self._try_timer = PeriodicTimer(
             idle_timeout_try,
@@ -130,7 +127,7 @@ class Scheduler:
 
         if isinstance(event, TryAction):
             if self._has_pending_try_action:
-                self._logger.debug("Skipping duplicate TryAction - one already pending")
+                logger.debug("Skipping duplicate TryAction - one already pending")
                 return False
             self._has_pending_try_action = True
         
@@ -159,7 +156,7 @@ class Scheduler:
             # Ignore "Event loop stopped before Future completed" error
             # This happens during normal shutdown when the loop is stopped while processing events
             if str(e) != 'Event loop stopped before Future completed.':
-                self._logger.error(f"Error in event loop: {e}\nTraceback:\n{traceback.format_exc()}")
+                logger.error(f"Error in event loop: {e}\nTraceback:\n{traceback.format_exc()}")
         finally:
             self._event_loop.close()
             self._event_loop = None
@@ -180,12 +177,12 @@ class Scheduler:
 
             try:
                 self._busy = True
-                self._logger.debug(f"Processing {type(event).__name__} event with priority {event.priority.name}")
+                logger.trace(f"Processing {type(event).__name__} event with priority {event.priority.name}")
                 if isinstance(event, TryAction):
                     self._has_pending_try_action = False
                 await self._handle_event(event)
             except Exception as e:
-                self._logger.error(f"Error processing event: {e}\nTraceback:\n{traceback.format_exc()}")
+                logger.error(f"Error processing event: {e}\nTraceback:\n{traceback.format_exc()}")
             finally:
                 self._busy = False
                 self._queue.task_done()
@@ -206,16 +203,16 @@ class Scheduler:
             actions = event.actions or list(self.game.actions.values())
             allow_yapping = event.allow_yapping if event.allow_yapping is not None else CONFIG.gary.allow_yapping
             if not actions and not allow_yapping:
-                self._logger.error("TryAction with nothing to do")
+                logger.error("TryAction with nothing to do")
                 return
             if not self.can_act:
-                self._logger.info(f"TryAction event ignored - {'muted' if self.muted else 'sleeping'}")
+                logger.debug(f"TryAction event ignored - {'muted' if self.muted else 'sleeping'}")
                 return
             act = await self.game.llm.try_action(actions, allow_yapping=allow_yapping)
             await self.game.execute_action(act)
         elif isinstance(event, ForceAction):
             if not self.can_act:
-                self._logger.info(f"ForceAction event ignored - {'muted' if self.muted else 'sleeping'}")
+                logger.debug(f"ForceAction event ignored - {'muted' if self.muted else 'sleeping'}")
                 return
             if event.force_message:
                 act = await self.game.llm.force_action(event.force_message)
@@ -225,7 +222,7 @@ class Scheduler:
             await self.game.execute_action(act)
         elif isinstance(event, Say):
             if not event.message and not self.can_act:
-                self._logger.warning(f"Tried to generate Say but {'muted' if self.muted else 'sleeping'} - Say event from {event.timestamp}")
+                logger.warning(f"Tried to generate Say but {'muted' if self.muted else 'sleeping'} - Say event from {event.timestamp}")
                 return
             await self.game.llm.say(message=event.message, ephemeral=event.ephemeral)
         elif isinstance(event, Sleep):
@@ -233,28 +230,28 @@ class Scheduler:
                 self.sleeping = True
                 await asyncio.sleep(duration)
                 self.sleeping = False
-                self._logger.debug(f"Woke up from Sleep sent at {event.timestamp.time()}")
+                logger.trace(f"Woke up from Sleep sent at {event.timestamp.time()}")
             sleep_until = event.timestamp.timestamp() + event.duration
             sleep_for = sleep_until - time.time()
-            self._logger.debug(f"Sleeping for {sleep_for:.2f}s (Sleep for {event.duration:.2f} sent at {event.timestamp.time()})")
+            logger.trace(f"Sleeping for {sleep_for:.2f}s (Sleep for {event.duration:.2f} sent at {event.timestamp.time()})")
             asyncio.create_task(sleep(sleep_for))
         elif isinstance(event, ClearContext):
             await self.game.llm.reset(True)
         else:
-            self._logger.warning(f"Unknown event type: {type(event)}")
+            logger.warning(f"Unknown event type: {type(event)}")
 
     async def _try(self) -> bool:
         if not self.game.actions and not CONFIG.gary.allow_yapping:
-            self._logger.info(f"Idled for {self._try_timer.interval}s, but no actions")
+            logger.debug(f"Idled for {self._try_timer.interval}s, but no actions")
             return True
-        self._logger.info(f"Idled for {self._try_timer.interval}s, trying action")
+        logger.info(f"Idled for {self._try_timer.interval}s, trying action")
         return self.enqueue(TryAction())
 
     async def _force(self) -> bool:
         if not self.game.actions:
-            self._logger.info(f"Didn't do anything for {self._force_timer.interval}s! But nothing to force")
+            logger.info(f"Didn't do anything for {self._force_timer.interval}s! But nothing to force")
             return True
-        self._logger.warning(f"Didn't do anything after {self._force_timer.interval}s! Forcing")
+        logger.warning(f"Didn't do anything after {self._force_timer.interval}s! Forcing")
         return self.enqueue(ForceAction())
 
     def _on_context(self, *_):

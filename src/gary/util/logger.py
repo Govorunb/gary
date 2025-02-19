@@ -1,44 +1,49 @@
-import os, sys, datetime, atexit
-import logging, logging.handlers
-import colorlog
+import logging
+import os, sys
+from loguru import logger
+from .config import CONFIG
 
-from . import CONFIG
-
-logging.addLevelName(1, "ALL")
-logging.addLevelName(999999999, "NONE")
 def map_log_level(level: str | int):
-    return level if isinstance(level, int) else level.upper()
-LOG_LEVEL_FILE = map_log_level(CONFIG.gary.log_level_file)
-LOG_LEVEL_CONSOLE = map_log_level(CONFIG.gary.log_level_console)
-LOG_FILENAME = f'_logs/log_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}.txt'
+    if isinstance(level, int):
+        return level
+    level = level.upper()
+    level_map = {
+        'WARN': 'WARNING',
+        'FATAL': 'CRITICAL',
+    }
+    return level_map.get(level, level)
+def configure_logging():
+    logger.level("ALL", 1)
+    logger.level("NONE", 999999999)
+    logger.level("DEBUG", color="<dim><lw>")
+    logger.level("INFO", color="<lw>")
+    logger.level("WARNING", color="<y>")
 
-logger = logging.getLogger('gary')
-_fh = logging.FileHandler(LOG_FILENAME)
-_fh.setLevel(LOG_LEVEL_FILE)
-_fh.formatter = logging.Formatter('[%(asctime)s - %(levelname)s] %(message)s')
-_stdout = logging.StreamHandler(sys.stdout)
-_stdout.setLevel(LOG_LEVEL_CONSOLE)
-_stdout.formatter = colorlog.ColoredFormatter('%(log_color)s[%(levelname)-8s : %(name)s] %(message)s', log_colors={
-    'DEBUG': 'white', # gray
-    'INFO': 'light_white', # white
-    'WARNING': 'yellow',
-    'ERROR': 'red',
-    'CRITICAL': 'bold_red',
-})
-logger.addHandler(_fh)
-logger.addHandler(_stdout)
-logger.setLevel(1) # all
+    LOG_LEVEL_FILE = map_log_level(CONFIG.gary.logging.log_level_file)
+    LOG_LEVEL_CONSOLE = map_log_level(CONFIG.gary.logging.log_level_console)
+    LOG_FILENAME = '_logs/log_{time:YYYY-MM-DD_HH-mm-ss}.txt'
 
-# https://github.com/bokeh/bokeh/blob/604e6f801974cedd6000835923bfb9030b64d461/src/bokeh/document/document.py#L377
-# https://github.com/python/cpython/blob/506c76f1bd252aeefb3b488903a9a1092e55ae04/Lib/logging/__init__.py#L2179
-logging.getLogger().addHandler(logging.NullHandler())
+    # Remove default handler
+    logger.remove()
 
-def _delete_empty():
-    _fh.close()
-    logger.removeHandler(_fh)
-    logger.info("Exiting")
-    if os.path.exists(LOG_FILENAME) and os.stat(LOG_FILENAME).st_size == 0:
-        logger.debug("Removing empty log file")
-        os.remove(LOG_FILENAME)
-    _stdout.flush()
-atexit.register(_delete_empty)
+    # https://github.com/Delgan/loguru/issues/1301#issuecomment-2663065215
+    _level_filtering: dict = {k: map_log_level(v) for k, v in CONFIG.gary.logging.log_levels.items()}
+
+    os.makedirs('_logs', exist_ok=True)
+    logger.add(LOG_FILENAME,
+        level=LOG_LEVEL_FILE,
+        filter=_level_filtering,
+        format='[{time:YYYY-MM-DD HH:mm:ss}|{level:<8}|{name}] {message}',
+        delay=True, # goated library
+    )
+
+    logger.add(sys.stdout,
+        level=LOG_LEVEL_CONSOLE,
+        filter=_level_filtering,
+        format='<dim>[{name}]</dim> <level>{message}</level>',
+        colorize=True
+    )
+
+    # https://github.com/bokeh/bokeh/blob/604e6f801974cedd6000835923bfb9030b64d461/src/bokeh/document/document.py#L377
+    # https://github.com/python/cpython/blob/506c76f1bd252aeefb3b488903a9a1092e55ae04/Lib/logging/__init__.py#L2179
+    logging.getLogger().addHandler(logging.NullHandler())

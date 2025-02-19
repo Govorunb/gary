@@ -13,12 +13,16 @@ default:
     temperature: 0.3 # seems to not do much
     flash_attn: true # speeds up inference
   gary:
-    log_level_file: info
-    log_level_console: info
     allow_yapping: false
     scheduler:
       idle_timeout_try: 6
       idle_timeout_force: 30
+    logging:
+      log_level_file: info
+      log_level_console: info
+      log_levels:
+        gary.llm.scheduler: warning
+        gary.llm.llm: info
 randy:
   base: default
   overrides:
@@ -40,4 +44,3 @@ phi:
       allow_yapping: true
       scheduler:
         sleep_after_say: true
-        log_level: info

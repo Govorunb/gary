@@ -1,13 +1,11 @@
 import functools
 import html
-import logging
 import panel as pn
 
 from typing import Any
 
 from . import SchemaForm
 
-_logger = logging.getLogger(__name__)
 
 class ObjectSchemaForm(SchemaForm):
     def _create_widgets(self):

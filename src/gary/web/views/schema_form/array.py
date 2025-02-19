@@ -1,9 +1,7 @@
-import logging
 import panel as pn
+from loguru import logger
 
 from . import SchemaForm
-
-_logger = logging.getLogger(__name__)
 
 class ArraySchemaForm(SchemaForm):
     def _create_widgets(self):
@@ -43,7 +41,7 @@ class ArraySchemaForm(SchemaForm):
             elif i < len(val):
                 subform.value = val[i]
             else: # uhhhhhh
-                _logger.error(f"{ArraySchemaForm.__name__}: push_item {i=} > {len(self.value)=} (value was trimmed but extra widgets weren't removed?)")
+                logger.error(f"{ArraySchemaForm.__name__}: push_item {i=} > {len(self.value)=} (value was trimmed but extra widgets weren't removed?)")
 
             watchers.append(subform.param.watch(_ui_update, ['value']))
 
