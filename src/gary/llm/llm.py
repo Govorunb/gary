@@ -222,14 +222,21 @@ You must perform one of the following actions, given this information:
             action_name = llm["action_name"]
             chosen_action = next(a for a in actions if a.name == action_name)
             schema = chosen_action.schema_
-            (filtered_schema, filtered_keys) = json_schema_filter(schema)
-            if filtered_keys and chosen_action.name not in self._warned_filtered_schemas:
-                self._warned_filtered_schemas.add(chosen_action.name)
-                logger.warning(f"Schema for action '{action_name}' contains unsupported keywords {filtered_keys}. They cannot be enforced, so the model may generate JSON that does not comply.")
             llm += f'''
     "schema": {dumps(schema).decode()},'''
+            try:
+                json_gen = json("data", schema=schema, temperature=self.temperature, max_tokens=self.max_tokens())
+            except ValueError as e:
+                if 'Unimplemented keys: ["' not in e.args[0]:
+                    raise
+                logger.debug(e.args[0])
+                (filtered_schema, filtered_keys) = json_schema_filter(schema)
+                if filtered_keys and chosen_action.name not in self._warned_filtered_schemas:
+                    self._warned_filtered_schemas.add(chosen_action.name)
+                    logger.warning(f"Schema for action '{action_name}' contains unsupported keywords {filtered_keys}. They cannot be enforced, so the model may generate JSON that does not comply.")
+                json_gen = json("data", schema=filtered_schema, temperature=self.temperature, max_tokens=self.max_tokens())
             llm = time_gen(llm, f'''
-    "data": {json("data", schema=filtered_schema, temperature=self.temperature, max_tokens=self.max_tokens())}
+    "data": {json_gen}
 }}
 ```''')
         llm += "" # role closer
