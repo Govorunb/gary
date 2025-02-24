@@ -1,6 +1,6 @@
 import random, time
 from orjson import dumps
-from typing import TYPE_CHECKING, NamedTuple, cast
+from typing import TYPE_CHECKING, NamedTuple
 from pydantic import TypeAdapter
 from loguru import logger
 
@@ -10,7 +10,7 @@ from guidance.chat import Llama3ChatTemplate, Phi3MiniChatTemplate
 from guidance._grammar import Function
 
 
-from ..util import CONFIG, HasEvents
+from ..util import CONFIG, HasEvents, json_schema_filter
 from ..util.config import MANUAL_RULES
 from ..spec import *
 
@@ -52,6 +52,7 @@ class LLM(HasEvents[Literal['context', 'say']]):
     def __init__(self, game: "Game"):
         super().__init__()
         self.game = game
+        self._warned_filtered_schemas = set()
         logger.info(f"loading model for {game.name}")
         start = time.time()
         llm_config = CONFIG.llm
@@ -89,7 +90,7 @@ class LLM(HasEvents[Literal['context', 'say']]):
 You are Gary, an expert gamer AI. Your main purpose is playing games. You perform in-game actions via sending JSON to a special software integration system.
 You are goal-oriented but curious. You aim to keep your actions varied and entertaining."""
         if CONFIG.gary.allow_yapping:
-            sys_prompt += "\nYou can choose to 'say' something, whether to communicate with the human running your software or just to think out loud."
+            sys_prompt += "\nYou can choose to 'say' something, whether to communicate with any humans running your software or just to think out loud."
             sys_prompt += "\nRemember that your only means of interacting with the game is 'action'. In-game characters cannot hear you."
         with system():
             self.llm += sys_prompt
@@ -146,13 +147,13 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         notify: bool = True
     ) -> models.Model:
         # TODO: options for decorating the message
-        # so try/force_action prompts don't appear as though they come from the game
-        # (+ manual send from webui)
+        # so try/force_action prompts (or manual send from webui)
+        # don't appear as though they come from the game
         msg = f"[{self.game.name}] {ctx}"
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
         await self.truncate_context(tokens)
         with user():
-            out = cast(models.Model, self.llm + msg + "\n") # pyright infers NoReturn (literally how???)
+            out = self.llm + msg + "\n"
         out += "" # add anything after the context manager exits so guidance can add the role closer
         if do_print:
             map_ = {
@@ -199,7 +200,7 @@ You must perform one of the following actions, given this information:
 ```
 """
         # self.action doesn't take a model param, so ephemerality here is done by setting/resetting self.llm
-        # good thing model objects are immutable
+        # relies on immutability of model objects
         llm_ephemeral_restore = self.llm
         self.llm = await self.context(ctx_msg, silent=True, ephemeral=ephemeral, do_print=False, notify=True)
         act = await self.action(actions, ephemeral=ephemeral)
@@ -220,11 +221,15 @@ You must perform one of the following actions, given this information:
     "action_name": "{with_temperature(select([a.name for a in actions], "action_name"), self.temperature)}",'''
             action_name = llm["action_name"]
             chosen_action = next(a for a in actions if a.name == action_name)
-            # TODO: test without schema reminder; theoretically it makes responses better but not sure how much (or if it's worth the tokens)
+            schema = chosen_action.schema_
+            (filtered_schema, filtered_keys) = json_schema_filter(schema)
+            if filtered_keys and chosen_action.name not in self._warned_filtered_schemas:
+                self._warned_filtered_schemas.add(chosen_action.name)
+                logger.warning(f"Schema for action '{action_name}' contains unsupported keywords {filtered_keys}. They cannot be enforced, so the model may generate JSON that does not comply.")
             llm += f'''
-    "schema": {dumps(chosen_action.schema_).decode()},'''
+    "schema": {dumps(schema).decode()},'''
             llm = time_gen(llm, f'''
-    "data": {json("data", schema=chosen_action.schema_, temperature=self.temperature, max_tokens=self.max_tokens())}
+    "data": {json("data", schema=filtered_schema, temperature=self.temperature, max_tokens=self.max_tokens())}
 }}
 ```''')
         llm += "" # role closer

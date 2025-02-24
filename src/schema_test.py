@@ -56,7 +56,7 @@ ACTIONS = [
             "items": {"enum": ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5"]},
             "minItems": 2,
             "maxItems": 4,
-            # "uniqueItems": True,
+            "uniqueItems": True,
         },
     ),
     action(
@@ -86,7 +86,7 @@ ACTIONS = [
                     "items": {"enum": ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5"]},
                     "minItems": 2,
                     "maxItems": 4,
-                    # "uniqueItems": True,
+                    "uniqueItems": True,
                 },
                 "obj_prop": {
                     "type": "object",
@@ -99,7 +99,7 @@ ACTIONS = [
                             "items": {"enum": ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5"]},
                             "minItems": 2,
                             "maxItems": 4,
-                            # "uniqueItems": True,
+                            "uniqueItems": True,
                         },
                         "obj_prop": {
                             "type": "object",
@@ -128,7 +128,7 @@ ACTIONS = [
             },
             "minItems": 2,
             "maxItems": 4,
-            # "uniqueItems": True,
+            "uniqueItems": True,
         },
     ),
     action(
@@ -196,11 +196,11 @@ ACTIONS = [
                 "integer": {"type": "integer"},
                 "int-step": {
                     "type": "integer",
-                    # "multipleOf": 2,
+                    "multipleOf": 2,
                 },
                 "float-step": {
                     "type": "number",
-                    # "multipleOf": 0.5,
+                    "multipleOf": 0.5,
                 }
             },
             "required": ["freeform", "bounds-inclusive", "bounds-exclusive", "integer", "int-step", "float-step"],
@@ -295,7 +295,6 @@ class Connection(WSConnection[AnyNeuroMessage, AnyGameMessage]):
                     "message": """
 Welcome to the JSON Schema test. Please execute the actions available to you.
 You may deviate from the given schema, it is part of the test.
-When there are no more actions remaining, say "Done!" out loud to finish the test.
 """,
                     "silent": True
                 }
