@@ -6,7 +6,8 @@ import jsonschema
 from websockets import ClientConnection, ConnectionClosed, State
 from websockets.asyncio.client import connect
 from loguru import logger
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Literal
+from pydantic import BaseModel, TypeAdapter
 
 from gary.spec import *
 from gary.util.utils import HasEvents

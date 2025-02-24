@@ -10,7 +10,7 @@ from guidance.chat import Llama3ChatTemplate, Phi3MiniChatTemplate
 from guidance._grammar import Function
 
 
-from ..util import CONFIG, HasEvents, json_schema_filter
+from ..util import CONFIG, HasEvents, json_schema_filter, loguru_tag
 from ..util.config import MANUAL_RULES
 from ..spec import *
 
@@ -156,13 +156,15 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             out = self.llm + msg + "\n"
         out += "" # add anything after the context manager exits so guidance can add the role closer
         if do_print:
-            map_ = {
-                "S": silent,
-                "E": ephemeral,
-                "P": persistent_llarry_only,
+            log_msg = msg.replace("<", r"\<")
+            decorations = {
+                'dim': silent,
+                'strike': ephemeral,
+                'underline': persistent_llarry_only,
             }
-            prefix = "".join(c for c,f in map_.items() if f)
-            logger.info(f"(ctx{prefix}) {msg}")
+            for tag in filter(lambda k: decorations[k], decorations):
+                log_msg = loguru_tag(log_msg, tag)
+            logger.opt(colors=True).info(log_msg)
             if tokens > 500 and not persistent_llarry_only:
                 logger.warning(f"Context '{ctx[:20].encode('unicode_escape').decode()}...' had {tokens} tokens. Are you sure this is a good idea?")
         if persistent_llarry_only and isinstance(out, Llarry):

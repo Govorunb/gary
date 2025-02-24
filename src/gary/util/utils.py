@@ -170,3 +170,7 @@ def _internal_test_keywords():
     print("Done")
     sys.exit(0)
 # _internal_test_keywords()
+
+# https://loguru.readthedocs.io/en/stable/api/logger.html ctrl+f "abbr" or "The color markups"
+def loguru_tag(msg: str, tag: str):
+    return f"<{tag}>{msg}</>"
