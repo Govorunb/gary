@@ -59,33 +59,114 @@ class NoPrint:
     def __exit__(self, *_):
         builtins.print = self._print
 
-_GUIDANCE_SCHEMA_UNSUPPORTED_KEYWORDS = {
-    "uniqueItems", # would be nice to get this even if just for enums
-    "multipleOf", # works on llguidance/main but not in guidance yet
+_empty_prop = {"enum": [None]}
+# Adapted from https://github.com/guidance-ai/llguidance/blob/main/parser/src/json/schema.rs#L16
+# (adjusted for currently released version of the python guidance library)
+_GUIDANCE_SCHEMA_SUPPORTED_KEYWORDS = {
+    # Core
+    "anyOf": [_empty_prop],
+    "oneOf": [_empty_prop],
+    "allOf": [_empty_prop],
+    "$ref": "#/definitions/a",
+    "const": None,
+    "enum": [None],
+    "type": "null",
+    # Array
+    "items": _empty_prop,
+    "additionalItems": _empty_prop,
+    "prefixItems": [_empty_prop],
+    "minItems": 0,
+    "maxItems": 0,
+    # Object
+    "properties": {"a": _empty_prop},
+    "additionalProperties": True,
+    "required": ["a"],
+    # String
+    "minLength": 0,
+    "maxLength": 0,
+    "pattern": "",
+    "format": "date-time",
+    # Number
+    "minimum": 0,
+    "maximum": 0,
+    "exclusiveMinimum": 0,
+    "exclusiveMaximum": 0,
+    # "multipleOf": 2, # not in guidance yet
+
+    # Unimplemented
+    # "$dynamicAnchor": "",
+    # "$dynamicRef": "",
+    # "$recursiveAnchor": "",
+    # "$recursiveRef": "",
+    # "not": _empty_prop,
+    # "if": _empty_prop,
+    # "then": _empty_prop,
+    # "else": _empty_prop,
+    # "dependencies": {"a": ["b"]},
+    # "dependentSchemas": {"a": _empty_prop},
+    # "dependentRequired": {"a": ["b"]},
+    # "unevaluatedProperties": True,
+    # "unevaluatedItems": _empty_prop,
+    # "minProperties": 0,
+    # "maxProperties": 0,
+    # "propertyNames": _empty_prop,
+    # "patternProperties": {"a": _empty_prop},
+    # "contains": _empty_prop,
+    # "maxContains": 0,
+    # "minContains": 0,
+    # "uniqueItems": True, # would be nice to get this even if just for enums
+
+    # Meta/annotations - these do not affect validation
+    "$id": "abcde",
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$defs": {"a": _empty_prop},
+    "$anchor": "123",
+    "contentEncoding": "",
+    "contentMediaType": "",
+    "description": "",
+    "default": "",
+    "examples": [""],
+    "id": "abcde123",
+    "title": "",
+    "readOnly": True,
+    "writeOnly": True,
+    "definitions": {"a": _empty_prop},
 }
 
 class FilteredSchema(NamedTuple):
     schema: dict | None = None
-    filtered_keys: set[str] | None = None
+    unsupported_keys: set[str] | None = None
 
 def json_schema_filter(schema: dict | None) -> FilteredSchema:
     if schema is None:
         return FilteredSchema()
 
     out = {}
-    replaced = set()
+    unsupported = set()
     for k,v in schema.items():
-        if k in _GUIDANCE_SCHEMA_UNSUPPORTED_KEYWORDS:
-            replaced.add(k)
+        if k not in _GUIDANCE_SCHEMA_SUPPORTED_KEYWORDS:
+            unsupported.add(k)
             continue
         if isinstance(v, dict) and k != "enum": # enum members can be objects (dicts)
             if k == "properties":
-                to_filter = v.items()
+                out[k] = props = {}
+                for kk, vv in v.items():
+                    (props[kk], sub_unsupported) = json_schema_filter(vv)
+                    unsupported.update(sub_unsupported or set())
             else:
-                to_filter = [(k,v)]
-            for kk, vv in to_filter:
-                (out[kk], sub_replaced) = json_schema_filter(vv)
-                replaced.update(sub_replaced or set())
+                (out[k], sub_unsupported) = json_schema_filter(v)
+                unsupported.update(sub_unsupported or set())
         else:
             out[k] = v
-    return FilteredSchema(out, replaced)
+    return FilteredSchema(out, unsupported)
+
+def _internal_test_keywords():
+    from guidance import json
+    try:
+        json(schema=_GUIDANCE_SCHEMA_SUPPORTED_KEYWORDS)
+    except ValueError as e:
+        print(e)
+    import sys
+    print("Done")
+    sys.exit(0)
+# _internal_test_keywords()

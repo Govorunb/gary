@@ -89,9 +89,10 @@ If an action fails because of game state (e.g. trying to place an item in an occ
 	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's fast
 - The web interface can be a bit flaky - keep an eye out for any exceptions in the terminal window and, when in doubt, refresh the page
 	- There's a non-zero chance I won't be able to polish it up to an acceptable level - if so, I'll probably ragequit the current implementation (using [panel](https://github.com/holoviz/panel/)) and go write a TS frontend or something instead. Send thoughts and prayers please
-- <sup>c</sup> Not all JSON schema keywords are supported in Guidance.
-	- Known unsupported keywords will produce a warning, and unknown ones will throw an exception. If you encounter such an exception, please open an issue.
-	- Generally, following [the Neuro API spec](https://github.com/VedalAI/neuro-game-sdk/blob/main/API/SPECIFICATION.md#action) is pretty safe. If you find an action schema is getting complex and/or full of uncommon keywords, consider breaking it up into multiple actions.
+- <sup>c</sup> Not all JSON schema keywords are supported in Guidance. You can find an up-to-date list [here](https://github.com/Govorunb/gary/blob/main/src/gary/util/utils.py#L65).
+	- Unsupported keywords will produce a warning and be excluded from the grammar.<br/>
+		- This means that the LLM **might not fully comply with the schema** - it's very important that the game validates the backend's responses and sends back meaningful and interpretable error messages.
+	- Generally, following [the Neuro API spec](https://github.com/VedalAI/neuro-game-sdk/blob/main/API/SPECIFICATION.md#action) is pretty safe. If you find an action schema is getting complex or full of esoteric keywords, consider logically restructuring it or breaking it up into multiple actions.
 
 ### Implementation-specific behaviour
 There may be cases where other backends (including Neuro) may behave differently.
