@@ -147,8 +147,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         notify: bool = True
     ) -> models.Model:
         # TODO: options for decorating the message
-        # so try/force_action prompts (or manual send from webui)
-        # don't appear as though they come from the game
+        # so try/force_action prompts (or manual send from webui) don't appear as though they come from the game
         msg = f"[{self.game.name}] {ctx}"
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
         await self.truncate_context(tokens)

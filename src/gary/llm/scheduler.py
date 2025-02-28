@@ -17,16 +17,15 @@ class Scheduler:
     def __init__(self, game: "Game"):
         self._queue: PriorityQueue[BaseEvent] = PriorityQueue()
         self._game = game
-        self._active = False
+        self._running = False
         self._busy = False
-        self._muted = False
-        self._sleeping = False
+        self._mutes: dict[str, bool] = {}
         self._event_loop: asyncio.AbstractEventLoop | None = None
         self._worker_thread: threading.Thread | None = None
         self._has_pending_try_action = False
         game.subscribe('action', self._on_action)
         game.llm.subscribe('context', self._on_context)
-        self.game.llm.subscribe('say', self._on_say)
+        game.llm.subscribe('say', self._on_say)
 
         # Initialize idle timers
         idle_timeout_try = CONFIG.gary.scheduler.idle_timeout_try
@@ -58,28 +57,28 @@ class Scheduler:
 
     @property
     def muted(self):
-        return self._muted
+        return self._mutes.get('muted', False)
 
     @property
     def sleeping(self):
-        return self._sleeping
+        return self._mutes.get('sleeping', False)
 
     @property
     def can_act(self):
-        return not self._muted and not self._sleeping
+        return not self.muted and not self.sleeping
 
     @muted.setter
     def muted(self, muted: bool):
-        if self._muted == muted:
+        if self.muted == muted:
             return
-        self._muted = muted
+        self._mutes['muted'] = muted
         self._update_mute()
 
     @sleeping.setter
     def sleeping(self, sleeping: bool):
-        if self._sleeping == sleeping:
+        if self.sleeping == sleeping:
             return
-        self._sleeping = sleeping
+        self._mutes['sleeping'] = sleeping
         self._update_mute()
 
     def _update_mute(self):
@@ -91,25 +90,27 @@ class Scheduler:
             self._force_timer.start()
             self.enqueue(TryAction())
     
-    def _awake_str(self):
-        return 'muted' if self.muted else 'sleeping' if self.sleeping else 'awake'
+    @property
+    def status(self):
+        mutes = [k for k, v in self._mutes.items() if v]
+        return ' '.join(mutes) or 'active'
 
     def start(self) -> None:
         """Start the event processing loop in a separate thread."""
-        if self._active:
+        if self._running:
             return
-        self._active = True
+        self._running = True
         self._worker_thread = threading.Thread(target=self._run_event_loop, daemon=True)
         self._worker_thread.start()
-        if not self._muted:
+        if self.can_act:
             self._try_timer.start()
             self._force_timer.start()
 
     def stop(self) -> None:
         """Stop the event processing loop."""
-        if not self._active:
+        if not self._running:
             return
-        self._active = False
+        self._running = False
         self._try_timer.stop()
         self._force_timer.stop()
         if self._event_loop:
@@ -166,7 +167,7 @@ class Scheduler:
 
     async def _process_events(self) -> None:
         """Process events from the queue."""
-        while self._active:
+        while self._running:
             if self._busy:
                 # If we're busy processing an event, wait a bit
                 await asyncio.sleep(0.1)
@@ -210,13 +211,13 @@ class Scheduler:
                 logger.error("TryAction with nothing to do")
                 return
             if not self.can_act:
-                logger.debug(f"TryAction event ignored - {self._awake_str()}")
+                logger.debug(f"TryAction event ignored - {self.status}")
                 return
             act = await self.game.llm.try_action(actions, allow_yapping=allow_yapping)
             await self.game.execute_action(act)
         elif isinstance(event, ForceAction):
             if not self.can_act:
-                logger.debug(f"ForceAction event ignored - {self._awake_str()}")
+                logger.debug(f"ForceAction event ignored - {self.status}")
                 return
             if event.force_message:
                 act = await self.game.llm.force_action(event.force_message)
@@ -226,7 +227,7 @@ class Scheduler:
             await self.game.execute_action(act)
         elif isinstance(event, Say):
             if not event.message and not self.can_act:
-                logger.warning(f"Tried to generate Say but {self._awake_str()} - Say event from {event.timestamp}")
+                logger.warning(f"Tried to generate Say but {self.status} - Say event from {event.timestamp}")
                 return
             await self.game.llm.say(message=event.message, ephemeral=event.ephemeral)
         elif isinstance(event, Sleep):

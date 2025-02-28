@@ -1,9 +1,6 @@
-from typing import Annotated, Any, Literal, Union
-import warnings
+from typing import Annotated, Any, Literal
 from uuid import uuid4
 from pydantic import BaseModel, Field, TypeAdapter
-
-warnings.filterwarnings("ignore", category=UserWarning, message='Field name "schema" in ')
 
 # pyright: reportIncompatibleVariableOverride=false
 # the fields are *not* mutated, ever
@@ -118,10 +115,10 @@ class ImmediateShutdown(NeuroMessage):
 class ShutdownReady(GameMessage):
     command: Literal["shutdown/ready"] = "shutdown/ready"
 
-AnyGameMessage = Union[Startup, Context, RegisterActions, UnregisterActions, ForceAction, ActionResult, ShutdownReady]
+AnyGameMessage = Startup | Context | RegisterActions | UnregisterActions | ForceAction | ActionResult | ShutdownReady
 GameMessageAdapter: TypeAdapter[Annotated[AnyGameMessage, Field(discriminator="command")]]
 GameMessageAdapter = TypeAdapter(Annotated[AnyGameMessage, Field(discriminator="command")])
 
-AnyNeuroMessage = Union[Action, ReregisterAllActions, GracefulShutdown, ImmediateShutdown]
+AnyNeuroMessage = Action | ReregisterAllActions | GracefulShutdown | ImmediateShutdown
 NeuroMessageAdapter: TypeAdapter[Annotated[AnyNeuroMessage, Field(discriminator="command")]]
 NeuroMessageAdapter = TypeAdapter(Annotated[AnyNeuroMessage, Field(discriminator="command")])

@@ -1,12 +1,11 @@
 import asyncio
 import panel as pn
 from bokeh.models import Tooltip
-from bokeh.models.dom import HTML
 from panel.template import FastListTemplate
 from loguru import logger
 
 from ..llm.events import ClearContext
-from ..util import CONFIG
+from ..util import CONFIG, bokeh_html_with_newlines
 from ..registry import REGISTRY, Game
 from ..spec import *
 from .views import ContextLog, ActionsList
@@ -28,10 +27,10 @@ def create_game_tab(game: Game):
         pn.widgets.StaticText(value=mute_toggle.name),
         pn.indicators.TooltipIcon(
             value=Tooltip(
-                # yes there is no other way to pass newlines into this thing
-                # it is very funny
-                content=HTML(html="Mutes the model, preventing it from performing any actions.<br/>"
-                                    "Makes it easier to send actions manually."),
+                content=bokeh_html_with_newlines(
+                    "Mutes the model, preventing it from performing any actions.\n"
+                    "Makes it easier to send actions manually."
+                ),
                 position='top',
                 attachment='above',
             ),
@@ -53,8 +52,10 @@ def create_game_tab(game: Game):
         name="Clear Context",
         button_type='default',
         description=Tooltip(
-            content=HTML(html="Clear the model's context (working memory). Use this if the model gets into a loop of bad decisions.<br/>"
-                            "Testing/development only - you can't do this with Neuro!"),
+            content=bokeh_html_with_newlines(
+                "Clear the model's context (working memory). Use this if the model gets into a loop of bad decisions.\n"
+                "Testing/development only - you can't do this with Neuro!"
+            ),
             position='right',
         ),
     )

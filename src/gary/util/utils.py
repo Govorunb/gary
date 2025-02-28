@@ -4,6 +4,8 @@ from collections import defaultdict
 from collections.abc import Callable, Awaitable
 from typing import NamedTuple, overload, LiteralString
 
+from bokeh.models.dom import HTML
+
 @overload
 async def invoke[U](fn: Callable[..., Awaitable[U]], *args, **kwargs) -> U: ...
 @overload
@@ -174,3 +176,6 @@ def _internal_test_keywords():
 # https://loguru.readthedocs.io/en/stable/api/logger.html ctrl+f "abbr" or "The color markups"
 def loguru_tag(msg: str, tag: str):
     return f"<{tag}>{msg}</>"
+
+def bokeh_html_with_newlines(text: str):
+    return HTML(text.replace("\n", "<br>"))

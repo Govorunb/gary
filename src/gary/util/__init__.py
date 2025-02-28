@@ -1,7 +1,7 @@
 from .logger import configure_logging
 from .config import CONFIG
 from .websocket import WSConnection, GameWSConnection
-from .utils import invoke, HasEvents, NoPrint, json_schema_filter, loguru_tag
+from .utils import invoke, HasEvents, NoPrint, json_schema_filter, loguru_tag, bokeh_html_with_newlines
 from .periodic_timer import PeriodicTimer
 
 __all__ = [
@@ -12,6 +12,7 @@ __all__ = [
     "invoke",
     "json_schema_filter",
     "loguru_tag",
+    "bokeh_html_with_newlines",
     "HasEvents",
     "NoPrint",
     "PeriodicTimer",

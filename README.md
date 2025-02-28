@@ -46,6 +46,8 @@ GARY_CONFIG_PRESET=randy
 ```
 
 ### Tips
+
+#### Models
 Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
 Since this project is focused on local models, success will depend on your model/hardware. Gary might turn out to be dumber than a rock when it comes to strategy and decisionmaking (which is ironic because it's made of rock) - maybe even *worse than Randy*.
@@ -54,18 +56,24 @@ If so, Gary probably cannot help you and you'd be better off using [Randy](https
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
 Getting a less intelligent model to successfully play your game will help more intelligent models make even smarter decisions.
 
-You probably *should* consider doing the following:
 #### Prompting
 - Use direct and concise language
-	- Having less text to process makes the LLM faster and sometimes reduces confusion
+	- Having less text to process makes the LLM faster and more focused
 	- Aim for high information density - consider running your prompts through a summarizer
-	- (opinion) Flowery or long-winded descriptions should be used very sparingly - all context influences the response and context that is out-of-tone can throw off the model
+- Do your best to keep a consistent tone
+	- All context influences the response and context that is out-of-tone can throw off the model
+	- (opinion) Flowery or long-winded descriptions should be used very sparingly
 - Natural language (e.g. `Consider your goals`) is okay - it is a language model, after all
-- Including/omitting common-sense stuff can be hit or miss - depends on the intelligence of the LLM
-- Rules with structured info (e.g. with Markdown) perform better than unstructured
-	- Tested on small open models, Neuro might act differently
+	- That said, language models are not humans - watch this short [video](https://www.youtube.com/watch?v=7xTGNNLPyMI) for a very brief overview of how LLMs work 
+- If you are testing with a small model (3B, 7B):
+	- Keep in mind Neuro might act differently from your model
+	- Including/omitting common-sense stuff can be hit or miss
+	- Rules with structured info (e.g. with [Markdown](https://www.markdownguide.org/basic-syntax/)) seem to perform better than unstructured
+	- Try more models (and try a bigger model - even if it's slower) to see what info is generally useful and what's just a quirk of your specific model
 
 #### Context
+Generally, LLMs prioritize the most recent context more when generating.
+
 - Send a description of the game and its rules on startup
 - Keep context messages relevant to upcoming actions/decisions
 - Send reminders of rules/tips/state at breakpoints, e.g. starting a new round
@@ -101,7 +109,7 @@ Differences marked with 🚧 will be resolved or obsoleted by the [v2 of the API
 - Gary will always be different from Neuro in some aspects, specifically:
 	- Processing other sources of information like vision/audio/chat (for obvious reasons)
 	- Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
-	- Myriad other things like response timings, text filters, allowed JSON schema keywords
+	- Myriad other things like response timings, text filters, allowed JSON schema keywords, long-term memories, etc
 - 🚧 Registering an action with an existing name will replace the old one (by default, configurable through `(preset).gary.existing_action_policy`)
 - Only one active websocket connection is allowed per game; when another tries to connect, either the old or the new connection will be closed (configurable in `config.yaml` the same way as above)
 - 🚧 Gary sends `actions/reregister_all` on every connect (instead of just reconnects, as in the spec)
