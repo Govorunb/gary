@@ -4,6 +4,7 @@ import panel as pn
 import html
 
 from ...registry import Game
+from ...util import html_newlines
 
 class LogEntry(pn.viewable.Viewer):
     value = param.String()
@@ -28,8 +29,9 @@ class LogEntry(pn.viewable.Viewer):
             # it is a *text* widget, not an "i'll happily render anything as html" widget
             # why on earth would you not sanitize it internally
             # now i have to go and check every other place where text is displayed
-            value=self.param.value.rx.pipe(html.escape),
-            styles=styles
+            value=self.param.value.rx.pipe(html.escape).rx.pipe(html_newlines),
+            styles=styles,
+            sizing_mode='stretch_width',
         )
 
 class ContextLog(pn.viewable.Viewer):

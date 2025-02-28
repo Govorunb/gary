@@ -20,7 +20,6 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
             game = await Game.create(msg.game, self)
             self.games[msg.game] = game
             await self._raise_event("game_created", game)
-            await game._connected()
         await game.set_connection(conn)
         return game
 

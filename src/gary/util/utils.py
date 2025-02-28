@@ -1,10 +1,11 @@
 import builtins
 import functools
+import bokeh.models.dom
+
 from collections import defaultdict
 from collections.abc import Callable, Awaitable
 from typing import NamedTuple, overload, LiteralString
 
-from bokeh.models.dom import HTML
 
 @overload
 async def invoke[U](fn: Callable[..., Awaitable[U]], *args, **kwargs) -> U: ...
@@ -177,5 +178,24 @@ def _internal_test_keywords():
 def loguru_tag(msg: str, tag: str):
     return f"<{tag}>{msg}</>"
 
+def html_newlines(text: str):
+    return text.replace("\n", "<br>")
+
 def bokeh_html_with_newlines(text: str):
-    return HTML(text.replace("\n", "<br>"))
+    return bokeh.models.dom.HTML(html_newlines(text))
+
+def markdown_code_fence(text: str) -> str:
+    '''
+    Returns a code fence that is guaranteed to be longer than any code fence in the text.
+    '''
+    longest = 4
+    ticks = 0
+    for char in text:
+        if char == '`':
+            ticks += 1
+            longest = max(longest, ticks)
+        else:
+            ticks = 0
+    
+    fence = '`' * (longest + 1)
+    return fence

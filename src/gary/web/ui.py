@@ -1,11 +1,12 @@
 import asyncio
+from typing import cast
 import panel as pn
 from bokeh.models import Tooltip
 from panel.template import FastListTemplate
 from loguru import logger
 
 from ..llm.events import ClearContext
-from ..util import CONFIG, bokeh_html_with_newlines
+from ..util import CONFIG, bokeh_html_with_newlines, markdown_code_fence
 from ..registry import REGISTRY, Game
 from ..spec import *
 from .views import ContextLog, ActionsList
@@ -65,6 +66,58 @@ def create_game_tab(game: Game):
             await asyncio.sleep(0.1)
             game.scheduler.enqueue(ClearContext())
             ctx_log.logs = []
+    
+    dump_ctx_button = pn.widgets.Button(
+        name="Dump Context",
+        button_type='default',
+        description=Tooltip(
+            content=bokeh_html_with_newlines(
+                "Show the entire contents of the model's context window (working memory)."
+            ),
+            position='right',
+        ),
+    )
+
+    context_md = pn.pane.Markdown()
+    ctx_dump_muted_md = pn.pane.Markdown(
+        "The model is muted while this dialog is open.",
+        visible=False
+    )
+
+    context_modal = pn.Modal(
+        "# Context Dump",
+        ctx_dump_muted_md,
+        context_md,
+        show_close_button=True,
+        background_close=True,
+        stylesheets=[
+            """
+            .dialog-content {
+                background-color: var(--background-color);
+                max-width: 90%;
+                max-height: 100%;
+            }
+            .pnx-dialog-close {background-color: revert;}
+            .pnx-dialog-close:hover {background-color: revert;}
+            """
+        ],
+    )
+    
+    @dump_ctx_button.on_click
+    async def _(*_):
+        with dump_ctx_button.param.update(name="Retrieving...", disabled=True):
+            await asyncio.sleep(0.1)
+            context_dump = game.llm.dump()
+            fence = markdown_code_fence(context_dump)
+            context_md.object = f"{fence}none\n{context_dump}\n{fence}"
+            context_modal.open = True
+            was_unmuted = not cast(bool, mute_toggle.value)
+            mute_toggle.value = True
+            ctx_dump_muted_md.visible = was_unmuted
+            while context_modal.open:
+                await asyncio.sleep(0.1)
+            if was_unmuted:
+                mute_toggle.value = False
 
     say_input = pn.widgets.TextInput(placeholder="Add message to context")
     say_button = pn.widgets.Button(
@@ -91,6 +144,10 @@ def create_game_tab(game: Game):
             clear_context,
             say_input,
             say_button,
+            pn.HSpacer(),
+            dump_ctx_button,
+            pn.Spacer(width=15), # space for gridstack resize handle
+            context_modal,
         ),
 
         styles=css, sizing_mode='stretch_both'
@@ -195,7 +252,7 @@ async def create_tabs():
         await asyncio.sleep(0.5)
 
 def create_web_ui():
-    extensions = ['gridstack', 'floatpanel', 'ace', 'codeeditor']
+    extensions = ['gridstack', 'floatpanel', 'ace', 'codeeditor', 'modal']
     pn.extension(
         *extensions,
         template='fast',
@@ -206,8 +263,10 @@ def create_web_ui():
         ready_notification="Connected",
     )
 
-    template = FastListTemplate(title="Gary Control Panel")
-    template.main.append(pn.Column(create_tabs, sizing_mode='stretch_both')) # type: ignore
+    template = FastListTemplate(
+        title="Gary Control Panel",
+        main=[pn.Column(create_tabs, sizing_mode='stretch_both')],
+    )
     return template
 
 def add_control_panel(path: str):

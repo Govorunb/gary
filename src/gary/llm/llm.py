@@ -378,6 +378,9 @@ The following actions are available to you:
     def assistant(self, lm = None):
         return ModelWrapper(lm or self.llm).role(assistant())
 
+    def dump(self, lm = None):
+        return str(lm or self.llm)
+
 def tokens(m: models.Model, s: str | None = None) -> int:
     s = s or str(m)
     return len(m.engine.tokenizer.encode(s.encode())) # type: ignore
