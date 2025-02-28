@@ -16,7 +16,7 @@ The project is mostly for fun but I'm open to feedback and contributions.
 - Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM (e.g. JSON syntax)
 - Aims to (eventually) behave (reasonably) close to Neuro for accurate testing/development
 - Offers a web interface (**WIP**) for [Tony](https://github.com/Pasu4/neuro-api-tony)-like manual action sending
-![image](https://github.com/user-attachments/assets/be4c520c-4e17-436b-81e9-1288f054913a)
+![image](https://github.com/user-attachments/assets/d0dc13a4-bd00-434f-b484-6600a67fe2e7)
 
 <sub>\* Not tested - if you know this works (or doesn't), open an issue.</sub><br/>
 
