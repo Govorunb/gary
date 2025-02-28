@@ -1,6 +1,7 @@
+from contextlib import AbstractContextManager, contextmanager
 import random, time
 from orjson import dumps
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, Self
 from pydantic import TypeAdapter
 from loguru import logger
 
@@ -19,7 +20,7 @@ from .llarry import Llarry, StreamingLlamaCppEngine
 if TYPE_CHECKING:
     from ..registry import Game
 
-# IMPL: this whole file is my implementation since uhh... yeah
+# IMPL: this whole file (for obvious reasons)
 
 # pyright: reportPrivateImportUsage=false
 
@@ -42,6 +43,31 @@ _engine_map = {
 class Act(NamedTuple):
     name: str
     data: str | None
+
+class ModelWrapper:
+    def __init__(self, model: models.Model):
+        self.model = model
+
+    def __str__(self):
+        return str(self.model)
+
+    def __getitem__(self, key: str):
+        return self.model[key]
+
+    def __add__(self, other: str | Function) -> Self:
+        self.model += other
+        return self
+    
+    def __iadd__(self, other: str | Function) -> Self:
+        return self.__add__(other)
+
+    @contextmanager
+    def role(self, ctxmgr: AbstractContextManager):
+        with ctxmgr:
+            yield self
+        # adding anything after the context manager will close the role
+        # why it has to be done this way is a long story
+        self += ""
 
 class LLM(HasEvents[Literal['context', 'say']]):
     llm: models.Model
@@ -94,6 +120,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             sys_prompt += "\nRemember that your only means of interacting with the game is 'action'. In-game characters cannot hear you."
         with system():
             self.llm += sys_prompt
+        # no role closer here is surely fine
         if custom_rules := MANUAL_RULES.get(self.game.name):
             await self.context(custom_rules, silent=True, persistent_llarry_only=True, notify=False)
 
@@ -151,9 +178,9 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         msg = f"[{self.game.name}] {ctx}"
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
         await self.truncate_context(tokens)
-        with user():
-            out = self.llm + msg + "\n"
-        out += "" # add anything after the context manager exits so guidance can add the role closer
+        with self.user() as lm:
+            lm += msg + "\n"
+        out = lm.model
         if do_print:
             log_msg = msg.replace("<", r"\<")
             decorations = {
@@ -213,8 +240,7 @@ You must perform one of the following actions, given this information:
         if not actions:
             raise Exception("No actions to choose from (LLM.action)")
         await self.truncate_context(200)
-        llm = self.llm
-        with assistant():
+        with self.assistant() as llm:
             llm += f'''\
 ```json
 {{
@@ -236,15 +262,14 @@ You must perform one of the following actions, given this information:
                     self._warned_filtered_schemas.add(chosen_action.name)
                     logger.warning(f"Schema for action '{action_name}' contains unsupported keywords {filtered_keys}. They cannot be enforced, so the model may generate JSON that does not comply.")
                 json_gen = json("data", schema=filtered_schema, temperature=self.temperature, max_tokens=self.max_tokens())
-            llm = time_gen(llm, f'''
+            time_gen(llm, f'''
     "data": {json_gen}
 }}
 ```''')
-        llm += "" # role closer
         data = llm['data']
         logger.debug(f"chosen action: {action_name}; data: {data}")
         if not ephemeral:
-            self.llm = llm
+            self.llm = llm.model
         return Act(action_name, data)
 
     async def try_action(self, actions: list[ActionModel], allow_yapping: bool = True) -> Act | None:
@@ -276,20 +301,18 @@ The following actions are available to you:
         options = [key for key, value in options_map.items() if value]
         if len(options) > 1:
             ctx += f"\nRespond with one of these options: {options}"
-        llm = await self.context(ctx, silent=True, ephemeral=True, do_print=False, notify=False)
-        pre_resp = llm
+        pre_resp = await self.context(ctx, silent=True, ephemeral=True, do_print=False, notify=False)
         resp = f'''
 ```json
 {{
     "command": "{with_temperature(select(options, 'decision'), self.temperature)}"'''
-        with assistant():
-            llm = time_gen(pre_resp, resp)
+        with self.assistant(pre_resp) as llm:
+            time_gen(llm, resp)
             decision = llm['decision']
             logger.info(f"{decision=}")
             llm += """
 }
 ```"""
-        llm += "" # role closer
         # TODO: command handlers
         if decision == ACT:
             return await self.action(actions)
@@ -306,9 +329,9 @@ The following actions are available to you:
         logger.error(f"unhandled decision '{decision}'")
         return None
 
-    async def say[TModel: models.Model](self, model: TModel | None = None, message: str | None = None, ephemeral: bool = False) -> TModel:
+    async def say(self, model: models.Model | None = None, message: str | None = None, ephemeral: bool = False) -> ModelWrapper:
         await self.truncate_context(520)
-        llm: Any = model or self.llm
+        model = model or self.llm
 
         msg = message or gen('say', stop=['\n','"'], temperature=self.temperature, max_tokens=self.max_tokens(500))
         
@@ -319,16 +342,15 @@ The following actions are available to you:
     "message": "{msg}"
 }}
 ```'''
-        with assistant():
-            llm = time_gen(llm, gen_)
-        llm += "" # FIXME: wrap ctxmgr for role closer
+        with self.assistant(model) as llm:
+            time_gen(llm, gen_)
         said = llm['say']
         logger.opt(colors=True).info(f"> <lc>{said}</>")
         # for msg in cast(Llarry, llm).iter_messages_text()[-3:]:
         #     _logger.debug(f"{msg}\n\n{msg.encode()}")
         await self._raise_event('say', said)
         if not ephemeral:
-            self.llm = llm
+            self.llm = llm.model
         return llm
 
     async def truncate_context(self, need_tokens: int = 0):
@@ -348,22 +370,29 @@ The following actions are available to you:
             else:
                 logger.warning(f"Truncating context ({used}/{self.token_limit} tokens used)")
                 await self.reset()
+    
+    def system(self, lm = None):
+        return ModelWrapper(lm or self.llm).role(system())
+    def user(self, lm = None):
+        return ModelWrapper(lm or self.llm).role(user())
+    def assistant(self, lm = None):
+        return ModelWrapper(lm or self.llm).role(assistant())
 
 def tokens(m: models.Model, s: str | None = None) -> int:
     s = s or str(m)
     return len(m.engine.tokenizer.encode(s.encode())) # type: ignore
 
-def time_gen[M: models.Model](lm: M, gen_: Function | str) -> M:
-    prev_tokens_generated: int = lm.metrics.engine_output_tokens
-    prev_tokens_in: int = lm.metrics.engine_input_tokens
+def time_gen(lm: ModelWrapper, gen_: Function | str):
+    prev_tokens_generated: int = lm.model.metrics.engine_output_tokens
+    prev_tokens_in: int = lm.model.metrics.engine_input_tokens
     t0 = time.perf_counter()
-    out: M = lm + gen_
+    lm += gen_
     generation_took = time.perf_counter() - t0
-    tokens_in: int = out.metrics.engine_input_tokens - prev_tokens_in
-    tokens_out: int = out.metrics.engine_output_tokens - prev_tokens_generated
+    tokens_in: int = lm.model.metrics.engine_input_tokens - prev_tokens_in
+    tokens_out: int = lm.model.metrics.engine_output_tokens - prev_tokens_generated
     tps: float = tokens_out / generation_took
     logger.debug(
         f'input {tokens_in} and output {tokens_out} tokens in {generation_took:.2f}s'
         + (f' ({tps:.2f} tok/s)' if tps >= 0.5 else f' ({1/tps:.2f} s/tok)' if tps != 0 else '')
     )
-    return out
+    return lm
