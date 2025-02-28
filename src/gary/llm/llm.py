@@ -159,7 +159,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             decorations = {
                 'dim': silent,
                 'strike': ephemeral,
-                'underline': persistent_llarry_only,
+                'italic': persistent_llarry_only,
             }
             for tag in filter(lambda k: decorations[k], decorations):
                 log_msg = loguru_tag(log_msg, tag)
