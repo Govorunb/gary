@@ -47,6 +47,14 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
             await self._raise_event("game_disconnected", conn.game)
             if (unsub := self._subscriptions.pop(conn.id, None)):
                 unsub()
+    
+    async def destroy(self):
+        for conn in self.connections.values():
+            await conn.disconnect(1001, "Server shutting down")
+        self.games.clear()
+        self.connections.clear()
+        for unsub in self._subscriptions.values():
+            unsub()
 
 type _game_events = Literal["connect", "disconnect"] | GameCommand | NeuroCommand
 

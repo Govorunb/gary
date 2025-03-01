@@ -12,6 +12,9 @@ async def lifespan(app: FastAPI):
     yield
     logger.debug("Shutting down Panel server")
     panel_server.stop()
+    logger.debug("Cleaning up games")
+    from .registry import REGISTRY
+    await REGISTRY.destroy()
 
 configure_logging()
 app = FastAPI(lifespan=lifespan)
