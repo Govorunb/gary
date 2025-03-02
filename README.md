@@ -33,8 +33,8 @@ That said...
 ## Quick start
 Since the project is aimed at developers, it's expected that you know your way around the command line, can clone the repo, and so on.
 1. Install [uv](https://github.com/astral-sh/uv#installation)
-2. Make a copy of `config.yaml` and point it to your model/settings
-	- Use a YAML language server that supports schemas for a smoother config editing experience
+2. Make a copy of `config.yaml` and point it to your model/configure stuff
+	- Use an editor with YAML schema support for a smoother config editing experience
 	- See [Project setup](#project-setup) below for more details
 3. Run the following command:
 ```
@@ -102,7 +102,7 @@ Generally, LLMs prioritize the most recent context more when generating.
 
 If an action fails because of game state (e.g. trying to place an item in an occupied slot), you should attempt, preferrably in this particular order:
 1. Disallow the illegal action (by removing the illegal parameter from the schema, or by unregistering the action entirely)
-	- This is the best option as there's no chance for mistakes at all
+	- This is the best option as there's no chance for mistakes at all (unless Neuro decides to ignore the schema)
 2. Suggest a suitable alternative in the result message
 	- For example, `"Battery C is currently charging and cannot be removed. Batteries A and B are charged and available."`
 3. Send additional context as a state reminder on failure so the model can retry with more knowledge
@@ -118,11 +118,11 @@ If an action fails because of game state (e.g. trying to place an item in an occ
 	- For nerds - guidance uses the model to generate the starting tokens and forwards the rest as soon as it's fully disambiguated (so e.g. `"g` has the highest likelihood, so it gets picked, and then `in"` is auto-completed because `"gin"` is the only option starting with `"g`, even though in reality the model wanted to say `"glass"`). [Learn more](https://github.com/guidance-ai/guidance/issues/564)
 	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's fast
 - The web interface can be a bit flaky - keep an eye out for any exceptions in the terminal window and, when in doubt, refresh the page
-	- There's a non-zero chance I won't be able to polish it up to an acceptable level - if so, I'll probably ragequit the current implementation (using [panel](https://github.com/holoviz/panel/)) and go write a TS frontend or something instead. Send thoughts and prayers please
-- <sup>c</sup> Not all JSON schema keywords are supported in Guidance. You can find an up-to-date list [here](https://github.com/Govorunb/gary/blob/main/src/gary/util/utils.py#L65).
+	- Send thoughts and prayers please
+- <sup>c</sup> Not all JSON schema keywords are supported in Guidance. You can find an up-to-date list [here](https://github.com/Govorunb/gary/blob/main/src/gary/util/utils.py#L68).
 	- Unsupported keywords will produce a warning and be excluded from the grammar.<br/>
 		- This means that the LLM **might not fully comply with the schema** - it's very important that the game validates the backend's responses and sends back meaningful and interpretable error messages.
-	- Generally, following [the Neuro API spec](https://github.com/VedalAI/neuro-game-sdk/blob/main/API/SPECIFICATION.md#action) is pretty safe. If you find an action schema is getting complex or full of esoteric keywords, consider logically restructuring it or breaking it up into multiple actions.
+	- Generally, following [the Neuro API spec](https://github.com/VedalAI/neuro-game-sdk/blob/main/API/SPECIFICATION.md#action) is pretty safe. If you find an action schema is getting complex or full of obscure keywords, consider logically restructuring it or breaking it up into multiple actions.
 
 ### Implementation-specific behaviour
 There may be cases where other backends (including Neuro) may behave differently.
@@ -135,7 +135,6 @@ Differences marked with 🚧 will be resolved or obsoleted by the [v2 of the API
 - 🚧 Registering an action with an existing name will replace the old one (by default, configurable through `gary.existing_action_policy`)
 - Only one active websocket connection is allowed per game; when another tries to connect, either the old or the new connection will be closed (configurable through `gary.existing_connection_policy`)
 - 🚧 Gary sends `actions/reregister_all` on every connect (instead of just reconnects, as in the spec)
-	- I can probably make something that figures out if it's a first launch or a reconnect but I'm too lazy
 - etc etc, just search for "IMPL" in the code
 
 #### Remote services? (OpenAI, Anthropic, Google, Azure)
