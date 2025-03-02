@@ -17,7 +17,6 @@ def start():
         "gary.app:app",
         **CONFIG.api,
         reload_includes=[CONFIG_PATH],
-        # reload_excludes=["src/gary/web/ui.py"]
     )
 
 if __name__ == "__main__":

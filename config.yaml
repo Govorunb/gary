@@ -28,7 +28,7 @@ randy:
   overrides:
     llm:
       engine: randy
-      model: ""
+      model:
     gary:
       allow_yapping: false # you don't want randy with this on, trust me
       scheduler:

@@ -15,15 +15,13 @@ The project is mostly for fun but I'm open to feedback and contributions.
 - **Guaranteed** to follow the schema[^1][^2][^3]
 - Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM (e.g. JSON syntax)
 - Aims to (eventually) behave (reasonably) close to Neuro for accurate testing/development
-- Offers a web interface (**WIP**) for [Tony](https://github.com/Pasu4/neuro-api-tony)-like manual action sending
+- Offers a web interface for [Tony](https://github.com/Pasu4/neuro-api-tony)-like manual action sending
 ![image](https://github.com/user-attachments/assets/d0dc13a4-bd00-434f-b484-6600a67fe2e7)
 
 <sub>\* Not tested - if you know this works (or doesn't), open an issue.</sub><br/>
 
 That said...
 > [!Note]
-> The project is currently in the early stages of development and is thus **unstable**.
->
 > Some areas or systems may change their behaviour and/or internals (especially internals).
 >
 > Take a look at the [Known issues/todos](#known-issuestodos) section for an idea of what might change in the future.
@@ -33,17 +31,41 @@ That said...
 [^3]: For most common schemas. See [Known issues/todos](#known-issuestodos)<sup>c</sup>.
 
 ## Quick start
+Since the project is aimed at developers, it's expected that you know your way around the command line, can clone the repo, and so on.
 1. Install [uv](https://github.com/astral-sh/uv#installation)
-2. Configure stuff in `config.yaml` (use a YAML language server that supports schemas for an easier time)
+2. Make a copy of `config.yaml` and point it to your model/settings
+	- Use a YAML language server that supports schemas for a smoother config editing experience
+	- See [Project setup](#project-setup) below for more details
 3. Run the following command:
 ```
-uv run gary [--preset your_preset] [--config _my_config.yaml]
+uv run gary [--preset randy] [--config _your_config.yaml]
 ```
-Instead of modifying `config.yaml` (which would get picked up by git) you should make a copy prefixed with an underscore (e.g. `_my_config.yaml`) and point Gary at it with either the `--config` flag or the `GARY_CONFIG_FILE` environment variable. Gary reads dotenv so you can make a `.env` file with the following contents:
+4. Open the webui at `http://localhost:8001/` (or `api.port + 1` if you changed it in the config)
+
+#### Project setup
+Files and folders starting with an underscore are `.gitignore`d - this is intended for your config/models/etc.
+
+You can point Gary at a config file with either the `--config` flag or the `GARY_CONFIG_FILE` environment variable.
+
+It reads dotenv too, so you can make a `.env` file with the following contents and run with just `uv run gary`:
 ```
-GARY_CONFIG_FILE=_my_config.yaml
+GARY_CONFIG_FILE=_your_config.yaml
 GARY_CONFIG_PRESET=randy
 ```
+
+<details>
+<summary>Don't have a local model downloaded? Not sure which to get or where?</summary>
+
+This [Llama 3.1 8B](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q5_K_L.gguf) quantization by [bartowski](https://huggingface.co/bartowski) is a good starting point.
+
+It takes around 8GB VRAM, which is [common](https://store.steampowered.com/hwsurvey). Configure `engine_params.n_ctx` to `8192` for more working memory, or `6144` for a slight speedup.
+
+If the 8B model is too slow, try a [smaller quantization](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF#download-a-file-not-the-whole-branch-from-below). Otherwise, try your luck with a [3B model](https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/blob/main/Llama-3.2-3B-Instruct-Q6_K_L.gguf).
+
+Vice versa, if you have more VRAM, you can look for a larger model - 13B/14B is the next step.
+
+Generally, aim for a model/quantization whose file size is 1-2 GB below your VRAM (you can give it another GB to get more headroom/a bigger context window).
+</details>
 
 ### Tips
 
@@ -64,8 +86,8 @@ Getting a less intelligent model to successfully play your game will help more i
 	- All context influences the response and context that is out-of-tone can throw off the model
 	- (opinion) Flowery or long-winded descriptions should be used very sparingly
 - Natural language (e.g. `Consider your goals`) is okay - it is a language model, after all
-	- That said, language models are not humans - watch this short [video](https://www.youtube.com/watch?v=7xTGNNLPyMI) for a very brief overview of how LLMs work 
-- If you are testing with a small model (3B, 7B):
+	- That said, language models are not humans - watch this short [video](https://www.youtube.com/watch?v=7xTGNNLPyMI) for a very brief overview of how LLMs work
+- If you are testing with a small model (3-8B):
 	- Keep in mind Neuro might act differently from your model
 	- Including/omitting common-sense stuff can be hit or miss
 	- Rules with structured info (e.g. with [Markdown](https://www.markdownguide.org/basic-syntax/)) seem to perform better than unstructured
@@ -110,8 +132,8 @@ Differences marked with 🚧 will be resolved or obsoleted by the [v2 of the API
 	- Processing other sources of information like vision/audio/chat (for obvious reasons)
 	- Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
 	- Myriad other things like response timings, text filters, allowed JSON schema keywords, long-term memories, etc
-- 🚧 Registering an action with an existing name will replace the old one (by default, configurable through `(preset).gary.existing_action_policy`)
-- Only one active websocket connection is allowed per game; when another tries to connect, either the old or the new connection will be closed (configurable in `config.yaml` the same way as above)
+- 🚧 Registering an action with an existing name will replace the old one (by default, configurable through `gary.existing_action_policy`)
+- Only one active websocket connection is allowed per game; when another tries to connect, either the old or the new connection will be closed (configurable through `gary.existing_connection_policy`)
 - 🚧 Gary sends `actions/reregister_all` on every connect (instead of just reconnects, as in the spec)
 	- I can probably make something that figures out if it's a first launch or a reconnect but I'm too lazy
 - etc etc, just search for "IMPL" in the code

@@ -1,4 +1,5 @@
 from enum import Enum
+import os
 import dotenv, yaml, argparse
 from os import environ
 from typing import * # type: ignore
@@ -73,15 +74,8 @@ def _merge_nested_dicts(a: dict | None, b: dict | None):
             out[k] = bv
     return out
 
-def _load_config(preset_name: str, config_yaml: dict | None = None):
-    if config_yaml is None:
-        _config_yaml: dict
-        with open(CONFIG_PATH) as f:
-            _config_yaml = yaml.safe_load(f)
-        return _load_config(preset_name, _config_yaml)
-
-    preset: dict
-    if not (preset := config_yaml.get(preset_name, None)): # keeping ", None" because type inference no worky goodly
+def _load_config(preset_name: str, config_yaml: dict[str, dict]):
+    if not (preset := config_yaml.get(preset_name)):
         raise ValueError(f"Preset '{preset_name}' was not found in config.yaml")
     if base := preset.get('base'):
         if base not in config_yaml:
@@ -101,7 +95,19 @@ def _load_config(preset_name: str, config_yaml: dict | None = None):
     # print(preset)
     return preset
 
-CONFIG = Config(**_load_config(PRESET))
+_config_yaml: dict
+with open(CONFIG_PATH) as f:
+    _config_yaml = yaml.safe_load(f)
+CONFIG = Config(**_load_config(PRESET, _config_yaml))
+
+def validate_config(config: Config):
+    if (
+        config.llm.engine in ('llama_cpp', 'transformers')
+        and not os.path.exists(config.llm.model)
+    ):
+        raise ValueError(f"Model file '{config.llm.model}' not found")
+
+validate_config(CONFIG)
 
 # temp i guess
 # these are always kept in the context
