@@ -102,7 +102,7 @@ class LLM(HasEvents[Literal['context', 'say']]):
         self.token_limit = params.get("n_ctx", 1 << 32) - 200
         self.llm.echo = False
         end = time.time()
-        logger.info(f"loaded in {end-start:.2f} seconds")
+        logger.debug(f"loaded in {end-start:.2f} seconds") # FIXME: makes no sense for remote (guidance_server)
         self.temperature = params.get("temperature", 1.0)
     
     @classmethod
@@ -118,10 +118,12 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         if CONFIG.gary.allow_yapping:
             sys_prompt += "\nYou can choose to 'say' something, whether to communicate with any humans running your software or just to think out loud."
             sys_prompt += "\nRemember that your only means of interacting with the game is 'action'. In-game characters cannot hear you."
+        logger.trace(f"System prompt: {sys_prompt}")
         with system():
             self.llm += sys_prompt
         # no role closer here is surely fine
         if custom_rules := MANUAL_RULES.get(self.game.name):
+            logger.debug(f"Found custom rules for {self.game.name}")
             await self.context(custom_rules, silent=True, persistent_llarry_only=True, notify=False)
 
     def llm_engine(self) -> models._model.Engine:
@@ -345,7 +347,7 @@ The following actions are available to you:
         with self.assistant(model) as llm:
             time_gen(llm, gen_)
         said = llm['say']
-        logger.opt(colors=True).info(f"> <lc>{said}</>")
+        logger.opt(colors=True).success(f"> <lc>{said}</>")
         # for msg in cast(Llarry, llm).iter_messages_text()[-3:]:
         #     _logger.debug(f"{msg}\n\n{msg.encode()}")
         await self._raise_event('say', said)
@@ -368,7 +370,7 @@ The following actions are available to you:
                 logger.info(f"Trimming context ({used}/{self.token_limit} tokens used)")
                 self.llm = self.llm.trim()
             else:
-                logger.warning(f"Truncating context ({used}/{self.token_limit} tokens used)")
+                logger.info(f"Truncating context ({used}/{self.token_limit} tokens used)")
                 await self.reset()
     
     def system(self, lm = None):
@@ -396,6 +398,6 @@ def time_gen(lm: ModelWrapper, gen_: Function | str):
     tps: float = tokens_out / generation_took
     logger.debug(
         f'input {tokens_in} and output {tokens_out} tokens in {generation_took:.2f}s'
-        + (f' ({tps:.2f} tok/s)' if tps >= 0.5 else f' ({1/tps:.2f} s/tok)' if tps != 0 else '')
+        + (f' ({tps:.2f} tok/s)' if tps != 0 else '')
     )
     return lm

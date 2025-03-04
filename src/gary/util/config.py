@@ -1,9 +1,9 @@
+import os, dotenv, yaml, argparse
+
 from enum import Enum
-import os
-import dotenv, yaml, argparse
 from os import environ
-from typing import * # type: ignore
-from pydantic import BaseModel
+from typing import Any, Literal
+from pydantic import BaseModel, NonNegativeInt
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", help="Path to config file (default: 'config.yaml')", default=None)
@@ -17,7 +17,7 @@ class ConflictResolutionPolicy(Enum):
     DROP_INCOMING = 'drop_incoming'
     DROP_EXISTING = 'drop_existing'
 
-_LogLevel = Literal['all', 'trace', 'debug', 'info', 'success', 'warn', 'warning', 'error', 'critical', 'fatal', 'none'] | int
+_LogLevel = Literal['all', 'trace', 'debug', 'info', 'success', 'warning', 'error', 'critical', 'none'] | NonNegativeInt
 class Config(BaseModel):
     class LLMConfig(BaseModel):
         engine: Literal[
@@ -38,8 +38,8 @@ class Config(BaseModel):
             '''Sleep after saying something to simulate waiting for TTS.'''
         class LoggingConfig(BaseModel):
             log_level_file: _LogLevel = 'info'
-            log_level_console: _LogLevel = 'debug'
-            log_levels: dict[str, _LogLevel] = {
+            log_level_console: _LogLevel = 'info'
+            modules: dict[str, _LogLevel] = {
                 'gary.llm.scheduler': 'warning',
                 'gary.llm.llm': 'info',
             }
@@ -92,7 +92,7 @@ def _load_config(preset_name: str, config_yaml: dict[str, dict]):
         return out
 
     preset = replace_env(preset)
-    # print(preset)
+    # print(f"{preset_name=}\n{preset=}")
     return preset
 
 _config_yaml: dict

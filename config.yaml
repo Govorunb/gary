@@ -20,15 +20,14 @@ default:
     logging:
       log_level_file: info
       log_level_console: info
-      log_levels:
-        gary.llm.scheduler: warning
-        gary.llm.llm: info
+      modules:
+        scheduler: warning
+        llm: info
 randy:
   base: default
   overrides:
     llm:
       engine: randy
-      model:
     gary:
       allow_yapping: false # you don't want randy with this on, trust me
       scheduler:
@@ -44,3 +43,12 @@ phi:
       allow_yapping: true
       scheduler:
         sleep_after_say: true
+debug_websocket:
+  base: randy
+  overrides:
+    gary:
+      logging:
+        log_level_console: trace
+        modules:
+          websocket: trace # logs raw websocket messages
+

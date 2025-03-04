@@ -30,12 +30,16 @@ definitions:
               Randy ignores this.
             # For remote services like Anthropic, use the name of the model.
           api_key: {type: string}
-        required: [engine, model]
+        if: {not: {properties: {engine: {const: randy}}}}
+        then:
+          required: [engine, model]
+        else:
+          required: [engine]
         additionalProperties: false
       engine_params:
         type: object
         description: |
-          Parameters to pass to your chosen engine. Refer to the engine's documentation for possible values.
+          (Advanced) Parameters to pass to your chosen engine. Refer to the engine's documentation for possible values.
         additionalProperties: true
       gary:
         type: object
@@ -45,8 +49,41 @@ definitions:
             properties:
               log_level_file: {$ref: "#/definitions/log_level"}
               log_level_console: {$ref: "#/definitions/log_level"}
-              log_levels:
+              modules:
                 type: object
+                description: |
+                  Log levels for specific areas. The key is the module name, and the value is the log level.
+                  There are some common names that are aliased for convenience, available in the auto-complete suggestions.
+                properties:
+                  game:
+                    $ref: "#/definitions/log_level"
+                    description: |
+                      Logs things related to processing messages from the game.
+                      This is the layer between the websocket connection and the LLM (scheduler).
+                  websocket:
+                    $ref: "#/definitions/log_level"
+                    description: |
+                      Everything to do with the websocket connection is logged here.
+                      Set the log level to `trace` to see raw incoming/outgoing messages.
+                  llm:
+                    $ref: "#/definitions/log_level"
+                    description: |
+                      Log area for the language model.
+                      Notable log levels:
+                      - Model decisions are logged with `debug`
+                      - Context is logged with `info`
+                      - Model's speech is logged with `success`, which is one level above `info`
+                  scheduler:
+                    $ref: "#/definitions/log_level"
+                    description: |
+                      The scheduler is responsible for queueing actions and periodically poking the model if there's no incoming stimuli.
+                      You generally shouldn't need to peek in here, but it may aid in debugging in some edge cases.
+                  webui:
+                    $ref: "#/definitions/log_level"
+                    description: |
+                      Everything to do with the web UI.
+                propertyNames:
+                  pattern: ^\w[\w.]+$
                 additionalProperties: {$ref: "#/definitions/log_level"}
           allow_yapping:
             type: boolean
@@ -82,7 +119,7 @@ definitions:
                 type: boolean
                 description: |
                   Sleep after saying something to simulate waiting for TTS.
-                  Duration is based on message length.
+                  Duration is based on message length (0.1s per character).
               log_level: {$ref: "#/definitions/log_level"}
         additionalProperties: false
     additionalProperties: false
@@ -101,10 +138,11 @@ definitions:
       guidance_server,
     ]
   log_level:
-    description: Minimum log level. This can be one of the given values, or a non-negative integer (refer to the [Loguru](https://loguru.readthedocs.io/en/stable/api/logger.html#levels) documentation).
+    description: |
+      Minimum log level.
+      This can be one of the given values, or a non-negative integer (refer to the Loguru documentation at https://loguru.readthedocs.io/en/stable/api/logger.html#levels).
     oneOf:
-      - enum: [all, trace, debug, info, success, warn, warning, error, critical, fatal, none]
-      - type: integer
-        minimum: 0
+      - enum: [all, trace, debug, info, success, warning, error, critical, none]
+      - {type: integer, minimum: 0}
   conflict_resolution_policy:
     enum: [drop_incoming, drop_existing]
