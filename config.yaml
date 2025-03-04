@@ -51,4 +51,3 @@ debug_websocket:
         log_level_console: trace
         modules:
           websocket: trace # logs raw websocket messages
-

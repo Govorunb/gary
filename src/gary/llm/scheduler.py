@@ -83,12 +83,18 @@ class Scheduler:
 
     def _update_mute(self):
         if not self.can_act or not self.game.connection.is_connected():
-            self._try_timer.stop()
-            self._force_timer.stop()
+            self._stop_timers()
         else:
-            self._try_timer.start()
-            self._force_timer.start()
+            self._start_timers()
             self.enqueue(TryAction())
+
+    def _stop_timers(self):
+        self._try_timer.stop()
+        self._force_timer.stop()
+
+    def _start_timers(self):
+        self._try_timer.start()
+        self._force_timer.start()
     
     @property
     def status(self):
@@ -103,16 +109,14 @@ class Scheduler:
         self._worker_thread = threading.Thread(target=self._run_event_loop, daemon=True)
         self._worker_thread.start()
         if self.can_act:
-            self._try_timer.start()
-            self._force_timer.start()
+            self._start_timers()
 
     def stop(self) -> None:
         """Stop the event processing loop."""
         if not self._running:
             return
         self._running = False
-        self._try_timer.stop()
-        self._force_timer.stop()
+        self._stop_timers()
         if self._event_loop:
             self._event_loop.call_soon_threadsafe(self._event_loop.stop)
         if self._worker_thread:

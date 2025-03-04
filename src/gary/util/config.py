@@ -5,11 +5,14 @@ from os import environ
 from typing import Any, Literal
 from pydantic import BaseModel, NonNegativeInt
 
+# pull out to cli module? (10 lines...)
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", help="Path to config file (default: 'config.yaml')", default=None)
 parser.add_argument("--preset", help="Preset from config file to use (default: 'default')", default=None)
 args = parser.parse_args()
-dotenv.load_dotenv(dotenv.find_dotenv(), override=True)
+env_path = dotenv.find_dotenv()
+if env_path and os.path.exists(env_path):
+    dotenv.load_dotenv(env_path, override=True)
 CONFIG_PATH = args.config or environ.get("GARY_CONFIG_FILE", "config.yaml")
 PRESET = args.preset or environ.get("GARY_CONFIG_PRESET", "default")
 
