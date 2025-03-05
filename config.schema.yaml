@@ -25,8 +25,7 @@ definitions:
           model:
             type: string
             description: |
-              For local engines (e.g. llama_cpp), use the local path to the model (e.g. `_models/llama-2-7b.gguf`).
-              For guidance_server, this should be the URL of the server.
+              For LLM engines (`llama_cpp`, `transformers`), use the local path to the model (e.g. `_models/llama-2-7b.gguf`).
               Randy ignores this.
             # For remote services like Anthropic, use the name of the model.
           api_key: {type: string}
@@ -134,8 +133,9 @@ definitions:
     enum: [
       llama_cpp, transformers,
       randy,
-      # openai, anthropic, azure_openai, googleai,
-      guidance_server,
+      #openai, anthropic, azure_openai, googleai,
+      # guidance removed their server implementation. unlucky
+      #guidance_server,
     ]
   log_level:
     description: |

@@ -9,7 +9,6 @@ The project is mostly for fun but I'm open to feedback and contributions.
 ## Features
 - Can use a few model engines/providers:
 	- Local models (LlamaCpp, Transformers\*)
-	- Remote Guidance server\*
 	- A "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
 	- Remote services (OpenAI, Anthropic, Google, Azure) are *not* supported. For more info, read the ["Remote Services?"](#remote-services-openai-anthropic-google-azure) section.
 - **Guaranteed** to follow the schema[^1][^2][^3]
@@ -163,11 +162,11 @@ Differences marked with 🚧 will be resolved or obsoleted by the [v2 of the API
 - etc etc, just search for "IMPL" in the code
 
 #### Remote services? (OpenAI, Anthropic, Google, Azure)
-Only local models (and guidance server) are supported. Guidance lets you use remote services, but it cannot enforce grammar/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just throw exceptions because of invalid output instead.
+Only local models are supported. Guidance lets you use remote services, but it cannot enforce grammar/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just throw exceptions because of invalid output instead.
 
 ![log excerpt showing remote generation failed after exceeding the limit of 10 attempts](https://i.imgur.com/UNtnhdV.png)
 
-For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or the [guidance server example](https://github.com/guidance-ai/guidance/blob/727e8320062746b019d29a4cf393c88641fd7e4c/notebooks/server_anachronism.ipynb).
+For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or [this issue comment](https://github.com/guidance-ai/guidance/issues/502#issuecomment-1845893780).
 
 #### Acknowledgements
 Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:

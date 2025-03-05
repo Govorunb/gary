@@ -27,7 +27,7 @@ class Config(BaseModel):
             'llama_cpp', 'transformers',
             'randy',
             # 'openai', 'anthropic', 'azure_openai', 'googleai',
-            'guidance_server',
+            # 'guidance_server',
         ]
         model: str
         api_key: str = ""

@@ -203,7 +203,7 @@ class Scheduler:
                 event.ctx,
                 silent=event.silent,
                 ephemeral=event.ephemeral,
-                persistent_llarry_only=event.persistent_llarry_only,
+                persistent_llarry_only=event.persistent_llamacpp_only,
                 notify=event.notify
             )
             if not event.silent:

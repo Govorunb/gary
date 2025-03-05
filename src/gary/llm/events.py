@@ -36,12 +36,12 @@ class Context(BaseEvent):
     '''
     If ephemeral, anything resulting from this context (e.g. if the model chooses to act or say something) will not stay in the context window.
     '''
-    persistent_llarry_only: bool = False
+    persistent_llamacpp_only: bool = False
     '''
     Mark the message as persistent. Persistent messages always stay in the context window when it is trimmed.
-    Take care not to overuse this - 
+    Take care not to overuse this - the context window is limited. You should persist at most 1-2 messages (e.g. explaining game rules).
 
-    Llarry only - Transformers/Guidance server/Randy don't do partial trimming so they ignore this.
+    llama_cpp only - Transformers don't do partial trimming so they ignore this, and Randy doesn't care about context at all.
     '''
     notify: bool = True
     '''Whether to send a 'context' event to any connected WebUI clients.'''
