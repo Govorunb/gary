@@ -26,15 +26,16 @@ That said...
 >
 > Take a look at the [Known issues/todos](#known-issuestodos) section for an idea of what might change in the future.
 
-[^1]: Very very likely but not (yet) guaranteed, see [Known issues/todos](#known-issuestodos)<sup>a</sup>.
-[^2]: Not always the best option; see [Known issues/todos](#known-issuestodos)<sup>b</sup>.
-[^3]: For most common schemas. See [Known issues/todos](#known-issuestodos)<sup>c</sup>.
+[^1]: Very very likely but not (yet) guaranteed, see [Known issues/todos](#context-trimming).
+[^2]: Not always the best option; see [Known issues/todos](#guidance-token-forwarding).
+[^3]: For most common schemas. See [Known issues/todos](#json-schema-support).
 
 ## Quick start
-Since the project is aimed at developers, it's expected that you know your way around the command line, can clone the repo, and so on.
+Since the project is aimed at developers, it's expected that you know your way around the command line, have cloned the repo, and so on.
 1. Install [uv](https://github.com/astral-sh/uv#installation)
-2. Make a copy of `config.yaml` and point it to your model/configure stuff
+2. Make a copy of `config.yaml` and set your model in `(preset).llm`
 	- Use an editor with YAML schema support for a smoother config editing experience
+		- The [schema](https://github.com/Govorunb/gary/blob/main/config.schema.yaml) currently acts as the config documentation
 	- See [Project setup](#project-setup) below for more details
 3. Run the following command:
 ```
@@ -47,11 +48,12 @@ Files and folders starting with an underscore are `.gitignore`d - this is intend
 
 You can point Gary at a config file with either the `--config` flag or the `GARY_CONFIG_FILE` environment variable.
 
-It reads dotenv too, so you can make a `.env` file with the following contents and run with just `uv run gary`:
+It reads [dotenv](https://github.com/theskumar/python-dotenv) too, so you can make a `.env` file with the following contents:
 ```
 GARY_CONFIG_FILE=_your_config.yaml
 GARY_CONFIG_PRESET=randy
 ```
+...and run with just `uv run gary`.
 
 <details>
 <summary>Don't have a local model downloaded? Not sure which to get or where?</summary>
@@ -62,9 +64,9 @@ It takes around 8GB VRAM, which is [common](https://store.steampowered.com/hwsur
 
 If the 8B model is too slow, try a [smaller quantization](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF#download-a-file-not-the-whole-branch-from-below). Otherwise, try your luck with a [3B model](https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/blob/main/Llama-3.2-3B-Instruct-Q6_K_L.gguf).
 
-Vice versa, if you have more VRAM, you can look for a larger model - 13B/14B is the next step.
+On the other hand, if you have more VRAM or don't mind slower responses, you can look for a larger model - 13B/14B is the next step.
 
-Generally, aim for a model/quantization whose file size is 1-2 GB below your VRAM (you can give it another GB to get more headroom/a bigger context window).
+Generally, aim for a model/quantization whose file size is 1-2 GB below your VRAM (you can give it another GB of headroom to fit a bigger context window).
 </details>
 
 ### Tips
@@ -87,7 +89,7 @@ Getting a less intelligent model to successfully play your game will help more i
 	- (opinion) Flowery or long-winded descriptions should be used very sparingly
 - Natural language (e.g. `Consider your goals`) is okay - it is a language model, after all
 	- That said, language models are not humans - watch this short [video](https://www.youtube.com/watch?v=7xTGNNLPyMI) for a very brief overview of how LLMs work
-- If you are testing with a small model (3-8B):
+- If you are testing with a small model (under 10B):
 	- Keep in mind Neuro might act differently from your model
 	- Including/omitting common-sense stuff can be hit or miss
 	- Rules with structured info (e.g. with [Markdown](https://www.markdownguide.org/basic-syntax/)) seem to perform better than unstructured
@@ -109,20 +111,43 @@ If an action fails because of game state (e.g. trying to place an item in an occ
 4. Or, register a query-like action (e.g. `check_inventory`) that allows the model to ask about the state at any time and just hope for the best
 
 ## Known issues/todos
-- <sup>a</sup> Trimming context (for continuous generation) only works with local LlamaCpp. Other model engines will instead fully truncate context, and may rarely fail due to overrunning the context window. Not tested.
-- <sup>b</sup> There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
-	- Basically, if the model wants something invalid, it will pick a similar or seemingly arbitrary valid option. For example:
-		- The model hallucinates about pouring drinks into a glass in its chain-of-thought
-		- The token likelihoods now favor `"glass"`, which is not a valid option (but `"gin"` is)
-		- When generating the action JSON, guidance picks `"gin"` because *(gives a long explanation)*
-	- For nerds - guidance uses the model to generate the starting tokens and forwards the rest as soon as it's fully disambiguated (so e.g. `"g` has the highest likelihood, so it gets picked, and then `in"` is auto-completed because `"gin"` is the only option starting with `"g`, even though in reality the model wanted to say `"glass"`). [Learn more](https://github.com/guidance-ai/guidance/issues/564)
-	- In a case like this, it would have been better to just let it fail and retry - oh well, at least it's fast
+### Context trimming
+Trimming context (for continuous generation) only works with the `llama_cpp` engine. Other engines will instead fully truncate context, and may rarely fail due to overrunning the context window.
+
+I plan to make an abstraction over managing context so all engines can work safely, but it's not at the top of my priority list currently.
+
+### Guidance token forwarding
+There's a quirk with the way guidance enforces grammar that can sometimes negatively affect chosen actions.
+
+Basically, if the model wants something invalid, it will pick a similar or seemingly arbitrary valid option. For example:
+- The game is about serving drinks at a bar, with valid items to pick up/serve being `"vodka"`, `"gin"`, etc
+- The model gets a bit too immersed and hallucinates about pouring drinks into a glass (which is not an action)
+- When asked what to do next, the model *wants* to call e.g. `pick up` on `"glass of wine"`
+- Since this is not a valid option, guidance picks `"gin"` because *(gives a long explanation)*
+
+For nerds - guidance uses the model to generate the starting token probabilities and forwards the rest as soon as it's fully disambiguated.
+
+In this case, `"g` has the highest likelihood of all valid tokens, so it gets picked; then, `in"` is auto-completed because `"gin"` is the only remaining option (of all valid items) that starts with `"g`.
+
+[Learn more](https://github.com/guidance-ai/guidance/issues/564)
+
+In a case like this, it would have been better to just let it fail and retry - oh well, at least it's fast.
+
+### JSON schema support
+Not all JSON schema keywords are supported in Guidance. You can find an up-to-date list [here](https://github.com/Govorunb/gary/blob/main/src/gary/util/utils.py#L68).
+
+Unsupported keywords will produce a warning and be excluded from the grammar.
+
+> [!Warning]
+> This means that the LLM **might not fully comply with the schema**.
+> 
+> It's very important that the game validates the backend's responses and sends back meaningful and interpretable error messages.
+
+Following [the Neuro API spec](https://github.com/VedalAI/neuro-game-sdk/blob/main/API/SPECIFICATION.md#action) is generally safe. If you find an action schema is getting complex or full of obscure keywords, consider logically restructuring it or breaking it up into multiple actions.
+
+#### Miscellaneous jank
 - The web interface can be a bit flaky - keep an eye out for any exceptions in the terminal window and, when in doubt, refresh the page
 	- Send thoughts and prayers please
-- <sup>c</sup> Not all JSON schema keywords are supported in Guidance. You can find an up-to-date list [here](https://github.com/Govorunb/gary/blob/main/src/gary/util/utils.py#L68).
-	- Unsupported keywords will produce a warning and be excluded from the grammar.<br/>
-		- This means that the LLM **might not fully comply with the schema** - it's very important that the game validates the backend's responses and sends back meaningful and interpretable error messages.
-	- Generally, following [the Neuro API spec](https://github.com/VedalAI/neuro-game-sdk/blob/main/API/SPECIFICATION.md#action) is pretty safe. If you find an action schema is getting complex or full of obscure keywords, consider logically restructuring it or breaking it up into multiple actions.
 
 ### Implementation-specific behaviour
 There may be cases where other backends (including Neuro) may behave differently.
