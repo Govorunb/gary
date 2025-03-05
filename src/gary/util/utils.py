@@ -94,7 +94,7 @@ _GUIDANCE_SCHEMA_SUPPORTED_KEYWORDS = {
     "maximum": 0,
     "exclusiveMinimum": 0,
     "exclusiveMaximum": 0,
-    # "multipleOf": 2, # not in guidance yet
+    # "multipleOf": 2, # implemented in llguidance; not in python guidance yet
 
     # Unimplemented
     # "$dynamicAnchor": "",
@@ -162,17 +162,6 @@ def json_schema_filter(schema: dict | None) -> FilteredSchema:
         else:
             out[k] = v
     return FilteredSchema(out, unsupported)
-
-def _internal_test_keywords():
-    from guidance import json
-    try:
-        json(schema=_GUIDANCE_SCHEMA_SUPPORTED_KEYWORDS)
-    except ValueError as e:
-        print(e)
-    import sys
-    print("Done")
-    sys.exit(0)
-# _internal_test_keywords()
 
 # https://loguru.readthedocs.io/en/stable/api/logger.html ctrl+f "abbr" or "The color markups"
 def loguru_tag(msg: str, tag: str):
