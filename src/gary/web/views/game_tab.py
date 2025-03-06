@@ -3,9 +3,10 @@ import orjson
 import panel as pn
 import param
 
-from typing import cast
+from typing import cast, get_args
 from bokeh.models import Tooltip
 from loguru import logger
+from jsf import JSF
 
 from ...llm.events import ClearContext
 from ...util import bokeh_html_with_newlines, markdown_code_fence
@@ -72,34 +73,54 @@ class GameTab(pn.viewable.Viewer):
         def _open_modal(contents: pn.viewable.Viewable):
             modal_contents[:] = [contents]
             modal.open = True
-        
+
         def _close_modal(*_):
             modal_contents[:] = []
             modal.open = False
 
+        def _get_command(t: type[Message]) -> str:
+            return t.model_fields['command'].default
+
+        msg_templates: dict[str, type[BaseModel]] = {
+            # only neuro messages since this is the neuro side
+            _get_command(t): t for t in get_args(AnyNeuroMessage)
+        }
+
+        def generate_template_json(template_name: str) -> str:
+            if not (model_cls := msg_templates.get(template_name)):
+                return ""
+
+            schema = model_cls.model_json_schema()
+            jsf = JSF(schema, allow_none_optionals=0) # 'command' is defined as optional for ease of instantiation but actually isn't
+            return orjson.dumps(jsf.generate(), option=orjson.OPT_INDENT_2).decode()
+
         raw_input_modal = pn.Column(
-            "# Send Raw WS Message",
+            "<h1>Send Raw WS Message</h1>",
             "Send a raw websocket message to the game.",
             (raw_input := pn.widgets.CodeEditor(
-                value=orjson.dumps({
-                    "command": "action",
-                    "data": {
-                        "id": "manual",
-                        "name": "",
-                        "data": {},
-                    }
-                }, option=orjson.OPT_INDENT_2).decode(),
+                value='{\n\t"command": ""\n}',
                 language='json',
                 sizing_mode='stretch_width',
                 min_height=300,
             )),
-            # TODO: templates (spec (pydantic models) -> json schema -> jsf)
             pn.Row(
+                pn.widgets.StaticText(value="Template:"),
+                (template_select := pn.widgets.Select(
+                    options=[""] + list(msg_templates.keys()),
+                    value="",
+                    width=200,
+                )),
                 pn.HSpacer(),
                 (raw_send_button := pn.widgets.Button(name="Send", button_type="primary")),
-                pn.HSpacer(),
             ),
         )
+
+        def _update_template(evt):
+            if not evt.new:
+                return
+            raw_input.value = generate_template_json(evt.new)
+
+        template_select.param.watch(_update_template, 'value')
 
         @raw_send_button.on_click
         async def _(*_):
@@ -128,7 +149,7 @@ class GameTab(pn.viewable.Viewer):
                 pn.HSpacer(),
                 send_raw_button,
                 pn.Spacer(width=15), # space for gridstack resize handle
-                
+
                 margin=(5, 10),
             ),
 
