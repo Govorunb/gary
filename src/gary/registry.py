@@ -185,16 +185,17 @@ class Game(HasEvents[_game_events]):
 
     async def process_result(self, result: ActionResult):
         if not self.pending_actions.pop(result.data.id, None):
-            logger.warning(f"Received result for unknown action {result.data.id}")
-            # IMPL: result for unknown action
-            return
+            logger.warning(f"Received result with unknown id {result.data.id}")
+            # IMPL: unknown results are processed
+            # return
 
         # IMPL: there SHOULD be a message on failure, but success doesn't require one
         ctx = f"Result for action {result.data.id[:5]}: {"Performing" if result.data.success else "Failure"} ({result.data.message or 'no message'})"
+        # TODO: v2 - retry responsibility moved to game (thank god)
         is_force = bool(force := self.pending_forces.pop(result.data.id, None))
         await self.send_context(ctx, silent=result.data.success or is_force) # IMPL: will try acting again if failed
         # IMPL: not checking whether the actions in the previous force are still registered
-        # i have no idea if it's guaranteed by the spec or not
+        # unregistering during force retry is a dangerous edge case that is fixed by v2
         if is_force and not result.data.success:
             await self.handle(force)
 

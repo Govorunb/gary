@@ -1,4 +1,5 @@
 import asyncio
+import orjson
 import panel as pn
 import param
 
@@ -20,6 +21,15 @@ class GameTab(pn.viewable.Viewer):
         "overflow": "hidden",
         "height": "100%",
     }
+    _modal_style = """
+.dialog-content {
+    background-color: var(--background-color);
+    max-width: 90%;
+}
+.pnx-dialog-close {background-color: revert;}
+.pnx-dialog-close:hover {background-color: revert;}
+"""
+
     def __init__(self, game: Game, *a, **kw):
         super().__init__(*a, **kw)
         with param.edit_constant(self):
@@ -47,14 +57,83 @@ class GameTab(pn.viewable.Viewer):
                 margin=0,
             ),
         )
+
+        # you can only have one modal... total. opening any modal opens all of them (probably an AllyDialog issue)
+        # baffling how many normal expected things just don't work
+        # and that apparently not a single other soul has ever tried to do these things
+        modal = pn.Modal(
+            (modal_contents := pn.Column()), # and it doesn't update direct contents properly :)
+            min_width=600,
+            show_close_button=True,
+            background_close=True,
+            stylesheets=[self._modal_style],
+        )
+
+        def _open_modal(contents: pn.viewable.Viewable):
+            modal_contents[:] = [contents]
+            modal.open = True
+        
+        def _close_modal(*_):
+            modal_contents[:] = []
+            modal.open = False
+
+        raw_input_modal = pn.Column(
+            "# Send Raw WS Message",
+            "Send a raw websocket message to the game.",
+            (raw_input := pn.widgets.CodeEditor(
+                value=orjson.dumps({
+                    "command": "action",
+                    "data": {
+                        "id": "manual",
+                        "name": "",
+                        "data": {},
+                    }
+                }, option=orjson.OPT_INDENT_2).decode(),
+                language='json',
+                sizing_mode='stretch_width',
+                min_height=300,
+            )),
+            # TODO: templates (spec (pydantic models) -> json schema -> jsf)
+            pn.Row(
+                pn.HSpacer(),
+                (raw_send_button := pn.widgets.Button(name="Send", button_type="primary")),
+                pn.HSpacer(),
+            ),
+        )
+
+        @raw_send_button.on_click
+        async def _(*_):
+            msg = cast(str, raw_input.value)
+            with raw_send_button.param.update(name="Sending...", disabled=True):
+                await game.connection.ws.send_text(msg)
+            _close_modal()
+
+        send_raw_button = pn.widgets.Button(
+            name="Send Raw",
+            button_type='default',
+            description=Tooltip(
+                content="Send a raw websocket message.",
+                position='top',
+                attachment='above',
+            ),
+        )
+
+        send_raw_button.on_click(lambda _: _open_modal(raw_input_modal))
+
         actions = pn.Column(
             "<h1>Actions</h1>",
             actions,
             pn.Row(
-                mute_toggle_with_tooltip
+                mute_toggle_with_tooltip,
+                pn.HSpacer(),
+                send_raw_button,
+                pn.Spacer(width=15), # space for gridstack resize handle
+                
+                margin=(5, 10),
             ),
 
-            styles=self._css, sizing_mode='stretch_both'
+            styles=self._css,
+            sizing_mode='stretch_both',
         )
 
         ctx_log = ContextLog(game)
@@ -75,9 +154,9 @@ class GameTab(pn.viewable.Viewer):
                 await asyncio.sleep(0.1)
                 game.scheduler.enqueue(ClearContext())
                 ctx_log.logs = []
-        
+
         dump_ctx_button = pn.widgets.Button(
-            name="Dump Context",
+            name="Show Context",
             button_type='default',
             description=Tooltip(
                 content=bokeh_html_with_newlines(
@@ -90,28 +169,15 @@ class GameTab(pn.viewable.Viewer):
         context_md = pn.pane.Markdown()
         ctx_dump_muted_md = pn.pane.Markdown(
             "The model is muted while this dialog is open.",
-            visible=False
+            visible=False,
         )
 
-        context_modal = pn.Modal(
-            "# Context Dump",
+        context_modal = pn.Column(
+            "# Context Window",
             ctx_dump_muted_md,
             context_md,
-            show_close_button=True,
-            background_close=True,
-            stylesheets=[
-                """
-                .dialog-content {
-                    background-color: var(--background-color);
-                    max-width: 90%;
-                    max-height: 100%;
-                }
-                .pnx-dialog-close {background-color: revert;}
-                .pnx-dialog-close:hover {background-color: revert;}
-                """
-            ],
         )
-        
+
         @dump_ctx_button.on_click
         async def _(*_):
             with dump_ctx_button.param.update(name="Retrieving...", disabled=True):
@@ -119,11 +185,11 @@ class GameTab(pn.viewable.Viewer):
                 context_dump = game.llm.dump()
                 fence = markdown_code_fence(context_dump)
                 context_md.object = f"{fence}none\n{context_dump}\n{fence}"
-                context_modal.open = True
+                _open_modal(context_modal)
                 was_unmuted = not cast(bool, mute_toggle.value)
                 mute_toggle.value = True
                 ctx_dump_muted_md.visible = was_unmuted
-                while context_modal.open:
+                while modal.open: # type: ignore
                     await asyncio.sleep(0.1)
                 if was_unmuted:
                     mute_toggle.value = False
@@ -141,11 +207,11 @@ class GameTab(pn.viewable.Viewer):
             msg = say_input.value
             say_input.value = ""
             with say_button.param.update(name="Sending...", disabled=True):
-                await game.send_context("(SYSTEM) " + msg, silent=True)
-        
+                await game.send_context("(SYSTEM) " + msg, silent=True) # TODO: better marker
+
         say_button.on_click(_)
         say_input.param.watch(_, 'enter_pressed')
-        
+
         context = pn.Column(
             "<h1>Context</h1>",
             ctx_log,
@@ -156,10 +222,10 @@ class GameTab(pn.viewable.Viewer):
                 pn.HSpacer(),
                 dump_ctx_button,
                 pn.Spacer(width=15), # space for gridstack resize handle
-                context_modal,
             ),
 
-            styles=self._css, sizing_mode='stretch_both'
+            styles=self._css,
+            sizing_mode='stretch_both',
         )
 
         enable_resize = pn.widgets.Checkbox(name="Allow resizing")
@@ -182,21 +248,15 @@ class GameTab(pn.viewable.Viewer):
         enable_resize.value = grid.allow_resize = True
         enable_drag.value = grid.allow_drag = False
 
-        config = pn.Column(
-            "<h1>Config</h1>",
-            "These settings are mostly for playing around and do not persist",
-            pn.Accordion(
-                # ("LLM", pn.Column(
-                #     margin=(5, 10),
-                # )),
-                ("Layout", pn.Column(
-                    enable_resize,
-                    enable_drag,
-                    margin=(5, 10),
-                )),
-                sizing_mode='stretch_width',
-                active=[0], # start with top card open
+        advanced = pn.Column(
+            "<h1>Advanced</h1>",
+            pn.Column(
+                "## Layout\n\nThese settings are mostly for playing around and do not persist.",
+                enable_resize,
+                enable_drag,
+                margin=(5, 10),
             ),
+            modal,
             pn.VSpacer(),
             "If stuff breaks, try refreshing the page",
             sizing_mode='stretch_both',
@@ -207,6 +267,6 @@ class GameTab(pn.viewable.Viewer):
         # https://github.com/gridstack/gridstack.js?tab=readme-ov-file#custom-columns-css
         grid[0:12, 0:4] = actions
         grid[0:12, 4:9] = context
-        grid[0:12, 9:12] = config
+        grid[0:12, 9:12] = advanced
 
         return grid

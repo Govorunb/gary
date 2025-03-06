@@ -100,6 +100,8 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
                 return pn.Row(send_button, margin=10)
 
             # TODO: handle {enum: [...]} (e.g. {enum: [null]})
+            # TODO: "raw" option (ace editor instead of form)
+            #       needs to be a modal because ace has an issue where it force scrolls to weird positions on mousedown
             form = SchemaForm.create(schema=schema, name="data")
 
             randy_button = pn.widgets.Button(name="Random", button_type='light')

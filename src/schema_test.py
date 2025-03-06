@@ -224,7 +224,12 @@ ACTIONS = [
 ]
 test_actions = {action.name: action for action in ACTIONS}
 
-class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connect", "disconnect", "receive", "send"]]):
+class CloseEvent(NamedTuple):
+    code: int
+    reason: str
+    server_disconnected: bool
+
+class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal['connect', 'disconnect', 'receive', 'send']]):
     def __init__(self, ws: ClientConnection, t_recv: TypeAdapter[TRecv], t_send: TypeAdapter[TSend]):
         super().__init__()
         self.ws = ws
@@ -238,7 +243,7 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
         if not self.is_connected():
             return
         await self.ws.close(code, reason)
-        await self._raise_event("disconnect", code, reason, False)
+        await self._raise_event('disconnect', code, reason, False)
 
     async def send(self, message: TSend):
         if not self.is_connected():
@@ -247,36 +252,33 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal["connec
         text = orjson.dumps(message.model_dump(mode='json', by_alias=True)).decode()
         logger.trace(f'Sending: {text}')
         await self.ws.send(text)
-        await self._raise_event("send", message)
+        await self._raise_event('send', message)
 
+    @logger.catch(reraise=True)
     async def receive(self) -> TRecv:
         text = await self.ws.recv(True)
         if not text:
             raise ValueError("Received empty message")
-        logger.trace(f'Received: {text}')
+        logger.trace(f"Received: {text}")
         model = self.t_recv.validate_json(text, strict=True)
-        await self._raise_event("receive", model)
+        await self._raise_event('receive', model)
         return model
 
     async def lifecycle(self):
-        await self._raise_event("connect")
-        CloseEvent = NamedTuple("CloseEvent", [("code", int), ("reason", str), ("client_disconnected", bool)])
+        await self._raise_event('connect')
         close_event = CloseEvent(1000, "", False)
         try:
             while self.is_connected():
                 await self.receive()
-        except Exception as e:
-            logger.trace(f"Disconnecting: {e}")
-            if isinstance(e, ConnectionClosed):
-                logger.info(f"WebSocket disconnected: [{e.code}] {e.reason}")
-                close_event = CloseEvent(e.code, e.reason, True)
-            else:
-                logger.warning(f"Message handler error: ({type(e)}) {e}")
-                close_event = CloseEvent(1011, "Internal error", False)
-                await self.ws.close(close_event.code, close_event.reason)
-                raise
+        except ConnectionClosed as cc:
+            logger.info(f"WebSocket disconnected: [{cc.code}] {cc.reason}")
+            close_event = CloseEvent(cc.code, cc.reason, True)
+        except Exception:
+            close_event = CloseEvent(1011, "Internal error", False)
+            await self.ws.close(close_event.code, close_event.reason)
+            raise
         finally:
-            await self._raise_event("disconnect", close_event)
+            await self._raise_event('disconnect', close_event)
 
 class Connection(WSConnection[AnyNeuroMessage, AnyGameMessage]):
     def __init__(self, ws: ClientConnection):
@@ -301,9 +303,9 @@ You may deviate from the given schema, it is part of the test.
                 }
                 await self.send(Context(**resp))
             case Action():
-                data: str = msg.data.data or ""
+                data: str | None = msg.data.data
                 name = msg.data.name
-                data = orjson.loads(data.encode())
+                data = data and orjson.loads(data.encode())
                 response = f"Echo: {name=} {data=}"
                 success = True
                 try:
@@ -332,7 +334,7 @@ async def main():
         sys.stdout,
         colorize=True,
         format="{time:HH:mm:ss} | <le>{file}:{line}</> | <level>{message}</>",
-        level="INFO"
+        level="TRACE"
     )
     while True:
         try:

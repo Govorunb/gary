@@ -91,7 +91,7 @@ class Action(NeuroMessage):
     class Data(BaseModel):
         id: str = Field(default_factory=lambda: uuid4().hex)
         name: str
-        data: Any | None
+        data: str | None
 
     command: Literal["action"] = "action"
     data: Data
