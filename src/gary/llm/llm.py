@@ -41,7 +41,7 @@ _engine_map = {
 (ACT, SAY, WAIT) = ('action', 'say', 'wait')
 
 SENDER_SYSTEM = 'SYSTEM'
-SENDER_HUMAN = 'User (Web UI)'
+SENDER_HUMAN = 'USER'
 
 class Act(NamedTuple):
     name: str
