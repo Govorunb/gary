@@ -201,6 +201,7 @@ class Scheduler:
         if isinstance(event, Context):
             await self.game.llm.context(
                 event.ctx,
+                event.sender or self.game.name,
                 silent=event.silent,
                 ephemeral=event.ephemeral,
                 persistent_llarry_only=event.persistent_llamacpp_only,

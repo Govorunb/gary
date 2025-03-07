@@ -28,6 +28,10 @@ class BaseEvent:
 @dataclass
 class Context(BaseEvent):
     ctx: str
+    sender: str | None = None
+    '''
+    The source of the context. Usually the game, but can be overridden.
+    '''
     silent: bool = False
     '''
     If not silent, the model will be prompted to act when this event is processed.

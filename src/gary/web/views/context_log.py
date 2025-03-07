@@ -5,6 +5,7 @@ import html
 
 from ...registry import Game
 from ...util import html_newlines
+from ...llm.llm import SENDER_SYSTEM, SENDER_HUMAN
 
 class LogEntry(pn.viewable.Viewer):
     value = param.String()
@@ -26,15 +27,21 @@ class ContextLogEntry(LogEntry):
     success = param.Boolean(default=None, allow_None=True) # type: ignore
     silent = param.Boolean(default=False) # type: ignore
     ephemeral = param.Boolean(default=False) # type: ignore
+    source = param.String(default='game') # type: ignore
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.success: bool | None
         self.silent: bool
-        self.ephemeral: bool
-    
+        self.ephemeral: bool    
+        self.source: str
+
     def _css_classes(self):
-        classes = ['source-game']
+        source = {
+            SENDER_SYSTEM: 'source-system',
+            SENDER_HUMAN: 'source-human',
+        }
+        classes = [source.get(self.source, 'source-game')]
         if self.success is not None:
             classes.append('ctx-success' if self.success else 'ctx-failure')
         if self.silent:
@@ -47,6 +54,10 @@ class SayLogEntry(LogEntry):
     def _css_classes(self):
         return ['source-llm']
 
+class HumanLogEntry(LogEntry):
+    def _css_classes(self):
+        return ['source-human']
+
 class ContextLog(pn.viewable.Viewer):
     logs = param.List(default=[], item_type=LogEntry)
     new_log = param.Event()
@@ -57,20 +68,21 @@ class ContextLog(pn.viewable.Viewer):
 .ctx-ephemeral {text-decoration: line-through;}
 
 .source-llm {background-color: rgba(0, 255, 255, 0.2);}
-.source-human {background-color: rgba(0, 0, 255, 0.1);}
+.source-human {background-color: rgba(128, 0, 255, 0.2);}
 
-.source-llm, .source-human, .source-game {
+[class*="source-"] {
     position: relative;
     padding-left: 1.4rem;
 }
-.source-llm:before, .source-human:before, .source-game:before {
+[class*="source-"]:before {
     position: absolute;
     left: 0;
     top: 0;
 }
-.source-llm:before {content:"💬";}
-.source-human:before {content:"⌨️";}
+.source-system:before {content:"🖥️";}
 .source-game:before {content:"🎮";}
+.source-llm:before {content:"💬";}
+.source-human:before {content:"🧑‍🦲";}
 """
 
     def __init__(self, game: Game, *a, **kw):
@@ -97,13 +109,14 @@ class ContextLog(pn.viewable.Viewer):
             styles={'flex': '1'},
         )
 
-    def on_context(self, ctx: str, silent: bool = False, ephemeral: bool = False):
+    def on_context(self, ctx: str, sender: str, silent: bool = False, ephemeral: bool = False):
         m = re.match(r"Result for action (?:[^:])+: (?P<res>Performing|Failure)", ctx)
         new_log = ContextLogEntry(
             value=ctx,
             success=m.group("res") == "Performing" if m else None,
             silent=silent,
-            ephemeral=ephemeral
+            ephemeral=ephemeral,
+            source=sender,
         )
         self._add_log(new_log)
     

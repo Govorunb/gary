@@ -9,6 +9,7 @@ from loguru import logger
 from jsf import JSF
 
 from ...llm.events import ClearContext
+from ...llm.llm import SENDER_HUMAN
 from ...util import bokeh_html_with_newlines, markdown_code_fence
 from ...registry import Game
 from ...spec import *
@@ -228,7 +229,7 @@ class GameTab(pn.viewable.Viewer):
             msg = say_input.value
             say_input.value = ""
             with say_button.param.update(name="Sending...", disabled=True):
-                await game.send_context("(SYSTEM) " + msg, silent=True) # TODO: better marker
+                await game.send_context(msg, SENDER_HUMAN)
 
         say_button.on_click(_)
         say_input.param.watch(_, 'enter_pressed')

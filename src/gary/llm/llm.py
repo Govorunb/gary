@@ -40,6 +40,9 @@ _engine_map = {
 
 (ACT, SAY, WAIT) = ('action', 'say', 'wait')
 
+SENDER_SYSTEM = 'SYSTEM'
+SENDER_HUMAN = 'User (Web UI)'
+
 class Act(NamedTuple):
     name: str
     data: str | None
@@ -116,7 +119,7 @@ class LLM(HasEvents[Literal['context', 'say']]):
 You are Gary, an expert gamer AI. Your main purpose is playing games. You perform in-game actions via sending JSON to a special software integration system.
 You are goal-oriented but curious. You aim to keep your actions varied and entertaining."""
         if CONFIG.gary.allow_yapping:
-            sys_prompt += "\nYou can choose to 'say' something, whether to communicate with any humans running your software or just to think out loud."
+            sys_prompt += "\nYou can choose to 'say' something, whether to communicate with the user running your software or just to think out loud."
             sys_prompt += "\nRemember that your only means of interacting with the game is 'action'. In-game characters cannot hear you."
         logger.trace(f"System prompt: {sys_prompt}")
         with system():
@@ -124,7 +127,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         # no role closer here is surely fine
         if custom_rules := MANUAL_RULES.get(self.game.name):
             logger.debug(f"Found custom rules for {self.game.name}")
-            await self.context(custom_rules, silent=True, persistent_llarry_only=True, notify=False)
+            await self.context(custom_rules, self.game.name, silent=True, persistent_llarry_only=True, notify=False)
 
     def llm_engine(self) -> models._model.Engine:
         return self.llm.engine # type: ignore
@@ -161,13 +164,14 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             await self.gaming()
 
     async def gaming(self):
-        await self.context(f"Connected. You are now playing {self.game.name}", silent=True)
+        await self.context(f"Connected. You are now playing {self.game.name}", SENDER_SYSTEM, silent=True)
 
     async def not_gaming(self):
-        await self.context("Disconnected.", silent=True)
+        await self.context(f"Disconnected from {self.game.name}.", SENDER_SYSTEM, silent=True)
 
     async def context(self,
         ctx: str,
+        sender: str,
         *,
         silent: bool = False,
         ephemeral: bool = False,
@@ -177,7 +181,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
     ) -> models.Model:
         # TODO: options for decorating the message
         # so try/force_action prompts (or manual send from webui) don't appear as though they come from the game
-        msg = f"[{self.game.name}] {ctx}"
+        msg = f"[{sender}] {ctx}"
         tokens = len(self.llm_engine().tokenizer.encode(msg.encode()))
         await self.truncate_context(tokens)
         with self.user() as lm:
@@ -200,7 +204,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             logger.debug(f"Marking message {i} as persistent (current: {out.persistent})")
             out.persistent.add(i)
         if notify:
-            await self._raise_event('context', ctx, silent, ephemeral)
+            await self._raise_event('context', ctx, sender, silent, ephemeral)
         if not ephemeral:
             self.llm = out
         return out
@@ -232,7 +236,7 @@ You must perform one of the following actions, given this information:
         # self.action doesn't take a model param, so ephemerality here is done by setting/resetting self.llm
         # relies on immutability of model objects
         llm_ephemeral_restore = self.llm
-        self.llm = await self.context(ctx_msg, silent=True, ephemeral=ephemeral, do_print=False, notify=True)
+        self.llm = await self.context(ctx_msg, SENDER_SYSTEM, silent=True, ephemeral=ephemeral, do_print=False, notify=True)
         act = await self.action(actions, ephemeral=ephemeral)
         if ephemeral:
             self.llm = llm_ephemeral_restore
@@ -303,7 +307,7 @@ The following actions are available to you:
         options = [key for key, value in options_map.items() if value]
         if len(options) > 1:
             ctx += f"\nRespond with one of these options: {options}"
-        pre_resp = await self.context(ctx, silent=True, ephemeral=True, do_print=False, notify=False)
+        pre_resp = await self.context(ctx, SENDER_SYSTEM, silent=True, ephemeral=True, do_print=False, notify=False)
         resp = f'''
 ```json
 {{
