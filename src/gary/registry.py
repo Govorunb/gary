@@ -180,7 +180,7 @@ class Game(HasEvents[_game_events]):
         self.pending_actions[msg.data.id] = msg
         if force:
             self.pending_forces[msg.data.id] = force
-        ctx = f"Executing action '{name}' with {{id: \"{msg.data.id[:5]}\", data: {msg.data.data}}}"
+        ctx = f"Executing action '{name}' with {{id: \"{msg.data.id[:6]}\", data: {msg.data.data}}}"
         await self.send_context(ctx, sender=SENDER_SYSTEM, silent=True)
         await self._raise_event("action", msg)
         await self._connection.send(msg)
@@ -192,9 +192,10 @@ class Game(HasEvents[_game_events]):
             # return
 
         # IMPL: there SHOULD be a message on failure, but success doesn't require one
-        ctx = f"Result for action {result.data.id[:5]}: {'Performing' if result.data.success else 'Failure'} ({result.data.message or 'no message'})"
+        ctx = f"Result for action {result.data.id[:6]}: {'Performing' if result.data.success else 'Failure'} ({result.data.message or 'no message'})"
         # TODO: v2 - retry responsibility moved to game (thank god)
         is_force = bool(force := self.pending_forces.pop(result.data.id, None))
+        # TODO: should this be game sender?
         await self.send_context(ctx, sender=SENDER_SYSTEM, silent=result.data.success or is_force) # IMPL: will try acting again if failed
         # IMPL: not checking whether the actions in the previous force are still registered
         # unregistering during force retry is a dangerous edge case that is fixed by v2
