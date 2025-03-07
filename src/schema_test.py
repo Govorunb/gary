@@ -295,7 +295,7 @@ class Connection(WSConnection[AnyNeuroMessage, AnyGameMessage]):
                 logger.success(f"Reregistering {len(ACTIONS)} actions")
                 await self.send(RegisterActions(**resp))
                 resp["data"] = {
-                    "message": """
+                    "message": """\
 Welcome to the JSON Schema test. Please execute the actions available to you.
 You may deviate from the given schema, it is part of the test.
 """,
