@@ -26,8 +26,8 @@ package = true
 
 [project.scripts]
 gary = "gary.__main__:start"
-schema_test = "schema_test:start"
-check_keywords = "check_keywords:test_keywords"
+schema_test = "tests.schema_test:start"
+check_keywords = "tests.check_keywords:test_keywords"
 
 [tool.uv.sources]
 llama-cpp-python = { index = "abetlen-cu124" }

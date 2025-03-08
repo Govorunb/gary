@@ -1,22 +1,24 @@
 import asyncio
-import sys
-import orjson
 import jsonschema
+import orjson
+import sys
 
-from websockets import ClientConnection, ConnectionClosed, State
-from websockets.asyncio.client import connect
+from collections import defaultdict
+from collections.abc import MutableMapping
 from loguru import logger
-from typing import Any, NamedTuple, Literal
-from pydantic import BaseModel, TypeAdapter
+from typing import Any
+from websockets import ClientConnection
+from websockets.asyncio.client import connect
 
 from gary.spec import *
-from gary.util.utils import HasEvents
+from .util import Connection, Game, Handler
 
 # shut up
 import warnings
 import logging
 warnings.filterwarnings('ignore')
 logging.getLogger('asyncio').setLevel(999999999)
+
 
 def action(name: str, desc: str, schema: dict[str, Any]) -> ActionModel:
     return ActionModel(name=name, description=desc, schema=schema) # type: ignore
@@ -224,107 +226,53 @@ ACTIONS = [
 ]
 test_actions = {action.name: action for action in ACTIONS}
 
-class CloseEvent(NamedTuple):
-    code: int
-    reason: str
-    server_disconnected: bool
+class JSONSchemaTest(Game):
+    def __init__(self, name: str, ws: Connection | ClientConnection):
+        super().__init__(name, ws)
+        self.handlers: MutableMapping[str, Handler] = defaultdict(lambda: self.default_handler)
+        self.actions = test_actions
+        self.subscribe('actions/reregister_all', self.hello)
 
-class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal['connect', 'disconnect', 'receive', 'send']]):
-    def __init__(self, ws: ClientConnection, t_recv: TypeAdapter[TRecv], t_send: TypeAdapter[TSend]):
-        super().__init__()
-        self.ws = ws
-        self.t_recv = t_recv
-        self.t_send = t_send
-
-    def is_connected(self):
-        return self.ws.state == State.OPEN
-
-    async def disconnect(self, code: int = 1000, reason: str = "Disconnected"):
-        if not self.is_connected():
-            return
-        await self.ws.close(code, reason)
-        await self._raise_event('disconnect', code, reason, False)
-
-    async def send(self, message: TSend):
-        if not self.is_connected():
-            logger.warning(f"Not connected, cannot send {message}")
-            return
-        text = orjson.dumps(message.model_dump(mode='json', by_alias=True)).decode()
-        logger.trace(f'Sending: {text}')
-        await self.ws.send(text)
-        await self._raise_event('send', message)
-
-    @logger.catch(reraise=True)
-    async def receive(self) -> TRecv:
-        text = await self.ws.recv(True)
-        if not text:
-            raise ValueError("Received empty message")
-        logger.trace(f"Received: {text}")
-        model = self.t_recv.validate_json(text, strict=True)
-        await self._raise_event('receive', model)
-        return model
-
-    async def lifecycle(self):
-        await self._raise_event('connect')
-        close_event = CloseEvent(1000, "", False)
+    async def default_handler(self, name: str, data: Any) -> tuple[bool, str]:
+        (success, response) = (True, f"Echo: {name=} {data=}")
         try:
-            while self.is_connected():
-                await self.receive()
-        except ConnectionClosed as cc:
-            logger.info(f"WebSocket disconnected: [{cc.code}] {cc.reason}")
-            close_event = CloseEvent(cc.code, cc.reason, True)
-        except Exception:
-            close_event = CloseEvent(1011, "Internal error", False)
-            await self.ws.close(close_event.code, close_event.reason)
-            raise
-        finally:
-            await self._raise_event('disconnect', close_event)
+            jsonschema.validate(data, self.actions[name].schema_ or {})
+        except jsonschema.ValidationError as e:
+            success = False
+            response = f"Error: {e}"
+            logger.warning(f"[{name}] Error: {e}")
+        else:
+            logger.success(f"[{name}] Success")
+        return success, response
 
-class Connection(WSConnection[AnyNeuroMessage, AnyGameMessage]):
-    def __init__(self, ws: ClientConnection):
-        super().__init__(ws, TypeAdapter(AnyNeuroMessage), TypeAdapter(AnyGameMessage))
-        self.ws = ws
-        self.subscribe('receive', self.handler)
+    async def hello(self, *_):
+        await self.send(self.make_msg(Context, data={
+            "message":
+                "Welcome to the JSON Schema test. Please execute the actions available to you.\n"
+                "You may deviate from the given schema, it is part of the test.",
+            "silent": True
+        }))
 
-    async def handler(self, msg: AnyNeuroMessage):
-        resp: dict = {"game": GAME}
-        logger.debug(f"{msg=} {type(msg)=}")
+    async def on_msg(self, msg: AnyNeuroMessage):
+        logger.debug(f"Received message: {msg}")
         match msg:
             case ReregisterAllActions():
-                resp["data"] = {"actions": ACTIONS}
-                logger.success(f"Reregistering {len(ACTIONS)} actions")
-                await self.send(RegisterActions(**resp))
-                resp["data"] = {
-                    "message": """\
-Welcome to the JSON Schema test. Please execute the actions available to you.
-You may deviate from the given schema, it is part of the test.
-""",
-                    "silent": True
-                }
-                await self.send(Context(**resp))
+                logger.success(f"Registering {len(self.actions)} actions")
+                await self.send(RegisterActions, data={"actions": list(self.actions.values())})
             case Action():
                 data: str | None = msg.data.data
                 name = msg.data.name
                 data = data and orjson.loads(data.encode())
-                response = f"Echo: {name=} {data=}"
-                success = True
-                try:
-                    jsonschema.validate(data, test_actions[name].schema_ or {})
-                except jsonschema.ValidationError as e:
-                    response = f"Error: {e}"
-                    logger.warning(f"[{name}] Error: {e}")
-                    success = False
-                else:
-                    logger.success(f"[{name}] Success")
+                handler = self.handlers[name]
+                (success, response) = await handler(name, data)
                 if success:
-                    resp["data"] = {"action_names": [name]}
-                    await self.send(UnregisterActions(**resp))
-                resp["data"] = {
+                    await self.send(UnregisterActions, data={"action_names": [name]})
+                result = {
                     "id": msg.data.id,
                     "success": success,
                     "message": response,
                 }
-                await self.send(ActionResult(**resp))
+                await self.send(ActionResult, data=result)
             case _:
                 logger.warning(f"Unhandled message: {msg}")
 
@@ -339,8 +287,8 @@ async def main():
     while True:
         try:
             async with connect("ws://localhost:8000") as ws:
-                conn = Connection(ws)
-                await conn.lifecycle()
+                game = JSONSchemaTest(GAME, ws)
+                await game.ws.lifecycle()
                 logger.info("Disconnected")
         except Exception as e:
             logger.error(e)

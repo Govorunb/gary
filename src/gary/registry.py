@@ -58,9 +58,9 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
         for unsub in self._subscriptions.values():
             unsub()
 
-type _game_events = Literal["connect", "disconnect"] | GameCommand | NeuroCommand
+type GameEvents = Literal["connect", "disconnect"] | GameCommand | NeuroCommand
 
-class Game(HasEvents[_game_events]):
+class Game(HasEvents[GameEvents]):
     def __init__(self, name: str, registry: Registry):
         super().__init__()
         self.name = name
