@@ -6,6 +6,7 @@ import sys
 from collections import defaultdict
 from loguru import logger
 from typing import Any
+from pkg_resources import require
 from websockets import ClientConnection
 from websockets.asyncio.client import connect
 
@@ -27,23 +28,38 @@ GAME = "JSON Schema Test"
 ACTIONS = [
     action(
         "prim_str",
-        "Must be a string.",
+        "Freeform string.",
         {"type": "string"},
     ),
     action(
         "prim_int",
-        "Must be an integer.",
+        "Freeform integer.",
         {"type": "integer"},
     ),
     action(
         "prim_bool",
-        "Must be a boolean.",
+        "Freeform boolean.",
         {"type": "boolean"},
     ),
     action(
         "prim_null",
-        "Must be null.",
+        "Null type.",
+        {"type": "null"},
+    ),
+    action(
+        "enum_null",
+        "The illusion of free choice.",
         {"enum": [None]},
+    ),
+    action(
+        "const_null",
+        "Constant null.",
+        {"const": None},
+    ),
+    action(
+        "const_str",
+        "Constant string.",
+        {"const": "Hello!"},
     ),
     action(
         "array_empty",
@@ -227,7 +243,8 @@ ACTIONS = [
                         }
                     ]
                 }
-            }
+            },
+            "required": ["oneOf"],
         },
     ),
     

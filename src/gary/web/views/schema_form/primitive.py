@@ -6,7 +6,7 @@ from . import SchemaForm
 
 class PrimitiveSchemaForm(SchemaForm):
     def _create_widgets(self):
-        if not self.schema or self.schema.get("type") not in ("string", "number", "integer", "boolean"):
+        if not self.schema or self.schema.get("type") not in ("string", "number", "integer", "boolean", "null"):
             return
 
         schema_type = self.schema.get("type")
@@ -36,6 +36,8 @@ class PrimitiveSchemaForm(SchemaForm):
                 # vs typing (manually inputting a value possibly intentionally between steps)
         elif schema_type == "boolean":
             widget = pn.widgets.Checkbox(name="")
+        elif schema_type == "null":
+            widget = pn.pane.Markdown(value="*(null)*")
         else:
             widget = pn.pane.Markdown(value=f"**Unsupported property type: {html.escape(str(schema_type))}**")
 
