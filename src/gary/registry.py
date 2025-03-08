@@ -28,14 +28,20 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
     async def handle(self, msg: AnyGameMessage, conn: GameWSConnection):
         if isinstance(msg, Startup):
             await self.startup(msg, conn)
-        else:
-            if not (game := self.games.get(msg.game)):
-                # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
-                logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
-                game = await self.startup(Startup(game=msg.game), conn)
-                return
-            if game.connection != conn and game.connection.is_connected(): # IMPL
+            return
+
+        if not (game := self.games.get(msg.game)):
+            # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
+            logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
+            game = await self.startup(Startup(game=msg.game), conn)
+            return
+
+        if game.connection != conn:
+            if game.connection.is_connected(): # IMPL
                 logger.error(f"Game {msg.game} is registered to a different active connection! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
+            # TODO: v2
+            logger.warning("Reconnecting without `startup` - the spec requires a `startup` message!")
+            await game.set_connection(conn)
 
     async def connect(self, conn: WSConnection):
         self.connections[conn.id] = conn
@@ -49,7 +55,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
             await self._raise_event("game_disconnected", conn.game)
             if (unsub := self._subscriptions.pop(conn.id, None)):
                 unsub()
-    
+
     async def destroy(self):
         for conn in self.connections.values():
             await conn.disconnect(1001, "Server shutting down")
@@ -106,7 +112,7 @@ class Game(HasEvents[GameEvents]):
         # IMPL: game already connected
         if self._connection and self._connection.is_connected():
             # IMPL: different active connection
-            logger.warning(f"Game '{self.name}' received startup from {conn.ws.client}, but is already actively connected to {self._connection.ws.client}!")
+            logger.warning(f"Game '{self.name}' received connection from {conn.ws.client}, but is already actively connected to {self._connection.ws.client}!")
             policy = CONFIG.gary.existing_connection_policy
             conn_to_close = self._connection if policy == ConflictResolutionPolicy.DROP_EXISTING else conn
             logger.info(f"Disconnecting {conn_to_close.ws.client} according to policy {policy}")

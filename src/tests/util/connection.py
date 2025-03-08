@@ -59,7 +59,12 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal['connec
             close_event = CloseEvent(cc.code, cc.reason, True)
         except Exception:
             close_event = CloseEvent(1011, "Internal error", False)
-            await self.ws.close(close_event.code, close_event.reason)
+            if self.is_connected():
+                logger.warning("Disconnecting due to error")
+                await self.ws.close(close_event.code, close_event.reason)
+            else:
+                logger.info("Server already disconnected")
+                close_event = close_event._replace(server_disconnected=True)
             raise
         finally:
             await self._raise_event('disconnect', close_event)
