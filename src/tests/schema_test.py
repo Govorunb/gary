@@ -208,6 +208,28 @@ ACTIONS = [
             "required": ["freeform", "bounds-inclusive", "bounds-exclusive", "integer", "int-step", "float-step"],
         },
     ),
+    action(
+        "mean_test",
+        "Mean test for backends and frontends.",
+        {
+            "type": "object",
+            "properties": {
+                "oneOf": {
+                    "enum": [
+                        "$ref",
+                        # this is an object literal - not a schema!
+                        {
+                            "type": "object",
+                            "properties": {
+                                "anyOf": {"type": "null"},
+                                "null": {"type": "boolean"},
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+    ),
     
     # web ui tests
     action(
@@ -252,6 +274,8 @@ class JSONSchemaTest(Game):
             logger.warning(f"[{name}] Error: {e}")
         else:
             logger.success(f"[{name}] Success")
+        if success:
+            await self.send(UnregisterActions, data={"action_names": [name]})
         return success, response
 
     async def hello(self, *_):
@@ -274,8 +298,6 @@ class JSONSchemaTest(Game):
                 data = data and orjson.loads(data.encode())
                 handler = self.handlers[name]
                 (success, response) = await handler(name, data)
-                if success:
-                    await self.send(UnregisterActions, data={"action_names": [name]})
                 result = {
                     "id": msg.data.id,
                     "success": success,
@@ -286,16 +308,14 @@ class JSONSchemaTest(Game):
                 logger.warning(f"Unhandled message: {msg}")
 
     async def _schema_update(self, name: str, data: Any):
-        if not self._schema_changed:
+        res = await self.default_handler(name, data)
+        if res[0] and not self._schema_changed:
             self._schema_changed = True
             action = self.actions[name]
             action.schema_ = {"type": "string"}
-            # IMPL: will fail on non-gary v1 spec backends
-            # since the spec asks to drop *incoming* actions that are duplicates
-            # but our behaviour is to drop *existing*
             await self.send(RegisterActions, data={"actions": [action]})
-            return (False, "Schema updated - try again")
-        return await self.default_handler(name, data)
+            res = (True, "Schema updated - try again")
+        return res
 
 async def main():
     logger.remove()
