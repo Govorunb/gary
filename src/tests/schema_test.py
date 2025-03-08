@@ -4,7 +4,6 @@ import orjson
 import sys
 
 from collections import defaultdict
-from collections.abc import MutableMapping
 from loguru import logger
 from typing import Any
 from websockets import ClientConnection
@@ -150,7 +149,7 @@ ACTIONS = [
     ),
     # jsf doesn't support arrays as enum members
     # whoever PR'd object enum members in just... didn't add lists
-    # Action(
+    # action(
     #     "enum_arrays_of_obj",
     #     "Enum whose members are arrays of objects.",
     #     {
@@ -209,6 +208,8 @@ ACTIONS = [
             "required": ["freeform", "bounds-inclusive", "bounds-exclusive", "integer", "int-step", "float-step"],
         },
     ),
+    
+    # web ui tests
     action(
         "<b>html_inject</b>",
         "<i>Test HTML injection.</i>",
@@ -223,16 +224,23 @@ ACTIONS = [
             "required": ["<u>underline</u>"],
         }
     ),
+    action(
+        "schema_update",
+        "On first execution, the schema of this action will change.",
+        {"type": "boolean"},
+    )
 ]
 test_actions = {action.name: action for action in ACTIONS}
 
 class JSONSchemaTest(Game):
     def __init__(self, name: str, ws: Connection | ClientConnection):
         super().__init__(name, ws)
-        self.handlers: MutableMapping[str, Handler] = defaultdict(lambda: self.default_handler)
+        self.handlers = defaultdict(lambda: self.default_handler)
         self.actions = test_actions
         self.ws.subscribe('receive', self.on_msg)
         self.subscribe('actions/reregister_all', self.hello)
+        self._schema_changed = False
+        self.handlers['schema_update'] = self._schema_update
 
     async def default_handler(self, name: str, data: Any) -> tuple[bool, str]:
         (success, response) = (True, f"Echo: {name=} {data=}")
@@ -276,6 +284,18 @@ class JSONSchemaTest(Game):
                 await self.send(ActionResult, data=result)
             case _:
                 logger.warning(f"Unhandled message: {msg}")
+
+    async def _schema_update(self, name: str, data: Any):
+        if not self._schema_changed:
+            self._schema_changed = True
+            action = self.actions[name]
+            action.schema_ = {"type": "string"}
+            # IMPL: will fail on non-gary v1 spec backends
+            # since the spec asks to drop *incoming* actions that are duplicates
+            # but our behaviour is to drop *existing*
+            await self.send(RegisterActions, data={"actions": [action]})
+            return (False, "Schema updated - try again")
+        return await self.default_handler(name, data)
 
 async def main():
     logger.remove()
