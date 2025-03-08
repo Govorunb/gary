@@ -37,13 +37,14 @@ class PrimitiveSchemaForm(SchemaForm):
         elif schema_type == "boolean":
             widget = pn.widgets.Checkbox(name="")
         elif schema_type == "null":
-            widget = pn.pane.Markdown(value="*(null)*")
+            widget = pn.pane.Markdown("*(null)*")
         else:
-            widget = pn.pane.Markdown(value=f"**Unsupported property type: {html.escape(str(schema_type))}**")
+            widget = pn.pane.Markdown(f"**Unsupported property type: {html.escape(str(schema_type))}**")
 
         widget.margin = (10, 10)
         self._widgets["value"] = widget
-        widget.link(self, value='value', bidirectional=True)
+        if hasattr(widget, 'value'):
+            widget.link(self, value='value', bidirectional=True)
 
     def __panel__(self):
         return self._widgets.get("value", pn.pane.Markdown(f"Invalid schema for {PrimitiveSchemaForm.__name__}"))

@@ -10,7 +10,7 @@ class EnumSchemaForm(SchemaForm):
         enum_values: list = self.schema["enum"]
         match enum_values:
             case []:
-                widget = pn.pane.Markdown(value="**No enum values provided**")
+                widget = pn.pane.Markdown("**No enum values provided**")
             case [single]:
                 widget = ConstSchemaForm(schema=self.schema, value=single)
             case _:
