@@ -231,6 +231,7 @@ class JSONSchemaTest(Game):
         super().__init__(name, ws)
         self.handlers: MutableMapping[str, Handler] = defaultdict(lambda: self.default_handler)
         self.actions = test_actions
+        self.ws.subscribe('receive', self.on_msg)
         self.subscribe('actions/reregister_all', self.hello)
 
     async def default_handler(self, name: str, data: Any) -> tuple[bool, str]:

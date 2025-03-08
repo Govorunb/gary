@@ -38,7 +38,6 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal['connec
         await self.ws.send(text, text=True)
         await self._raise_event('send', message)
 
-    @logger.catch(reraise=True)
     async def receive(self) -> TRecv:
         text = await self.ws.recv(True)
         if not text:
@@ -48,6 +47,7 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal['connec
         await self._raise_event('receive', model)
         return model
 
+    @logger.catch(reraise=True)
     async def lifecycle(self):
         await self._raise_event('connect')
         close_event = CloseEvent(1000, "", False)
