@@ -44,6 +44,7 @@ class ActionsList(pn.viewable.Viewer):
         self.param.trigger('update_event')
 
     def __panel__(self):
+        # FIXME: not full-width sometimes on first load
         actions_col = pn.Column(
             objects=self.actions,
             stylesheets=[

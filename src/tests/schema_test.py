@@ -276,6 +276,15 @@ ACTIONS = [
             "properties": {
                 "optional_prop": {"type": "string"},
                 "required_prop": {"type": "string"},
+                "optional_obj": {
+                    "type": "object",
+                    "properties": {
+                        "str_prop": {"type": "string"},
+                        "int_prop": {"type": "integer"},
+                        "null_prop": {"const": None},
+                    },
+                    "required": ["null_prop"],
+                }
             },
             "required": ["required_prop"],
         }
