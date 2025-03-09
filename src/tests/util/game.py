@@ -18,6 +18,7 @@ class Game(HasEvents[GameEvents]):
         self.name = name
         self.actions: dict[str, ActionModel] = {}
         self.ws.subscribe('receive', self._handler)
+        self._sent_hello = False
 
     def make_msg(self, cls: type[AnyGameMessage], **kw):
         return cls(game=self.name, **kw)
@@ -27,6 +28,9 @@ class Game(HasEvents[GameEvents]):
     @overload
     async def send(self, msg: type[AnyGameMessage], **kw): ...
     async def send(self, msg: AnyGameMessage | type[AnyGameMessage], **kw):
+        if not self._sent_hello:
+            self._sent_hello = True
+            await self.send(Startup)
         message = self.make_msg(msg, **kw) if isinstance(msg, type) else msg
         if not self.ws.is_connected():
             logger.warning(f"Not connected, cannot send {message}")

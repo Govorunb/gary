@@ -280,6 +280,9 @@ class JSONSchemaTest(Game):
         self.subscribe('actions/reregister_all', self.hello)
         self._schema_changed = False
         self.handlers['schema_update'] = self._schema_update
+        # uncomment to be extra mean to backends that rely on the Startup message
+        # shoutouts to the 0 people that will ever run this against anything other than gary
+        # self._sent_hello = True
 
     async def default_handler(self, name: str, data: Any) -> tuple[bool, str]:
         (success, response) = (True, f"Echo: {name=} {data=}")
