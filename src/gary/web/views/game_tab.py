@@ -10,7 +10,7 @@ from jsf import JSF
 
 from ...llm.events import ClearContext
 from ...llm.llm import SENDER_HUMAN
-from ...util import bokeh_html_with_newlines, markdown_code_fence
+from ...util import bokeh_html_with_newlines, markdown_code_block
 from ...registry import Game
 from ...spec import *
 from .context_log import ContextLog
@@ -205,8 +205,7 @@ class GameTab(pn.viewable.Viewer):
             with dump_ctx_button.param.update(name="Retrieving...", disabled=True):
                 await asyncio.sleep(0.1)
                 context_dump = game.llm.dump()
-                fence = markdown_code_fence(context_dump)
-                context_md.object = f"{fence}none\n{context_dump}\n{fence}"
+                context_md.object = markdown_code_block(context_dump, "none")
                 _open_modal(context_modal)
                 was_unmuted = not cast(bool, mute_toggle.value)
                 mute_toggle.value = True

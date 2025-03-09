@@ -91,7 +91,9 @@ class Action(NeuroMessage):
     class Data(BaseModel):
         id: str = Field(default_factory=lambda: uuid4().hex)
         name: str
-        data: str | None
+        # FIXME: unset vs null
+        # if there's no schema, there should be no data - as opposed to explicit "data": null
+        data: str | None = None
 
     command: Literal["action"] = "action"
     data: Data

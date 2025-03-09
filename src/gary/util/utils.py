@@ -175,7 +175,15 @@ def bokeh_html_with_newlines(text: str):
 
 def markdown_code_fence(text: str) -> str:
     '''
-    Returns a code fence that is guaranteed to be longer than any code fence in the text.
+    Returns a code fence (sequence of backticks) that is guaranteed to be longer than any code fence in the text.
+    This makes it safe to use in markdown code blocks.
+    
+    Example:
+        ```````python
+        text = "Some `string` ````` (5) with ``` backticks"
+        fence = markdown_code_fence(text) # `````` (6)
+        print(f"{fence}python\\n{text}\\n{fence}")
+        ```````
     '''
     longest = 4
     ticks = 0
@@ -188,3 +196,7 @@ def markdown_code_fence(text: str) -> str:
     
     fence = '`' * (longest + 1)
     return fence
+
+def markdown_code_block(text: str, lang: str = ""):
+    fence = markdown_code_fence(text)
+    return f"{fence}{lang}\n{text}\n{fence}"

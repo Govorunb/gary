@@ -20,7 +20,7 @@ warnings.filterwarnings('ignore')
 logging.getLogger('asyncio').setLevel(999999999)
 
 
-def action(name: str, desc: str, schema: dict[str, Any]) -> ActionModel:
+def action(name: str, desc: str, schema: dict[str, Any] | None) -> ActionModel:
     return ActionModel(name=name, description=desc, schema=schema) # type: ignore
 
 GAME = "JSON Schema Test"
@@ -247,6 +247,11 @@ ACTIONS = [
             "required": ["oneOf"],
         },
     ),
+    action(
+        "no_schema",
+        "Action without schema.",
+        None,
+    ),
     
     # web ui tests
     action(
@@ -290,7 +295,12 @@ ACTIONS = [
         }
     )
 ]
+
+focus = []
+# focus = ["no_schema", "optional_props"]
 test_actions = {action.name: action for action in ACTIONS}
+if focus:
+    test_actions = {name: test_actions[name] for name in focus}
 
 class JSONSchemaTest(Game):
     def __init__(self, name: str, ws: Connection | ClientConnection):

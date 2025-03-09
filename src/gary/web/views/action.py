@@ -11,6 +11,7 @@ from typing import Any
 from ...llm import Act
 from ...registry import Game
 from ...spec import ActionModel
+from ...util import markdown_code_block
 from .schema_form import SchemaForm
 
 def _monkey_patch():
@@ -60,7 +61,7 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
 
     def __panel__(self):
         def filter_schema(schema: dict[str, Any] | None):
-            # no 'properties'
+            # no 'properties' (technically not correct, e.g. patternProperties)
             if not schema or (schema.get("type") == "object" and not schema.get("properties")):
                 return None
 
@@ -76,8 +77,10 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             schema = orjson.loads(orjson.dumps(schema)) # to not mutate the original
             assert schema
             schema.pop('additionalProperties', None) # hide our injection to reduce confusion
+            
+            text = orjson.dumps(schema, option=orjson.OPT_INDENT_2).decode()
             return pn.Card(
-                pn.pane.Markdown(f"```json\n{orjson.dumps(schema, option=orjson.OPT_INDENT_2).decode()}\n```", sizing_mode='stretch_width'),
+                pn.pane.Markdown(markdown_code_block(text, 'json'), sizing_mode='stretch_width'),
                 title="Schema",
                 collapsed=True,
                 styles={"max-height": 'none'},
@@ -90,10 +93,9 @@ class ActionView(pn.viewable.Viewer, pn.reactive.Syncable):
             @send_button.on_click
             async def _(*_):
                 name: str = self.action_name # type: ignore
-                # IMPL: null vs {} if no schema
-                data = form.value if form else {}
-                print(f"{data=}")
-                await self._game.execute_action(Act(name, orjson.dumps(data).decode()))
+                # data is omitted if there's no schema - as per the spec
+                data: Any | None = form.value if form else None
+                await self._game.execute_action(Act(name, data and orjson.dumps(data).decode()))
 
             if not schema:
                 return pn.Row(send_button, margin=10)
