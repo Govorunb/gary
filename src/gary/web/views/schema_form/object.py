@@ -2,10 +2,13 @@ import functools
 import html
 import panel as pn
 
+from loguru import logger
 from typing import Any
 
 from . import SchemaForm
 
+
+_warned_props = set()
 
 class ObjectSchemaForm(SchemaForm):
     def _create_widgets(self):
@@ -30,7 +33,12 @@ class ObjectSchemaForm(SchemaForm):
 
         def _model_update(evt):
             for prop_name, widget in self._widgets.items():
-                val = evt.new[prop_name] # TODO: optionals
+                if prop_name not in evt.new:
+                    if prop_name not in _warned_props:
+                        logger.warning(f"Property {prop_name} not in model update - is it meant to be optional? Did you forget 'required' in the schema?")
+                        _warned_props.add(prop_name)
+                    continue
+                val = evt.new[prop_name]
                 if widget.value != val:
                     widget.value = val
 

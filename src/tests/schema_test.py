@@ -267,6 +267,18 @@ ACTIONS = [
         "schema_update",
         "On first execution, the schema of this action will change.",
         {"type": "boolean"},
+    ),
+    action(
+        "optional_props",
+        "Test optional properties.",
+        {
+            "type": "object",
+            "properties": {
+                "optional_prop": {"type": "string"},
+                "required_prop": {"type": "string"},
+            },
+            "required": ["required_prop"],
+        }
     )
 ]
 test_actions = {action.name: action for action in ACTIONS}
