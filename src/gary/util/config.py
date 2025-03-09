@@ -45,6 +45,7 @@ class Config(BaseModel):
             modules: dict[str, _LogLevel] = {
                 'gary.llm.scheduler': 'warning',
                 'gary.llm.llm': 'info',
+                'gary.web': 'info',
             }
         logging: LoggingConfig = LoggingConfig()
         existing_connection_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING

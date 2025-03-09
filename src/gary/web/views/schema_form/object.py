@@ -83,18 +83,12 @@ class ObjectSchemaForm(SchemaForm):
         self.param.watch(_model_update, ['value'])
 
     def __panel__(self):
-        # FIXME: use two columns
-        items = []
+        grid = pn.GridBox(ncols=2, sizing_mode='stretch_width')
         for prop_name, widget in self._widgets.items():
-            items.append(
-                pn.Row(
-                    self._labels[prop_name],
-                    widget,
-                    sizing_mode="stretch_width"
-                )
-            )
+            grid.append(self._labels[prop_name])
+            grid.append(widget)
         return pn.WidgetBox(
-            *items,
+            grid,
             name=self.param.name,
             sizing_mode="stretch_width",
             styles={
