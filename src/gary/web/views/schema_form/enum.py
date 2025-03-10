@@ -17,7 +17,7 @@ class EnumSchemaForm(SchemaForm):
                 widget = pn.widgets.Select(
                     options=enum_values,
                     value=enum_values[0],
-                    size=len(enum_values),
+                    size=len(enum_values) if len(enum_values) < 10 else 1, # revert to combo box if too many options
                     margin=(10, 10),
                     name="",
                     sizing_mode="stretch_width"
