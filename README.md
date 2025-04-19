@@ -69,6 +69,12 @@ On the other hand, if you have more VRAM or don't mind slower responses, you can
 Generally, aim for a model/quantization whose file size is 1-2 GB below your VRAM (you can give it another GB of headroom to fit a bigger context window).
 </details>
 
+#### Updating
+
+If you downloaded the repository through `git clone`, just run `git pull` to update to the most recent commit.
+
+Otherwise, you should clone this repository to a new folder and manually transfer any extra files from your previous install (e.g. `_your_config.yaml`, `.env`, folders like `_models`/`_logs` and so on).
+
 ### Tips
 
 #### Models
