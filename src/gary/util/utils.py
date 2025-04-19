@@ -94,7 +94,7 @@ _GUIDANCE_SCHEMA_SUPPORTED_KEYWORDS = {
     "maximum": 0,
     "exclusiveMinimum": 0,
     "exclusiveMaximum": 0,
-    # "multipleOf": 2, # implemented in llguidance; not in python guidance yet
+    "multipleOf": 2,
 
     # Unimplemented
     # "$dynamicAnchor": "",
@@ -171,7 +171,7 @@ def html_newlines(text: str):
     return text.replace("\n", "<br>")
 
 def bokeh_html_with_newlines(text: str):
-    return bokeh.models.dom.HTML(html_newlines(text))
+    return bokeh.models.dom.HTML(html=html_newlines(text))
 
 def markdown_code_fence(text: str) -> str:
     '''

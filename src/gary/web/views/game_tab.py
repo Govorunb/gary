@@ -25,7 +25,7 @@ class GameTab(pn.viewable.Viewer):
     }
     _modal_style = """
 .dialog-content {
-    background-color: var(--background-color);
+    background-color: var(--panel-background-color);
     max-width: 90%;
 }
 .pnx-dialog-close {background-color: revert;}
@@ -42,7 +42,7 @@ class GameTab(pn.viewable.Viewer):
         game = self.game
         grid = pn.GridStack(sizing_mode='stretch_both')
 
-        actions = ActionsList(game)
+        actions_list = ActionsList(game)
         mute_toggle = pn.widgets.Switch(name="Tony Mode")
         mute_toggle_with_tooltip = pn.Row(
             mute_toggle,
@@ -144,7 +144,7 @@ class GameTab(pn.viewable.Viewer):
 
         actions = pn.Column(
             "<h1>Actions</h1>",
-            actions,
+            actions_list,
             pn.Row(
                 mute_toggle_with_tooltip,
                 pn.HSpacer(),

@@ -6,6 +6,7 @@ from pydantic import TypeAdapter
 from loguru import logger
 
 import llama_cpp
+from guidance.models._engine import Engine
 from guidance import gen, with_temperature, select, json, models, system, user, assistant
 from guidance.chat import Llama3ChatTemplate, Phi3MiniChatTemplate
 from guidance._grammar import Function
@@ -23,20 +24,6 @@ if TYPE_CHECKING:
 # IMPL: this whole file (for obvious reasons)
 
 # pyright: reportPrivateImportUsage=false
-
-# pyright: reportOperatorIssue=false
-# __add__ without an explicit __iadd__ impl surely means you cannot use +=. it is illegal and your code will explode
-
-_engine_map = {
-    # "openai": models.OpenAI,
-    # "anthropic": models.Anthropic,
-    # "azure_openai": models.AzureOpenAI,
-    # "googleai": models.GoogleAI,
-    "llama_cpp": Llarry,
-    "transformers": models.Transformers,
-    "guidance_server": models.Model,
-    "randy": Randy,
-}
 
 (ACT, SAY, WAIT) = ('action', 'say', 'wait')
 
@@ -99,13 +86,22 @@ class LLM(HasEvents[Literal['context', 'say']]):
             "enable_monitoring": False,
             **CONFIG.engine_params
         }
-        model_cls = _engine_map[engine]
-
-        self.llm = model_cls(model, echo=False, **params) # type: ignore
+                
+        if engine == "llama_cpp":
+            self.llm = Llarry(model, echo=False, **params)
+        elif engine == "transformers":
+            self.llm = models.Transformers(model, echo=False, **params)
+        elif engine == "randy":
+            self.llm = Randy(model, echo=False, **params)
+        elif engine in ("openai", "anthropic", "azure_openai", "vertexai"):
+            raise ValueError(f"Remote services are not supported: {engine}")
+        else:
+            raise ValueError(f"Unknown engine type: {engine}")
+        
         self.token_limit = params.get("n_ctx", 1 << 32) - 200
         self.llm.echo = False
         end = time.time()
-        logger.debug(f"loaded in {end-start:.2f} seconds") # FIXME: makes no sense for remote (guidance_server)
+        logger.debug(f"loaded in {end-start:.2f} seconds")
         self.temperature = params.get("temperature", 1.0)
     
     @classmethod
@@ -122,15 +118,16 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             sys_prompt += "\nYou can choose to 'say' something, whether to communicate with the user running your software or just to think out loud."
             sys_prompt += "\nRemember that your only means of interacting with the game is 'action'. In-game characters cannot hear you."
         logger.trace(f"System prompt: {sys_prompt}")
-        with system():
-            self.llm += sys_prompt
+        with self.system() as lm:
+            lm += sys_prompt
+        self.llm = lm.model
         # no role closer here is surely fine
         if custom_rules := MANUAL_RULES.get(self.game.name):
             logger.debug(f"Found custom rules for {self.game.name}")
             await self.context(custom_rules, self.game.name, silent=True, persistent_llarry_only=True, notify=False)
 
-    def llm_engine(self) -> models._model.Engine:
-        return self.llm.engine # type: ignore
+    def llm_engine(self) -> Engine:
+        return self.llm._client.engine # type: ignore
 
     def max_tokens(self, at_most: int = 100000) -> int:
         maxtok = max(0, min(at_most, self.token_limit - tokens(self.llm)))
@@ -142,14 +139,14 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         if llarry_keep_persistent and isinstance(self.llm, Llarry):
             logger.debug("TODO: keep persistent messages on reset")
             self.llm.persistent.clear()
-        if isinstance(engine, models.llama_cpp._llama_cpp.LlamaCppEngine):
+        if isinstance(engine, models._llama_cpp.LlamaCppEngine):
             engine.reset_metrics()
             engine.model_obj.reset()
             llama_cpp.llama_kv_cache_clear(engine.model_obj.ctx)
 
         # :) all this to avoid the model.LlamaCpp ctor
         # it sure is nice that python lets you do this :)
-        buh = models.Model(self.llm.engine, echo=False)
+        buh = models.Model(self.llm.client, self.llm._state.__class__(), echo=False)
         if isinstance(self.llm, Llarry):
             buh.__class__ = Llarry
             buh.persistent = self.llm.persistent.copy() # type: ignore
@@ -378,11 +375,11 @@ The following actions are available to you:
                 await self.reset()
     
     def system(self, lm = None):
-        return ModelWrapper(lm or self.llm).role(system())
+        return ModelWrapper(lm or self.llm).role(system()) # type: ignore # great... now they're lying about what types they return
     def user(self, lm = None):
-        return ModelWrapper(lm or self.llm).role(user())
+        return ModelWrapper(lm or self.llm).role(user()) # type: ignore
     def assistant(self, lm = None):
-        return ModelWrapper(lm or self.llm).role(assistant())
+        return ModelWrapper(lm or self.llm).role(assistant()) # type: ignore
 
     def dump(self, lm = None):
         return str(lm or self.llm)
@@ -392,16 +389,19 @@ def tokens(m: models.Model, s: str | None = None) -> int:
     return len(m.engine.tokenizer.encode(s.encode())) # type: ignore
 
 def time_gen(lm: ModelWrapper, gen_: Function | str):
-    prev_tokens_generated: int = lm.model.metrics.engine_output_tokens
-    prev_tokens_in: int = lm.model.metrics.engine_input_tokens
+    engine: Engine = lm.model._client.engine # type: ignore
+    prev_tok_out: int = lm.model.token_count
+    prev_tok_in: int = len(engine.tokenizer.encode(str(lm.model._state).encode()))
     t0 = time.perf_counter()
     lm += gen_
     generation_took = time.perf_counter() - t0
-    tokens_in: int = lm.model.metrics.engine_input_tokens - prev_tokens_in
-    tokens_out: int = lm.model.metrics.engine_output_tokens - prev_tokens_generated
-    tps: float = tokens_out / generation_took
+    new_tok_in: int = len(engine.tokenizer.encode(str(lm.model._state).encode()))
+    new_tok_out: int = lm.model.token_count
+    delta_tok_in: int = new_tok_in - prev_tok_in
+    delta_tok_out: int = new_tok_out - prev_tok_out
+    tps: float = delta_tok_out / generation_took
     logger.debug(
-        f'input {tokens_in} and output {tokens_out} tokens in {generation_took:.2f}s'
+        f'input {delta_tok_in} and output {delta_tok_out} tokens in {generation_took:.2f}s'
         + (f' ({tps:.2f} tok/s)' if tps != 0 else '')
     )
     return lm

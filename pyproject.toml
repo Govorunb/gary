@@ -5,16 +5,13 @@ description = "A testing implementation of the LLM side of the Neuro-sama Game S
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "gpustat>=1.1.1",
-    "guidance-stitch>=0.1.0",
-    "guidance>=0.2.0",
-    "llama-cpp-python>=0.3.4",
-    "setuptools>=75.8.0",
+    "guidance>=0.2.1",
+    "llama-cpp-python>=0.3.7", # undeclared guidance dependency
     "fastapi[standard]>=0.115.7",
-    "pydantic>=2.10.4",
+    "pydantic>=2.11.3",
     "websockets>=14.2",
     "colorlog>=6.9.0",
-    "panel>=1.6.0",
+    "panel==1.6.1", # TODO: 1.6.2 has new inconsistent toggleswitch css + actions list no longer limits its height
     "jsonschema>=4.23.0",
     "jsf>=0.11.2",
     "orjson>=3.10.15",
@@ -30,7 +27,8 @@ schema_test = "tests.schema_test:start"
 check_keywords = "tests.check_keywords:test_keywords"
 
 [tool.uv.sources]
-llama-cpp-python = { index = "abetlen-cu124" }
+# llama-cpp-python = { index = "abetlen-cu124" } # not updated past 0.3.4
+llama-cpp-python = { url = "https://github.com/JamePeng/llama-cpp-python/releases/download/v0.3.8-cu124-win-20250414/llama_cpp_python-0.3.8-cp312-cp312-win_amd64.whl" }
 
 [[tool.uv.index]]
 name = "abetlen-cu124"
@@ -47,4 +45,6 @@ ignore = [
 dev = [
     "ipykernel>=6.29.5",
     "jupyter-bokeh>=4.0.5",
+    "gpustat>=1.1.1",
+    "guidance-stitch>=0.1.0",
 ]

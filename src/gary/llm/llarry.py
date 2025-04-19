@@ -1,13 +1,18 @@
-from collections import namedtuple
 import loguru
 import functools
 import re
 import time
-from typing import Self, Sequence, cast
+
+from collections import namedtuple
+from collections.abc import Sequence
+from typing import Self, cast
 from guidance.chat import ChatTemplate
-from guidance.models.llama_cpp._llama_cpp import LlamaCpp, LlamaCppEngine, LlamaCppTokenizer
-from guidance.models._model import Model
+from guidance.models import Model, LlamaCpp
+from guidance.models._llama_cpp import LlamaCppEngine, LlamaCppTokenizer
+from guidance.models._engine import EngineClient, EngineState
 from llama_cpp import Llama
+
+# pyright: reportPrivateImportUsage=false
 
 _logger = loguru.logger
 
@@ -29,16 +34,6 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
         self._enable_monitoring = llama_cpp_engine._enable_monitoring
         self._top_k = llama_cpp_engine._top_k
         self.metrics = llama_cpp_engine.metrics
-
-        self.trace_handler = llama_cpp_engine.trace_handler
-        self.renderer = llama_cpp_engine.renderer
-        # we don't handle the renderer subscription since this is only ever used in a terminal
-
-        self.model_dict = llama_cpp_engine.model_dict
-
-        self.monitor = llama_cpp_engine.monitor
-        self.periodic_metrics_generator = llama_cpp_engine.periodic_metrics_generator
-        self.post_exec_metrics = llama_cpp_engine.post_exec_metrics
 
         self.default_n_keep = kwargs.get("n_keep", 500)
         self.default_n_discard = kwargs.get("n_discard") # n_ctx // 2
@@ -68,10 +63,15 @@ _warned = False
 class Llarry(LlamaCpp):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # can be RemoteEngine instead
-        if isinstance(self.engine, LlamaCppEngine) and not isinstance(self.engine, StreamingLlamaCppEngine):
-            self.engine = StreamingLlamaCppEngine(self.engine, **kwargs)
+        self._client: EngineClient
+        self._state: EngineState
+        if not isinstance(self.engine, StreamingLlamaCppEngine):
+            self._client.engine = StreamingLlamaCppEngine(self.engine, **kwargs)
         self.persistent: set[int] = set()
+    
+    @property
+    def engine(self) -> LlamaCppEngine:
+        return self._client.engine # type: ignore
 
     @functools.cache
     def get_msg_end_tokens(self):
@@ -216,9 +216,9 @@ class Llarry(LlamaCpp):
         tokens = self.engine.trim(msg.all_tokens, n_keep, n_discard) # type: ignore (zero depth flow control analysis)
         # this code is ok because i'm not a python dev :)
         copy = self.__new__(self.__class__)
-        # initializers above Model create an Engine, we don't want that
+        # initializers above Model create a new Client/Engine, we don't want that
         # literally just want to reset state
-        Model.__init__(copy, self.engine, echo = False)
+        Model.__init__(copy, self._client, self._state.__class__(), echo = False)
         copy.persistent = set(p - persist_shift if p >= i_end_discard else p for p in self.persistent) # immutability
 
         new_prompt = tokenizer.decode(tokens).decode()
