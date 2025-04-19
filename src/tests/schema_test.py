@@ -6,12 +6,11 @@ import sys
 from collections import defaultdict
 from loguru import logger
 from typing import Any
-from pkg_resources import require
 from websockets import ClientConnection
 from websockets.asyncio.client import connect
 
 from gary.spec import *
-from .util import Connection, Game, Handler
+from .util import Connection, Game
 
 # shut up
 import warnings

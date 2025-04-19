@@ -11,7 +11,7 @@ The project is mostly for fun but I'm open to feedback and contributions.
 	- Local models (LlamaCpp, Transformers\*)
 	- A "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
 	- Remote services (OpenAI, Anthropic, Google, Azure) are *not* supported. For more info, read the ["Remote Services?"](#remote-services-openai-anthropic-google-azure) section.
-- **Guaranteed** to follow the schema[^1][^2][^3]
+- **Guaranteed** to follow the schema[^1][^2][^3][^4]
 - Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM (e.g. JSON syntax)
 - Aims to (eventually) behave (reasonably) close to Neuro for accurate testing/development
 - Offers a web interface for [Tony](https://github.com/Pasu4/neuro-api-tony)-like manual action sending
@@ -28,6 +28,7 @@ That said...
 [^1]: Very very likely but not (yet) guaranteed, see [Known issues/todos](#context-trimming).
 [^2]: Not always the best option; see [Known issues/todos](#guidance-token-forwarding).
 [^3]: For most common schemas. See [Known issues/todos](#json-schema-support).
+[^4]: Unless you manually disable enforcing the schema with `(preset).gary.enforce_schema` (or in the web UI).
 
 ## Quick start
 Since the project is aimed at developers, it's expected that you know your way around the command line, have cloned the repo, and so on.

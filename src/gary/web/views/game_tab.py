@@ -10,7 +10,8 @@ from jsf import JSF
 
 from ...llm.events import ClearContext
 from ...llm.llm import SENDER_HUMAN
-from ...util import bokeh_html_with_newlines, markdown_code_block
+from ...util import bokeh_html_with_newlines, html_newlines, markdown_code_block
+from ...util.config import CONFIG
 from ...registry import Game
 from ...spec import *
 from .context_log import ContextLog
@@ -251,28 +252,61 @@ class GameTab(pn.viewable.Viewer):
 
         enable_resize = pn.widgets.Checkbox(name="Allow resizing")
         enable_drag = pn.widgets.Checkbox(name="Allow dragging")
+        
+        schema_toggle = pn.widgets.Switch(name="Follow schema")
+        schema_toggle_with_tooltip = pn.Row(
+            schema_toggle,
+            pn.widgets.StaticText(value=schema_toggle.name),
+            pn.indicators.TooltipIcon(
+                value=Tooltip(
+                    content=bokeh_html_with_newlines(
+                        "Toggle whether the LLM is forced to adhere to the action schema.\n"
+                        "Switch this off to test how your game responds to invalid data.\n"
+                        "Config path: <u>gary.enforce_schema</u>"
+                    ),
+                    position='top',
+                    attachment='above',
+                ),
+                margin=0,
+            )
+        )
 
         def update_mute(muted):
             if game.scheduler.muted == muted:
                 return
             logger.info(f"(Web UI) {'un' if not muted else ''}muted '{game.name}'")
             game.scheduler.muted = muted
+        def update_follow_schema(value):
+            if CONFIG.gary.enforce_schema == value:
+                return
+            logger.trace(f"(Web UI) {'enabled' if value else 'disabled'} enforce_schema")
+            CONFIG.gary.enforce_schema = value
 
         mute_toggle.rx.watch(update_mute)
+        schema_toggle.rx.watch(update_follow_schema)
         enable_resize.link(grid, value='allow_resize', bidirectional=True)
         enable_drag.link(grid, value='allow_drag', bidirectional=True)
 
         # TODO: localstorage for preferences?
         mute_toggle.value = True
+        schema_toggle.value = CONFIG.gary.enforce_schema
         # checkbox initial value is False; grid properties' initial value is True
         # reactive programming claims yet another victim (nobody found out because there was no change notification)
         enable_resize.value = grid.allow_resize = True
         enable_drag.value = grid.allow_drag = False
 
         advanced = pn.Column(
-            "<h1>Advanced</h1>",
+            html_newlines(
+                "<h1>Advanced</h1>\n" \
+                "These settings are not saved"
+            ),
+            "<h2>Behaviour</h2>",
             pn.Column(
-                "## Layout\n\nThese settings are mostly for playing around and do not persist.",
+                schema_toggle_with_tooltip,
+                margin=(5, 10),
+            ),
+            "<h2>Layout</h2>",
+            pn.Column(
                 enable_resize,
                 enable_drag,
                 margin=(5, 10),
