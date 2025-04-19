@@ -58,6 +58,13 @@ class Config(BaseModel):
         Eats through tokens, likely to distract the model. Only enable this for "realism".
         '''
         scheduler: SchedulerConfig = SchedulerConfig()
+        enforce_schema: bool = True
+        '''
+        Enforce action schemas when generating data JSON.
+        Turn this off if you:
+            - Want to test how the game responds to invalid JSON and are too lazy to send invalid actions manually (through the web UI)
+            - Want to see how good the model is at outputting JSON for some reason
+        '''
     api: dict[str, Any] = {}
     llm: LLMConfig
     engine_params: dict[str, Any] = {}

@@ -146,7 +146,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
 
         # :) all this to avoid the model.LlamaCpp ctor
         # it sure is nice that python lets you do this :)
-        buh = models.Model(self.llm.client, self.llm._state.__class__(), echo=False)
+        buh = models.Model(self.llm._client, self.llm._state.__class__(), echo=False)
         if isinstance(self.llm, Llarry):
             buh.__class__ = Llarry
             buh.persistent = self.llm.persistent.copy() # type: ignore
@@ -254,6 +254,8 @@ You must perform one of the following actions, given this information:
             schema = chosen_action.schema_
             llm += f'''
     "schema": {dumps(schema).decode()},'''
+            if not CONFIG.gary.enforce_schema:
+                schema = None
             try:
                 json_gen = json("data", schema=schema, temperature=self.temperature, max_tokens=self.max_tokens())
             except ValueError as e:

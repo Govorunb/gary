@@ -51,3 +51,9 @@ debug_websocket:
         log_level_console: trace
         modules:
           websocket: trace # logs raw websocket messages
+yolo:
+  base: default
+  overrides:
+    gary:
+      allow_yapping: true
+      enforce_schema: false

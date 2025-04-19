@@ -120,6 +120,14 @@ definitions:
                   Sleep after saying something to simulate waiting for TTS.
                   Duration is based on message length (0.1s per character).
               log_level: {$ref: "#/definitions/log_level"}
+          enforce_schema:
+            type: boolean
+            default: true
+            description: |
+              Enforce action schemas when generating data JSON.
+              Turn this off if you:
+                - Want to test how the game responds to invalid JSON and are too lazy to send invalid actions manually (through the web UI)
+                - Want to see how good the model is at outputting JSON for some reason
         additionalProperties: false
     additionalProperties: false
   preset_inherit:
