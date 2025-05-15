@@ -423,7 +423,7 @@ requires-dist = [
     { name = "guidance", specifier = ">=0.2.1" },
     { name = "jsf", specifier = ">=0.11.2" },
     { name = "jsonschema", specifier = ">=4.23.0" },
-    { name = "llama-cpp-python", url = "https://github.com/JamePeng/llama-cpp-python/releases/download/v0.3.8-cu124-win-20250414/llama_cpp_python-0.3.8-cp312-cp312-win_amd64.whl" },
+    { name = "llama-cpp-python", url = "https://github.com/JamePeng/llama-cpp-python/releases/download/v0.3.9-cu124-AVX2-win-20250510/llama_cpp_python-0.3.9-cp312-cp312-win_amd64.whl" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "orjson", specifier = ">=3.10.15" },
     { name = "panel", specifier = "==1.6.1" },
@@ -775,8 +775,8 @@ wheels = [
 
 [[package]]
 name = "llama-cpp-python"
-version = "0.3.8"
-source = { url = "https://github.com/JamePeng/llama-cpp-python/releases/download/v0.3.8-cu124-win-20250414/llama_cpp_python-0.3.8-cp312-cp312-win_amd64.whl" }
+version = "0.3.9"
+source = { url = "https://github.com/JamePeng/llama-cpp-python/releases/download/v0.3.9-cu124-AVX2-win-20250510/llama_cpp_python-0.3.9-cp312-cp312-win_amd64.whl" }
 dependencies = [
     { name = "diskcache" },
     { name = "jinja2" },
@@ -784,7 +784,7 @@ dependencies = [
     { name = "typing-extensions" },
 ]
 wheels = [
-    { url = "https://github.com/JamePeng/llama-cpp-python/releases/download/v0.3.8-cu124-win-20250414/llama_cpp_python-0.3.8-cp312-cp312-win_amd64.whl", hash = "sha256:a3005425440cf9034f270e3d62c4c03ead5f48c6e8a421b463ee3b165ecdb26b" },
+    { url = "https://github.com/JamePeng/llama-cpp-python/releases/download/v0.3.9-cu124-AVX2-win-20250510/llama_cpp_python-0.3.9-cp312-cp312-win_amd64.whl", hash = "sha256:9a0d75eb40ae439978e762cf94e104fcdbcc02c51bddd19af1cc9a5850c0459f" },
 ]
 
 [package.metadata]

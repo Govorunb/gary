@@ -28,7 +28,7 @@ check_keywords = "tests.check_keywords:test_keywords"
 
 [tool.uv.sources]
 # llama-cpp-python = { index = "abetlen-cu124" } # not updated past 0.3.4
-llama-cpp-python = { url = "https://github.com/JamePeng/llama-cpp-python/releases/download/v0.3.9-cu126-AVX2-win-20250510/llama_cpp_python-0.3.9-cp312-cp312-win_amd64.whl" }
+llama-cpp-python = { url = "https://github.com/JamePeng/llama-cpp-python/releases/download/v0.3.9-cu124-AVX2-win-20250510/llama_cpp_python-0.3.9-cp312-cp312-win_amd64.whl" }
 
 [[tool.uv.index]]
 name = "abetlen-cu124"
