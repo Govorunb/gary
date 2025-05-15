@@ -8,7 +8,7 @@ from loguru import logger
 import llama_cpp
 from guidance.models._engine import Engine
 from guidance import gen, with_temperature, select, json, models, system, user, assistant
-from guidance.chat import Llama3ChatTemplate, Phi3MiniChatTemplate
+from guidance.chat import Llama3ChatTemplate, Phi3MiniChatTemplate, Qwen2dot5ChatTemplate
 from guidance._grammar import Function
 
 
@@ -82,6 +82,7 @@ class LLM(HasEvents[Literal['context', 'say']]):
                 # why is this not picked up automatically orz
                 Llama3ChatTemplate if 'Llama-3.1' in model
                 else Phi3MiniChatTemplate if 'Phi-3.' in model
+                else Qwen2dot5ChatTemplate if 'Qwen' in model
                 else None),
             "enable_monitoring": False,
             **CONFIG.engine_params
