@@ -33,15 +33,17 @@ That said...
 ## Quick start
 Since the project is aimed at developers, it's expected that you know your way around the command line, have cloned the repo, and so on.
 1. Install [uv](https://github.com/astral-sh/uv#installation)
-2. Make a copy of `config.yaml` and set your model in `(preset).llm`
+2. Install [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Windows)
+	- You should have the `CUDA_PATH` environment variable set to the install location (e.g. `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6`) after installation; if not, set it manually
+3. Make a copy of `config.yaml` and set your model in `(preset).llm`
 	- Use an editor with YAML schema support for a smoother config editing experience
 		- The [schema](https://github.com/Govorunb/gary/blob/main/config.schema.yaml) currently acts as the config documentation
 	- See [Project setup](#project-setup) below for more details
-3. Run the following command:
+4. Run the following command:
 ```
 uv run gary [--preset randy] [--config _your_config.yaml]
 ```
-4. Open the webui at `http://localhost:8001/` (or `api.port + 1` if you changed it in the config)
+5. Open the webui at `http://localhost:8001/` (or `api.port + 1` if you changed it in the config)
 
 #### Project setup
 Files and folders starting with an underscore are `.gitignore`d - this is intended for your config/models/etc.
