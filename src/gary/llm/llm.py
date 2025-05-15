@@ -186,15 +186,15 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
             lm += msg + "\n"
         out = lm.model
         if do_print:
-            log_msg = msg.replace("<", r"\<")
             decorations = {
                 'dim': silent,
                 'strike': ephemeral,
                 'italic': persistent_llarry_only,
             }
+            tagged_template = "[{}] {}"
             for tag in filter(lambda k: decorations[k], decorations):
-                log_msg = loguru_tag(log_msg, tag)
-            logger.opt(colors=True).info(log_msg)
+                tagged_template = loguru_tag(tagged_template, tag)
+            logger.opt(colors=True).info(tagged_template, sender, ctx)
             if tokens > 500 and not persistent_llarry_only:
                 logger.warning(f"Context '{ctx[:20].encode('unicode_escape').decode()}...' had {tokens} tokens. Are you sure this is a good idea?")
         if persistent_llarry_only and isinstance(out, Llarry):
@@ -351,7 +351,7 @@ The following actions are available to you:
         with self.assistant(model) as llm:
             time_gen(llm, gen_)
         said = llm['say']
-        logger.opt(colors=True).success(f"> <lc>{said}</>")
+        logger.opt(colors=True).success("> <lc>{}</>", said)
         # for msg in cast(Llarry, llm).iter_messages_text()[-3:]:
         #     _logger.debug(f"{msg}\n\n{msg.encode()}")
         await self._raise_event('say', said)

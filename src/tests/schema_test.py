@@ -22,8 +22,6 @@ logging.getLogger('asyncio').setLevel(999999999)
 def action(name: str, desc: str, schema: dict[str, Any] | None) -> ActionModel:
     return ActionModel(name=name, description=desc, schema=schema) # type: ignore
 
-GAME = "JSON Schema Test"
-
 ACTIONS = [
     action(
         "prim_str",
@@ -231,13 +229,14 @@ ACTIONS = [
             "properties": {
                 "oneOf": {
                     "enum": [
-                        "$ref",
                         # this is an object literal - not a schema!
                         {
+                            "$ref": None,
                             "type": "object",
                             "properties": {
                                 "anyOf": {"type": "null"},
                                 "null": {"type": "boolean"},
+                                "<lr>hello loguru users</>": "<test><lr>ABCDE</>\\",
                             }
                         }
                     ]
@@ -302,8 +301,8 @@ if focus:
     test_actions = {name: test_actions[name] for name in focus}
 
 class JSONSchemaTest(Game):
-    def __init__(self, name: str, ws: Connection | ClientConnection):
-        super().__init__(name, ws)
+    def __init__(self, ws: Connection | ClientConnection):
+        super().__init__("JSON Schema Test", ws)
         self.handlers = defaultdict(lambda: self.default_handler)
         self.actions = test_actions
         self.ws.subscribe('receive', self.on_msg)
@@ -378,7 +377,7 @@ async def main():
     while True:
         try:
             async with connect("ws://localhost:8000") as ws:
-                game = JSONSchemaTest(GAME, ws)
+                game = JSONSchemaTest(ws)
                 await game.ws.lifecycle()
                 logger.info("Disconnected")
         except Exception as e:
