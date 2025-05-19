@@ -81,17 +81,27 @@ class WSConnection[TRecv: BaseModel, TSend: BaseModel](HasEvents[Literal['connec
             await self._raise_event('disconnect', close_event)
 
 class GameWSConnection(WSConnection[AnyGameMessage, AnyNeuroMessage]):
-    def __init__(self, websocket: WebSocket):
+    def __init__(self, websocket: WebSocket, version: Literal["1", "2"], game_name: str | None = None):
         super().__init__(websocket, GameMessageAdapter, NeuroMessageAdapter)
         self.game: "Game | None" = None
+        self.version = version
+        self.game_name = game_name
 
-        # IMPL: sent on every connect (not just reconnects)
-        self.subscribe('connect', self._send_reregisterall)
-        self.subscribe('receive', self.handle)
+        if self.version == "1":
+            async def _v1_init_if_no_startup_msg(message: AnyGameMessage):
+                if not self.game and isinstance(message, RegisterActions):
+                    await self.registry.initiate(message.game, self)
+            
+            # IMPL: sent on every connect (not just reconnects)
+            # in v2, game is expected to (re-)register on connect, backend is expected to unregister on disconnect
+            async def _v1_send_reregisterall():
+                await self.send(ReregisterAllActions())
+            
+            self.subscribe('connect', _v1_send_reregisterall)
+            self.subscribe('receive', _v1_init_if_no_startup_msg)
+        elif self.version == "2":
+            assert game_name, "Game name is required for v2"
+            async def v2_startup():
+                await self.registry.initiate(game_name, self)
+            self.subscribe('connect', v2_startup)
 
-    async def handle(self, message: AnyGameMessage):
-        if not self.game and isinstance(message, RegisterActions):
-            await self.registry.startup(Startup(game=message.game), self)
-
-    async def _send_reregisterall(self):
-        await self.send(ReregisterAllActions())

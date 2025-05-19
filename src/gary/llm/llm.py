@@ -81,7 +81,7 @@ class LLM(HasEvents[Literal['context', 'say']]):
             "chat_template": (
                 # why is this not picked up automatically orz
                 Llama3ChatTemplate if 'Llama-3.1' in model
-                else Phi3MiniChatTemplate if 'Phi-3.' in model
+                else Phi3MiniChatTemplate if 'Phi-3' in model
                 else Qwen2dot5ChatTemplate if 'Qwen' in model
                 else None),
             "enable_monitoring": False,

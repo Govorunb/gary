@@ -16,24 +16,26 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
         self.games: dict[str, "Game"] = {}
         self.connections: dict[str, WSConnection] = {}
         self._subscriptions: dict[str, Any] = {}
-
-    async def startup(self, msg: Startup, conn: GameWSConnection) -> "Game":
-        if not (game := self.games.get(msg.game)):
-            game = await Game.create(msg.game, self)
-            self.games[msg.game] = game
+    
+    async def initiate(self, name: str, conn: GameWSConnection) -> "Game":
+        if not (game := self.games.get(name)):
+            game = await Game.create(name, self)
+            self.games[name] = game
             await self._raise_event("game_created", game)
         await game.set_connection(conn)
         return game
 
     async def handle(self, msg: AnyGameMessage, conn: GameWSConnection):
         if isinstance(msg, Startup):
-            await self.startup(msg, conn)
+            if conn.version != "1":
+                logger.warning(f"Received `startup` for v{conn.version} - it's been deprecated in v1")
+            await self.initiate(msg.game, conn)
             return
 
         if not (game := self.games.get(msg.game)):
             # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
             logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
-            game = await self.startup(Startup(game=msg.game), conn)
+            game = await self.initiate(msg.game, conn)
             return
 
         if game.connection != conn:
@@ -67,7 +69,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
 type GameEvents = Literal["connect", "disconnect"] | GameCommand | NeuroCommand
 
 class Game(HasEvents[GameEvents]):
-    def __init__(self, name: str, registry: Registry):
+    def __init__(self, name: str, registry: Registry, version: str = "1"):
         super().__init__()
         self.name = name
         self.registry = registry
@@ -78,13 +80,14 @@ class Game(HasEvents[GameEvents]):
         self._warned_unstable = set[str]()
         self.llm: LLM
         self.scheduler: Scheduler
+        self.version = version
 
         self._connection: GameWSConnection = None # type: ignore
         self.subscriptions = []
 
     @classmethod
-    async def create(cls, name: str, registry: Registry):
-        game = cls(name, registry)
+    async def create(cls, name: str, registry: Registry, version: str = "1"):
+        game = cls(name, registry, version)
         game.llm = await LLM.create(game) # TODO: single LLM (again)
         game.scheduler = Scheduler(game)
         return game
@@ -109,6 +112,8 @@ class Game(HasEvents[GameEvents]):
         if self._connection is conn:
             logger.debug(f"connection is already {conn.id}")
             return
+        
+        assert conn.version == self.version, f"Connection vs own version mismatch: {conn.version} != {self.version}"
 
         # IMPL: game already connected
         if self._connection and self._connection.is_connected():
@@ -124,6 +129,8 @@ class Game(HasEvents[GameEvents]):
                 await self._connection.disconnect(1012, "Changing connections")
 
         self._connection = conn
+        if self.version != "1":
+            self.actions.clear()
 
         if conn.game and conn.game is not self:
             logger.error(f"set_connection: conn already has game! {conn.game.name}")
@@ -135,19 +142,17 @@ class Game(HasEvents[GameEvents]):
 
     async def action_register(self, actions: list[ActionModel]):
         for action in actions:
-            # IMPL: action register conflict
-            # i think dropping existing actions is more sensible
-            # that said, neither behaviour should be relied upon
             if action.name in self.actions:
                 logger.warning(f"Action {action.name} already registered")
-                policy = CONFIG.gary.existing_action_policy
+                policy = ConflictResolutionPolicy.DROP_INCOMING if self.version == "1" else ConflictResolutionPolicy.DROP_EXISTING
                 if policy == ConflictResolutionPolicy.DROP_INCOMING:
-                    logger.debug(f"Ignoring incoming action {action.name} according to policy {policy}")
+                    logger.debug(f"Ignoring incoming action {action.name} according to policy {policy} (v{self.version})")
                     continue
-                logger.debug(f"Overwriting existing action {action.name} according to policy {policy}")
+                logger.debug(f"Overwriting existing action {action.name} according to policy {policy} (v{self.version})")
             assert action.schema_ is None or isinstance(action.schema_, dict), "Schema must be None or dict"
             if action.schema_ and action.schema_.get("type") == "object":
                 # stop making up random fields in the data. i am no longer asking
+                # TODO: guidance has a strict json mode now (and by "now" i mean not released yet)
                 action.schema_["additionalProperties"] = False # type: ignore
             self.actions[action.name] = action
             if action.name not in self._seen_actions:
@@ -183,9 +188,10 @@ class Game(HasEvents[GameEvents]):
         if name not in self.actions:
             logger.error(f"Executing unregistered action {name}")
         # IMPL: not validating data against stored action schema (guidance is just perfect like that (clueless))
+        # is it really 'impl' if the official backend doesn't do it either
         msg = Action(data=Action.Data(name=name, data=data))
         self.pending_actions[msg.data.id] = msg
-        if force:
+        if self.version == "1" and force:
             self.pending_forces[msg.data.id] = force
         ctx = f"Executing action '{name}' with {{id: \"{msg.data.id[:6]}\", data: {msg.data.data}}}"
         await self.send_context(ctx, sender=SENDER_SYSTEM, silent=True)
@@ -195,19 +201,19 @@ class Game(HasEvents[GameEvents]):
     async def process_result(self, result: ActionResult):
         if not self.pending_actions.pop(result.data.id, None):
             logger.warning(f"Received result with unknown id {result.data.id}")
-            # IMPL: unknown results are processed
+            # IMPL: unknown results are not ignored
             # return
 
         # IMPL: there SHOULD be a message on failure, but success doesn't require one
         ctx = f"Result for action {result.data.id[:6]}: {'Performing' if result.data.success else 'Failure'} ({result.data.message or 'no message'})"
-        # TODO: v2 - retry responsibility moved to game (thank god)
-        is_force = bool(force := self.pending_forces.pop(result.data.id, None))
-        # TODO: should this be game sender?
-        await self.send_context(ctx, sender=SENDER_SYSTEM, silent=result.data.success or is_force) # IMPL: will try acting again if failed
-        # IMPL: not checking whether the actions in the previous force are still registered
-        # unregistering during force retry is a dangerous edge case that is fixed by v2
-        if is_force and not result.data.success:
+        # v2 - retry responsibility moved to game (thank god)
+        if self.version == "1" and not result.data.success and (force := self.pending_forces.pop(result.data.id, None)):
+            # IMPL: not checking whether the actions in the previous force are still registered
+            # unregistering during force retry is a dangerous edge case that is fixed by v2
+            # hmmmmmm... this enqueues a FORCE-prio event, which will be processed before the ctx above (so the retry will be without context)
             await self.handle(force)
+        # IMPL: will try acting again if failed
+        await self.send_context(ctx, sender=SENDER_SYSTEM, silent=result.data.success)
 
     async def send_context(self, ctx: str, sender: str | None = None, silent: bool = False, ephemeral: bool = False):
         event = ContextEvent(
@@ -225,7 +231,8 @@ class Game(HasEvents[GameEvents]):
         await self._raise_event(msg.command, msg)
         match msg:
             case Startup():
-                pass
+                if self.version != "1":
+                    logger.warning(f"Received `startup` for v{self.version} - it's been deprecated in v1")
             case RegisterActions():
                 await self.action_register(msg.data.actions)
             case UnregisterActions():

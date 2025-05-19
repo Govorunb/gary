@@ -96,7 +96,8 @@ definitions:
           existing_action_policy:
             $ref: "#/definitions/conflict_resolution_policy"
             description: |
-              What to do when an action is registered with the same name as an existing action.
+              [DEPRECATED] What to do when an action is registered with the same name as an existing action.
+              When v2 is out, this will be handled based on the API version (v1 ignores incoming and v2 overwrites, as per spec).
           scheduler:
             type: object
             properties:

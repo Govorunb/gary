@@ -376,6 +376,7 @@ async def main():
     )
     while True:
         try:
+            # TODO: v2
             async with connect("ws://localhost:8000") as ws:
                 game = JSONSchemaTest(ws)
                 await game.ws.lifecycle()

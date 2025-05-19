@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
 from loguru import logger
 
 from .util import GameWSConnection, configure_logging
@@ -20,9 +20,19 @@ configure_logging()
 app = FastAPI(lifespan=lifespan)
 
 
+SUPPORTED_API_VERSIONS = ("1", "2")
+
 @app.websocket("/")
-async def game_ws(websocket: WebSocket):
-    connection = GameWSConnection(websocket)
+@app.websocket("/v{version}")
+@app.websocket("/v{version}/{game}")
+async def game_ws(*, websocket: WebSocket, version: str = "1", game: str | None = None):
+    if version not in SUPPORTED_API_VERSIONS:
+        await websocket.send_denial_response(Response("Unsupported version", status_code=400))
+        return
+    if version == "2" and not game:
+        await websocket.send_denial_response(Response("Missing 'game' query parameter", status_code=400))
+        return
+    connection = GameWSConnection(websocket, version, game)
 
     await websocket.accept()
     logger.info(f"New connection {connection.id} from {websocket.client}")

@@ -50,8 +50,11 @@ class Config(BaseModel):
         logging: LoggingConfig = LoggingConfig()
         existing_connection_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING
         '''What to do when someone tries to connect to a game that already has an active connection.'''
-        existing_action_policy: ConflictResolutionPolicy = ConflictResolutionPolicy.DROP_EXISTING
-        '''What to do when an action is registered but there's already an action with that name.'''
+        existing_action_policy: ConflictResolutionPolicy | None = ConflictResolutionPolicy.DROP_EXISTING
+        '''
+        [DEPRECATED] What to do when an action is registered but there's already an action with that name.
+        When v2 is out, this will be handled based on the API version (v1 ignores incoming and v2 overwrites, as per spec).
+        '''
         allow_yapping: bool = False
         '''
         Allow the model to choose to say something instead of performing an action.
