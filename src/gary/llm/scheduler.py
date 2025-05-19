@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from ..util import CONFIG, PeriodicTimer
-from .events import BaseEvent, ClearContext, Context, TryAction, ForceAction, Say, Sleep
+from .events import BaseEvent, ClearContext, Context, Mute, TryAction, ForceAction, Say, Sleep, Unmute
 
 if TYPE_CHECKING:
     from ..registry import Game
@@ -56,30 +56,34 @@ class Scheduler:
         return self._busy
 
     @property
-    def muted(self):
-        return self._mutes.get('muted', False)
-
+    def muted_web(self):
+        return self._mutes.get('web', False)
+    @property
+    def muted_game(self):
+        return self._mutes.get('game', False)
     @property
     def sleeping(self):
         return self._mutes.get('sleeping', False)
 
-    @property
-    def can_act(self):
-        return not self.muted and not self.sleeping
-
-    @muted.setter
-    def muted(self, muted: bool):
-        if self.muted == muted:
-            return
-        self._mutes['muted'] = muted
-        self._update_mute()
-
+    @muted_web.setter
+    def muted_web(self, muted: bool):
+        self._set_mute('web', muted)
+    @muted_game.setter
+    def muted_game(self, muted: bool):
+        self._set_mute('game', muted)
     @sleeping.setter
     def sleeping(self, sleeping: bool):
-        if self.sleeping == sleeping:
+        self._set_mute('sleeping', sleeping)
+    
+    def _set_mute(self, mute: str, muted: bool):
+        if self._mutes.get(mute) == muted:
             return
-        self._mutes['sleeping'] = sleeping
+        self._mutes[mute] = muted
         self._update_mute()
+
+    @property
+    def can_act(self):
+        return not any(self._mutes.values())
 
     def _update_mute(self):
         if not self.can_act or not self.game.connection.is_connected():
@@ -198,57 +202,65 @@ class Scheduler:
     @logger.catch()
     async def _handle_event(self, event: BaseEvent) -> None:
         """Handle a single event based on its type."""
-        if isinstance(event, Context):
-            await self.game.llm.context(
-                event.ctx,
-                event.sender or self.game.name,
-                silent=event.silent,
-                ephemeral=event.ephemeral,
-                persistent_llarry_only=event.persistent_llamacpp_only,
-                notify=event.notify
-            )
-            if not event.silent:
-                self.enqueue(TryAction())
-        elif isinstance(event, TryAction):
-            actions = event.actions or list(self.game.actions.values())
-            allow_yapping = event.allow_yapping if event.allow_yapping is not None else CONFIG.gary.allow_yapping
-            if not actions and not allow_yapping:
-                logger.error("TryAction with nothing to do")
-                return
-            if not self.can_act:
-                logger.debug(f"TryAction event ignored - {self.status}")
-                return
-            act = await self.game.llm.try_action(actions, allow_yapping=allow_yapping)
-            await self.game.execute_action(act)
-        elif isinstance(event, ForceAction):
-            if not self.can_act:
-                logger.debug(f"ForceAction event ignored - {self.status}")
-                return
-            if event.force_message:
-                act = await self.game.llm.force_action(event.force_message)
-            else:
-                actions = list(self.game.actions.values())
-                act = await self.game.llm.action(actions)
-            await self.game.execute_action(act)
-        elif isinstance(event, Say):
-            if not event.message and not self.can_act:
-                logger.warning(f"Tried to generate Say but {self.status} - Say event from {event.timestamp}")
-                return
-            await self.game.llm.say(message=event.message, ephemeral=event.ephemeral)
-        elif isinstance(event, Sleep):
-            async def sleep(duration: float):
-                self.sleeping = True
-                await asyncio.sleep(duration)
-                self.sleeping = False
-                logger.trace(f"Woke up from Sleep sent at {event.timestamp.time()}")
-            sleep_until = event.timestamp.timestamp() + event.duration
-            sleep_for = sleep_until - time.time()
-            logger.trace(f"Sleeping for {sleep_for:.2f}s (Sleep for {event.duration:.2f} sent at {event.timestamp.time()})")
-            asyncio.create_task(sleep(sleep_for))
-        elif isinstance(event, ClearContext):
-            await self.game.llm.reset(True)
-        else:
-            logger.warning(f"Unknown event type: {type(event)}")
+        match event:
+            case Context():
+                await self.game.llm.context(
+                    event.ctx,
+                    event.sender or self.game.name,
+                    silent=event.silent,
+                    ephemeral=event.ephemeral,
+                    persistent_llarry_only=event.persistent_llamacpp_only,
+                    notify=event.notify
+                )
+                if not event.silent:
+                    self.enqueue(TryAction())
+            case TryAction():
+                actions = event.actions or list(self.game.actions.values())
+                allow_yapping = event.allow_yapping if event.allow_yapping is not None else CONFIG.gary.allow_yapping
+                if not actions and not allow_yapping:
+                    logger.error("TryAction with nothing to do")
+                    return
+                if not self.can_act:
+                    logger.debug(f"TryAction event ignored - {self.status}")
+                    return
+                act = await self.game.llm.try_action(actions, allow_yapping=allow_yapping)
+                await self.game.execute_action(act)
+            case ForceAction():
+                if not self.can_act:
+                    logger.debug(f"ForceAction event ignored - {self.status}")
+                    return
+                if event.force_message:
+                    act = await self.game.llm.force_action(event.force_message)
+                else:
+                    actions = list(self.game.actions.values())
+                    act = await self.game.llm.action(actions)
+                await self.game.execute_action(act)
+            case Say():
+                if not event.message and not self.can_act:
+                    logger.warning(f"Tried to generate Say but {self.status} - Say event from {event.timestamp}")
+                    return
+                await self.game.llm.say(message=event.message, ephemeral=event.ephemeral)
+            case Sleep():
+                async def sleep(duration: float):
+                    self.sleeping = True
+                    await asyncio.sleep(duration)
+                    self.sleeping = False
+                    logger.trace(f"Woke up from Sleep sent at {event.timestamp.time()}")
+                sleep_until = event.timestamp.timestamp() + event.duration
+                sleep_for = sleep_until - time.time()
+                logger.trace(f"Sleeping for {sleep_for:.2f}s (Sleep for {event.duration:.2f} sent at {event.timestamp.time()})")
+                asyncio.create_task(sleep(sleep_for))
+            case ClearContext():
+                logger.trace("Clearing context")
+                await self.game.llm.reset(True)
+            case Mute():
+                logger.info("Muted by game")
+                self.muted_game = True
+            case Unmute():
+                logger.info("Unmuted by game")
+                self.muted_game = False
+            case _:
+                logger.warning(f"Unknown event type: {type(event)}")
 
     async def _try(self) -> bool:
         if not self.game.actions and not CONFIG.gary.allow_yapping:

@@ -7,7 +7,7 @@ from .llm.llm import SENDER_SYSTEM
 from .util import CONFIG, WSConnection, GameWSConnection, HasEvents
 from .util.config import ConflictResolutionPolicy
 from .llm import LLM, Scheduler, Act
-from .llm.events import Context as ContextEvent, TryAction, ForceAction as ForceActionEvent
+from .llm.events import Context as ContextEvent, TryAction, ForceAction as ForceActionEvent, Mute as MuteEvent, Unmute as UnmuteEvent
 from .spec import *
 
 class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconnected"]]):
@@ -75,6 +75,7 @@ class Game(HasEvents[GameEvents]):
         self._seen_actions: set[str] = set()
         self.pending_actions: dict[str, Action] = {}
         self.pending_forces: dict[str, ForceAction] = {}
+        self._warned_unstable = set[str]()
         self.llm: LLM
         self.scheduler: Scheduler
 
@@ -235,6 +236,12 @@ class Game(HasEvents[GameEvents]):
                 self.scheduler.enqueue(ForceActionEvent(force_message=msg))
             case ActionResult():
                 await self.process_result(msg)
+            case Mute():
+                self._warn_unstable("mute/unmute")
+                self.scheduler.enqueue(MuteEvent())
+            case Unmute():
+                self._warn_unstable("mute/unmute")
+                self.scheduler.enqueue(UnmuteEvent())
             case _:
                 raise Exception(f"Unhandled message {msg}")
 
@@ -255,5 +262,12 @@ class Game(HasEvents[GameEvents]):
         self.actions.clear()
         self.pending_actions.clear()
         self.pending_forces.clear()
+
+    def _warn_unstable(self, api: str):
+        if api in self._warned_unstable:
+            return
+        self._warned_unstable.add(api)
+        logger.warning(f"The {api} API is currently in the proposal stage for v2, and is not guaranteed to end up in the official spec."
+                        "\nIf this API doesn't make it into v2, it will be removed from here as well. Do not depend on this implementation.")
 
 REGISTRY = Registry()

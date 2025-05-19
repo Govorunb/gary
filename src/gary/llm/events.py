@@ -109,7 +109,15 @@ class Sleep(BaseEvent):
 
 @dataclass
 class ClearContext(BaseEvent):
-    pass
+    def __post_init__(self):
+        self.priority = Priority.HIGH
 
+@dataclass
+class Mute(BaseEvent):
+    def __post_init__(self):
+        self.priority = Priority.HIGH
+
+@dataclass
+class Unmute(BaseEvent):
     def __post_init__(self):
         self.priority = Priority.HIGH

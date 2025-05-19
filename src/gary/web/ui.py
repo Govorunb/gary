@@ -112,7 +112,7 @@ def add_control_panel(path: str):
         if connected_clients == 0:
             logger.info("(Web UI) All clients disconnected, unmuting all")
             for game in REGISTRY.games.values():
-                game.scheduler.muted = False
+                game.scheduler.muted_web = False
     pn.state.on_session_created(on_connect)
     pn.state.on_session_destroyed(on_disconnect)
 

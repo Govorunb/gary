@@ -272,10 +272,10 @@ class GameTab(pn.viewable.Viewer):
         )
 
         def update_mute(muted):
-            if game.scheduler.muted == muted:
+            if game.scheduler.muted_web == muted:
                 return
             logger.info(f"(Web UI) {'un' if not muted else ''}muted '{game.name}'")
-            game.scheduler.muted = muted
+            game.scheduler.muted_web = muted
         def update_follow_schema(value):
             if CONFIG.gary.enforce_schema == value:
                 return

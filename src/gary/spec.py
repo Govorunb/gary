@@ -15,6 +15,8 @@ type GameCommand = Literal[
     "actions/force",
     "action/result",
     "shutdown/ready",
+    "mute",
+    "unmute",
 ]
 
 type NeuroCommand = Literal[
@@ -98,7 +100,9 @@ class Action(NeuroMessage):
     command: Literal["action"] = "action"
     data: Data
 
-# active proposals - see https://github.com/VedalAI/neuro-game-sdk/blob/main/API/PROPOSALS.md
+# active proposals
+# see https://github.com/VedalAI/neuro-game-sdk/blob/main/API/PROPOSALS.md
+# and https://github.com/VedalAI/neuro-game-sdk/discussions/58
 
 class ReregisterAllActions(NeuroMessage):
     command: Literal["actions/reregister_all"] = "actions/reregister_all"
@@ -117,7 +121,13 @@ class ImmediateShutdown(NeuroMessage):
 class ShutdownReady(GameMessage):
     command: Literal["shutdown/ready"] = "shutdown/ready"
 
-AnyGameMessage = Startup | Context | RegisterActions | UnregisterActions | ForceAction | ActionResult | ShutdownReady
+class Mute(GameMessage):
+    command: Literal["mute"] = "mute"
+
+class Unmute(GameMessage):
+    command: Literal["unmute"] = "unmute"
+
+AnyGameMessage = Startup | Context | RegisterActions | UnregisterActions | ForceAction | ActionResult | ShutdownReady | Mute | Unmute
 GameMessageAdapter: TypeAdapter[Annotated[AnyGameMessage, Field(discriminator="command")]]
 GameMessageAdapter = TypeAdapter(Annotated[AnyGameMessage, Field(discriminator="command")])
 
