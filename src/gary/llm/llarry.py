@@ -39,8 +39,8 @@ class StreamingLlamaCppEngine(LlamaCppEngine):
         self.default_n_discard = kwargs.get("n_discard") # n_ctx // 2
 
     def shift_kv_cache(self, n_keep, n_discard, seq_id=0):
-        self.model_obj._ctx.kv_self_seq_rm(seq_id, n_keep, n_keep + n_discard)
-        self.model_obj._ctx.kv_self_seq_add(seq_id, n_keep, -1, -n_discard)
+        self.model_obj._ctx.kv_cache_seq_rm(seq_id, n_keep, n_keep + n_discard)
+        self.model_obj._ctx.kv_cache_seq_shift(seq_id, n_keep, -1, -n_discard)
 
     def trim(self, token_ids: list[int], n_keep: int | None = None, n_discard: int | None = None) -> list[int]:
         n_keep = n_keep or self.default_n_keep
