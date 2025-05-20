@@ -22,9 +22,9 @@ app = FastAPI(lifespan=lifespan)
 
 SUPPORTED_API_VERSIONS = ("1", "2")
 
-@app.websocket("/")
-@app.websocket("/v{version}")
-@app.websocket("/v{version}/{game}")
+@app.websocket("/") # v1 only
+@app.websocket("/v{version}") # v2, exact route still in proposal - game would be in query
+@app.websocket("/v{version}/{game}") # v2, alternative route (game in path rather than query)
 async def game_ws(*, websocket: WebSocket, version: str = "1", game: str | None = None):
     if version not in SUPPORTED_API_VERSIONS:
         await websocket.send_denial_response(Response("Unsupported version", status_code=400))

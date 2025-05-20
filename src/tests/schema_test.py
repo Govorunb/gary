@@ -1,4 +1,5 @@
 import asyncio
+import argparse
 import jsonschema
 import orjson
 import sys
@@ -301,8 +302,9 @@ if focus:
     test_actions = {name: test_actions[name] for name in focus}
 
 class JSONSchemaTest(Game):
+    game_name = "JSON Schema Test"
     def __init__(self, ws: Connection | ClientConnection):
-        super().__init__("JSON Schema Test", ws)
+        super().__init__(self.game_name, ws)
         self.handlers = defaultdict(lambda: self.default_handler)
         self.actions = test_actions
         self.ws.subscribe('receive', self.on_msg)
@@ -367,6 +369,9 @@ class JSONSchemaTest(Game):
         return res
 
 async def main():
+    parser = argparse.ArgumentParser(description='Run schema tests against Gary backend')
+    parser.add_argument('--api-version', '-v', nargs='?', type=str, default='1', choices=['1', '2'], help='API version to test')
+    args = parser.parse_args()
     logger.remove()
     logger.add(
         sys.stdout,
@@ -376,8 +381,12 @@ async def main():
     )
     while True:
         try:
-            # TODO: v2
-            async with connect("ws://localhost:8000") as ws:
+            ws_url = "ws://localhost:8000/"
+            if args.api_version == '2':
+                ws_url += f"v2/{JSONSchemaTest.game_name}"
+
+            logger.info(f"Connecting to {ws_url}")
+            async with connect(ws_url) as ws:
                 game = JSONSchemaTest(ws)
                 await game.ws.lifecycle()
                 logger.info("Disconnected")
