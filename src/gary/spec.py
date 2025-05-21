@@ -4,27 +4,22 @@ from pydantic import BaseModel, Field, TypeAdapter
 
 # pyright: reportIncompatibleVariableOverride=false
 # the fields are *not* mutated, ever
-# there's the option to make the base classes generic
-# but pydantic doesn't pass overrides with default values down to the parent ctor)
 
-type GameCommand = Literal[
-    "startup", # v1 only
+type GameCommandCommon = Literal[
     "context",
     "actions/register",
     "actions/unregister",
     "actions/force",
     "action/result",
-    "shutdown/ready",
-    "mute",
-    "unmute",
 ]
+type GameCommandV1 = GameCommandCommon | Literal["startup"]
+type GameCommandV2 = GameCommandCommon | Literal["mute", "unmute", "shutdown/ready"]
+type GameCommand = GameCommandV1 | GameCommandV2
 
-type NeuroCommand = Literal[
-    "action",
-    "actions/reregister_all", # v1 only
-    "shutdown/graceful",
-    "shutdown/immediate",
-]
+type NeuroCommandCommon = Literal["action"]
+type NeuroCommandV1 = NeuroCommandCommon | Literal["actions/reregister_all"]
+type NeuroCommandV2 = NeuroCommandCommon | Literal["shutdown/graceful", "shutdown/immediate"]
+type NeuroCommand = NeuroCommandV1 | NeuroCommandV2
 
 class ActionModel(BaseModel):
     name: str
@@ -34,18 +29,30 @@ class ActionModel(BaseModel):
 class Message(BaseModel):
     command: GameCommand | NeuroCommand
 
-class GameMessage(Message):
-    command: GameCommand
+class GameMessageV1(Message):
+    command: GameCommandV1
     game: str
 
-class NeuroMessage(Message):
-    command: NeuroCommand
+class GameMessageV2(Message):
+    command: GameCommandV2
+
+GameMessage = GameMessageV1 | GameMessageV2
+
+class NeuroMessageV1(Message):
+    command: NeuroCommandV1
+
+class NeuroMessageV2(Message):
+    command: NeuroCommandV2
+
+NeuroMessage = NeuroMessageV1 | NeuroMessageV2
 
 # Game messages
-class Startup(GameMessage):
+# v1 only messages
+class Startup(GameMessageV1):
     command: Literal["startup"] = "startup"
 
-class Context(GameMessage):
+# Messages that exist in both v1 and v2
+class Context(GameMessageV1, GameMessageV2):
     class Data(BaseModel):
         message: str
         silent: bool
@@ -53,21 +60,21 @@ class Context(GameMessage):
     command: Literal["context"] = "context"
     data: Data
 
-class RegisterActions(GameMessage):
+class RegisterActions(GameMessageV1, GameMessageV2):
     class Data(BaseModel):
         actions: list[ActionModel]
 
     command: Literal["actions/register"] = "actions/register"
     data: Data
 
-class UnregisterActions(GameMessage):
+class UnregisterActions(GameMessageV1, GameMessageV2):
     class Data(BaseModel):
         action_names: list[str]
 
     command: Literal["actions/unregister"] = "actions/unregister"
     data: Data
 
-class ForceAction(GameMessage):
+class ForceAction(GameMessageV1, GameMessageV2):
     class Data(BaseModel):
         state: str | None = None
         query: str
@@ -78,7 +85,7 @@ class ForceAction(GameMessage):
     command: Literal["actions/force"] = "actions/force"
     data: Data
 
-class ActionResult(GameMessage):
+class ActionResult(GameMessageV1, GameMessageV2):
     class Data(BaseModel):
         id: str
         success: bool
@@ -89,7 +96,7 @@ class ActionResult(GameMessage):
 
 # Neuro messages
 
-class Action(NeuroMessage):
+class Action(NeuroMessageV1):
     class Data(BaseModel):
         id: str = Field(default_factory=lambda: uuid4().hex)
         name: str
@@ -104,10 +111,10 @@ class Action(NeuroMessage):
 # see https://github.com/VedalAI/neuro-game-sdk/blob/main/API/PROPOSALS.md
 # and https://github.com/VedalAI/neuro-game-sdk/discussions/58
 
-class ReregisterAllActions(NeuroMessage):
+class ReregisterAllActions(NeuroMessageV1):
     command: Literal["actions/reregister_all"] = "actions/reregister_all"
 
-class GracefulShutdown(NeuroMessage):
+class GracefulShutdown(NeuroMessageV2):
     # might be changed; see https://github.com/VedalAI/neuro-game-sdk/issues/44
     class Data(BaseModel):
         wants_shutdown: bool
@@ -115,22 +122,45 @@ class GracefulShutdown(NeuroMessage):
     command: Literal["shutdown/graceful"] = "shutdown/graceful"
     data: Data
 
-class ImmediateShutdown(NeuroMessage):
+class ImmediateShutdown(NeuroMessageV2):
     command: Literal["shutdown/immediate"] = "shutdown/immediate"
 
-class ShutdownReady(GameMessage):
+class ShutdownReady(GameMessageV2):
     command: Literal["shutdown/ready"] = "shutdown/ready"
 
-class Mute(GameMessage):
+class Mute(GameMessageV2):
     command: Literal["mute"] = "mute"
 
-class Unmute(GameMessage):
+class Unmute(GameMessageV2):
     command: Literal["unmute"] = "unmute"
 
-AnyGameMessage = Startup | Context | RegisterActions | UnregisterActions | ForceAction | ActionResult | ShutdownReady | Mute | Unmute
-GameMessageAdapter: TypeAdapter[Annotated[AnyGameMessage, Field(discriminator="command")]]
-GameMessageAdapter = TypeAdapter(Annotated[AnyGameMessage, Field(discriminator="command")])
+# Create separate type adapters for each version
+AnyGameMessageV1 = Startup | Context | RegisterActions | UnregisterActions | ForceAction | ActionResult
+AnyGameMessageV2 = Context | RegisterActions | UnregisterActions | ForceAction | ActionResult | ShutdownReady | Mute | Unmute
 
-AnyNeuroMessage = Action | ReregisterAllActions | GracefulShutdown | ImmediateShutdown
-NeuroMessageAdapter: TypeAdapter[Annotated[AnyNeuroMessage, Field(discriminator="command")]]
-NeuroMessageAdapter = TypeAdapter(Annotated[AnyNeuroMessage, Field(discriminator="command")])
+# For backward compatibility, include all possible messages
+AnyGameMessage = AnyGameMessageV1 | AnyGameMessageV2
+
+# Type adapters for each version
+GameMessageAdapterV1: TypeAdapter[Annotated[AnyGameMessageV1, Field(discriminator="command")]]
+GameMessageAdapterV1 = TypeAdapter(Annotated[AnyGameMessageV1, Field(discriminator="command")])
+
+GameMessageAdapterV2: TypeAdapter[Annotated[AnyGameMessageV2, Field(discriminator="command")]]
+GameMessageAdapterV2 = TypeAdapter(Annotated[AnyGameMessageV2, Field(discriminator="command")])
+
+# For backward compatibility, default to V1
+GameMessageAdapter = GameMessageAdapterV1
+
+AnyNeuroMessageV1 = Action | ReregisterAllActions
+AnyNeuroMessageV2 = Action | GracefulShutdown | ImmediateShutdown
+AnyNeuroMessage = AnyNeuroMessageV1 | AnyNeuroMessageV2
+
+# Type adapters for each version
+NeuroMessageAdapterV1: TypeAdapter[Annotated[AnyNeuroMessageV1, Field(discriminator="command")]]
+NeuroMessageAdapterV1 = TypeAdapter(Annotated[AnyNeuroMessageV1, Field(discriminator="command")])
+
+NeuroMessageAdapterV2: TypeAdapter[Annotated[AnyNeuroMessageV2, Field(discriminator="command")]]
+NeuroMessageAdapterV2 = TypeAdapter(Annotated[AnyNeuroMessageV2, Field(discriminator="command")])
+
+# For backward compatibility, default to V1
+NeuroMessageAdapter = NeuroMessageAdapterV1

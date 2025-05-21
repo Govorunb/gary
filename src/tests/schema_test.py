@@ -1,5 +1,4 @@
 import asyncio
-import argparse
 import jsonschema
 import orjson
 import sys
@@ -10,6 +9,7 @@ from os import environ
 from typing import Any
 from websockets import ClientConnection
 from websockets.asyncio.client import connect
+from urllib import parse
 
 from gary.spec import *
 from .util import Connection, Game
@@ -348,8 +348,8 @@ class JSONSchemaTest(Game):
         logger.debug(f"Received message: {msg}")
         match msg:
             case ReregisterAllActions():
-                if self.version != "2":
-                    logger.error("v2 should not receive actions/reregister_all!")
+                if self.version != "1":
+                    logger.error(f"actions/reregister_all is only for v1! We're on {self.version}")
                 logger.success(f"Registering {len(self.actions)} actions")
                 await self.send(RegisterActions, data={"actions": list(self.actions.values())})
             case Action():
@@ -378,9 +378,13 @@ class JSONSchemaTest(Game):
         return res
 
 async def main():
-    parser = argparse.ArgumentParser(description='Run schema tests against Gary backend')
-    parser.add_argument('-v2', action='store_true', help='Use API v2 (this will become the default once v2 is out)')
-    args = parser.parse_args()
+    # erm... config has its own argparser that runs on module import
+    # import argparse
+    # parser = argparse.ArgumentParser(description='Run schema tests against Gary or another Neuro SDK backend')
+    # parser.add_argument('-v2', action='store_true', help='Use API v2 (this will become the default once v2 is out)')
+    # args = parser.parse_args()
+    # v2 = args.v2
+    v2 = True
     logger.remove()
     logger.add(
         sys.stdout,
@@ -391,17 +395,19 @@ async def main():
     while True:
         try:
             ws_url = environ.get("NEURO_SDK_WS_URL") or "ws://localhost:8000"
-            if args.v2:
-                ws_url += f"/v2/{JSONSchemaTest.game_name}"
+            if v2:
+                ws_url += f"/v2/{parse.quote_plus(JSONSchemaTest.game_name)}"
 
             logger.info(f"Connecting to {ws_url}")
             async with connect(ws_url) as ws:
-                game = await JSONSchemaTest.create(ws, "2" if args.v2 else "1")
+                game = await JSONSchemaTest.create(ws, "2" if v2 else "1")
                 await game.ws.lifecycle()
                 logger.info("Disconnected")
         except Exception as e:
             logger.error(e)
             continue
+        finally:
+            await asyncio.sleep(0.5)
 
 def start():
     try:

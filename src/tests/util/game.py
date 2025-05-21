@@ -18,11 +18,13 @@ class Game(HasEvents[GameEvents]):
         self.name = name
         self.version = version
         self.actions: dict[str, ActionModel] = {}
-        self.ws.subscribe('receive', self._handler)
+        self.ws.subscribe('receive', self._recv_handler)
         self._sent_hello = False
 
     def make_msg(self, cls: type[AnyGameMessage], **kw):
-        return cls(game=self.name, **kw)
+        if self.version == "1":
+            kw["game"] = self.name
+        return cls(**kw)
 
     @overload
     async def send(self, msg: AnyGameMessage): ...
@@ -39,5 +41,5 @@ class Game(HasEvents[GameEvents]):
         await self.ws.send(message)
         await self._raise_event(message.command, message)
 
-    async def _handler(self, msg: AnyNeuroMessage):
+    async def _recv_handler(self, msg: AnyNeuroMessage):
         await self._raise_event(msg.command, msg)

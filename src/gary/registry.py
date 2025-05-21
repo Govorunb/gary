@@ -1,10 +1,12 @@
+from typing import cast
 import orjson
 from functools import partial
 from loguru import logger
 
+
 from .llm.llm import SENDER_SYSTEM
 
-from .util import CONFIG, WSConnection, GameWSConnection, HasEvents
+from .util import CONFIG, WSConnection, GameWSConnection, GameWSConnectionV1, GameWSConnectionV2, HasEvents
 from .util.config import ConflictResolutionPolicy
 from .llm import LLM, Scheduler, Act
 from .llm.events import Context as ContextEvent, TryAction, ForceAction as ForceActionEvent, Mute as MuteEvent, Unmute as UnmuteEvent
@@ -19,7 +21,7 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
     
     async def initiate(self, name: str, conn: GameWSConnection) -> "Game":
         if not (game := self.games.get(name)):
-            game = await Game.create(name, self)
+            game = await Game.create(name, self, conn.version)
             self.games[name] = game
             await self._raise_event("game_created", game)
         await game.set_connection(conn)
@@ -32,15 +34,21 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
             await self.initiate(msg.game, conn)
             return
 
-        if not (game := self.games.get(msg.game)):
-            # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
-            logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
-            game = await self.initiate(msg.game, conn)
-            return
+        if isinstance(conn, GameWSConnectionV1):
+            msg = cast(AnyGameMessageV1, msg)
+            if not (game := self.games.get(msg.game)):
+                # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
+                logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
+                game = await self.initiate(msg.game, conn)
+        elif isinstance(conn, GameWSConnectionV2):
+            game = conn.game
+            assert game, "v2 was not initialized"
+        else:
+            assert False
 
         if game.connection != conn:
             if game.connection.is_connected(): # IMPL
-                logger.error(f"Game {msg.game} is registered to a different active connection! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
+                logger.error(f"Game {game.name} is registered to a different active connection! (was {game.connection.ws.client}; received '{msg.command}' from {conn.ws.client})")
             # TODO: v2
             logger.warning("Reconnecting without `startup` - the spec requires a `startup` message!")
             await game.set_connection(conn)
