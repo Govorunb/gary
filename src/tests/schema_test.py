@@ -346,10 +346,18 @@ class JSONSchemaTest(Game):
 
     async def on_msg(self, msg: AnyNeuroMessage):
         logger.debug(f"Received message: {msg}")
+        if self.version == "1":
+            if not isinstance(msg, NeuroMessageV1):
+                logger.error(f"Received {msg.__class__.__name__} on v1 connection")
+                return
+        elif self.version == "2":
+            if not isinstance(msg, NeuroMessageV2):
+                logger.error(f"Received {msg.__class__.__name__} on v2 connection")
+                return
+        else:
+            assert False, "Unreachable - game connection not v1 or v2"
         match msg:
             case ReregisterAllActions():
-                if self.version != "1":
-                    logger.error(f"actions/reregister_all is only for v1! We're on {self.version}")
                 logger.success(f"Registering {len(self.actions)} actions")
                 await self.send(RegisterActions, data={"actions": list(self.actions.values())})
             case Action():
@@ -364,6 +372,9 @@ class JSONSchemaTest(Game):
                     "message": response,
                 }
                 await self.send(ActionResult, data=result)
+            case GracefulShutdown(data=GracefulShutdown.Data(wants_shutdown=True)) | ImmediateShutdown():
+                await self.send(self.make_msg(ShutdownReady))
+                # backend will disconnect
             case _:
                 logger.warning(f"Unhandled message: {msg}")
 
