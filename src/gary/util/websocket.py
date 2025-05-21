@@ -97,7 +97,8 @@ class GameWSConnectionV1(GameWSConnection, WSConnection[AnyGameMessageV1, AnyNeu
         self.subscribe('connect', _v1_send_reregisterall)
         self.subscribe('receive', self._v1_init_if_no_startup_msg)
     
-    async def _v1_init_if_no_startup_msg(self, message: AnyGameMessage):
+    async def _v1_init_if_no_startup_msg(self, message: AnyGameMessageV1):
+        assert message.game is not None, "v1 requires 'game' field"
         if not self.game and isinstance(message, RegisterActions):
             await self.registry.initiate(message.game, self)
     

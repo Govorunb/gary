@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
 from loguru import logger
-
+import urllib.parse
 from .util import GameWSConnection, GameWSConnectionV1, GameWSConnectionV2, configure_logging
 from .web.ui import add_control_panel
 
@@ -30,7 +30,7 @@ async def v2_game_in_query(*, websocket: WebSocket, version: str, game: str | No
 
 @app.websocket("/v{version}/{game}") # v2+, alternative route (game in path rather than query)
 async def v2_game_in_path(*, websocket: WebSocket, version: str, game: str):
-    return await game_ws(websocket=websocket, version=version, game=game)
+    return await game_ws(websocket=websocket, version=version, game=urllib.parse.unquote_plus(game))
 
 async def game_ws(*, websocket: WebSocket, version: str, game: str | None = None):
     connection: GameWSConnection

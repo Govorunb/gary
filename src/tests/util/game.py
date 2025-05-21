@@ -31,9 +31,10 @@ class Game(HasEvents[GameEvents]):
     @overload
     async def send(self, msg: type[AnyGameMessage], **kw): ...
     async def send(self, msg: AnyGameMessage | type[AnyGameMessage], **kw):
-        if not self._sent_hello: # v2 will also send a hello (maybe)
+        if not self._sent_hello:
             self._sent_hello = True
-            await self.send(Startup)
+            if self.version == "1": # v2 will also send a hello (maybe)
+                await self.send(Startup)
         message = self.make_msg(msg, **kw) if isinstance(msg, type) else msg
         if not self.ws.is_connected():
             logger.warning(f"Not connected, cannot send {message}")

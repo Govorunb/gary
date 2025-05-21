@@ -1,4 +1,3 @@
-from typing import cast
 import orjson
 from functools import partial
 from loguru import logger
@@ -28,23 +27,25 @@ class Registry(HasEvents[Literal["game_created", "game_connected", "game_disconn
         return game
 
     async def handle(self, msg: AnyGameMessage, conn: GameWSConnection):
-        if isinstance(msg, Startup):
-            if conn.version != "1":
-                logger.warning(f"Received `startup` for v{conn.version} - it's been deprecated in v1")
-            await self.initiate(msg.game, conn)
-            return
-
         if isinstance(conn, GameWSConnectionV1):
-            msg = cast(AnyGameMessageV1, msg)
+            if not isinstance(msg, GameMessageV1):
+                logger.error(f"Received {msg.__class__.__name__} on v1 connection")
+                return
+            assert msg.game is not None, "v1 message without game"
+            if isinstance(msg, Startup):
+                await self.initiate(msg.game, conn)
+                return
             if not (game := self.games.get(msg.game)):
                 # IMPL: pretend we got a `startup` if first msg after reconnect isn't `startup`
                 logger.warning(f"Game {msg.game} was not initialized, imitating a `startup`")
                 game = await self.initiate(msg.game, conn)
         elif isinstance(conn, GameWSConnectionV2):
-            game = conn.game
-            assert game, "v2 was not initialized"
+            assert (game := conn.game), "v2 was not initialized"
+            if not isinstance(msg, GameMessageV2):
+                logger.error(f"Received {msg.__class__.__name__} on v2 connection")
+                return
         else:
-            assert False
+            assert False, "Unreachable - game connection not v1 or v2"
 
         if game.connection != conn:
             if game.connection.is_connected(): # IMPL

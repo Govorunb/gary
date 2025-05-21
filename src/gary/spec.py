@@ -31,7 +31,7 @@ class Message(BaseModel):
 
 class GameMessageV1(Message):
     command: GameCommandV1
-    game: str
+    game: str | None = None # noooooooooo
 
 class GameMessageV2(Message):
     command: GameCommandV2
@@ -138,29 +138,15 @@ class Unmute(GameMessageV2):
 AnyGameMessageV1 = Startup | Context | RegisterActions | UnregisterActions | ForceAction | ActionResult
 AnyGameMessageV2 = Context | RegisterActions | UnregisterActions | ForceAction | ActionResult | ShutdownReady | Mute | Unmute
 
-# For backward compatibility, include all possible messages
 AnyGameMessage = AnyGameMessageV1 | AnyGameMessageV2
 
-# Type adapters for each version
-GameMessageAdapterV1: TypeAdapter[Annotated[AnyGameMessageV1, Field(discriminator="command")]]
-GameMessageAdapterV1 = TypeAdapter(Annotated[AnyGameMessageV1, Field(discriminator="command")])
-
-GameMessageAdapterV2: TypeAdapter[Annotated[AnyGameMessageV2, Field(discriminator="command")]]
-GameMessageAdapterV2 = TypeAdapter(Annotated[AnyGameMessageV2, Field(discriminator="command")])
-
-# For backward compatibility, default to V1
-GameMessageAdapter = GameMessageAdapterV1
+GameMessageAdapterV1: TypeAdapter[Annotated[AnyGameMessageV1, Field(discriminator="command")]] = TypeAdapter(Annotated[AnyGameMessageV1, Field(discriminator="command")])
+GameMessageAdapterV2: TypeAdapter[Annotated[AnyGameMessageV2, Field(discriminator="command")]] = TypeAdapter(Annotated[AnyGameMessageV2, Field(discriminator="command")])
 
 AnyNeuroMessageV1 = Action | ReregisterAllActions
 AnyNeuroMessageV2 = Action | GracefulShutdown | ImmediateShutdown
 AnyNeuroMessage = AnyNeuroMessageV1 | AnyNeuroMessageV2
 
-# Type adapters for each version
-NeuroMessageAdapterV1: TypeAdapter[Annotated[AnyNeuroMessageV1, Field(discriminator="command")]]
-NeuroMessageAdapterV1 = TypeAdapter(Annotated[AnyNeuroMessageV1, Field(discriminator="command")])
+NeuroMessageAdapterV1: TypeAdapter[Annotated[AnyNeuroMessageV1, Field(discriminator="command")]] = TypeAdapter(Annotated[AnyNeuroMessageV1, Field(discriminator="command")])
+NeuroMessageAdapterV2: TypeAdapter[Annotated[AnyNeuroMessageV2, Field(discriminator="command")]] = TypeAdapter(Annotated[AnyNeuroMessageV2, Field(discriminator="command")])
 
-NeuroMessageAdapterV2: TypeAdapter[Annotated[AnyNeuroMessageV2, Field(discriminator="command")]]
-NeuroMessageAdapterV2 = TypeAdapter(Annotated[AnyNeuroMessageV2, Field(discriminator="command")])
-
-# For backward compatibility, default to V1
-NeuroMessageAdapter = NeuroMessageAdapterV1
