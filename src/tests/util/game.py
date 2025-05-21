@@ -12,10 +12,11 @@ from ..util import Connection
 type Handler = Callable[[str, Any], Awaitable[tuple[bool, str]]]
 
 class Game(HasEvents[GameEvents]):
-    def __init__(self, name: str, ws: Connection | ClientConnection):
+    def __init__(self, name: str, ws: Connection | ClientConnection, version: str = "1"):
         super().__init__()
         self.ws = ws if isinstance(ws, Connection) else Connection(ws)
         self.name = name
+        self.version = version
         self.actions: dict[str, ActionModel] = {}
         self.ws.subscribe('receive', self._handler)
         self._sent_hello = False
@@ -28,7 +29,7 @@ class Game(HasEvents[GameEvents]):
     @overload
     async def send(self, msg: type[AnyGameMessage], **kw): ...
     async def send(self, msg: AnyGameMessage | type[AnyGameMessage], **kw):
-        if not self._sent_hello:
+        if not self._sent_hello: # v2 will also send a hello (maybe)
             self._sent_hello = True
             await self.send(Startup)
         message = self.make_msg(msg, **kw) if isinstance(msg, type) else msg

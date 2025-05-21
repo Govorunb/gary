@@ -6,6 +6,7 @@ import sys
 
 from collections import defaultdict
 from loguru import logger
+from os import environ
 from typing import Any
 from websockets import ClientConnection
 from websockets.asyncio.client import connect
@@ -303,20 +304,26 @@ if focus:
 
 class JSONSchemaTest(Game):
     game_name = "JSON Schema Test"
-    def __init__(self, ws: Connection | ClientConnection):
-        super().__init__(self.game_name, ws)
+    def __init__(self, ws: Connection | ClientConnection, version: str = "1"):
+        super().__init__(self.game_name, ws, version)
         self.handlers = defaultdict(lambda: self.default_handler)
         self.actions = test_actions
-        self.ws.subscribe('receive', self.on_msg)
-        self.subscribe('actions/reregister_all', self.hello)
         self._schema_changed = False
         self.handlers['schema_update'] = self._schema_update
-        # uncomment to be extra mean to backends that rely on the Startup message
-        # shoutouts to the 0 people that will ever run this against anything other than gary
-        # self._sent_hello = True
+        self.ws.subscribe('receive', self.on_msg)
+    
+    @classmethod
+    async def create(cls, ws: Connection | ClientConnection, version: str = "1"):
+        self = cls(ws, version)
+        if version == "1":
+            self.subscribe('actions/reregister_all', self.welcome_ctx)
+        else:
+            await self.send(self.make_msg(RegisterActions, data={"actions": list(self.actions.values())}))
+            await self.welcome_ctx()
+        return self
 
     async def default_handler(self, name: str, data: Any) -> tuple[bool, str]:
-        (success, response) = (True, f"Echo: {name=} {data=}")
+        (success, response) = (True, f"Echo: {name=}, {data=}")
         try:
             jsonschema.validate(data, self.actions[name].schema_ or {})
         except jsonschema.ValidationError as e:
@@ -329,7 +336,7 @@ class JSONSchemaTest(Game):
             await self.send(UnregisterActions, data={"action_names": [name]})
         return success, response
 
-    async def hello(self, *_):
+    async def welcome_ctx(self, *_):
         await self.send(self.make_msg(Context, data={
             "message":
                 "Welcome to the JSON Schema test. Please execute the actions available to you.\n"
@@ -341,6 +348,8 @@ class JSONSchemaTest(Game):
         logger.debug(f"Received message: {msg}")
         match msg:
             case ReregisterAllActions():
+                if self.version != "2":
+                    logger.error("v2 should not receive actions/reregister_all!")
                 logger.success(f"Registering {len(self.actions)} actions")
                 await self.send(RegisterActions, data={"actions": list(self.actions.values())})
             case Action():
@@ -370,7 +379,7 @@ class JSONSchemaTest(Game):
 
 async def main():
     parser = argparse.ArgumentParser(description='Run schema tests against Gary backend')
-    parser.add_argument('--api-version', '-v', nargs='?', type=str, default='1', choices=['1', '2'], help='API version to test')
+    parser.add_argument('-v2', action='store_true', help='Use API v2 (this will become the default once v2 is out)')
     args = parser.parse_args()
     logger.remove()
     logger.add(
@@ -381,13 +390,13 @@ async def main():
     )
     while True:
         try:
-            ws_url = "ws://localhost:8000/"
-            if args.api_version == '2':
-                ws_url += f"v2/{JSONSchemaTest.game_name}"
+            ws_url = environ.get("NEURO_SDK_WS_URL") or "ws://localhost:8000"
+            if args.v2:
+                ws_url += f"/v2/{JSONSchemaTest.game_name}"
 
             logger.info(f"Connecting to {ws_url}")
             async with connect(ws_url) as ws:
-                game = JSONSchemaTest(ws)
+                game = await JSONSchemaTest.create(ws, "2" if args.v2 else "1")
                 await game.ws.lifecycle()
                 logger.info("Disconnected")
         except Exception as e:

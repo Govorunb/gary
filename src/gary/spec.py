@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, TypeAdapter
 # but pydantic doesn't pass overrides with default values down to the parent ctor)
 
 type GameCommand = Literal[
-    "startup",
+    "startup", # v1 only
     "context",
     "actions/register",
     "actions/unregister",
@@ -21,7 +21,7 @@ type GameCommand = Literal[
 
 type NeuroCommand = Literal[
     "action",
-    "actions/reregister_all",
+    "actions/reregister_all", # v1 only
     "shutdown/graceful",
     "shutdown/immediate",
 ]
