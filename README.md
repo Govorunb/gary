@@ -8,16 +8,14 @@ The project is mostly for fun but I'm open to feedback and contributions.
 
 ## Features
 - Can use a few model engines/providers:
-	- Local models (LlamaCpp, Transformers\*)
+	- Local inference (LlamaCpp, Transformers)
 	- A "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
-	- Remote services (OpenAI, Anthropic, Google, Azure) are *not* supported. For more info, read the ["Remote Services?"](#remote-services-openai-anthropic-google-azure) section.
+	- Remote services (OpenAI, Anthropic, Google, Azure) are *not* supported, use [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity). For more info, read the ["Remote Services?"](#remote-services-openai-anthropic-google-azure) section.
 - **Guaranteed** to follow the schema[^1][^2][^3][^4]
 - Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM (e.g. JSON syntax)
 - Aims to (eventually) behave (reasonably) close to Neuro for accurate testing/development
 - Offers a web interface for [Tony](https://github.com/Pasu4/neuro-api-tony)-like manual action sending
 ![image](https://github.com/user-attachments/assets/d0dc13a4-bd00-434f-b484-6600a67fe2e7)
-
-<sub>\* Not tested - if you know this works (or doesn't), open an issue.</sub><br/>
 
 That said...
 > [!Note]
@@ -88,7 +86,7 @@ If so, Gary probably cannot help you and you'd be better off using [Randy](https
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
 Getting a less intelligent model to successfully play your game will help more intelligent models make even smarter decisions.
 
-#### Prompting
+#### Prompting (descriptions, context)
 - Use direct and concise language
 	- Having less text to process makes the LLM faster and more focused
 	- Aim for high information density - consider running your prompts through a summarizer
@@ -103,7 +101,7 @@ Getting a less intelligent model to successfully play your game will help more i
 	- Rules with structured info (e.g. with [Markdown](https://www.markdownguide.org/basic-syntax/)) seem to perform better than unstructured
 	- Try more models (and try a bigger model - even if it's slower) to see what info is generally useful and what's just a quirk of your specific model
 
-#### Context
+#### Managing context
 Generally, LLMs prioritize the most recent context more when generating.
 
 - Send a description of the game and its rules on startup
@@ -171,9 +169,11 @@ Differences marked with 🚧 will be resolved or obsoleted by the [v2 of the API
 - etc etc, just search for "IMPL" in the code
 
 #### Remote services? (OpenAI, Anthropic, Google, Azure)
-Only local models are supported. Guidance lets you use remote services, but it cannot enforce grammar/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just throw exceptions because of invalid output instead.
+Only local models are supported. Guidance does allow using remote services, but it cannot enforce grammar/structured outputs if it can't hook itself into the inference process, so it's *more than likely* it'll just throw exceptions because of invalid output instead. 
 
 ![log excerpt showing remote generation failed after exceeding the limit of 10 attempts](https://i.imgur.com/UNtnhdV.png)
+
+Therefore, they are not exposed as an option at all. You should use [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead anyway.
 
 For more info, check the [guidance README](https://github.com/guidance-ai/guidance/blob/46340aa58b51a0714066a9faeba18c6cb2128f34/README.md#vertex-ai) or [this issue comment](https://github.com/guidance-ai/guidance/issues/502#issuecomment-1845893780).
 

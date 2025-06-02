@@ -13,7 +13,6 @@ from guidance._grammar import Function
 
 
 from ..util import CONFIG, HasEvents, json_schema_filter, loguru_tag
-from ..util.config import MANUAL_RULES
 from ..spec import *
 
 from .randy import Randy
@@ -91,7 +90,9 @@ class LLM(HasEvents[Literal['context', 'say']]):
         if engine == "llama_cpp":
             self.llm = Llarry(model, echo=False, **params)
         elif engine == "transformers":
-            self.llm = models.Transformers(model, echo=False, **params)
+            # tf models don't have anything to configure
+            self.llm = models.Transformers(model, echo=False, enable_monitoring=False, chat_template=params.get("chat_template"),
+                                           device_map='cuda') # (except loading to gpu)
         elif engine == "randy":
             self.llm = Randy(model, echo=False, **params)
         elif engine in ("openai", "anthropic", "azure_openai", "vertexai"):
@@ -122,10 +123,6 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         with self.system() as lm:
             lm += sys_prompt
         self.llm = lm.model
-        # no role closer here is surely fine
-        if custom_rules := MANUAL_RULES.get(self.game.name):
-            logger.debug(f"Found custom rules for {self.game.name}")
-            await self.context(custom_rules, self.game.name, silent=True, persistent_llarry_only=True, notify=False)
 
     def llm_engine(self) -> Engine:
         return self.llm._client.engine # type: ignore
