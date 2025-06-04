@@ -8,7 +8,7 @@ The project is mostly for fun but I'm open to feedback and contributions.
 
 ## Features
 - Can use a few model engines/providers:
-	- Local inference (LlamaCpp, Transformers)
+	- [llama.cpp](https://github.com/ggerganov/llama.cpp) (recommended) and [transformers](https://github.com/huggingface/transformers) for local inference
 	- A "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
 	- Remote services (OpenAI, Anthropic, Google, Azure) are *not* supported, use [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity). For more info, read the ["Remote Services?"](#remote-services-openai-anthropic-google-azure) section.
 - **Guaranteed** to follow the schema[^1][^2][^3][^4]

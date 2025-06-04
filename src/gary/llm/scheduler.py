@@ -246,7 +246,7 @@ class Scheduler:
             logger.trace(f"Sleeping for {sleep_for:.2f}s (Sleep for {event.duration:.2f} sent at {event.timestamp.time()})")
             asyncio.create_task(sleep(sleep_for))
         elif isinstance(event, ClearContext):
-            await self.game.llm.reset(True)
+            await self.game.llm.reset()
         else:
             logger.warning(f"Unknown event type: {type(event)}")
 

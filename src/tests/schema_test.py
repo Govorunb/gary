@@ -344,9 +344,14 @@ class JSONSchemaTest(Game):
             case Action():
                 data: str | None = msg.data.data
                 name = msg.data.name
-                data = data and orjson.loads(data.encode())
-                handler = self.handlers[name]
-                (success, response) = await handler(name, data)
+                try:
+                    data = data and orjson.loads(data.encode())
+                except orjson.JSONDecodeError as e:
+                    success = False
+                    response = f"Error: {e}"
+                else:
+                    handler = self.handlers[name]
+                    (success, response) = await handler(name, data)
                 result = {
                     "id": msg.data.id,
                     "success": success,
