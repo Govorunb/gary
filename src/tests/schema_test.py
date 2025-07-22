@@ -240,9 +240,11 @@ ACTIONS = [
                             }
                         }
                     ]
-                }
+                },
+                "jsf bug #1e5e9": {"type": "integer", "maximum": -1},
+                "": {"type": "integer", "minimum": 10000.5},
             },
-            "required": ["oneOf"],
+            "required": ["oneOf", "jsf bug #1e5e9", ""],
         },
     ),
     action(
@@ -291,11 +293,33 @@ ACTIONS = [
             },
             "required": ["required_prop"],
         }
+    ),
+    action(
+        "negative_numbers",
+        "Test negative numbers.",
+        {
+            "type": "object",
+            "properties": {
+                "constrained_int": {"type": "integer", "minimum": -1000, "maximum": -1},
+                "constrained_float": {"type": "number", "minimum": -1000, "maximum": -1, "step": 0.1},
+                "free_int_negative": {"type": "integer"},
+                "free_float_negative": {"type": "number"},
+                "free_int_positive": {"type": "integer"},
+                "free_float_positive": {"type": "number"},
+                # guidance fails the vibe check
+                # "vibe_check": {"type": "number", "maximum": -1.23e45, "minimum": -2.34e56},
+            },
+            "required": [
+                "constrained_int", "constrained_float",
+                "free_int_negative", "free_float_negative",
+                "free_int_positive", "free_float_positive",
+            ]
+        }
     )
 ]
 
 focus = []
-# focus = ["no_schema", "optional_props"]
+# focus = ["negative_numbers", "mean_test"]
 test_actions = {action.name: action for action in ACTIONS}
 if focus:
     test_actions = {name: test_actions[name] for name in focus}
