@@ -323,12 +323,14 @@ focus = []
 test_actions = {action.name: action for action in ACTIONS}
 if focus:
     test_actions = {name: test_actions[name] for name in focus}
+samsara = True # when there's no more actions left, reregister them all again
 
 class JSONSchemaTest(Game):
     def __init__(self, ws: Connection | ClientConnection):
         super().__init__("JSON Schema Test", ws)
         self.handlers = defaultdict(lambda: self.default_handler)
         self.actions = test_actions
+        self.remaining_actions = self.actions.copy()
         self.ws.subscribe('receive', self.on_msg)
         self.subscribe('actions/reregister_all', self.hello)
         self._schema_changed = False
@@ -340,7 +342,15 @@ class JSONSchemaTest(Game):
     async def default_handler(self, name: str, data: Any) -> tuple[bool, str]:
         (success, response) = (True, f"Echo: {name=} {data=}")
         try:
-            jsonschema.validate(data, self.actions[name].schema_ or {})
+            action = self.remaining_actions.get(name)
+            if not action:
+                action = self.actions.get(name)
+                if not action:
+                    logger.error(f"[{name}] Unknown action")
+                    return (False, f"Unknown action '{name}'")
+                else:
+                    logger.warning(f"Called '{name}' out of turn (unregistered)")
+            jsonschema.validate(data, action.schema_ or {})
         except jsonschema.ValidationError as e:
             success = False
             response = f"Error: {e}"
@@ -348,6 +358,7 @@ class JSONSchemaTest(Game):
         else:
             logger.success(f"[{name}] Success")
         if success:
+            self.remaining_actions.pop(name)
             await self.send(UnregisterActions, data={"action_names": [name]})
         return success, response
 
@@ -364,6 +375,7 @@ class JSONSchemaTest(Game):
         match msg:
             case ReregisterAllActions():
                 logger.success(f"Registering {len(self.actions)} actions")
+                self.remaining_actions = self.actions.copy()
                 await self.send(RegisterActions, data={"actions": list(self.actions.values())})
             case Action():
                 data: str | None = msg.data.data
@@ -382,6 +394,10 @@ class JSONSchemaTest(Game):
                     "message": response,
                 }
                 await self.send(ActionResult, data=result)
+                if samsara and not self.remaining_actions:
+                    logger.info("No more actions - reregistering all. The eternal cycle continues")
+                    await self.on_msg(ReregisterAllActions())
+                    self._schema_changed = False
             case _:
                 logger.warning(f"Unhandled message: {msg}")
 
@@ -389,8 +405,9 @@ class JSONSchemaTest(Game):
         res = await self.default_handler(name, data)
         if res[0] and not self._schema_changed:
             self._schema_changed = True
-            action = self.actions[name]
+            action = self.actions[name].model_copy()
             action.schema_ = {"type": "string"}
+            self.remaining_actions[action.name] = action
             await self.send(RegisterActions, data={"actions": [action]})
             res = (True, "Schema updated - try again")
         return res

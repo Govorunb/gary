@@ -212,10 +212,12 @@ def _workaround_jsf_single_bound(node: BaseSchema, schema: dict[str, Any]):
     if isinstance(node, Number):
         has_min = (min_declared := schema.get("minimum")) is not None
         has_max = (max_declared := schema.get("maximum")) is not None
-        if (has_min and not has_max):
-            node.maximum = min_declared + 9999
-        elif (has_max and not has_min):
-            node.minimum = max_declared - 9999
+        # TODO: exclusiveMin/Max
+        step = node.multipleOf if node.multipleOf is not None else 1
+        if has_min and not has_max:
+            node.maximum = min_declared + step * 9999
+        elif has_max and not has_min:
+            node.minimum = max_declared - step * 9999
     elif isinstance(node, Object):
         if node.properties:
             # they just outright lie about the type. cool
