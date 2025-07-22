@@ -4,7 +4,9 @@ import bokeh.models.dom
 
 from collections import defaultdict
 from collections.abc import Callable, Awaitable
-from typing import NamedTuple, overload, LiteralString
+from typing import Any, NamedTuple, cast, overload, LiteralString
+from jsf.schema_types import Number, Object
+from jsf.schema_types.base import BaseSchema
 
 
 @overload
@@ -200,3 +202,41 @@ def markdown_code_fence(text: str) -> str:
 def markdown_code_block(text: str, lang: str = ""):
     fence = markdown_code_fence(text)
     return f"{fence}{lang}\n{text}\n{fence}"
+
+def _workaround_jsf_single_bound(node: BaseSchema, schema: dict[str, Any]):
+    # in short - JSF sets defaults for the min/max (to generate natural-looking numbers out of the box)
+    # https://github.com/ghandic/jsf/blob/191375476bc86accba5755e6c04a0eb7ba95469b/jsf/schema_types/number.py#L10
+    # this can make invalid ranges if your schema only sets one side and not the other
+    #   e.g. set max -1, min is still the default 0 (max defaults to 9999 so same thing if you set min to 10000+)
+    #   instead of (-inf, -1] you get [0, -1] (which makes no sense)
+    if isinstance(node, Number):
+        has_min = (min_declared := schema.get("minimum")) is not None
+        has_max = (max_declared := schema.get("maximum")) is not None
+        # TODO: exclusiveMin/Max
+        step = node.multipleOf if node.multipleOf is not None else 1
+        if has_min and not has_max:
+            node.maximum = min_declared + step * 9999
+        elif has_max and not has_min:
+            node.minimum = max_declared - step * 9999
+    elif isinstance(node, Object):
+        if node.properties:
+            # they just outright lie about the type. cool
+            # https://github.com/ghandic/jsf/blob/191375476bc86accba5755e6c04a0eb7ba95469b/jsf/schema_types/object.py#L22
+            # https://github.com/ghandic/jsf/blob/191375476bc86accba5755e6c04a0eb7ba95469b/jsf/parser.py#L142-L147
+            assert "properties" in schema, "JSF making up properties"
+            props = cast(list[BaseSchema], node.properties)
+            for prop in props:
+                prop_name = prop.name
+                _workaround_jsf_single_bound(prop, schema["properties"][prop_name])
+        if isinstance(node.additionalProperties, BaseSchema):
+            assert "additionalProperties" in schema, "JSF making up additionalProperties"
+            _workaround_jsf_single_bound(node.additionalProperties, schema["additionalProperties"])
+        if node.patternProperties:
+            assert "patternProperties" in schema, "JSF making up patternProperties"
+            # same as above
+            # https://github.com/ghandic/jsf/blob/191375476bc86accba5755e6c04a0eb7ba95469b/jsf/parser.py#L148-L153
+            props = cast(list[BaseSchema], node.patternProperties)
+            for prop in props:
+                prop_name = prop.name
+                _workaround_jsf_single_bound(prop, schema["patternProperties"][prop_name])
+    # TODO: allOf/oneOf/anyOf

@@ -242,9 +242,11 @@ ACTIONS = [
                             }
                         }
                     ]
-                }
+                },
+                "jsf bug #1e5e9": {"type": "integer", "maximum": -1},
+                "": {"type": "integer", "minimum": 10000.5},
             },
-            "required": ["oneOf"],
+            "required": ["oneOf", "jsf bug #1e5e9", ""],
         },
     ),
     action(
@@ -293,14 +295,37 @@ ACTIONS = [
             },
             "required": ["required_prop"],
         }
+    ),
+    action(
+        "negative_numbers",
+        "Test negative numbers.",
+        {
+            "type": "object",
+            "properties": {
+                "constrained_int": {"type": "integer", "minimum": -1000, "maximum": -1},
+                "constrained_float": {"type": "number", "minimum": -1000, "maximum": -1, "step": 0.1},
+                "free_int_negative": {"type": "integer"},
+                "free_float_negative": {"type": "number"},
+                "free_int_positive": {"type": "integer"},
+                "free_float_positive": {"type": "number"},
+                # guidance fails the vibe check
+                # "vibe_check": {"type": "number", "maximum": -1.23e45, "minimum": -2.34e56},
+            },
+            "required": [
+                "constrained_int", "constrained_float",
+                "free_int_negative", "free_float_negative",
+                "free_int_positive", "free_float_positive",
+            ]
+        }
     )
 ]
 
 focus = []
-# focus = ["no_schema", "optional_props"]
+# focus = ["negative_numbers", "mean_test"]
 test_actions = {action.name: action for action in ACTIONS}
 if focus:
     test_actions = {name: test_actions[name] for name in focus}
+samsara = True # when there's no more actions left, reregister them all again
 
 class JSONSchemaTest(Game):
     game_name = "JSON Schema Test"
@@ -308,6 +333,7 @@ class JSONSchemaTest(Game):
         super().__init__(self.game_name, ws, version)
         self.handlers = defaultdict(lambda: self.default_handler)
         self.actions = test_actions
+        self.remaining_actions = self.actions.copy()
         self._schema_changed = False
         self.handlers['schema_update'] = self._schema_update
         self.ws.subscribe('receive', self.on_msg)
@@ -325,7 +351,15 @@ class JSONSchemaTest(Game):
     async def default_handler(self, name: str, data: Any) -> tuple[bool, str]:
         (success, response) = (True, f"Echo: {name=}, {data=}")
         try:
-            jsonschema.validate(data, self.actions[name].schema_ or {})
+            action = self.remaining_actions.get(name)
+            if not action:
+                action = self.actions.get(name)
+                if not action:
+                    logger.error(f"[{name}] Unknown action")
+                    return (False, f"Unknown action '{name}'")
+                else:
+                    logger.warning(f"Called '{name}' out of turn (unregistered)")
+            jsonschema.validate(data, action.schema_ or {})
         except jsonschema.ValidationError as e:
             success = False
             response = f"Error: {e}"
@@ -333,6 +367,7 @@ class JSONSchemaTest(Game):
         else:
             logger.success(f"[{name}] Success")
         if success:
+            self.remaining_actions.pop(name)
             await self.send(UnregisterActions, data={"action_names": [name]})
         return success, response
 
@@ -359,19 +394,29 @@ class JSONSchemaTest(Game):
         match msg:
             case ReregisterAllActions():
                 logger.success(f"Registering {len(self.actions)} actions")
+                self.remaining_actions = self.actions.copy()
                 await self.send(RegisterActions, data={"actions": list(self.actions.values())})
             case Action():
                 data: str | None = msg.data.data
                 name = msg.data.name
-                data = data and orjson.loads(data.encode())
-                handler = self.handlers[name]
-                (success, response) = await handler(name, data)
+                try:
+                    data = data and orjson.loads(data.encode())
+                except orjson.JSONDecodeError as e:
+                    success = False
+                    response = f"Error: {e}"
+                else:
+                    handler = self.handlers[name]
+                    (success, response) = await handler(name, data)
                 result = {
                     "id": msg.data.id,
                     "success": success,
                     "message": response,
                 }
                 await self.send(ActionResult, data=result)
+                if samsara and not self.remaining_actions:
+                    logger.info("No more actions - reregistering all. The eternal cycle continues")
+                    await self.on_msg(ReregisterAllActions())
+                    self._schema_changed = False
             case GracefulShutdown(data=GracefulShutdown.Data(wants_shutdown=True)) | ImmediateShutdown():
                 await self.send(self.make_msg(ShutdownReady))
                 # backend will disconnect
@@ -382,8 +427,9 @@ class JSONSchemaTest(Game):
         res = await self.default_handler(name, data)
         if res[0] and not self._schema_changed:
             self._schema_changed = True
-            action = self.actions[name]
+            action = self.actions[name].model_copy()
             action.schema_ = {"type": "string"}
+            self.remaining_actions[action.name] = action
             await self.send(RegisterActions, data={"actions": [action]})
             res = (True, "Schema updated - try again")
         return res

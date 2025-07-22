@@ -1,7 +1,7 @@
 from contextlib import AbstractContextManager, contextmanager
 import random, time
 from orjson import dumps
-from typing import TYPE_CHECKING, NamedTuple, Self
+from typing import TYPE_CHECKING, NamedTuple, Self, cast
 from pydantic import TypeAdapter
 from loguru import logger
 
@@ -13,7 +13,6 @@ from guidance._grammar import Function
 
 
 from ..util import CONFIG, HasEvents, json_schema_filter, loguru_tag
-from ..util.config import MANUAL_RULES
 from ..spec import *
 
 from .randy import Randy
@@ -87,19 +86,27 @@ class LLM(HasEvents[Literal['context', 'say']]):
             "enable_monitoring": False,
             **CONFIG.engine_params
         }
-                
+
         if engine == "llama_cpp":
             self.llm = Llarry(model, echo=False, **params)
+            guidance_engine = cast(StreamingLlamaCppEngine, self.llm_engine())
+            self.token_limit = guidance_engine.model_obj.n_ctx()
         elif engine == "transformers":
-            self.llm = models.Transformers(model, echo=False, **params)
+            # tf models don't have anything to configure
+            self.llm = models.Transformers(model, echo=False, enable_monitoring=False, chat_template=params.get("chat_template"),
+                                           device_map='cuda') # (except loading to gpu)
+            guidance_engine = cast(models._transformers.TransformersEngine, self.llm_engine())
+            self.token_limit = guidance_engine.model_obj.config.max_position_embeddings
+            # self.token_limit = params.get("n_ctx", self.token_limit) # for testing
         elif engine == "randy":
             self.llm = Randy(model, echo=False, **params)
+            self.token_limit = 1000000
         elif engine in ("openai", "anthropic", "azure_openai", "vertexai"):
             raise ValueError(f"Remote services are not supported: {engine}")
         else:
             raise ValueError(f"Unknown engine type: {engine}")
         
-        self.token_limit = params.get("n_ctx", 1 << 32) - 200
+        self.token_limit -= 200
         self.llm.echo = False
         end = time.time()
         logger.debug(f"loaded in {end-start:.2f} seconds")
@@ -122,10 +129,6 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         with self.system() as lm:
             lm += sys_prompt
         self.llm = lm.model
-        # no role closer here is surely fine
-        if custom_rules := MANUAL_RULES.get(self.game.name):
-            logger.debug(f"Found custom rules for {self.game.name}")
-            await self.context(custom_rules, self.game.name, silent=True, persistent_llarry_only=True, notify=False)
 
     def llm_engine(self) -> Engine:
         return self.llm._client.engine # type: ignore
@@ -135,23 +138,21 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         logger.debug(f"Max tokens: {maxtok}")
         return maxtok
 
-    async def reset(self, llarry_keep_persistent=False):
+    async def reset(self):
+        # ctors for derived classes create their own engines
+        # the Model class is just a container and it is used as such
+        clone = self.llm.__new__(self.llm.__class__)
+        models.Model.__init__(clone, self.llm._client, self.llm._state.__class__(), echo=False)
         engine = self.llm_engine()
-        if llarry_keep_persistent and isinstance(self.llm, Llarry):
-            logger.debug("TODO: keep persistent messages on reset")
-            self.llm.persistent.clear()
-        if isinstance(engine, models._llama_cpp.LlamaCppEngine):
-            engine.reset_metrics()
-            engine.model_obj.reset()
+        engine.reset_metrics()
+        if isinstance(clone, Llarry):
+            clone.persistent = set()
+            engine = cast(StreamingLlamaCppEngine, engine)
             llama_cpp.llama_kv_cache_clear(engine.model_obj.ctx)
-
-        # :) all this to avoid the model.LlamaCpp ctor
-        # it sure is nice that python lets you do this :)
-        buh = models.Model(self.llm._client, self.llm._state.__class__(), echo=False)
-        if isinstance(self.llm, Llarry):
-            buh.__class__ = Llarry
-            buh.persistent = self.llm.persistent.copy() # type: ignore
-        self.llm = buh
+            engine.model_obj.reset()
+        elif isinstance(clone, models.Transformers):
+            engine = cast(models._transformers.TransformersEngine, engine)
+        self.llm = clone
 
         assert self.llm.token_count == 0
         assert len(str(self.llm)) == 0

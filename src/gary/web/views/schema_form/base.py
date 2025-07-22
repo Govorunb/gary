@@ -3,7 +3,10 @@ import param
 import panel as pn
 
 from jsf import JSF
+from loguru import logger
 from typing import Any
+
+from gary.util.utils import _workaround_jsf_single_bound
 
 class SchemaForm(pn.viewable.Viewer):
     schema = param.Dict() # type: ignore
@@ -59,7 +62,12 @@ class SchemaForm(pn.viewable.Viewer):
 
     def randomize_value(self):
         jsf = JSF(self.schema)
-        self.value = jsf.generate()
+        if jsf.root:
+            _workaround_jsf_single_bound(jsf.root, self.schema)
+        try:
+            self.value = jsf.generate()
+        except ValueError as e:
+            logger.exception("JSF failed to generate random value: {e}\nSchema:\n\t{schema}", e=e, schema=self.schema)
 
     def _validate_json(self, evt):
         if not self.schema:
