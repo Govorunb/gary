@@ -222,6 +222,7 @@ class Scheduler:
             await self.game.execute_action(act)
         elif isinstance(event, ForceAction):
             if not self.can_act:
+                # TODO: data/query should be added to context immediately (tony mode)
                 logger.debug(f"ForceAction event ignored - {self.status}")
                 return
             if event.force_message:

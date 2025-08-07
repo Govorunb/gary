@@ -175,7 +175,10 @@ class GameTab(pn.viewable.Viewer):
         async def _(*_):
             with clear_context.param.update(name="Clearing...", disabled=True):
                 await asyncio.sleep(0.1)
-                game.scheduler.enqueue(ClearContext())
+                if game.connection.is_connected():
+                    game.scheduler.enqueue(ClearContext()) # might be in the middle of generation
+                else:
+                    await game.llm.reset() # safe to do directly
                 ctx_log.logs = []
 
         dump_ctx_button = pn.widgets.Button(
