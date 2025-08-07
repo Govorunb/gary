@@ -2,7 +2,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from loguru import logger
 
+
 from .util import GameWSConnection, configure_logging
+from .util.config import PRESET
 from .web.ui import add_control_panel
 
 @asynccontextmanager
@@ -17,6 +19,8 @@ async def lifespan(app: FastAPI):
     await REGISTRY.destroy()
 
 configure_logging()
+if PRESET != 'default':
+    logger.info(f"Using preset '{PRESET}'")
 app = FastAPI(lifespan=lifespan)
 
 
