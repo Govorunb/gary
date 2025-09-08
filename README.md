@@ -1,6 +1,6 @@
 # Gaming Gary
 
-An implementation of the LLM side of the [Neuro-sama game SDK](https://github.com/VedalAI/neuro-game-sdk) to test game integrations.
+An implementation of the LLM side of the [Neuro-sama game SDK](https://github.com/VedalAI/neuro-sdk) to test game integrations.
 Uses [guidance](https://github.com/guidance-ai/guidance) to coerce the LLM to adhere to the appropriate JSON schema for actions. This works best with a local model.
 
 This is baby's first LLM code and I haven't done Python in years so ~~don't be mean please 🥺👉👈~~ PRs are welcome.
@@ -9,7 +9,7 @@ The project is mostly for fun but I'm open to feedback and contributions.
 ## Features
 - Can use a few model engines/providers:
 	- [llama.cpp](https://github.com/ggerganov/llama.cpp) (recommended) and [transformers](https://github.com/huggingface/transformers) for local inference
-	- A "[Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md)-like" random generator
+	- A "[Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md)-like" random generator
 	- Remote services (OpenAI, Anthropic, Google, Azure) are *not* supported, use [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity). For more info, read the ["Remote Services?"](#remote-services-openai-anthropic-google-azure) section.
 - **Guaranteed** to follow the schema[^1][^2][^3][^4]
 - Generating with guidance is faster than asking the model to adhere to a format since it auto-completes tokens that don't depend on the LLM (e.g. JSON syntax)
@@ -81,7 +81,7 @@ Otherwise, you should clone this repository to a new folder and manually transfe
 Smaller models are generally less intelligent than larger ones. A 3B model may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
 Since this project is focused on local models, success will depend on your model/hardware. Gary might turn out to be dumber than a rock when it comes to strategy and decisionmaking (which is ironic because it's made of rock) - maybe even *worse than Randy*.
-If so, Gary probably cannot help you and you'd be better off using [Randy](https://github.com/VedalAI/neuro-game-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
+If so, Gary probably cannot help you and you'd be better off using [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
 Getting a less intelligent model to successfully play your game will help more intelligent models make even smarter decisions.
@@ -131,9 +131,9 @@ Basically, if the model wants something invalid, it will pick a similar or seemi
 - When asked what to do next, the model *wants* to call e.g. `pick up` on `"glass of wine"`
 - Since this is not a valid option, guidance picks `"gin"` because *(gives a long explanation)*
 
-For nerds - guidance uses the model to generate the starting token probabilities and forwards the rest as soon as it's fully disambiguated.
+For nerds - when selecting between options (e.g. `["vodka", "gin"]`), guidance will only use the model to generate the starting tokens, and will forward (auto-complete) the rest as soon as it's fully disambiguated.
 
-In this case, `"g` has the highest likelihood of all valid tokens, so it gets picked; then, `in"` is auto-completed because `"gin"` is the only remaining option (of all valid items) that starts with `"g`.
+In this case, let's say a `"g` token gets sampled first; then, `"gin"` is the only remaining option (of all valid items) that starts with `"g`, so it gets auto-completed. We've just generated multiple tokens for the compute cost of one! Surely this is always a good thing.
 
 [Learn more](https://github.com/guidance-ai/guidance/issues/564)
 
@@ -149,7 +149,7 @@ Unsupported keywords will produce a warning and be excluded from the grammar.
 > 
 > It's very important that the game validates the backend's responses and sends back meaningful and interpretable error messages.
 
-Following [the Neuro API spec](https://github.com/VedalAI/neuro-game-sdk/blob/main/API/SPECIFICATION.md#action) is generally safe. If you find an action schema is getting complex or full of obscure keywords, consider logically restructuring it or breaking it up into multiple actions.
+Following [the Neuro API spec](https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md#action) is generally safe. If you find an action schema is getting complex or full of obscure keywords, consider logically restructuring it or breaking it up into multiple actions.
 
 #### Miscellaneous jank
 - The web interface can be a bit flaky - keep an eye out for any exceptions in the terminal window and, when in doubt, refresh the page
@@ -158,7 +158,7 @@ Following [the Neuro API spec](https://github.com/VedalAI/neuro-game-sdk/blob/ma
 ### Implementation-specific behaviour
 There may be cases where other backends (including Neuro) may behave differently.
 
-Differences marked with 🚧 will be resolved or obsoleted by the [v2 of the API](https://github.com/VedalAI/neuro-game-sdk/discussions/58).
+Differences marked with 🚧 will be resolved or obsoleted by the [v2 of the API](https://github.com/VedalAI/neuro-sdk/discussions/58).
 - Gary will always be different from Neuro in some aspects, specifically:
 	- Processing other sources of information like vision/audio/chat (for obvious reasons)
 	- Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
