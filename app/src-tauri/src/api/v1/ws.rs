@@ -1,21 +1,30 @@
-use std::pin::Pin;
 use futures_util::{pin_mut, stream::{Peekable, SplitSink, SplitStream}, SinkExt, Stream, StreamExt};
 use log::error;
 use serde_json::json;
+use tauri::ipc::Channel;
 use tauri_plugin_log::log::{debug, trace, warn};
-use tokio_tungstenite::tungstenite::stream;
 use uuid::Uuid;
-use axum::extract::{connect_info::Connected, ws::{CloseFrame, Message, WebSocket}};
+use axum::extract::ws::{CloseFrame, Message, WebSocket};
 use anyhow::Result;
 
 use crate::api::{v1::spec::{GameMessage, NeuroMessage}};
 
 
-#[derive(Debug)]
 pub struct ClientWSConnection {
     id: String,
     // ws: Peekable<WebSocket>,
     ws: WebSocket,
+    // web_events: Channel<ClientWSConnectionEvent>,
+}
+
+impl std::fmt::Debug for ClientWSConnection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClientWSConnection")
+         .field("id", &self.id)
+         .field("ws", &self.ws)
+        //  .field("web_events", &format_args!("Channel(id:{})", &self.web_events.id()))
+         .finish()
+    }
 }
 
 /* TODO

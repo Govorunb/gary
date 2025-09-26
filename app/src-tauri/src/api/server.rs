@@ -62,7 +62,7 @@ fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) -> Res
             },
             ApiVersion::V2(v2_name) => v2_name
         };
-        app.emit("game_connected", json!({
+        let _ = app.emit("game_connected", json!({
             "version": format!("{}", version)
         }));
         

@@ -16,7 +16,7 @@ impl Display for ApiVersion {
         write!(f, "{}", match self {
             Self::V1 => "v1",
             Self::V2(_) => "v2"
-        });
+        })?;
         Ok(())
     }
 }
