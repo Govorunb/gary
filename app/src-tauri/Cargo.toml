@@ -1,0 +1,37 @@
+[package]
+name = "gary"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "gary_tauri" # not just "gary" because of https://github.com/rust-lang/cargo/issues/8519
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-fs = "2"
+tauri-plugin-http = { version = "2", features = ["json", "stream"] }
+tauri-plugin-log = { version = "2", features = ["colored"] }
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-store = "2"
+tauri-plugin-websocket = "2"
+uuid = { version = "1.18.1", features = ["v4"] }
+tokio = { version = "1", features = ["full"] }
+thiserror = "2.0.16"
+anyhow = "1.0.99"
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+log = { version = "0.4.28", features = ["kv_serde"] }
+axum = { version = "0.8.4", features = ["ws", "macros"]}
+
+# just for offline docs tooltips
+tokio-tungstenite = { version = "0.27.0" }
