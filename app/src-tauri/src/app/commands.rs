@@ -1,8 +1,8 @@
-use log::{debug, info, warn};
+use log::{debug, info};
 use tauri::{AppHandle, Emitter, Manager, State};
-use tokio::{sync::{Mutex, RwLock}, task::AbortHandle};
+use anyhow::Result;
 
-use crate::{api, app::state::{AppStateMutex, ServerHandle}};
+use crate::app::state::{AppStateMutex};
 
 
 #[tauri::command]
@@ -16,12 +16,11 @@ pub async fn is_server_running(state: State<'_, AppStateMutex>) -> Result<bool, 
 pub async fn start_server(app: AppHandle, port: u16) -> Result<(), String> {
     let state_mutex = app.state::<AppStateMutex>();
     let mut state = state_mutex.lock().await;
-    if let Some(_) = state.server_handle {
-        return Err(format!("Server already running"));
+    if state.is_server_running() {
+        return Err("Server already running".into());
     }
     
-    let abort_handle = tokio::spawn(api::server::create_server(app.clone(), port, false)).abort_handle();
-    state.server_handle = Some(ServerHandle::new(abort_handle));
+    state.start_server(port).await.map_err(|e| e.to_string())?;
     info!("Server started on port {port}");
     let _ = app.emit("server-started", port);
     Ok(())

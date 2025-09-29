@@ -1,36 +1,11 @@
-use std::collections::{BTreeMap, HashMap};
-
-use axum::extract::ws::WebSocket;
 use tauri::AppHandle;
-use tokio::{sync::Mutex, task::AbortHandle};
-use uuid::Uuid;
+use tokio::sync::Mutex;
 
-use crate::api::{registry::Registry, v1::ws::ClientWSConnection};
+use crate::api::{server::WSServer};
 
-#[derive(Debug)]
 pub struct App {
-    // TODO: app state in f/end
-    // (obv still need some state here, like server handle)
-    // it is just such unfettered ASS to manage
     app_handle: AppHandle,
-    // pub config: Config,
-    // pub registry: Registry,
-    pub server_handle: Option<ServerHandle>,
-}
-
-#[derive(Debug)]
-pub struct ServerHandle {
-    abort_handle: AbortHandle,
-    connections: BTreeMap<Uuid, ClientWSConnection>
-}
-
-impl ServerHandle {
-    pub fn new(abort_handle: AbortHandle) -> Self {
-        Self {
-            abort_handle,
-            connections: Default::default()
-        }
-    }
+    pub server: Option<WSServer>,
 }
 
 pub type AppStateMutex = Mutex<App>;
@@ -39,27 +14,39 @@ impl App {
     pub fn new(app_handle: AppHandle) -> Self {
         Self {
             app_handle,
-            // registry: Registry::new(),
-            // config: Default::default(),
-            server_handle: None,
+            server: None,
         }
     }
 
     pub fn is_server_running(&self) -> bool {
-        self.server_handle.is_some()
+        self.server.is_some()
     }
 
-    pub fn start_server(&mut self) {
-
+    pub async fn start_server(&mut self, port: u16) -> Result<(), String> {
+        if self.server.is_some() {
+            return Err("Server already running".into())
+        }
+        self.server = Some(crate::api::server::create_server(
+            self.app_handle.clone(), port
+        ).await.map_err(|e| e.to_string())?);
+        Ok(())
     }
 
     pub fn stop_server(&mut self) -> Result<(), ()> {
-        if let Some(handle) = &self.server_handle {
-            handle.abort_handle.abort();
-            self.server_handle = None;
+        let server_opt = self.server.take();
+        if let Some(server) = server_opt {
+            server.stop();
+            self.server = None;
             Ok(())
         } else {
             Err(())
         }
+    }
+
+    pub fn server(&self) -> Option<&WSServer> {
+        self.server.as_ref()
+    }
+    pub fn server_mut(&mut self) -> Option<&mut WSServer> {
+        self.server.as_mut()
     }
 }

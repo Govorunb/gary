@@ -1,4 +1,6 @@
 #![feature(if_let_guard)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
 
 use tauri::Manager;
 use tauri_plugin_log::{log::LevelFilter, RotationStrategy, Target, TargetKind};
@@ -6,7 +8,8 @@ use tauri_plugin_log::{log::LevelFilter, RotationStrategy, Target, TargetKind};
 mod api;
 mod app;
 use app::state::App;
-use app::commands::*;
+use app::commands::{greet, is_server_running, start_server, stop_server};
+use api::server::{ws_accept, ws_deny, ws_close};
 use tokio::sync::Mutex;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -31,6 +34,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             is_server_running, start_server, stop_server,
+            ws_accept, ws_deny, ws_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
