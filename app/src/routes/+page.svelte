@@ -1,69 +1,94 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
+  import { Registry, type WSConnectionRequest } from "$lib/api/registry.svelte";
+    import Tooltip from "$lib/ui/Tooltip.svelte";
+  import { invoke, Channel } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
-    import { onMount } from "svelte";
+  import { error, warn } from "@tauri-apps/plugin-log";
+  import { onDestroy, onMount } from "svelte";
 
-  type ServerState = null | {
-    port: number;
-    connectedGames: Game[];
-  }
-
-  type Game = {
-    name: string;
-    seenActions: Set<string>;
-    actions: Action[];
-  }
-
-  type Action = {
-    name: string;
-    description: string;
-    schema: string; // obj?
-  }
-  
+  type ServerConnections = null | string[];
   let name = $state("");
   let greetMsg = $state("");
-  
+
   let port = $state(8000); // TODO: config
   let serverActionPending = $state(false);
-  let serverState: ServerState = $state(null);
-  let serverRunning = $derived(serverState != null);
-  
+  let serverConnections: ServerConnections = $state(null);
+  let serverRunning = $derived(serverConnections != null);
+  let registry = $state(new Registry());
+  let subscriptions: Function[] = [];
+  $inspect(registry);
+
   async function greet() {
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
     greetMsg = await invoke("greet", { name });
   }
-  function preventDefault<T, E extends Event>(func: (evt: E, ...args: any[]) => T) {
+  function preventDefault<T, E extends Event>(
+    func: (evt: E, ...args: any[]) => T,
+  ) {
     return (evt: E, ...args: any[]) => {
       evt.preventDefault();
       return func(evt, ...args);
-    }
+    };
   }
-  let x = (a: any, b: any, c: any) => 5;
-  let y = preventDefault(x);
   async function toggleServer() {
     if (serverActionPending) return;
     try {
       serverActionPending = true;
       if (serverRunning) {
-        await invoke('stop_server');
+        await invoke("stop_server");
       } else {
-        await invoke('start_server', { port });
+        await invoke("start_server", { port });
       }
-      setTimeout(() => serverActionPending = false, 1000);
+      setTimeout(() => (serverActionPending = false), 1000);
     } catch (e) {
+      error(`${e}`);
       console.error(e);
+      serverActionPending = false;
+    }
+    await sync();
+  }
+  async function sync() {
+    serverConnections = await invoke("server_state");
+    if (serverConnections != null) {
+      const serverConns = new Set(serverConnections);
+      const regConns = new Set(registry.games.map(g => g.conn.id));
+      const serverOnly = serverConns.difference(regConns);
+      const regOnly = regConns.difference(serverConns);
+      for (const id of serverOnly) {
+        warn(`Closing server-only connection ${id}`);
+        await invoke('ws_close', { id, code: 1000, reason: "UI out of sync, please reconnect" });
+      }
+      for (const id of regOnly) {
+        const game = registry.games.find(g => g.conn.id === id);
+        if (game === undefined) {
+          error(`registry-only game at ${id} doesn't exist`);
+        } else {
+          warn(`Closing registry-only connection ${id} (game ${game.name})`);
+          registry.games.splice(registry.games.indexOf(game), 1);
+          game.conn.close();
+        }
+      }
     }
   }
   onMount(async () => {
-    // TODO: this is for autostart but server should autostart from this side
-    // rust side should be dumb (f/e loads config etc)
-    serverState = await invoke("get_server_state");
-  })
-  // these return unsub handlers but we don't care (this page won't be unmounted ever)
-  listen<ServerState>('server-state', (evt) => serverState = evt.payload);
-  // TEMP
-  listen('server-started', () => serverState = {port, connectedGames: []});
-  listen('server-stopped', () => serverState = null);
+    // unmounted on HMR
+    subscriptions.push(await listen<WSConnectionRequest>("ws-try-connect", (evt) => {
+      registry.tryConnect(evt.payload);
+      console.log(registry);
+    }));
+    subscriptions.push(await listen<string[]>("server-state", (evt) => serverConnections = evt.payload));
+    await sync();
+  });
+  onDestroy(async () => {
+    console.log(`unsubbing ${subscriptions.length} items`);
+
+    for (const unsub of subscriptions) {
+      const buh = unsub();
+      if (buh instanceof Promise) {
+        await buh;
+      }
+    }
+  });
 </script>
 
 <main class="container">
@@ -87,9 +112,30 @@
     <button type="submit">Greet</button>
   </form>
   <p>{greetMsg}</p>
-  <p>Server is {serverRunning ? "running" : "stopped"}</p>
-  <input id="port-input" disabled={serverRunning} placeholder="Port (default 8000)" bind:value={port} />
-  <button disabled={!serverActionPending} onclick={toggleServer}>{serverRunning ? "Stop" : "Start"}</button>
+  <p>Server is {serverRunning ? `running on port ${port}` : "stopped"}</p>
+  <input
+    id="port-input"
+    disabled={serverRunning}
+    placeholder="Port (default 8000)"
+    bind:value={port}
+  />
+  <button disabled={serverActionPending} onclick={toggleServer}
+    >{serverRunning ? "Stop" : "Start"}</button
+  >
+  {#if serverConnections != null}
+    <h3>{serverConnections.length} active connections:</h3>
+    <ul>
+      {#each registry.games as game (game.conn.id)}
+        {@const id = game.conn.id}
+        <Tooltip>
+          {#snippet tip()}
+            <p>id: <button onclick={() => window.navigator.clipboard.writeText(id)}>{id}</button></p>
+          {/snippet}
+          <li>{game.name}</li>
+        </Tooltip>
+      {/each}
+    </ul>
+  {/if}
 </main>
 
 <style>
@@ -177,10 +223,10 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   border-color: #396cd8;
 }
-button:active {
+button:active:not(:disabled) {
   border-color: #396cd8;
   background-color: #e8e8e8;
 }
@@ -213,7 +259,7 @@ button {
       color: #aaaaaa;
     }
   }
-  button:active {
+  button:active:not(:disabled) {
     background-color: #0f0f0f69;
   }
 }

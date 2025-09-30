@@ -8,21 +8,22 @@ use tauri_plugin_log::{log::LevelFilter, RotationStrategy, Target, TargetKind};
 mod api;
 mod app;
 use app::state::App;
-use app::commands::{greet, is_server_running, start_server, stop_server};
-use api::server::{ws_accept, ws_deny, ws_close};
-use tokio::sync::Mutex;
+use app::commands::{greet, is_server_running, server_state, start_server, stop_server};
+use api::server::{ws_accept, ws_deny, ws_send, ws_close};
+
+use crate::app::state::AppStateMutex;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            app.manage(Mutex::new(App::new(app.handle().clone())));
+            app.manage(AppStateMutex::new(App::new(app.handle().clone())));
             Ok(())
         })
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_log::Builder::new()
             .rotation_strategy(RotationStrategy::KeepSome(5))
-            .level(LevelFilter::Trace)
+            .level(LevelFilter::Info)
             .target(Target::new(TargetKind::LogDir { file_name: Some("ws".to_owned()) })
                 .filter(|md| md.target() == "ws"))
             .build())
@@ -33,8 +34,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,
-            is_server_running, start_server, stop_server,
-            ws_accept, ws_deny, ws_close,
+            is_server_running, server_state, start_server, stop_server,
+            ws_accept, ws_deny, ws_send, ws_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

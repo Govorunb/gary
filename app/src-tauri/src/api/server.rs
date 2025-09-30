@@ -1,8 +1,8 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
-use axum::{extract::{ws::{CloseFrame}, Path, Query, State, WebSocketUpgrade}, response::Response, routing::get, Router};
-use futures_util::FutureExt;
-use log::error;
+use axum::{extract::{ws::{CloseFrame, Message, WebSocket}, Path, Query, State, WebSocketUpgrade}, response::Response, routing::get, Router};
+use futures_util::{stream::SplitSink, FutureExt, SinkExt, StreamExt};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tauri::{ipc::Channel, AppHandle, Emitter, Manager};
@@ -20,7 +20,7 @@ struct V2ConnectQuery {
 pub struct WSServer {
     abort_handle: AbortHandle,
     pending_connections: BTreeMap<Uuid, Sender<WSConnectResponse>>,
-    connections: BTreeMap<Uuid, ClientWSConnection>
+    connections: BTreeMap<Uuid, SplitSink<WebSocket, Message>>
 }
 
 impl WSServer {
@@ -32,21 +32,21 @@ impl WSServer {
         }
     }
 
-    pub fn stop(self) {
+    pub async fn stop(self) {
+        for (_, pend) in self.pending_connections {
+            let _ = pend.send(WSConnectResponse::Deny(Some("Server shutting down".into())));
+        }
+        for (_, tx) in self.connections {
+            let _ = Self::close_tx(tx, Some(1001), Some("Server shutting down".into())).await;
+        }
         self.abort_handle.abort()
     }
 
-    pub fn get_conn(&self, id: Uuid) -> Option<&ClientWSConnection> {
-        self.connections.get(&id)
-    }
-
-    pub fn get_conn_mut(&mut self, id: Uuid) -> Option<&mut ClientWSConnection> {
-        self.connections.get_mut(&id)
-    }
-
     fn add_pending(&mut self, id: Uuid, tx: Sender<WSConnectResponse>) {
-        if let Some(_) = self.pending_connections.insert(id, tx) {
-            error!(target: "ws", "UUID collision on {id} for pending_connections :(");
+        if let Some(existing) = self.pending_connections.insert(id, tx) {
+            existing.send(WSConnectResponse::Deny(Some("UUID collision; discarding existing (sorry)".to_owned())))
+                .ok().expect("double send on oneshot in add_pending (UUID collision)");
+            error!(target: "ws", "UUID collision on {id} for pending_connections, discarded existing");
         }
     }
 
@@ -54,32 +54,60 @@ impl WSServer {
         self.pending_connections.remove(&id)
     }
 
-    fn take_conn(&mut self, id: Uuid) -> Option<ClientWSConnection> {
-        self.connections.remove(&id)
+    pub async fn close(&mut self, id: Uuid, code: Option<u16>, reason: Option<String>) -> Result<(), String> {
+        let tx = self.connections.remove(&id).ok_or(format!("connection not found @ {id}"))?;
+        Self::close_tx(tx, code, reason).await.map_err(|e| e.to_string())
     }
 
-    pub async fn connect(&mut self, conn: ClientWSConnection) {
-        let id = *conn.id();
-        if let Some(mut existing) = self.connections.insert(id, conn) {
-            let _ = existing.disconnect_with(
-                Some(CloseCode::Protocol.into()), 
-                Some("New connection for this game came in; dropping old connection (yours)".into())
+    async fn close_tx(mut tx: SplitSink<WebSocket, Message>, code: Option<u16>, reason: Option<String>) -> Result<(), axum::Error> {
+        if code.is_none() && reason.is_none() {
+            tx.send(Message::Close(None)).await
+        } else {
+            tx.send(Message::Close(Some(CloseFrame {
+                code: code.unwrap_or(1000),
+                reason: reason.map(|s| s.into()).unwrap_or("".into())
+            }))).await
+        }
+    }
+
+    pub async fn send(&mut self, id: Uuid, msg: String) -> Result<(), String> {
+        let tx = self.connections.get_mut(&id).ok_or(format!("connection not found @ {id}"))?;
+        tx.send(msg.into()).await.map_err(|e| e.to_string())
+    }
+
+    pub async fn insert(&mut self, id: Uuid, tx: SplitSink<WebSocket, Message>) {
+        if let Some(existing) = self.connections.insert(id, tx) {
+            warn!(target: "ws", "UUID collision @ {id}, dropping existing");
+            let _ = Self::close_tx(existing,
+                Some(CloseCode::Protocol.into()),
+                Some("New incoming connection rolled the same UUID as yours... Sorry".into())
             ).await;
         }
-        self.connections.get_mut(&id).unwrap().lifecycle().await;
+    }
+
+    pub fn connections(&self) -> Vec<Uuid> {
+        self.connections.keys().cloned()
+            .collect()
     }
 }
 
-pub async fn create_server(app: AppHandle, port: u16) -> anyhow::Result<WSServer> {
+pub async fn create_server(app: AppHandle, port: u16) -> Result<WSServer, String> {
     let router = Router::new()
         .route("/", get(v1_legacy))
         .route("/v2/{game}", get(v2_game_in_path))
+        .route("/v2/{game}/", get(v2_game_in_path))
         .route("/v2", get(v2_game_in_query))
+        .route("/v2/", get(v2_game_in_query))
         .with_state(app.clone());
 
     let addr = ("127.0.0.1", port);
-    let listener = TcpListener::bind(addr).await?;
-    let server_future = axum::serve(listener, router).into_future();
+    let listener_res = TcpListener::bind(addr).await;
+    debug!("Bind result to {addr:?} - {}", if let Err(ref e) = listener_res { e.to_string() } else { "OK".to_owned() });
+    let listener = listener_res.map_err(|e| e.to_string())?;
+    let server_future = axum::serve(listener, router).into_future()
+        .then(|_| async move { // result doesn't matter - it's never Ok (even if stopped gracefully, the task gets aborted anyway)
+            let _ = app.clone().emit("server-stopped", ());
+        });
     let abort_handle = tokio::spawn(server_future).abort_handle();
     Ok(WSServer::new(abort_handle))
 }
@@ -123,13 +151,16 @@ async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) 
     let (tx, rx) = oneshot::channel::<WSConnectResponse>();
     let id = Uuid::new_v4();
     let app_handle = app.clone();
-    let state_mutex = app_handle.state::<AppStateMutex>();
-    let mut state = state_mutex.lock().await;
-    state.server.as_mut().expect("should have server").add_pending(id, tx);
-    drop(state);
-    drop(state_mutex);
-    // send evt to f/e to approve/deny
-    let _ = app.emit("ws-try-connect", TryConnectPayload { id, version: version.clone() });
+    {
+        let state_mutex = app_handle.state::<AppStateMutex>();
+        info!("taking mutex to add pending {id}");
+        let mut state = state_mutex.lock().await;
+        info!("took/p {id}");
+        state.server.as_mut().expect("should have server").add_pending(id, tx);
+    }
+    info!("released/p {id}");
+    // send evt to frontend to approve/deny
+    let _ = app.emit("ws-try-connect", TryConnectPayload { id, version });
     let Ok(resp) = rx.await else {
         error!("ws approval oneshot channel recv error: sender dropped without sending (id {id})"); // TODO
         return Response::builder().status(500).body("erm".into()).unwrap();
@@ -141,11 +172,35 @@ async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) 
         }
     };
     ws.on_upgrade(async move |socket| {
-        let conn = ClientWSConnection::new(id, socket, version, channel);
-        let state_mutex = app.state::<AppStateMutex>();
-        let mut state = state_mutex.lock().await;
-        let server = state.server.as_mut().expect("server not running");
-        server.connect(conn).await;
+        let (tx, rx) = socket.split();
+        let mut conn = ClientWSConnection::new(id, rx, channel );
+        {
+            let state_mutex = app.state::<AppStateMutex>();
+            info!("taking app state mutex to insert conn {id}");
+            let mut state = state_mutex.lock().await;
+            info!("took/i {id}");
+            let server = state.server.as_mut().expect("server should be running");
+            server.insert(id, tx).await;
+            info!("Sending server-state {:?}", server.connections());
+            let _ = app.emit("server-state", server.connections());
+        }
+        info!("awaiting lifecycle for conn {id}");
+        let close_reason = match conn.lifecycle().await {
+            Err(error) => Some(error),
+            _ => None,
+        };
+        info!("conn {id} closed - {:?}", &close_reason);
+        {
+            let state_mutex = app.state::<AppStateMutex>();
+            info!("taking app state mutex to close conn {id}");
+            let mut state = state_mutex.lock().await;
+            info!("took/c {id}");
+            if let Some(server) = state.server.as_mut() {
+                let _ = server.close(id, None, close_reason).await;
+                let _ = app.emit("server-state", server.connections());
+            }
+        }
+        let _ = app.emit("ws-closed", id);
     })
 }
 
@@ -174,6 +229,17 @@ pub async fn ws_close(app: AppHandle, id: Uuid, code: Option<u16>, reason: Optio
     let state_mutex = app.state::<AppStateMutex>();
     let mut state = state_mutex.lock().await;
     let server = state.server.as_mut().ok_or("ws_close: server not running".to_owned())?;
-    let mut conn = server.take_conn(id).ok_or(format!("ws_close: no connection found for id {id}"))?;
-    conn.disconnect_with(code, reason).await.map_err(|e| e.to_string())
+    server.close(id, code, reason).await
+}
+
+#[tauri::command]
+pub async fn ws_send(app: AppHandle, id: Uuid, text: String) -> Result<(), String> {
+    let state_mutex = app.state::<AppStateMutex>();
+    info!("taking mutex to send {id}");
+    let mut state = state_mutex.lock().await;
+    info!("took/send {id}");
+    let server= state.server.as_mut().ok_or("ws_send: server not running".to_owned())?;
+    let res = server.send(id, text).await;
+    info!("released/send {id}");
+    res
 }

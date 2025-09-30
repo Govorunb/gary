@@ -1,5 +1,5 @@
-use tauri::AppHandle;
-use tokio::sync::Mutex;
+use tauri::{AppHandle, Listener};
+use tokio::sync::{Mutex, RwLock};
 
 use crate::api::{server::WSServer};
 
@@ -32,10 +32,10 @@ impl App {
         Ok(())
     }
 
-    pub fn stop_server(&mut self) -> Result<(), ()> {
+    pub async fn stop_server(&mut self) -> Result<(), ()> {
         let server_opt = self.server.take();
         if let Some(server) = server_opt {
-            server.stop();
+            server.stop().await;
             self.server = None;
             Ok(())
         } else {

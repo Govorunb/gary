@@ -4,12 +4,14 @@ from typing import overload
 
 from websockets import ClientConnection
 
-from gary.registry import GameEvents
 from gary.util import HasEvents
 from gary.spec import *
 from ..util import Connection
 
 type Handler = Callable[[str, Any], Awaitable[tuple[bool, str]]]
+
+# duplicated from gary.registry to avoid importing guidance/llama-cpp/everything else
+type GameEvents = Literal["connect", "disconnect"] | GameCommand | NeuroCommand
 
 class Game(HasEvents[GameEvents]):
     def __init__(self, name: str, ws: Connection | ClientConnection):

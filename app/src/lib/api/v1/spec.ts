@@ -1,5 +1,6 @@
 // alternatively: ClientCommand and ServerCommand
-type GameCommand = |
+
+export type GameCommand = |
     "startup"
     | "context"
     | "actions/register"
@@ -8,33 +9,33 @@ type GameCommand = |
     | "action/result"
     | "shutdown/ready";
 
-type NeuroCommand = |
+export type NeuroCommand = |
     "action"
     | "actions/reregister_all"
     | "shutdown/graceful"
     | "shutdown/immediate";
 
-type Action = {
+export type Action = {
     name: string;
     description?: string;
     schema: object; // TODO: package to deal with json schemas
 }
 
-interface Message {
+export interface Message {
     readonly command: GameCommand | NeuroCommand;
 }
 
-abstract class GameMessage implements Message {
+export abstract class GameMessage implements Message {
     abstract readonly command: GameCommand;
 
     constructor(readonly game: string) { }
 }
 
-abstract class NeuroMessage implements Message {
+export abstract class NeuroMessage implements Message {
     abstract readonly command: NeuroCommand;
 }
 
-class Startup extends GameMessage {
+export class Startup extends GameMessage {
     readonly command = "startup";
 
     constructor(game: string) {
@@ -42,7 +43,7 @@ class Startup extends GameMessage {
     }
 }
 
-class Context extends GameMessage {
+export class Context extends GameMessage {
     readonly command = "context";
     data: {
         message: string;
@@ -55,9 +56,9 @@ class Context extends GameMessage {
     }
 }
 
-type DataOf<T extends { data: unknown }> = T["data"];
+export type DataOf<T extends { data: unknown }> = T["data"];
 
-class RegisterActions extends GameMessage {
+export class RegisterActions extends GameMessage {
     readonly command = "actions/register";
     data: {
         actions: Action[];
@@ -69,7 +70,7 @@ class RegisterActions extends GameMessage {
     }
 }
 
-class UnregisterActions extends GameMessage {
+export class UnregisterActions extends GameMessage {
     readonly command = "actions/unregister";
     data: {
         actionNames: string[];
@@ -81,7 +82,7 @@ class UnregisterActions extends GameMessage {
     }
 }
 
-class ForceAction extends GameMessage {
+export class ForceAction extends GameMessage {
     readonly command = "actions/force";
     data: {
         state?: string;
@@ -96,7 +97,7 @@ class ForceAction extends GameMessage {
     }
 }
 
-class ActionResult extends GameMessage {
+export class ActionResult extends GameMessage {
     readonly command = "action/result";
     data: {
         id: string;
@@ -112,7 +113,7 @@ class ActionResult extends GameMessage {
 
 // Neuro messages
 
-class ActionMessage extends NeuroMessage {
+export class ActionMessage extends NeuroMessage {
     readonly command = "action";
     data: {
         id?: string;
@@ -126,11 +127,11 @@ class ActionMessage extends NeuroMessage {
     }
 }
 
-class ReregisterAll extends NeuroMessage {
+export class ReregisterAll extends NeuroMessage {
     readonly command = "actions/reregister_all";
 }
 
-class GracefulShutdown extends NeuroMessage {
+export class GracefulShutdown extends NeuroMessage {
     readonly command = "shutdown/graceful";
     data: {
         wants_shutdown: boolean;
@@ -141,10 +142,10 @@ class GracefulShutdown extends NeuroMessage {
     }
 }
 
-class ImmediateShutdown extends NeuroMessage {
+export class ImmediateShutdown extends NeuroMessage {
     readonly command = "shutdown/immediate";
 }
 
-class ShutdownReady extends GameMessage {
+export class ShutdownReady extends GameMessage {
     readonly command = "shutdown/ready";
 }

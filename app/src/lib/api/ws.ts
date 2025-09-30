@@ -1,10 +1,16 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { error, info } from "@tauri-apps/plugin-log";
+import { error, info, warn } from "@tauri-apps/plugin-log";
+import type { NeuroMessage } from "./v1/spec";
+
+type OnMessageHandler = (msg: string) => any;
+export type OnCloseHandler = (clientDisconnected?: CloseFrame) => void;
 
 export class GameWSConnection {
     private _closed: boolean = false;
     private subscriptions: Function[] = [];
+    public onmessage?: OnMessageHandler;
+    public onclose?: OnCloseHandler;
 
     public get closed() {
         return this._closed;
@@ -14,40 +20,45 @@ export class GameWSConnection {
         public readonly id: string,
         public readonly version: string,
         private readonly channel: Channel<ServerWSEvent>,
-        private onmessage: (msg: string) => any,
-        private onclose: (clientDisconnect?: CloseFrame) => any,
     ) {
         listen<string>('ws-closed', (evt) => {
             if (evt.payload === this.id) this.close();
         }).then(this.subscriptions.push);
-        this.channel.onmessage = this.processServerEvt;
+        this.channel.onmessage = (e) => this.processServerEvt(e);
     }
 
     get shortId() {
         return this.id.substring(0, 6);
     }
 
-    close() {
+    public close(clientDisconnected?: CloseFrame) {
         this._closed = true;
         for (const unsub of this.subscriptions) {
             unsub();
         }
+        this.subscriptions.length = 0;
+        this.onclose?.(clientDisconnected);
     }
 
     checkClosed() {
         if (this._closed) throw new Error(`Connection id '${this.shortId}' is closed`);
     }
 
-    processServerEvt(evt: ServerWSEvent) {
+    async processServerEvt(evt: ServerWSEvent) {
         switch (evt.type) {
             case "connected":
-                // ???
+                // ??? log i guess (or some ui update)
                 break;
             case "message":
-                this.onmessage(evt.text);
+                if (this.onmessage) {
+                    await this.onmessage(evt.text);
+                } else {
+                    warn(`Connection ${this.shortId} received a WS message but has no onmessage handler! I have no mouth and I must scream`);
+                }
                 break;
             case "clientDisconnected":
-                info(`client ${this.id.substring(0,6)} disconnected`);
+                info(`client ${this.shortId} disconnected`);
+                this.close(evt);
                 break;
         }
     }
@@ -59,7 +70,7 @@ export class GameWSConnection {
     public async sendRaw(text: string) {
         this.checkClosed();
         try {
-            await invoke('ws-send', { id: this.id, text } satisfies SendArgs);
+            await invoke('ws_send', { id: this.id, text } satisfies SendArgs);
         } catch (e) {
             error(`Failed to send WS text: ${e}`);
             throw e;
@@ -69,7 +80,8 @@ export class GameWSConnection {
     public async disconnect(code?: number, reason?: string) {
         if (this._closed) return;
 
-        await invoke('ws-close', { id: this.id, code, reason } satisfies CloseArgs);
+        await invoke('ws_close', { id: this.id, code, reason } satisfies CloseArgs);
+        this.close();
     }
 }
 

@@ -428,6 +428,7 @@ async def main():
                 logger.info("Disconnected")
         except Exception as e:
             logger.error(e)
+            await asyncio.sleep(5)
             continue
 
 def start():
