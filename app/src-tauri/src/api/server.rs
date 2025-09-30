@@ -153,12 +153,9 @@ async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) 
     let app_handle = app.clone();
     {
         let state_mutex = app_handle.state::<AppStateMutex>();
-        info!("taking mutex to add pending {id}");
         let mut state = state_mutex.lock().await;
-        info!("took/p {id}");
         state.server.as_mut().expect("should have server").add_pending(id, tx);
     }
-    info!("released/p {id}");
     // send evt to frontend to approve/deny
     let _ = app.emit("ws-try-connect", TryConnectPayload { id, version });
     let Ok(resp) = rx.await else {
@@ -176,9 +173,7 @@ async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) 
         let mut conn = ClientWSConnection::new(id, rx, channel );
         {
             let state_mutex = app.state::<AppStateMutex>();
-            info!("taking app state mutex to insert conn {id}");
             let mut state = state_mutex.lock().await;
-            info!("took/i {id}");
             let server = state.server.as_mut().expect("server should be running");
             server.insert(id, tx).await;
             info!("Sending server-state {:?}", server.connections());
@@ -189,12 +184,10 @@ async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) 
             Err(error) => Some(error),
             _ => None,
         };
-        info!("conn {id} closed - {:?}", &close_reason);
+        info!("conn {id} closed ({:?})", close_reason.clone().unwrap_or("normal closure".to_owned()));
         {
             let state_mutex = app.state::<AppStateMutex>();
-            info!("taking app state mutex to close conn {id}");
             let mut state = state_mutex.lock().await;
-            info!("took/c {id}");
             if let Some(server) = state.server.as_mut() {
                 let _ = server.close(id, None, close_reason).await;
                 let _ = app.emit("server-state", server.connections());
@@ -235,11 +228,8 @@ pub async fn ws_close(app: AppHandle, id: Uuid, code: Option<u16>, reason: Optio
 #[tauri::command]
 pub async fn ws_send(app: AppHandle, id: Uuid, text: String) -> Result<(), String> {
     let state_mutex = app.state::<AppStateMutex>();
-    info!("taking mutex to send {id}");
     let mut state = state_mutex.lock().await;
-    info!("took/send {id}");
     let server= state.server.as_mut().ok_or("ws_send: server not running".to_owned())?;
     let res = server.send(id, text).await;
-    info!("released/send {id}");
     res
 }

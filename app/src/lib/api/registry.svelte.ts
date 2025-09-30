@@ -39,7 +39,7 @@ export class Registry {
         conn.onclose = () => {
             debug(`Game ${gameName} disconnected, removing`);
             const i = this.games.indexOf(game);
-            this.games = this.games.splice(i, 1);
+            this.games.splice(i, 1);
         };
         await invoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
         if (conn.version == "v1") {

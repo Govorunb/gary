@@ -67,7 +67,7 @@
 		width: fit-content;
 		padding: 4px 8px;
 		border: 1px solid red;
-		border-radius: 15;
+		border-radius: 15px;
 		background-color: grey;
 		text-align: left;
 		white-space: pre-line;
