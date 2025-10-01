@@ -43,12 +43,20 @@ impl ClientWSConnection {
     }
 
     pub async fn lifecycle(&mut self) -> Result<(), String> {
+        let _ = self.channel.send(ServerWSEvent::Connected);
+        // ignores Some(Err)
         while let Some(Ok(raw_msg)) = self.rx.next().await {
             match raw_msg {
                 Message::Binary(_) => {
-                    return Err("Received binary message".into())
+                    let err_msg = "Received binary message".to_owned();
+                    let _ = self.channel.send(ServerWSEvent::ProtocolError { err: err_msg.clone() });
+                    return Err(err_msg)
                 },
                 Message::Ping(_) | Message::Pong(_) => {}, // ignore
+                // axum's docs seems to think the protocol is for both ends to send a Close, even though it's not in the RFC
+                // and who knows what clients/impls think that too
+                // so realistically this could also be hit for 'reply' close frames, when it's actually us that disconnected
+                // plus, our tx is already closed
                 Message::Close(close_frame) => {
                     let (code, reason) = match close_frame {
                         None => (1000, None),
@@ -81,12 +89,6 @@ impl std::hash::Hash for ClientWSConnection {
     }
 }
 
-/* TODO
-on conn, event to f/e
-f/e sends back command w/ channel in params
-server ws events go through the channel (recv, client disconnect)
-f/e events (send, close) go through commands
-*/
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ServerWSEvent {
@@ -100,7 +102,8 @@ pub enum ServerWSEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
     },
-    ProtocolError(String),
+    #[serde(rename = "wsError")]
+    ProtocolError { err: String },
 }
 
 #[test]
@@ -110,7 +113,7 @@ fn does_this_even_serialize() {
         ServerWSEvent::Message { text: "AAAA".into() },
         ServerWSEvent::ClientDisconnected { code: 1006, reason: None },
         ServerWSEvent::ClientDisconnected { code: 3000, reason: Some("SOME".into()) },
-        ServerWSEvent::ProtocolError("client sent binary frame".to_owned())
+        ServerWSEvent::ProtocolError { err: "client sent binary frame".to_owned() },
     ];
-    println!("{:#?}", serde_json::to_value(&kinds).expect("should be able to serialize"));
+    println!("{}", serde_json::to_string_pretty(&kinds).expect("should be able to serialize"));
 }

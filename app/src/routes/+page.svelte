@@ -104,9 +104,9 @@
     placeholder="Port (default 8000)"
     bind:value={port}
   />
-  <button disabled={serverActionPending} onclick={toggleServer}
-    >{serverRunning ? "Stop" : "Start"}</button
-  >
+  <button disabled={serverActionPending} onclick={toggleServer}>
+    {serverRunning ? "Stop" : "Start"}
+  </button>
   {#if serverConnections != null}
     <h3>{serverConnections.length} active connections:</h3>
     <ul>
@@ -114,7 +114,7 @@
         {@const id = game.conn.id}
         <Tooltip>
           {#snippet tip()}
-            <p>id: <button onclick={() => window.navigator.clipboard.writeText(id)}>{id}</button></p>
+            <p>id: {id} <button onclick={() => window.navigator.clipboard.writeText(id)}>Copy</button></p>
           {/snippet}
           <li>{game.name}</li>
         </Tooltip>

@@ -148,6 +148,12 @@ enum WSConnectResponse {
 }
 
 async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) -> Response {
+    /* overview
+    on conn, event to f/e
+    f/e sends back 'accept' command w/ channel in params (or 'deny' w/ reason)
+    server ws events go through the channel (e.g. recv, client disconnect)
+    f/e events (send, close) go through commands
+    */
     let (tx, rx) = oneshot::channel::<WSConnectResponse>();
     let id = Uuid::new_v4();
     let app_handle = app.clone();
@@ -169,8 +175,12 @@ async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) 
         }
     };
     ws.on_upgrade(async move |socket| {
+        // not splitting would be nicer but the socket can't be owned by both the recv loop and the server (to address by id for send/close commands)
+        // the ownership model...
+        // yes yes technically this is the perfect use for Arc<Arc<BiLock<Mutex<RwxLock<Arc<UnLock<Cow<Polycule<Arc<()>>>>>>>>>>
+        // but i think i'll just use the BiLock that's already there
         let (tx, rx) = socket.split();
-        let mut conn = ClientWSConnection::new(id, rx, channel );
+        let mut conn = ClientWSConnection::new(id, rx, channel);
         {
             let state_mutex = app.state::<AppStateMutex>();
             let mut state = state_mutex.lock().await;
@@ -179,7 +189,7 @@ async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) 
             info!("Sending server-state {:?}", server.connections());
             let _ = app.emit("server-state", server.connections());
         }
-        info!("awaiting lifecycle for conn {id}");
+        debug!("awaiting lifecycle for conn {id}");
         let close_reason = match conn.lifecycle().await {
             Err(error) => Some(error),
             _ => None,
@@ -230,6 +240,5 @@ pub async fn ws_send(app: AppHandle, id: Uuid, text: String) -> Result<(), Strin
     let state_mutex = app.state::<AppStateMutex>();
     let mut state = state_mutex.lock().await;
     let server= state.server.as_mut().ok_or("ws_send: server not running".to_owned())?;
-    let res = server.send(id, text).await;
-    res
+    server.send(id, text).await
 }

@@ -33,11 +33,13 @@ export class GameWSConnection {
 
     public close(clientDisconnected?: CloseFrame) {
         this._closed = true;
+        this.onmessage = undefined;
         for (const unsub of this.subscriptions) {
             unsub();
         }
         this.subscriptions.length = 0;
         this.onclose?.(clientDisconnected);
+        this.onclose = undefined;
     }
 
     checkClosed() {
@@ -45,6 +47,7 @@ export class GameWSConnection {
     }
 
     async processServerEvt(evt: ServerWSEvent) {
+        if (this._closed) return;
         switch (evt.type) {
             case "connected":
                 // ??? log i guess (or some ui update)
@@ -59,6 +62,11 @@ export class GameWSConnection {
             case "clientDisconnected":
                 info(`client ${this.shortId} disconnected`);
                 this.close(evt);
+                break;
+            case "wsError":
+                warn(`client ${this.shortId} broke its websocket: ${evt.err}`);
+                // server websocket will close itself
+                this.close();
                 break;
         }
     }
@@ -105,7 +113,12 @@ type ClientDisconnected = {
     type: "clientDisconnected";
 } & CloseFrame;
 
-export type ServerWSEvent = Connected | Message | ClientDisconnected;
+type ProtocolError = {
+    type: "wsError";
+    err: string;
+}
+
+export type ServerWSEvent = Connected | Message | ClientDisconnected | ProtocolError;
 
 type ConnMsgBase = {id: string}
 
