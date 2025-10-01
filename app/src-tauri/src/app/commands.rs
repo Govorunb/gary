@@ -32,7 +32,7 @@ pub async fn start_server(app: AppHandle, port: u16) -> Result<(), String> {
         return Err("Server already running".into());
     }
     
-    state.start_server(port).await.map_err(|e| e.to_string())?;
+    state.start_server(port).await?;
     info!("Server started on port {port}");
     let _ = app.emit("server-started", port);
     Ok(())
@@ -50,11 +50,4 @@ pub async fn stop_server(app: AppHandle) -> Result<(), String> {
     } else {
         Err("Server not running".to_string())
     }
-}
-
-
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-pub fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
 }

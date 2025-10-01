@@ -28,7 +28,7 @@ impl App {
         }
         self.server = Some(crate::api::server::create_server(
             self.app_handle.clone(), port
-        ).await.map_err(|e| e.to_string())?);
+        ).await?);
         Ok(())
     }
 

@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc, convert::Into};
 
 use axum::{extract::{ws::{CloseFrame, Message, WebSocket}, Path, Query, State, WebSocketUpgrade}, response::Response, routing::get, Router};
 use futures_util::{stream::SplitSink, FutureExt, SinkExt, StreamExt};
@@ -39,7 +39,7 @@ impl WSServer {
         for (_, tx) in self.connections {
             let _ = Self::close_tx(tx, Some(1001), Some("Server shutting down".into())).await;
         }
-        self.abort_handle.abort()
+        self.abort_handle.abort();
     }
 
     fn add_pending(&mut self, id: Uuid, tx: Sender<WSConnectResponse>) {
@@ -65,7 +65,7 @@ impl WSServer {
         } else {
             tx.send(Message::Close(Some(CloseFrame {
                 code: code.unwrap_or(1000),
-                reason: reason.map(|s| s.into()).unwrap_or("".into())
+                reason: reason.map_or("".into(), Into::into)
             }))).await
         }
     }
@@ -86,7 +86,7 @@ impl WSServer {
     }
 
     pub fn connections(&self) -> Vec<Uuid> {
-        self.connections.keys().cloned()
+        self.connections.keys().copied()
             .collect()
     }
 }
@@ -231,7 +231,7 @@ pub async fn ws_close(app: AppHandle, id: Uuid, code: Option<u16>, reason: Optio
     let state_mutex = app.state::<AppStateMutex>();
     let mut state = state_mutex.lock().await;
     let server = state.server.as_mut().ok_or("ws_close: server not running".to_owned())?;
-    debug!("ws_close: ({:?}, {:?}) (id {id})", code, reason);
+    debug!("ws_close: ({code:?}, {reason:?}) (id {id})");
     server.close(id, code, reason).await
 }
 

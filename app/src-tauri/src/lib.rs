@@ -8,7 +8,7 @@ use tauri_plugin_log::{log::LevelFilter, RotationStrategy, Target, TargetKind};
 mod api;
 mod app;
 use app::state::App;
-use app::commands::{greet, is_server_running, server_state, start_server, stop_server};
+use app::commands::{is_server_running, server_state, start_server, stop_server};
 use api::server::{ws_accept, ws_deny, ws_send, ws_close};
 
 use crate::app::state::AppStateMutex;
@@ -33,7 +33,6 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            greet,
             is_server_running, server_state, start_server, stop_server,
             ws_accept, ws_deny, ws_send, ws_close,
         ])

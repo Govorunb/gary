@@ -3,5 +3,5 @@
 
 #[tokio::main]
 async fn main() {
-    gary_tauri::run()
+    gary_tauri::run();
 }
