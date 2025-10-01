@@ -68,7 +68,7 @@ impl ClientWSConnection {
                 Message::Text(txt) => {
                     match self.channel.send(ServerWSEvent::Message { text: txt.to_string() }) {
                         Ok(()) => trace!("relayed WS Text msg: {txt}"),
-                        Err(e) => error!("failed to relay WS Text msg: {}", e.to_string()),
+                        Err(e) => error!("failed to relay WS Text msg: {e}"),
                     }
                 },
             }

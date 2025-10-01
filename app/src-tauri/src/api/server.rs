@@ -190,10 +190,7 @@ async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) 
             let _ = app.emit("server-state", server.connections());
         }
         debug!("awaiting lifecycle for conn {id}");
-        let close_reason = match conn.lifecycle().await {
-            Err(error) => Some(error),
-            _ => None,
-        };
+        let close_reason = (conn.lifecycle().await).err();
         info!("conn {id} closed ({:?})", close_reason.clone().unwrap_or("normal closure".to_owned()));
         {
             let state_mutex = app.state::<AppStateMutex>();
@@ -213,7 +210,8 @@ pub async fn ws_accept(app: AppHandle, id: Uuid, channel: Channel<ServerWSEvent>
     let mut state = state_mutex.lock().await;
     let server = state.server.as_mut().ok_or("ws_accept: server not running".to_owned())?;
     let tx = server.take_pending(id).ok_or(format!("ws_accept: no pending connection found for id {id}"))?;
-    tx.send(WSConnectResponse::Accept(channel)).ok().expect(&format!("ws_accept: double send on oneshot (id {id})"));
+    debug!("ws_accept: id {id}");
+    tx.send(WSConnectResponse::Accept(channel)).ok().unwrap_or_else(|| panic!("ws_accept: double send on oneshot (id {id})"));
     Ok(())
 }
 
@@ -223,7 +221,8 @@ pub async fn ws_deny(app: AppHandle, id: Uuid, reason: Option<String>) -> Result
     let mut state = state_mutex.lock().await;
     let server = state.server.as_mut().ok_or("ws_deny: server not running".to_owned())?;
     let tx = server.take_pending(id).ok_or(format!("ws_deny: no pending connection found for id {id}"))?;
-    tx.send(WSConnectResponse::Deny(reason)).ok().expect(&format!("ws_deny: double send on oneshot (id {id})"));
+    debug!("ws_deny: {} (id {id})", reason.as_ref().unwrap_or(&"no reason".to_owned()));
+    tx.send(WSConnectResponse::Deny(reason)).ok().unwrap_or_else(|| panic!("ws_deny: double send on oneshot (id {id})"));
     Ok(())
 }
 
@@ -232,6 +231,7 @@ pub async fn ws_close(app: AppHandle, id: Uuid, code: Option<u16>, reason: Optio
     let state_mutex = app.state::<AppStateMutex>();
     let mut state = state_mutex.lock().await;
     let server = state.server.as_mut().ok_or("ws_close: server not running".to_owned())?;
+    debug!("ws_close: ({:?}, {:?}) (id {id})", code, reason);
     server.close(id, code, reason).await
 }
 

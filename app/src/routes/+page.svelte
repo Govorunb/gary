@@ -7,8 +7,6 @@
   import { onDestroy, onMount } from "svelte";
 
   type ServerConnections = null | string[];
-  let name = $state("");
-  let greetMsg = $state("");
 
   let port = $state(8000); // TODO: config
   let serverActionPending = $state(false);
@@ -18,10 +16,6 @@
   let subscriptions: Function[] = [];
   $inspect(registry);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsg = await invoke("greet", { name });
-  }
   function preventDefault<T, E extends Event>(
     func: (evt: E, ...args: any[]) => T,
   ) {
@@ -92,47 +86,59 @@
 </script>
 
 <main class="container">
-  <form class="row" onsubmit={preventDefault(greet)}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p>
-  <p>Server is {serverRunning ? `running on port ${port}` : "stopped"}</p>
-  <input
-    id="port-input"
-    disabled={serverRunning}
-    placeholder="Port (default 8000)"
-    bind:value={port}
-  />
-  <button disabled={serverActionPending} onclick={toggleServer}>
-    {serverRunning ? "Stop" : "Start"}
-  </button>
+  <h3>Welcome to Gary</h3>
+  <div class="row">
+    <p>Server is {serverRunning ? `running on port ${port}` : "stopped"}</p>
+  </div>
+  <div class="row">
+    <label for="port-input">Port</label>
+    <input
+      id="port-input"
+      disabled={serverRunning}
+      placeholder="Port (default 8000)"
+      bind:value={port}
+    />
+    <button disabled={serverActionPending} onclick={toggleServer}>
+      {serverRunning ? "Stop" : "Start"}
+    </button>
+  </div>
   {#if serverConnections != null}
     <h3>{serverConnections.length} active connections:</h3>
-    <ul>
-      {#each registry.games as game (game.conn.id)}
-        {@const id = game.conn.id}
-        <Tooltip>
-          {#snippet tip()}
-            <p>id: {id} <button onclick={() => window.navigator.clipboard.writeText(id)}>Copy</button></p>
-          {/snippet}
-          <li>{game.name}</li>
-        </Tooltip>
-      {/each}
-    </ul>
+    <div class="row">
+      <ul>
+        {#each registry.games as game (game.conn.id)}
+          {@const id = game.conn.id}
+          <Tooltip>
+            {#snippet tip()}
+              <div class="row">
+                <p>id: <b>{id}</b></p>
+                <button onclick={() => window.navigator.clipboard.writeText(id)}>Copy</button>
+              </div>
+            {/snippet}
+            <li>
+              <div class="row">
+                <div class="version-badge {game.conn.version}">{game.conn.version}</div>
+                {game.name} ({game.actions.size} actions)
+              </div>
+            </li>
+          </Tooltip>
+        {/each}
+      </ul>
+    </div>
   {/if}
 </main>
 
 <style>
 
 :root {
+  color-scheme: light dark;
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
+  color: light-dark(#0f0f0f, #f6f6f6);
+  background-color: light-dark(#f6f6f6, #2f2f2f);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -153,6 +159,25 @@
 .row {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+
+.version-badge {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0 0.2em 0 0.3em;
+  font-size: 0.9em;
+  font-weight: 500;
+  font-family: inherit;
+  transition: border-color 0.25s;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+  &.v1 {
+    background-color: light-dark(#396cd8, #4e77d1);
+  }
+  &.v2 {
+    background-color: light-dark(#ff8b00, #f7a644);
+  }
 }
 
 input,
@@ -163,12 +188,13 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
+  color: light-dark(#0f0f0f, #ffffff);
+  background-color: light-dark(#ffffff, #0f0f0f98);
   transition: border-color 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
   &:disabled {
-    background-color: #aaaaaa;
+    background-color: light-dark(#aaaaaa, #0f0f0f30);
+    color: light-dark(#aaaaaa, #777777);
   }
 }
 
@@ -176,41 +202,18 @@ button {
   cursor: pointer;
 }
 
+
 button:hover:not(:disabled) {
   border-color: #396cd8;
 }
 button:active:not(:disabled) {
   border-color: #396cd8;
-  background-color: #e8e8e8;
+  background-color: light-dark(#e8e8e8, #0f0f0f69);
 }
 
 input,
 button {
   outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-    &:disabled {
-      background-color: #0f0f0f30;
-      color: #aaaaaa;
-    }
-  }
-  button:active:not(:disabled) {
-    background-color: #0f0f0f69;
-  }
 }
 
 </style>

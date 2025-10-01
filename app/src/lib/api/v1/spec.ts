@@ -25,6 +25,7 @@ export interface Message {
     readonly command: GameCommand | NeuroCommand;
 }
 
+// TODO: classes aren't doing type inference
 export abstract class GameMessage implements Message {
     abstract readonly command: GameCommand;
 

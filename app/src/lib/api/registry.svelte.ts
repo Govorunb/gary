@@ -1,9 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { debug, info, trace, warn } from "@tauri-apps/plugin-log";
 import { GameWSConnection, type ServerWSEvent, type AcceptArgs } from "./ws";
-import type { Action } from "svelte/action";
-import { ReregisterAll, GameMessage } from "./v1/spec";
+import { type Action, ReregisterAll, GameMessage, Context, RegisterActions, UnregisterActions } from "./v1/spec";
 
 export type WSConnectionRequest = {
     id: string;
@@ -21,6 +19,10 @@ export class Registry {
     async tryConnect(req: WSConnectionRequest) {
         const id = req.id;
         // approve/deny connection
+        if (req.version != "v1" && req.version != "v2") {
+            await invoke('ws_deny', { id, reason: "Invalid version" });
+            return;
+        }
         if (req.version != "v1" && !this.validateGameName(req.game)) {
             await invoke('ws_deny', { id, reason: "Invalid game name" });
             return;
@@ -63,7 +65,7 @@ export class Registry {
 }
 
 export class Game {
-    public readonly actions = new Map<string, Action>();
+    public readonly actions = $state(new Map<string, Action>());
     public name: string = $state(null!);
     // private readonly seenActions = new Set<string>(); // log new actions
     constructor(
@@ -82,7 +84,7 @@ export class Game {
         for (const action of actions) {
             if (this.actions.has(action.name)) {
                 // duplicate action conflict resolution
-                // v1 drops incoming (ignore new), v2 will drop existing (overwrite with new)
+                // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                 const isV1 = this.version == "v1";
                 const logMethod = isV1 ? warn : info;
                 logMethod(`${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (on ${this.version} connection)`);
@@ -90,6 +92,15 @@ export class Game {
             }
             this.actions.set(action.name, action);
         }
+        if (actions.length > 3) {
+            info(`Registered ${actions.length} actions`);
+        } else {
+            info(`Registered actions: [${actions.map(a => a.name).join(", ")}]`);
+        }
+        // TEMP: trigger svelte
+        const a = this.actions;
+        this.actions = null;
+        this.actions = a;
     }
 
     async unregisterActions(actions: string[]) {
@@ -106,11 +117,33 @@ export class Game {
     }
 
     async handle(msg: GameMessage) {
-        warn(`Handling ${msg.command}`);
+        trace(`Handling ${msg.command}`);
         if (this.conn.version == "v1" && this.name === `<Pending-${this.conn.shortId}>`) {
-            info(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
+            debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
             this.name = msg.game;
         }
+        switch (msg.command) {
+            case "startup":
+                info(`Startup`);
+                break;
+            case "context":
+                info(`TODO context: '${(msg as Context).data.message}'`);
+                break;
+            case "actions/register":
+                this.registerActions((msg as RegisterActions).data.actions);
+                break;
+                case "actions/unregister":
+                this.unregisterActions((msg as UnregisterActions).data.actionNames);
+                break;
+            case "actions/force":
+            case "action/result":
+            // case "shutdown/ready":
+            default: this.unimp(msg.command); break;
+        }
+    }
+
+    private unimp(cmd: string) {
+        warn(`Unimplemented command '${cmd}'`);
     }
 
     toString() {
