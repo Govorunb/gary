@@ -8,6 +8,7 @@
   import { listen } from "@tauri-apps/api/event";
   import { error, warn } from "@tauri-apps/plugin-log";
   import { onDestroy, onMount } from "svelte";
+  import type { Attachment } from 'svelte/attachments';
 
   type ServerConnections = null | string[];
 
@@ -26,6 +27,24 @@
       return func(evt, ...args);
     };
   }
+  const scrollNum: Attachment<HTMLInputElement> = (el) => {
+    el.addEventListener("wheel", (evt: WheelEvent) => {
+      // tauri uses libwebkit2gtk which has a browser that is just kinda weird and offputting
+      if (!navigator.platform.includes("Linux")) return;
+      
+      const target = evt.target as HTMLInputElement;
+      // increment/decrement on scroll (modern browsers do this by default btw)
+      if (target.disabled) return;
+      let val = parseInt(target.value);
+      const step = target.step && parseInt(target.step) || 1;
+      const min = parseInt(target.min);
+      const max = parseInt(target.max);
+      val += (evt.deltaY > 0 ? -step : step);
+      val = Math.max(min, Math.min(max, val));
+      target.value = val as any;
+      target.dispatchEvent(new Event('input')); // svelte subscribes to 'input' and not 'change'
+    });
+  };
   async function toggleServer() {
     if (serverActionPending) return;
     try {
@@ -104,21 +123,7 @@
       type="number"
       max="65535"
       min="1024"
-      onmousewheel="{(evt: WheelEvent & { target: HTMLInputElement }) => {
-        // tauri uses libwebkit2gtk which has a browser that is just kinda weird and offputting
-        if (!navigator.platform.includes("Linux")) return;
-        
-        // increment/decrement on scroll
-        if (evt.target.disabled) return;
-        let val = parseInt(evt.target.value);
-        const step = evt.target.step && parseInt(evt.target.step) || 1;
-        const min = parseInt(evt.target.min);
-        const max = parseInt(evt.target.max);
-        val += (evt.deltaY > 0 ? -step : step);
-        val = Math.max(min, Math.min(max, val));
-        evt.target.value = val as any;
-        evt.target.dispatchEvent(new Event('input')); // svelte subscribes to 'input' and not 'change'
-      }}"
+      {@attach scrollNum}
       placeholder="Port (default 8000)"
       bind:value={port}
     />

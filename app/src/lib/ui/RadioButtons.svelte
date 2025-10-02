@@ -60,11 +60,11 @@
             --border-radius: 15px;
             line-height: 10px;
         }
-        & > label:nth-of-type(1) {
+        & > label:first-child {
             border-top-left-radius: var(--border-radius);
             border-bottom-left-radius: var(--border-radius);
         }
-        & > label:nth-last-of-type(1) {
+        & > label:last-child {
             border-top-right-radius: var(--border-radius);
             border-bottom-right-radius: var(--border-radius);
         }

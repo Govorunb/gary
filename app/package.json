@@ -21,6 +21,7 @@
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-store": "~2.4.0",
     "@tauri-apps/plugin-websocket": "~2.4.0",
+    "json-schema-faker": "^0.5.9",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.13",
     "uuid": "^13.0.0"

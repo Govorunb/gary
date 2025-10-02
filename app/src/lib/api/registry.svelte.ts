@@ -109,10 +109,6 @@ export class Game {
         info(`Actions unregistered: [${actions}]`);
     }
 
-    public async buh() {
-        await this.conn.send(new Act({ name: "prim_null", data: null }));
-    }
-
     async recv(txt: string) {
         const msg = JSON.parse(txt) as GameMessage;
         await this.handle(msg);
@@ -125,7 +121,7 @@ export class Game {
             this.name = msg.game;
         }
         if (msg instanceof Startup) {
-            info(`Startup`);
+            info(`startup woo`);
         } else if (msg instanceof Context) {
             info(`TODO context: '${msg.data.message}'`);
         } else if (msg instanceof RegisterActions) {
