@@ -1,3 +1,5 @@
+import { v4 as uuid4 } from "uuid";
+
 // alternatively: ClientCommand and ServerCommand
 
 export type GameCommand = |
@@ -114,7 +116,7 @@ export class ActionResult extends GameMessage {
 
 // Neuro messages
 
-export class ActionMessage extends NeuroMessage {
+export class Act extends NeuroMessage {
     readonly command = "action";
     data: {
         id?: string;
@@ -122,8 +124,12 @@ export class ActionMessage extends NeuroMessage {
         data?: string | null;
     }
 
-    constructor(data: DataOf<ActionMessage>) {
+    constructor(data: DataOf<Act>) {
         super();
+        data.id ??= uuid4();
+        if (data.data === undefined) {
+            data.data = null;
+        }
         this.data = data;
     }
 }

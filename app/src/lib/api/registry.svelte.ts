@@ -1,7 +1,8 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { debug, info, trace, warn } from "@tauri-apps/plugin-log";
 import { GameWSConnection, type ServerWSEvent, type AcceptArgs } from "./ws";
-import { type Action, ReregisterAll, GameMessage, Context, RegisterActions, UnregisterActions } from "./v1/spec";
+import { type Action, ReregisterAll, GameMessage, Context, RegisterActions, UnregisterActions, Act, Startup } from "./v1/spec";
+import { SvelteMap } from "svelte/reactivity";
 
 export type WSConnectionRequest = {
     id: string;
@@ -65,7 +66,7 @@ export class Registry {
 }
 
 export class Game {
-    public readonly actions = $state(new Map<string, Action>());
+    public readonly actions = $state(new SvelteMap<string, Action>());
     public name: string = $state(null!);
     // private readonly seenActions = new Set<string>(); // log new actions
     constructor(
@@ -81,6 +82,7 @@ export class Game {
     }
 
     async registerActions(actions: Action[]) {
+        console.log(`${this.actions.size} existing actions`);
         for (const action of actions) {
             if (this.actions.has(action.name)) {
                 // duplicate action conflict resolution
@@ -97,10 +99,6 @@ export class Game {
         } else {
             info(`Registered actions: [${actions.map(a => a.name).join(", ")}]`);
         }
-        // TEMP: trigger svelte
-        const a = this.actions;
-        this.actions = null;
-        this.actions = a;
     }
 
     async unregisterActions(actions: string[]) {
@@ -109,6 +107,10 @@ export class Game {
             await trace(`Unregistered ${existed ? '' : 'non-'}existing action ${action_name}`);
         }
         info(`Actions unregistered: [${actions}]`);
+    }
+
+    public async buh() {
+        await this.conn.send(new Act({ name: "prim_null", data: null }));
     }
 
     async recv(txt: string) {
@@ -122,23 +124,16 @@ export class Game {
             debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
             this.name = msg.game;
         }
-        switch (msg.command) {
-            case "startup":
-                info(`Startup`);
-                break;
-            case "context":
-                info(`TODO context: '${(msg as Context).data.message}'`);
-                break;
-            case "actions/register":
-                this.registerActions((msg as RegisterActions).data.actions);
-                break;
-                case "actions/unregister":
-                this.unregisterActions((msg as UnregisterActions).data.actionNames);
-                break;
-            case "actions/force":
-            case "action/result":
-            // case "shutdown/ready":
-            default: this.unimp(msg.command); break;
+        if (msg instanceof Startup) {
+            info(`Startup`);
+        } else if (msg instanceof Context) {
+            info(`TODO context: '${msg.data.message}'`);
+        } else if (msg instanceof RegisterActions) {
+            this.registerActions((msg as RegisterActions).data.actions);
+        } else if (msg instanceof UnregisterActions) {
+            this.unregisterActions((msg as UnregisterActions).data.actionNames);
+        } else { // ForceAction, ActionResult, ShutdownReady
+            this.unimp(msg.command);
         }
     }
 

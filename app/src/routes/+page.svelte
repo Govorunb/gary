@@ -1,20 +1,22 @@
 <script lang="ts">
+  import './global.css';
+
   import { Registry, type WSConnectionRequest } from "$lib/api/registry.svelte";
-    import Tooltip from "$lib/ui/Tooltip.svelte";
-  import { invoke, Channel } from "@tauri-apps/api/core";
+  import ThemePicker from "$lib/ui/ThemePicker.svelte";
+  import Tooltip from "$lib/ui/Tooltip.svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { error, warn } from "@tauri-apps/plugin-log";
   import { onDestroy, onMount } from "svelte";
 
   type ServerConnections = null | string[];
 
-  let port = $state(8000); // TODO: config
+  let port = $state(localStorage.getItem("ws-server:port") ?? 8000);
   let serverActionPending = $state(false);
   let serverConnections: ServerConnections = $state(null);
   let serverRunning = $derived(serverConnections != null);
   let registry = $state(new Registry());
   let subscriptions: Function[] = [];
-  $inspect(registry);
 
   function preventDefault<T, E extends Event>(
     func: (evt: E, ...args: any[]) => T,
@@ -31,6 +33,7 @@
       if (serverRunning) {
         await invoke("stop_server");
       } else {
+        if (typeof port === "string") port = parseInt(port);
         await invoke("start_server", { port });
       }
       setTimeout(() => (serverActionPending = false), 1000);
@@ -74,19 +77,22 @@
     await sync();
   });
   onDestroy(async () => {
-    console.log(`unsubbing ${subscriptions.length} items`);
-
     for (const unsub of subscriptions) {
-      const buh = unsub();
-      if (buh instanceof Promise) {
-        await buh;
-      }
+      await unsub();
     }
   });
+
+  $effect(() => {
+    localStorage.setItem("ws-server:port", port.toString());
+  })
 </script>
 
 <main class="container">
   <h3>Welcome to Gary</h3>
+  <div class="row">
+    <p>Theme: </p>
+    <ThemePicker />
+  </div>
   <div class="row">
     <p>Server is {serverRunning ? `running on port ${port}` : "stopped"}</p>
   </div>
@@ -95,6 +101,24 @@
     <input
       id="port-input"
       disabled={serverRunning}
+      type="number"
+      max="65535"
+      min="1024"
+      onmousewheel="{(evt: WheelEvent & { target: HTMLInputElement }) => {
+        // tauri uses libwebkit2gtk which has a browser that is just kinda weird and offputting
+        if (!navigator.platform.includes("Linux")) return;
+        
+        // increment/decrement on scroll
+        if (evt.target.disabled) return;
+        let val = parseInt(evt.target.value);
+        const step = evt.target.step && parseInt(evt.target.step) || 1;
+        const min = parseInt(evt.target.min);
+        const max = parseInt(evt.target.max);
+        val += (evt.deltaY > 0 ? -step : step);
+        val = Math.max(min, Math.min(max, val));
+        evt.target.value = val as any;
+        evt.target.dispatchEvent(new Event('input')); // svelte subscribes to 'input' and not 'change'
+      }}"
       placeholder="Port (default 8000)"
       bind:value={port}
     />
@@ -103,7 +127,7 @@
     </button>
   </div>
   {#if serverConnections != null}
-    <h3>{serverConnections.length} active connections:</h3>
+    <h3>{serverConnections.length} active connections</h3>
     <div class="row">
       <ul>
         {#each registry.games as game (game.conn.id)}
@@ -131,7 +155,6 @@
 <style>
 
 :root {
-  color-scheme: light dark;
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 24px;
@@ -170,7 +193,6 @@
   font-size: 0.9em;
   font-weight: 500;
   font-family: inherit;
-  transition: border-color 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
   &.v1 {
     background-color: light-dark(#396cd8, #4e77d1);
@@ -178,42 +200,6 @@
   &.v2 {
     background-color: light-dark(#ff8b00, #f7a644);
   }
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: light-dark(#0f0f0f, #ffffff);
-  background-color: light-dark(#ffffff, #0f0f0f98);
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-  &:disabled {
-    background-color: light-dark(#aaaaaa, #0f0f0f30);
-    color: light-dark(#aaaaaa, #777777);
-  }
-}
-
-button {
-  cursor: pointer;
-}
-
-
-button:hover:not(:disabled) {
-  border-color: #396cd8;
-}
-button:active:not(:disabled) {
-  border-color: #396cd8;
-  background-color: light-dark(#e8e8e8, #0f0f0f69);
-}
-
-input,
-button {
-  outline: none;
 }
 
 </style>
