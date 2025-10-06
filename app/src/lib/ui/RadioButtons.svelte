@@ -1,17 +1,22 @@
-<!-- https://lyra.horse/blog/2025/08/you-dont-need-js/ -->
+<!-- adapted from https://lyra.horse/blog/2025/08/you-dont-need-js/ -->
 <script lang="ts">
-    type Item = string | number;
+    import type { Snippet } from "svelte";
+    import type { ClassValue } from "svelte/elements";
+
+    type Item = string;
     type Props = {
         items: Item[];
         groupName?: string;
         selectedIndex?: number;
-        pill?: boolean;
+        class?: ClassValue;
+        renderItem?: Snippet<[Item, number]>;
     }
     let {
         items,
         groupName = Math.random().toFixed(8),
         selectedIndex = $bindable(),
-        pill,
+        class: _class,
+        renderItem = defaultRender,
     }: Props = $props();
 
     function handleChange(event: Event & { currentTarget: EventTarget & HTMLInputElement; }) {
@@ -35,17 +40,23 @@
     }
 </script>
 
-<radio-picker role="radiogroup" class={{ pill }}>
+{#snippet defaultRender(item: string, i: number)}
+    <span>{item}</span>
+{/snippet}
+
+<radio-picker role="radiogroup" class={_class}>
     {#each items as item, i}
-        {@const dispName = item}
-        <label>
+        {@const dispName = typeof item === "string" ? item : i}
+        <label class="input button">
             <input type="radio" group={groupName}
                 id="{groupName}_{dispName}"
                 value={dispName}
                 data-index={i}
                 checked={selectedIndex === i}
                 onchange={handleChange}>
-            {dispName}
+            <div class="radio-item">
+                {@render renderItem(item, i)}
+            </div>
         </label>
     {/each}
 </radio-picker>
@@ -54,12 +65,7 @@
     radio-picker {
         display: flex;
         width: fit-content;
-        --border-radius: 8px;
         line-height: 15px;
-        &.pill {
-            --border-radius: 15px;
-            line-height: 10px;
-        }
         & > label:first-child {
             border-top-left-radius: var(--border-radius);
             border-bottom-left-radius: var(--border-radius);
@@ -70,35 +76,14 @@
         }
         label {
             &:has(input:checked) {
-                background: Highlight;
+                background: Highlight !important;
                 box-shadow: inset 0px 0px 8px 0px #888;
             }
             &:has(input:focus-visible) {
                 outline: 2px solid light-dark(#000, #fff);
             }
-            box-shadow: inset 0px 0px 1.2px 0px #000;
-            padding: 10px;
             cursor: pointer;
-            --shade: #000;
-            /* background: rgb(from var(--shade) r g b / 10%); */
-            &:hover {
-                background: rgb(from currentColor r g b / 20%);
-            }
-            &:active {
-                background: rgb(from currentColor r g b / 40%);
-            }
-            padding: 0.6em 1.2em;
-            font-size: 1em;
-            font-weight: 500;
-            font-family: inherit;
-            color: light-dark(#0f0f0f, #ffffff);
-            background-color: light-dark(#ffffff, #0f0f0f98);
-            transition: border-color 0.25s, background-color 0.15s;
-            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-            &:disabled {
-                background-color: light-dark(#aaaaaa, #0f0f0f30);
-                color: light-dark(#aaaaaa, #777777);
-            }
+            border-radius: 0;
         }
         /* accessibility (screen readers, keyboard nav) */
         input {

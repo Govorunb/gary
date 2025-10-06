@@ -3,11 +3,14 @@ import { pick } from "../utils";
 import { Engine } from "./engine";
 import {JSONSchemaFaker} from "json-schema-faker";
 
-/* Randy - automatically generates actions conforming to the schema */
+/** Randy - automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
+ * 
+ */
 export class Randy extends Engine {
     readonly name: string = "Randy";
+    public chanceDoNothing: number = 0.5;
     async try_act(actions: Action[]): Promise<Act | null> {
-        if (Math.random() < 0.5) {
+        if (Math.random() < this.chanceDoNothing) {
             return null;
         }
         return this.force_act(actions, "", "");

@@ -60,7 +60,7 @@
     .tooltip-container {
         display: flex;
 		display: inline-block;
-		z-index: -1000;
+		z-index: 1000;
 		position: fixed;
 		flex-direction: column;
 		justify-content: center;

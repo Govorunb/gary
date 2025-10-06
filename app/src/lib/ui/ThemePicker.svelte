@@ -2,8 +2,10 @@
     import RadioButtons from "./RadioButtons.svelte";
 
     const themeSymbols = ["🖥️", "☀️", "🌑"];
-    const savedTheme = localStorage.getItem("theme") ?? themeSymbols[0];
-    let selectedIndex = $state(themeSymbols.indexOf(savedTheme));
+    // const themeSymbols = ["System", "Light", "Dark"];
+    const themeTooltips = ["System", "Light", "Dark"];
+    const savedTheme = localStorage.getItem("theme");
+    let selectedIndex = $state(Math.max(0, themeSymbols.indexOf(savedTheme!)));
     let selectedTheme = $derived(themeSymbols[selectedIndex]);
     // $inspect(selectedTheme);
     $effect(() => {
@@ -11,6 +13,15 @@
     })
 </script>
 
+{#snippet renderItem(emoji: string, i: number)}
+    {@const tip = themeTooltips[i]}
+    <!-- TODO: tooltip only on symbol (should be on the entire button) -->
+    <div title="{tip}" class="radio-item">{emoji}</div>
+{/snippet}
+
 <RadioButtons items={themeSymbols}
     bind:selectedIndex={selectedIndex}
-    pill groupName="theme" />
+    class="pill"
+    {renderItem}
+    groupName="theme"
+    />

@@ -3,25 +3,25 @@
 }
 :root {
     color-scheme: light dark;
-    &:has(#theme_☀️:checked) {
+    &:has(#theme_☀️:checked, #theme_Light:checked) {
         color-scheme: light;
     }
-    &:has(#theme_🌑:checked) {
+    &:has(#theme_🌑:checked, #theme_Dark:checked) {
         color-scheme: dark;
     }
 }
 
 input,
-button {
-  border-radius: 8px;
+button, .input {
+  border-radius: var(--border-radius);
   border: 1px solid transparent;
-  padding: 0.6em 1.2em;
+  padding: 0.55em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
   color: light-dark(#0f0f0f, #ffffff);
   background-color: light-dark(#ffffff, #0f0f0f98);
-  transition: border-color 0.25s, background-color 0.15s;
+  transition: border-color 0.25s, background-color 0.10s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
   &:disabled {
     background-color: light-dark(#dddddd, #0f0f0f30);
@@ -29,23 +29,33 @@ button {
   }
 }
 
-button {
+button, .button {
   cursor: pointer;
   &:hover:not(:disabled) {
     border-color: #396cd8;
   }
   &:active:not(:disabled) {
     border-color: #396cd8;
-    background-color: light-dark(#e8e8e8, #0f0f0f69);
+    background: rgb(from currentColor r g b / 20%);
   }
   &:disabled {
     cursor: default;
   }
 }
 
-
-
 input,
 button {
   outline: none;
+}
+
+:root {
+  --border-radius: 8px;
+}
+
+.pill {
+  --border-radius: 15px;
+}
+
+.chip {
+  --border-radius: 20px;
 }
