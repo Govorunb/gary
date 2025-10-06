@@ -5,6 +5,8 @@ export function pick<T>(arr: T[]) {
 }
 
 export const scrollNum: Attachment<HTMLInputElement> = (el) => {
+    if (el.type !== "number") return;
+    
     el.addEventListener("wheel", (evt: WheelEvent) => {
         // tauri uses libwebkit2gtk which has a browser that is just kinda weird and offputting
         if (!navigator.platform.includes("Linux")) return;
@@ -12,14 +14,9 @@ export const scrollNum: Attachment<HTMLInputElement> = (el) => {
         const target = evt.target as HTMLInputElement;
         // increment/decrement on scroll (modern browsers do this by default btw)
         if (target.disabled) return;
-        let val = parseInt(target.value);
-        const step = target.step && parseInt(target.step) || 1;
-        const min = parseInt(target.min);
-        const max = parseInt(target.max);
-        val += (evt.deltaY > 0 ? -step : step);
-        val = Math.max(min, Math.min(max, val));
-        target.value = val as any;
-        target.dispatchEvent(new Event('input')); // svelte subscribes to 'input' and not 'change'
+        if (evt.deltaY == 0) return;
+        evt.deltaY < 0 ? target.stepUp() : target.stepDown();
+        target.dispatchEvent(new Event("input")); // svelte targets 'input' and not 'change'
     });
 };
 

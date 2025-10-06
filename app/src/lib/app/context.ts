@@ -1,3 +1,5 @@
+import { v7 as uuid7 } from "uuid";
+
 export abstract class ContextManager<TMessage extends Message> {
     readonly messages: TMessage[] = [];
 
@@ -27,6 +29,7 @@ export abstract class ContextManager<TMessage extends Message> {
 
     add({...partialMsg}: Partial<Message> & Required<Pick<Message, "text" | "source">>) {
         const msg: Message = {
+            id: uuid7(),
             timestamp: new Date(),
             options: { silent: false },
             ...partialMsg
@@ -45,6 +48,7 @@ export class DefaultContextManager extends ContextManager<Message> {
 }
 
 export type Message = {
+    id: string;
     timestamp: Date;
     source: Source; // aka "role"
     text: string;
