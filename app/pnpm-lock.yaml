@@ -35,6 +35,9 @@ importers:
       json-schema-faker:
         specifier: ^0.5.9
         version: 0.5.9
+      openai:
+        specifier: ^6.2.0
+        version: 6.2.0(zod@4.1.12)
       postcss:
         specifier: ^8.5.6
         version: 8.5.6
@@ -44,6 +47,9 @@ importers:
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
+      zod:
+        specifier: ^4.1.12
+        version: 4.1.12
     devDependencies:
       '@sveltejs/adapter-static':
         specifier: ^3.0.6
@@ -639,6 +645,18 @@ packages:
   ono@4.0.11:
     resolution: {integrity: sha512-jQ31cORBFE6td25deYeD80wxKBMj+zBmHTrVxnc6CKhx8gho6ipmWM5zj/oeoqioZ99yqBls9Z/9Nss7J26G2g==}
 
+  openai@6.2.0:
+    resolution: {integrity: sha512-qqjzHls7F5xkXNGy9P1Ei1rorI5LWupUUFWP66zPU8FlZbiITX8SFcHMKNZg/NATJ0LpIZcMUFxSwQmdeQPwSw==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -759,6 +777,9 @@ packages:
 
   zimmerframe@1.1.2:
     resolution: {integrity: sha512-rAbqEGa8ovJy4pyBxZM70hg4pE6gDgaQ0Sl9M3enG3I0d6H4XSAM3GeNGLKnsBpuijUow064sf7ww1nutC5/3w==}
+
+  zod@4.1.12:
+    resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
 
 snapshots:
 
@@ -1186,6 +1207,10 @@ snapshots:
     dependencies:
       format-util: 1.0.5
 
+  openai@6.2.0(zod@4.1.12):
+    optionalDependencies:
+      zod: 4.1.12
+
   picocolors@1.1.1: {}
 
   picomatch@4.0.3: {}
@@ -1299,3 +1324,5 @@ snapshots:
       vite: 6.3.6
 
   zimmerframe@1.1.2: {}
+
+  zod@4.1.12: {}

@@ -1,7 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { debug, info, trace, warn } from "@tauri-apps/plugin-log";
+import * as log from "@tauri-apps/plugin-log";
 import { GameWSConnection, type ServerWSEvent, type AcceptArgs } from "./ws";
-import { type Action, ReregisterAll, GameMessage, Context, RegisterActions, UnregisterActions, Act, Startup } from "./v1/spec";
+import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
 
 export type WSConnectionRequest = {
@@ -34,20 +34,19 @@ export class Registry {
     async accept(req: WSConnectionRequest) {
         const channel = new Channel<ServerWSEvent>();
         const conn = new GameWSConnection(req.id, req.version, channel);
-        let gameName = req.version != "v1" ? req.game
-            : `<Pending-${conn.shortId}>`;
-        debug(`Creating game for '${gameName}'`);
+        let gameName = req.version == "v1" ? `<Pending-${conn.id}>` : req.game;
+        log.debug(`Creating game for '${gameName}'`);
         const game = new Game(gameName, conn);
         this.games.push(game);
         conn.onclose = () => {
-            debug(`Game ${gameName} disconnected, removing`);
+            log.debug(`Game ${gameName} disconnected, removing`);
             const i = this.games.indexOf(game);
             this.games.splice(i, 1);
         };
         await invoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
         if (conn.version == "v1") {
-            debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
-            await conn.send(new ReregisterAll());
+            log.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
+            await conn.send(v1.zReregisterAll.parse({}));
         }
     }
 
@@ -62,11 +61,11 @@ export class Registry {
     // TODO: v1 conn (new game) then v2 conn for same game
     // python version kept games in state for ui, maybe we don't need to
     // (it reset all internals of a game on disconnect anyway)
-    // if we have 1 llm instance, we don't need to keep games around (except for seen actions maybe)
+    // 1 (global) llm instance means 1 (global) context, so we don't need to keep games around (except for seen actions maybe)
 }
 
 export class Game {
-    public readonly actions = $state(new SvelteMap<string, Action>());
+    public readonly actions = $state(new SvelteMap<string, v1.Action>());
     public name: string = $state(null!);
     // private readonly seenActions = new Set<string>(); // log new actions
     constructor(
@@ -81,60 +80,80 @@ export class Game {
         return this.conn.version
     }
 
-    async registerActions(actions: Action[]) {
-        console.log(`${this.actions.size} existing actions`);
+    async recv(txt: string) {
+        const msgMaybe = JSON.parse(txt);
+        const msg = v1.zGameMessage.safeParse(msgMaybe);
+        if (!msg.success) {
+            log.error(`Invalid message: ${txt}\n\tzod error: ${msg.error}`);
+            await this.conn.disconnect(1006, `Invalid message: ${msg.error}`);
+            return;
+        }
+        await this.handle(msg.data);
+    }
+
+    async handle(msg: v1.GameMessage) {
+        log.trace(`Handling ${msg.command}`);
+        if (this.conn.version == "v1" && this.name === `<Pending-${this.conn.id}>`) {
+            // technically vulnerable but i'd like to see a game out in the wild actually guess its own id
+            // could also just replace the game name on every single message, it's UB in the v1 spec so we can do whatever
+            log.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
+            this.name = msg.game;
+        }
+        switch (msg.command) {
+            case "startup":
+                log.info(`startup woo`);
+                break;
+            case "context":
+                log.info(`TODO context: '${msg.data.message}'`);
+                break;
+            case "actions/register":
+                this.registerActions((msg as v1.RegisterActions).data.actions);
+                break;
+            case "actions/unregister":
+                this.unregisterActions((msg as v1.UnregisterActions).data.actionNames);
+                break;
+            case "actions/force":
+                break;
+            case "action/result":
+                const silent = msg.data.success;
+                let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
+                // TODO: inject context
+                // this.contextManager.client(this.name, msg.data.message, silent);
+                break;
+            case "shutdown/ready":
+                break;
+            default:
+                log.warn(`Unimplemented command '${(msg as any).command!}'`);
+        }
+    }
+
+    async registerActions(actions: v1.Action[]) {
+        log.info(`${this.actions.size} existing actions`);
         for (const action of actions) {
             if (this.actions.has(action.name)) {
                 // duplicate action conflict resolution
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                 const isV1 = this.version == "v1";
-                const logMethod = isV1 ? warn : info;
-                logMethod(`${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (on ${this.version} connection)`);
+                const logMethod = isV1 ? log.warn : log.info;
+                logMethod(`${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`);
                 if (isV1) continue;
             }
             this.actions.set(action.name, action);
         }
         if (actions.length > 3) {
-            info(`Registered ${actions.length} actions`);
+            log.info(`Registered ${actions.length} actions`);
         } else {
-            info(`Registered actions: [${actions.map(a => a.name).join(", ")}]`);
+            log.info(`Registered actions: [${actions.map(a => a.name).join(", ")}]`);
         }
     }
 
     async unregisterActions(actions: string[]) {
         for (const action_name of actions) {
             const existed = this.actions.delete(action_name);
-            await trace(`Unregistered ${existed ? '' : 'non-'}existing action ${action_name}`);
+            const logMethod = existed ? log.info : log.warn;
+            logMethod(`Unregistered ${existed ? '' : 'non-'}existing action ${action_name}`);
         }
-        info(`Actions unregistered: [${actions}]`);
-    }
-
-    async recv(txt: string) {
-        const msg = JSON.parse(txt) as GameMessage;
-        await this.handle(msg);
-    }
-
-    async handle(msg: GameMessage) {
-        trace(`Handling ${msg.command}`);
-        if (this.conn.version == "v1" && this.name === `<Pending-${this.conn.shortId}>`) {
-            debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
-            this.name = msg.game;
-        }
-        if (msg instanceof Startup) {
-            info(`startup woo`);
-        } else if (msg instanceof Context) {
-            info(`TODO context: '${msg.data.message}'`);
-        } else if (msg instanceof RegisterActions) {
-            this.registerActions((msg as RegisterActions).data.actions);
-        } else if (msg instanceof UnregisterActions) {
-            this.unregisterActions((msg as UnregisterActions).data.actionNames);
-        } else { // ForceAction, ActionResult, ShutdownReady
-            this.unimp(msg.command);
-        }
-    }
-
-    private unimp(cmd: string) {
-        warn(`Unimplemented command '${cmd}'`);
+        log.info(`Actions unregistered: [${actions}]`);
     }
 
     toString() {

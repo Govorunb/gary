@@ -114,14 +114,16 @@
           <Tooltip>
             {#snippet tip()}
               <div class="row">
-                <p>id: <b>{id}</b></p>
+                <p>ID: <b>{id}</b></p>
                 <button onclick={() => window.navigator.clipboard.writeText(id)}>Copy</button>
               </div>
             {/snippet}
             <li>
               <div class="row">
                 <div class="version-badge {game.conn.version}">{game.conn.version}</div>
-                {game.name} ({game.actions.size} actions)
+                <span>{game.name} ({game.actions.size} actions)</span>
+                <!-- TODO: disconnect vs shutdown (& graceful/immediate) -->
+                <button onclick={() => registry.getGame(id)?.conn.disconnect()}>x</button>
               </div>
             </li>
           </Tooltip>

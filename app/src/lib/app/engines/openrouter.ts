@@ -1,1 +1,0 @@
-/* OpenRouter - realistically any OpenAI-compatible API (that supports structured outputs) */

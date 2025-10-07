@@ -1,158 +1,121 @@
 import { v4 as uuid4 } from "uuid";
+import * as z from 'zod';
 
-// alternatively: ClientCommand and ServerCommand
-
-export type GameCommand = |
-    "startup"
-    | "context"
-    | "actions/register"
-    | "actions/unregister"
-    | "actions/force"
-    | "action/result"
-    | "shutdown/ready";
-
-export type NeuroCommand = |
-    "action"
-    | "actions/reregister_all"
-    | "shutdown/graceful"
-    | "shutdown/immediate";
-
-export type Action = {
-    name: string;
-    description?: string;
-    schema: object; // TODO: package to deal with json schemas
+function zConst<T extends z.core.util.Literal>(value: NonNullable<T>) {
+    // this lets us omit the field when constructing from e.g. `zStartup.parse({})`
+    return z.literal(value).default(value);
 }
 
-export interface Message {
-    readonly command: GameCommand | NeuroCommand;
-}
+export const zAction = z.strictObject({
+    name: z.string(),
+    description: z.string().optional(),
+    schema: z.record(z.string(), z.any()).nullable(),
+});
 
-// TODO: classes aren't doing type inference
-export abstract class GameMessage implements Message {
-    abstract readonly command: GameCommand;
+export type Action = z.infer<typeof zAction>;
 
-    constructor(readonly game: string) { }
-}
+export const zGameMessageBase = z.strictObject({
+    game: z.string(),
+});
 
-export abstract class NeuroMessage implements Message {
-    abstract readonly command: NeuroCommand;
-}
+export const zStartup = z.strictObject({
+    ...zGameMessageBase.shape,
+    command: zConst("startup"),
+});
 
-export class Startup extends GameMessage {
-    readonly command = "startup";
+export const zContext = z.strictObject({
+    ...zGameMessageBase.shape,
+    command: zConst("context"),
+    data: z.strictObject({
+        message: z.string(),
+        silent: z.boolean(),
+    }),
+});
 
-    constructor(game: string) {
-        super(game);
-    }
-}
+export const zRegisterActions = z.strictObject({
+    ...zGameMessageBase.shape,
+    command: zConst("actions/register"),
+    data: z.strictObject({
+        actions: z.array(zAction),
+    }),
+});
 
-export class Context extends GameMessage {
-    readonly command = "context";
-    data: {
-        message: string;
-        silent: boolean;
-    }
+export const zUnregisterActions = z.strictObject({
+    ...zGameMessageBase.shape,
+    command: zConst("actions/unregister"),
+    data: z.strictObject({
+        actionNames: z.array(z.string()),
+    }),
+});
 
-    constructor(game: string, data: Context["data"]) {
-        super(game);
-        this.data = data;
-    }
-}
+export const zForceAction = z.strictObject({
+    ...zGameMessageBase.shape,
+    command: zConst("actions/force"),
+    data: z.strictObject({
+        state: z.string().optional(),
+        query: z.string(),
+        ephemeral_context: z.boolean().optional(),
+        action_names: z.array(z.string()),
+    }),
+});
 
-export type DataOf<T extends { data: unknown }> = T["data"];
+export const zActionResult = z.strictObject({
+    ...zGameMessageBase.shape,
+    command: zConst("action/result"),
+    data: z.strictObject({
+        id: z.string(),
+        success: z.boolean(),
+        message: z.string().optional(),
+    }),
+});
 
-export class RegisterActions extends GameMessage {
-    readonly command = "actions/register";
-    data: {
-        actions: Action[];
-    }
+export const zShutdownReady = z.strictObject({
+    ...zGameMessageBase.shape,
+    command: zConst("shutdown/ready"),
+});
 
-    constructor(game: string, data: DataOf<RegisterActions>) {
-        super(game);
-        this.data = data;
-    }
-}
+export const zGameMessage = z.discriminatedUnion("command", [
+    zStartup,
+    zContext,
+    zRegisterActions,
+    zUnregisterActions,
+    zForceAction,
+    zActionResult,
+    zShutdownReady,
+]);
 
-export class UnregisterActions extends GameMessage {
-    readonly command = "actions/unregister";
-    data: {
-        actionNames: string[];
-    }
+export type Startup = z.infer<typeof zStartup>;
+export type Context = z.infer<typeof zContext>;
+export type RegisterActions = z.infer<typeof zRegisterActions>;
+export type UnregisterActions = z.infer<typeof zUnregisterActions>;
+export type ForceAction = z.infer<typeof zForceAction>;
+export type ActionResult = z.infer<typeof zActionResult>;
+export type ShutdownReady = z.infer<typeof zShutdownReady>;
 
-    constructor(game: string, data: DataOf<UnregisterActions>) {
-        super(game);
-        this.data = data;
-    }
-}
-
-export class ForceAction extends GameMessage {
-    readonly command = "actions/force";
-    data: {
-        state?: string;
-        query: string;
-        ephemeral_context?: boolean;
-        action_names: string[];
-    }
-
-    constructor(game: string, data: DataOf<ForceAction>) {
-        super(game);
-        this.data = data;
-    }
-}
-
-export class ActionResult extends GameMessage {
-    readonly command = "action/result";
-    data: {
-        id: string;
-        success: boolean;
-        message?: string;
-    }
-
-    constructor(game: string, data: DataOf<ActionResult>) {
-        super(game);
-        this.data = data;
-    }
-}
+export type GameMessage = z.infer<typeof zGameMessage>;
 
 // Neuro messages
 
-export class Act extends NeuroMessage {
-    readonly command = "action";
-    data: {
-        id?: string;
-        name: string;
-        data?: string | null;
-    }
+export const zActData = z.strictObject({
+    id: z.string().default(uuid4),
+    name: z.string(),
+    data: z.string().nullish(),
+});
+export const zAct = z.strictObject({
+    command: zConst("action"),
+    data: zActData,
+});
 
-    constructor(data: DataOf<Act>) {
-        super();
-        data.id ??= uuid4();
-        if (data.data === undefined) {
-            data.data = null;
-        }
-        this.data = data;
-    }
-}
+export const zReregisterAll = z.strictObject({
+    command: zConst("actions/reregister_all"),
+})
 
-export class ReregisterAll extends NeuroMessage {
-    readonly command = "actions/reregister_all";
-}
+export const zNeuroMessage = z.discriminatedUnion("command", [
+    zAct,
+    zReregisterAll,
+])
 
-export class GracefulShutdown extends NeuroMessage {
-    readonly command = "shutdown/graceful";
-    data: {
-        wants_shutdown: boolean;
-    }
-    constructor(data: DataOf<GracefulShutdown>) {
-        super();
-        this.data = data;
-    }
-}
-
-export class ImmediateShutdown extends NeuroMessage {
-    readonly command = "shutdown/immediate";
-}
-
-export class ShutdownReady extends GameMessage {
-    readonly command = "shutdown/ready";
-}
+export type Act = z.infer<typeof zAct>;
+export type ActData = z.infer<typeof zActData>;
+export type ReregisterAll = z.infer<typeof zReregisterAll>;
+export type NeuroMessage = z.infer<typeof zNeuroMessage>;
