@@ -13,15 +13,13 @@
     })
 </script>
 
-{#snippet renderItem(emoji: string, i: number)}
-    {@const tip = themeTooltips[i]}
-    <!-- TODO: tooltip only on symbol (should be on the entire button) -->
-    <div title="{tip}" class="radio-item">{emoji}</div>
-{/snippet}
 
 <RadioButtons items={themeSymbols}
     bind:selectedIndex={selectedIndex}
-    class="pill"
-    {renderItem}
-    groupName="theme"
-    />
+    class="pill" groupName="theme">
+    {#snippet renderItem(emoji: string, i: number)}
+        {@const tip = themeTooltips[i]}
+        <!-- TODO: tooltip only on symbol (should be on the entire button) -->
+        <div title="{tip}" class="radio-item">{emoji}</div>
+    {/snippet}
+</RadioButtons>

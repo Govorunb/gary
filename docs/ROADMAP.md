@@ -6,11 +6,11 @@ The project is currently undergoing a renovation, porting functionality and UI f
 
 - `src/gary/` - Stable Python app. Agents *must* not modify this project.
 - `app/` - In-dev Tauri port of the application.
-    - `app/src` - Svelte 5 frontend. Almost all development will happen here.
+    - `app/src` - Svelte 5 frontend. Almost all development will happen here. See `app/src/UI_PORT.md` for the current plan for porting the UI from the Python app.
     - `app/src-tauri` - Rust backend. Do not edit unless explicitly asked to.
 
 The immediate goal for the backend is to get at least Randy running and responding to actions.
-The frontend goal is to display the game, context, and actions (with sending as the next step).
+The frontend goal is to display the game, context, and actions (with sending as the next step). Track detailed UI milestones in `app/src/UI_PORT.md`.
 
 ### Notable changes
 

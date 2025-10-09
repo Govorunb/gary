@@ -6,11 +6,13 @@ Refer to `docs/ARCHITECTURE.md` for a technical overview of the project's archit
 
 `docs/ROADMAP.md` contains the current development goals. Keep these in mind when implementing.
 
+`app/src/UI_PORT.md` documents the current UI port plan for the Tauri frontend.
+
 ## Agent Development Guidelines
 
 ### Frontend
 
-Currently, LLMs are likely to output outdated Svelte code that uses legacy features like `export let` or `$:`. Svelte 5 has changed drastically from the previous versions, so check `docs/svelte5.md` for a refresher on the new system.
+Currently, LLMs are likely to output outdated Svelte code that uses legacy features like implicit reactivity or `$:` statements. Svelte 5 has changed drastically from the previous versions, so review `docs/svelte5.md` and the [Svelte 5 docs](https://svelte.dev/docs) for a refresher on the new runes-based model.
 
 Additionally, since this is a frontend for an entirely client-side app, no server-side code patterns will work. It will render in the user's system WebView, which means Node is also not available, and system calls are handled through IPC messages to Tauri (e.g. filesystem access is handled through the `@tauri-apps/plugin-fs` Tauri plugin).
 
