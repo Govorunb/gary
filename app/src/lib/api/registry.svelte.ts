@@ -3,6 +3,7 @@ import * as log from "@tauri-apps/plugin-log";
 import { GameWSConnection, type ServerWSEvent, type AcceptArgs } from "./ws";
 import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
+import z from "zod";
 
 export type WSConnectionRequest = {
     id: string;
@@ -84,8 +85,9 @@ export class Game {
         const msgMaybe = JSON.parse(txt);
         const msg = v1.zGameMessage.safeParse(msgMaybe);
         if (!msg.success) {
-            log.error(`Invalid message: ${txt}\n\tzod error: ${msg.error}`);
-            await this.conn.disconnect(1006, `Invalid message: ${msg.error}`);
+            const err = z.treeifyError(msg.error);
+            log.error(`Invalid message: ${txt}\n\tzod error: ${err}`);
+            await this.conn.disconnect(1006, `Invalid message: ${err}`);
             return;
         }
         await this.handle(msg.data);
@@ -107,10 +109,10 @@ export class Game {
                 log.info(`TODO context: '${msg.data.message}'`);
                 break;
             case "actions/register":
-                this.registerActions((msg as v1.RegisterActions).data.actions);
+                this.registerActions(msg.data.actions);
                 break;
             case "actions/unregister":
-                this.unregisterActions((msg as v1.UnregisterActions).data.actionNames);
+                this.unregisterActions(msg.data.actionNames);
                 break;
             case "actions/force":
                 break;

@@ -94,10 +94,11 @@ impl WSServer {
 pub async fn create_server(app: AppHandle, port: u16) -> Result<WSServer, String> {
     let router = Router::new()
         .route("/", get(v1_legacy))
-        .route("/v2/{game}", get(v2_game_in_path))
-        .route("/v2/{game}/", get(v2_game_in_path))
-        .route("/v2", get(v2_game_in_query))
-        .route("/v2/", get(v2_game_in_query))
+        // v2 is not out yet (not even finalized)
+        // .route("/v2/{game}", get(v2_game_in_path))
+        // .route("/v2/{game}/", get(v2_game_in_path))
+        // .route("/v2", get(v2_game_in_query))
+        // .route("/v2/", get(v2_game_in_query))
         .with_state(app.clone());
 
     let addr = ("127.0.0.1", port);
@@ -239,6 +240,6 @@ pub async fn ws_close(app: AppHandle, id: Uuid, code: Option<u16>, reason: Optio
 pub async fn ws_send(app: AppHandle, id: Uuid, text: String) -> Result<(), String> {
     let state_mutex = app.state::<AppStateMutex>();
     let mut state = state_mutex.lock().await;
-    let server= state.server.as_mut().ok_or("ws_send: server not running".to_owned())?;
+    let server = state.server.as_mut().ok_or("ws_send: server not running".to_owned())?;
     server.send(id, text).await
 }

@@ -24,7 +24,6 @@
     "json-schema-faker": "^0.5.9",
     "openai": "^6.2.0",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.13",
     "uuid": "^13.0.0",
     "zod": "^4.1.12"
   },
