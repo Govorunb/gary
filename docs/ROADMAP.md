@@ -18,7 +18,7 @@ The goal of the port is to keep functionality the same; however, some things wil
 
 #### Single Context
 
-Previously, each game hosted its own LLM with its own context. In the Tauri app, the context will be decoupled from the LLM, and may be shared between multiple game connections (e.g. two separate integration mods running in the same game).
+Previously, each game hosted its own LLM with its own context. In the Tauri app, there will be one context shared between all game connections (e.g. two separate integration mods running in the same game).
 
 #### Context enhancements
 
@@ -38,4 +38,8 @@ The Tauri app will support OpenAI-compatible remote APIs - specifically, OpenRou
 
 #### Miscellaneous wishlist
 - Actual config UI (I can't believe this wasn't done already)
-- Launching game processes (proposed Shutdown API)
+- Launching game processes (enabling use of the proposed Shutdown API)
+
+#### UI Modes/Auto checks
+
+I like the idea of collapsing everything down to just a list of connected games with a small display for any opinionated warnings/advice, to quickly test the behaviour of an integration and confirm it conforms to the spec and acts in an acceptable way.

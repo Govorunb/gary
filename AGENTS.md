@@ -4,7 +4,7 @@ Gary is a project that allows LLMs to interface with controllable client apps ("
 
 Refer to `docs/ARCHITECTURE.md` for a technical overview of the project's architecture if needed.
 
-`docs/ROADMAP.md` contains the current development goals. Keep these in mind when implementing.
+`docs/ROADMAP.md` contains the current development goals. Keep these in mind when implementing or planning.
 
 `app/src/UI_PORT.md` documents the current UI port plan for the Tauri frontend.
 

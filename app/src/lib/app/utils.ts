@@ -16,7 +16,7 @@ export const scrollNum: Attachment<HTMLInputElement> = (el) => {
         if (target.disabled) return;
         if (evt.deltaY == 0) return;
         evt.deltaY < 0 ? target.stepUp() : target.stepDown();
-        target.dispatchEvent(new Event("input")); // svelte targets 'input' and not 'change'
+        target.dispatchEvent(new Event("input")); // svelte 5 targets 'input' and not 'change'
     });
 };
 

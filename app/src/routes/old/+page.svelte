@@ -2,8 +2,8 @@
   import './global.css';
 
   import { Registry, type WSConnectionRequest } from "$lib/api/registry.svelte";
-  import ThemePicker from "$lib/ui/ThemePicker.svelte";
-  import Tooltip from "$lib/ui/Tooltip.svelte";
+  import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
+  import Tooltip from "$lib/ui/common/Tooltip.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { error, warn } from "@tauri-apps/plugin-log";

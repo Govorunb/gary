@@ -23,18 +23,27 @@
 
 ## Primary User Flows
 
-1. Launch desktop app, view server status, start/stop the backend, and set port.
+1. Start a session to the "launch" page, where the user can set backend parameters, start/stop the server, and monitor its status.
 2. Monitor connected games, inspect their actions, and mute/unmute scheduler (“Tony Mode”).
-3. View context history, inject messages, clear context, or inspect raw dumps.
+3. View context history, inject messages, clear context, or inspect the raw text.
 4. Trigger manual actions via schema forms or send raw WebSocket payloads through a JSON editor.
 5. Adjust UI preferences and behavioural toggles (enforce schema) per game.
 
 ## High-Level Layout
 
-- **App Shell (`app/src/routes/+layout.svelte`)**: Provides global theme, error boundaries, and shared stores.
-- **Dashboard Route (`app/src/routes/+page.svelte`)**: Becomes a lightweight orchestrator that delegates to feature components.
-- **Responsive Split Layout**: Left rail for connection/server controls, central column for selected game details, optional right column for advanced tools. The layout should collapse to stacked sections on smaller widths.
-- **Modal Layer**: Centralised modal manager (Svelte snippet + state store) to replicate Panel modal behaviour without coupling to individual components.
+The layout will render on a single page in a **Sidebar Split Layout**:
+- Left sidebar for a tabbed control panel, with:
+  - A pinned 'server controls' tab
+  - Individual tabs for each connected game that lists actions
+- A central column for displaying the active context, featuring:
+  - A scrolling log of marked up display messages
+  - A text input for manually inserting user messages into the context
+  - Buttons to clear the context, view a raw JSON dump of it, and so on
+- A right sidebar for advanced tools or per-game settings.
+
+On smaller widths, the right sidebar will merge into the left sidebar as a collapsible panel, leaving a two-column layout with actions on the left and context on the right.
+
+There will also be a **Modal Layer** to replicate previous Panel modal behaviour.
 
 ## Component & Module Plan
 
@@ -61,7 +70,7 @@
 - **AdvancedPanel (`app/src/lib/ui/AdvancedPanel.svelte`)**
   - Hosts layout preference controls (drag/resize toggles), schema enforcement switch, and general debugging messaging.
 - **ModalHost (`app/src/lib/ui/ModalHost.svelte`)**
-  - Centralises modals; uses a store to push/pop modal content to avoid multiple overlapping modals (limitation observed in Panel).
+  - Centralizes modals; uses a store to push/pop modal content to avoid multiple overlapping modals (limitation observed in Panel).
 - **Shared Utilities**
   - `app/src/lib/app/uiState.ts`: central store for UI preferences, selected game ID, and modal stack.
   - `app/src/lib/ui/primitives`: tooltip, badge, status indicator, etc., to avoid duplication.
@@ -88,13 +97,6 @@
 3. **Interactivity Parity**: Add manual context input, action execution (manual + random), scheduler mute toggle, schema switch, and modals for raw send/context dump.
 4. **Polish & Persistence**: Integrate layout preferences, persistent settings, validation/error states, and accessibility improvements.
 5. **Future Enhancements**: Prepare hooks for shared contexts, engine management, and config UI per roadmap once backend support arrives.
-
-## Risks & Mitigations
-
-- **Schema Form Complexity**: Porting the dynamic form generator is non-trivial. Mitigate by incrementally migrating the logic, writing unit tests, or reusing a mature schema-form library compatible with Svelte 5.
-- **Modal Management**: Avoid Panel’s single-modal limitation by investing early in a dedicated modal host with stack management.
-- **State Synchronisation**: Divergence between Tauri backend and frontend registry may persist; maintain periodic `sync()` routine and reconcile differences gracefully.
-- **Performance**: Heavy context logs may impact rendering. Use virtualised lists or chunked rendering once baseline functionality works.
 
 ## Open Questions
 

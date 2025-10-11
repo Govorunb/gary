@@ -125,7 +125,7 @@ export class Game {
             case "shutdown/ready":
                 break;
             default:
-                log.warn(`Unimplemented command '${(msg as any).command!}'`);
+                log.warn(`Unimplemented command '${(msg as any).command}'`);
         }
     }
 
