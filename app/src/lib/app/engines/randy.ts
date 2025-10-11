@@ -1,5 +1,5 @@
 import { type Action } from "$lib/api/v1/spec";
-import { pick as pickRandom } from "../utils";
+import { pick as pickRandom } from "../utils.svelte";
 import { Engine, zEngineAct, type EngineAct } from ".";
 import {JSONSchemaFaker} from "json-schema-faker";
 

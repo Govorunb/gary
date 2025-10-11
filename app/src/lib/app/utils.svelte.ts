@@ -27,3 +27,24 @@ export function preventDefault<T, E extends Event, F extends (evt: E, ...args: a
     };
     return f as F;
 }
+
+export function throttleClick(delay: number, func: (evt: MouseEvent) => void): Attachment<HTMLButtonElement> {
+    return (el) => {
+        let timeout: number | null = null;
+        const listener = (evt: MouseEvent): void => {
+            if (timeout) clearTimeout(timeout);
+            el.disabled = true;
+            timeout = setTimeout(() => {
+                el.disabled = false;
+            }, delay);
+            func(evt);
+        };
+        el.addEventListener("click", listener);
+        // cleanup func
+        return () => {
+            if (timeout) clearTimeout(timeout);
+            timeout = null;
+            el.removeEventListener("click", listener);
+        }
+    };
+}

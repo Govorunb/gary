@@ -1,6 +1,4 @@
 <script lang="ts">
-  import './global.css';
-
   import { Registry, type WSConnectionRequest } from "$lib/api/registry.svelte";
   import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
   import Tooltip from "$lib/ui/common/Tooltip.svelte";
@@ -8,7 +6,8 @@
   import { listen } from "@tauri-apps/api/event";
   import { error, warn } from "@tauri-apps/plugin-log";
   import { onDestroy, onMount } from "svelte";
-  import { scrollNum } from '$lib/app/utils';
+  import { scrollNum } from '$lib/app/utils.svelte';
+    import VersionBadge from "$lib/ui/app/VersionBadge.svelte";
 
   type ServerConnections = null | string[];
 
@@ -120,7 +119,7 @@
             {/snippet}
             <li>
               <div class="row">
-                <div class="version-badge {game.conn.version}">{game.conn.version}</div>
+                <VersionBadge version={game.conn.version} />
                 <span>{game.name} ({game.actions.size} actions)</span>
                 <!-- TODO: disconnect vs shutdown (& graceful/immediate) -->
                 <button onclick={() => registry.getGame(id)?.conn.disconnect()}>x</button>
@@ -165,22 +164,6 @@
   justify-content: center;
   align-items: center;
   gap: 15px;
-}
-
-.version-badge {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0 0.2em 0 0.3em;
-  font-size: 0.9em;
-  font-weight: 500;
-  font-family: inherit;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-  &.v1 {
-    background-color: light-dark(#396cd8, #4e77d1);
-  }
-  &.v2 {
-    background-color: light-dark(#ff8b00, #f7a644);
-  }
 }
 
 </style>
