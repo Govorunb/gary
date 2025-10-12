@@ -1,82 +1,12 @@
 <script lang="ts">
-  import { Registry, type WSConnectionRequest } from "$lib/api/registry.svelte";
+  import { Registry } from "$lib/api/registry.svelte";
   import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
-  import Tooltip from "$lib/ui/common/Tooltip.svelte";
-  import { invoke } from "@tauri-apps/api/core";
-  import { listen } from "@tauri-apps/api/event";
-  import { error, warn } from "@tauri-apps/plugin-log";
-  import { onDestroy, onMount } from "svelte";
-  import { scrollNum } from '$lib/app/utils.svelte';
-    import VersionBadge from "$lib/ui/app/VersionBadge.svelte";
+  import { getContext, setContext } from "svelte";
+  import ServerControls from "$lib/ui/app/ServerControls.svelte";
 
-  type ServerConnections = null | string[];
-
-  let port = $state(localStorage.getItem("ws-server:port") ?? 8000);
-  let serverActionPending = $state(false);
-  let serverConnections: ServerConnections = $state(null);
-  let serverRunning = $derived(serverConnections != null);
-  let registry = $state(new Registry());
-  let subscriptions: Function[] = [];
-
-  async function toggleServer() {
-    if (serverActionPending) return;
-    try {
-      serverActionPending = true;
-      if (serverRunning) {
-        await invoke("stop_server");
-      } else {
-        if (typeof port === "string") port = parseInt(port);
-        await invoke("start_server", { port });
-      }
-      setTimeout(() => (serverActionPending = false), 1000);
-    } catch (e) {
-      error(`${e}`);
-      console.error(e);
-      serverActionPending = false;
-    }
-    await sync();
-  }
-  async function sync() {
-    serverConnections = await invoke("server_state");
-    if (serverConnections != null) {
-      const serverConns = new Set(serverConnections);
-      const regConns = new Set(registry.games.map(g => g.conn.id));
-      const serverOnly = serverConns.difference(regConns);
-      const regOnly = regConns.difference(serverConns);
-      for (const id of serverOnly) {
-        warn(`Closing server-only connection ${id}`);
-        await invoke('ws_close', { id, code: 1000, reason: "UI out of sync, please reconnect" });
-      }
-      for (const id of regOnly) {
-        const game = registry.games.find(g => g.conn.id === id);
-        if (game === undefined) {
-          error(`registry-only game at ${id} doesn't exist`);
-        } else {
-          warn(`Closing registry-only connection ${id} (game ${game.name})`);
-          registry.games.splice(registry.games.indexOf(game), 1);
-          game.conn.close();
-        }
-      }
-    }
-  }
-  onMount(async () => {
-    // unmounted on HMR
-    subscriptions.push(await listen<WSConnectionRequest>("ws-try-connect", (evt) => {
-      registry.tryConnect(evt.payload);
-      console.log(registry);
-    }));
-    subscriptions.push(await listen<string[]>("server-state", (evt) => serverConnections = evt.payload));
-    await sync();
-  });
-  onDestroy(async () => {
-    for (const unsub of subscriptions) {
-      await unsub();
-    }
-  });
-
-  $effect(() => {
-    localStorage.setItem("ws-server:port", port.toString());
-  })
+  let port: number = $state(parseInt(localStorage.getItem("ws-server:port") ?? "8000"));
+  let registry: Registry = getContext("registry") ?? setContext("registry", new Registry());
+  
 </script>
 
 <main class="container">
@@ -86,50 +16,8 @@
     <ThemePicker />
   </div>
   <div class="row">
-    <p>Server is {serverRunning ? `running on port ${port}` : "stopped"}</p>
+    <ServerControls bind:port={port} />
   </div>
-  <div class="row">
-    <label for="port-input">Port</label>
-    <input
-      id="port-input"
-      disabled={serverRunning}
-      type="number"
-      max="65535"
-      min="1024"
-      {@attach scrollNum}
-      placeholder="Port (default 8000)"
-      bind:value={port}
-    />
-    <button disabled={serverActionPending} onclick={toggleServer}>
-      {serverRunning ? "Stop" : "Start"}
-    </button>
-  </div>
-  {#if serverConnections != null}
-    <h3>{serverConnections.length} active connections</h3>
-    <div class="row">
-      <ul>
-        {#each registry.games as game (game.conn.id)}
-          {@const id = game.conn.id}
-          <Tooltip>
-            {#snippet tip()}
-              <div class="row">
-                <p>ID: <b>{id}</b></p>
-                <button onclick={() => window.navigator.clipboard.writeText(id)}>Copy</button>
-              </div>
-            {/snippet}
-            <li>
-              <div class="row">
-                <VersionBadge version={game.conn.version} />
-                <span>{game.name} ({game.actions.size} actions)</span>
-                <!-- TODO: disconnect vs shutdown (& graceful/immediate) -->
-                <button onclick={() => registry.getGame(id)?.conn.disconnect()}>x</button>
-              </div>
-            </li>
-          </Tooltip>
-        {/each}
-      </ul>
-    </div>
-  {/if}
 </main>
 
 <style>

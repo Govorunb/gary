@@ -6,7 +6,7 @@
     &:has(#theme_☀️:checked, #theme_Light:checked) {
         color-scheme: light;
     }
-    &:has(#theme_🌑:checked, #theme_Dark:checked) {
+    &:has(#theme_🌙:checked, #theme_Dark:checked) {
         color-scheme: dark;
     }
 }
@@ -25,7 +25,7 @@ button, .input {
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
   &:disabled {
     background-color: light-dark(#dddddd, #0f0f0f30);
-    color: light-dark(#777777, #777777);
+    color: #777777;
   }
 }
 
@@ -42,11 +42,11 @@ button, .button {
     cursor: default;
   }
 }
-
+/* 
 input,
 button {
   outline: none;
-}
+} */
 
 :root {
   --border-radius: 8px;

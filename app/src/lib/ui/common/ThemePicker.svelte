@@ -1,7 +1,7 @@
 <script lang="ts">
     import RadioButtons from "./RadioButtons.svelte";
 
-    const themeSymbols = ["🖥️", "☀️", "🌑"];
+    const themeSymbols = ["🖥️", "☀️", "🌙"];
     // const themeSymbols = ["System", "Light", "Dark"];
     const themeTooltips = ["System", "Light", "Dark"];
     const savedTheme = localStorage.getItem("theme");
