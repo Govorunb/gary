@@ -1,10 +1,11 @@
 <script lang="ts">
     import GaryDashboard from "$lib/ui/app/GaryDashboard.svelte";
     import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
+    import PowerButton from "$lib/ui/app/PowerButton.svelte";
 </script>
 
 <div class="header">
-    <button>Server</button>
+    <PowerButton />
     <h1>GCP (Gary Control Panel)</h1>
     <ThemePicker />
 </div>
