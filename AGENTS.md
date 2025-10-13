@@ -18,6 +18,6 @@ Additionally, since this is a frontend for an entirely client-side app, no serve
 
 ### Backend
 
-The Rust side should handle as little as possible to keep the majority of app logic concentrated in just TypeScript. The only things that must be handed over to Rust are system calls and things that aren't possible to do on the frontend; for example, we can't host a WebSocket server from the system WebView, so we must use Rust for that. But, since the Rust side should stay out of app logic, it just forwards messages to the frontend and does not handle any of them.
+The Rust side should handle as little as possible to keep the majority of app logic concentrated in just TypeScript (for maintainability). The only things that must be handed over to Rust are system calls and things that aren't possible to do on the frontend; for example, we can't host a WebSocket server from the system WebView, so we must use Rust for that. But, since the Rust side should stay out of app logic, it just forwards messages to the frontend and does not handle any of them.
 
-Rust will also handle local LLM generation through `llama-cpp`, but that isn't implemented yet.
+Rust will also handle local LLM generation through `llama-cpp`, which is currently yet to be implemented.
