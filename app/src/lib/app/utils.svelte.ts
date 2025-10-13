@@ -67,9 +67,9 @@ export function outclick(func: () => void, additionalTargets: HTMLElement[] = []
             )) return;
             func();
         };
-        window.addEventListener("click", listener);
+        window.addEventListener("pointerdown", listener);
         return () => {
-            window.removeEventListener("click", listener);
+            window.removeEventListener("pointerdown", listener);
         }
     };
 }
