@@ -48,3 +48,7 @@ I like the idea of collapsing everything down to just a list of connected games 
 Same with e.g. accomodating someone testing their SDK implementation vs a game integration - they have different requirements, and it'd be nice to have modes that focus in on each of those workflows.
 
 Previously this was sort of kind of accomodated by allowing different logging levels for each module/"subsystem" (e.g. logging websockets at `trace` to diagnose message passing), but I wonder if that could be taken to the extreme.
+
+#### Configurable scheduler
+
+I want to see Randy speed through the schema test in 0.1 seconds
