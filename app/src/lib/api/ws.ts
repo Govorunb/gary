@@ -22,7 +22,7 @@ export class GameWSConnection {
         private readonly channel: Channel<ServerWSEvent>,
     ) {
         listen<string>('ws-closed', (evt) => {
-            if (evt.payload === this.id) this.close();
+            if (evt.payload === this.id) this.dispose();
         }).then(this.subscriptions.push);
         this.channel.onmessage = (e) => this.processServerEvt(e);
     }
@@ -31,7 +31,7 @@ export class GameWSConnection {
         return this.id.substring(0, 6);
     }
 
-    public close(clientDisconnected?: CloseFrame) {
+    public dispose(clientDisconnected?: CloseFrame) {
         this._closed = true;
         this.onmessage = undefined;
         for (const unsub of this.subscriptions) {
@@ -61,12 +61,12 @@ export class GameWSConnection {
                 break;
             case "clientDisconnected":
                 info(`client ${this.shortId} disconnected`);
-                this.close(evt);
+                this.dispose(evt);
                 break;
             case "wsError":
                 warn(`client ${this.shortId} broke its websocket: ${evt.err}`);
                 // server websocket will close itself
-                this.close();
+                this.dispose();
                 break;
         }
     }
@@ -89,7 +89,7 @@ export class GameWSConnection {
         if (this._closed) return;
 
         await invoke('ws_close', { id: this.id, code, reason } satisfies CloseArgs);
-        this.close();
+        this.dispose();
     }
 }
 

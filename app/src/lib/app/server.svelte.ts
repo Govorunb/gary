@@ -115,9 +115,9 @@ export class ServerManager {
     private async reconcileConnections() {
         if (this.connections == null) {
             if (this.registry.games.length > 0) {
-                log.warn("Server stopped, closing all connections");
+                log.warn("Server stopped, removing all games");
                 for (const game of this.registry.games) {
-                    game.conn.close();
+                    game.conn.dispose();
                 }
                 this.registry.games.length = 0;
             }
@@ -141,7 +141,7 @@ export class ServerManager {
             } else {
                 log.warn(`Closing registry-only connection ${id} (game ${game.name})`);
                 this.registry.games.splice(this.registry.games.indexOf(game), 1);
-                game.conn.close();
+                game.conn.dispose();
             }
         }
     }

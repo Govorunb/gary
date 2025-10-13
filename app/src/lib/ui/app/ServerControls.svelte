@@ -63,7 +63,7 @@
             if (registry.games.length > 0) {
                 log.warn("Server stopped, closing all connections");
                 for (const game of registry.games) {
-                    game.conn.close();
+                    game.conn.dispose();
                 }
                 registry.games.length = 0;
             }
@@ -84,7 +84,7 @@
             } else {
                 log.warn(`Closing registry-only connection ${id} (game ${game.name})`);
                 registry.games.splice(registry.games.indexOf(game), 1);
-                game.conn.close();
+                game.conn.dispose();
             }
         }
     }

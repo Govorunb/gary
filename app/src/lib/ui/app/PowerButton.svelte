@@ -28,6 +28,11 @@
 
     let running = $derived(manager?.running ?? false);
     let disabled = $derived(manager == null);
+    let configDisabled = $derived(running || disabled);
+    let pwrBtnSize = "40px";
+
+    let powerBtnTooltip = $derived(disabled ? "Internal error: server manager not found" : running ? "Stop server" : "Start server")
+    let optionsBtnTooltip = $derived(disabled ? "Internal error: server manager not found" : configDisabled ? "Server is running" : "Server options")
 
     async function togglePower() {
         if (!manager) return;
@@ -35,26 +40,21 @@
     }
 
     function toggleOptions() {
+        if (configDisabled) return;
         showOptions = !showOptions;
     }
 
-    function openOptions() {
-        showOptions = true;
-    }
-
-    function closeOptions() {
-        showOptions = false;
-    }
-
     function updatePort(value: number) {
-        if (!manager) return;
-        manager.setPort(value);
+        manager?.setPort(value);
     }
 
-    let portDisabled = $derived(running || manager == null);
+    
+    $effect(() => {
+        if (configDisabled) showOptions = false;
+    })
 
     const handleContextMenu = preventDefault(() => {
-        if (disabled) return;
+        if (disabled || configDisabled) return;
         toggleOptions();
     });
 
@@ -67,20 +67,23 @@
 <div class="power-button-container">
     <button
         class={`power-button ${running ? "running" : "stopped"}`}
-        disabled={disabled}
+        style:height={pwrBtnSize}
+        {disabled}
         {@attach throttleClick(500, togglePower)}
         oncontextmenu={handleContextMenu}
+        aria-label={powerBtnTooltip}
+        title={powerBtnTooltip}
     >
-        {running ? "Running" : "Stopped"}
+        <img src="power-button-power-on-svgrepo-com.svg" alt="Power button" width={pwrBtnSize} height={pwrBtnSize}>
     </button>
-    <button class="options-button" disabled={disabled} onclick={toggleOptions}>
-        ⚙️
+    <button class="options-button" disabled={disabled || configDisabled} onclick={toggleOptions} title={optionsBtnTooltip} aria-label={optionsBtnTooltip}>
+        <img src="cogwheel-configuration-gear-svgrepo-com.svg" alt="Server options" width="24" height="24">
     </button>
-    {#if showOptions}
+    {#if showOptions && !configDisabled}
         <div class="options-popover">
             <div class="options-header">
                 <span>Server options</span>
-                <button onclick={closeOptions}>✕</button>
+                <button onclick={toggleOptions}>✕</button>
             </div>
             <label for="power-port">Port</label>
             <input
@@ -89,7 +92,7 @@
                 min="1024"
                 max="65535"
                 value={localPort}
-                disabled={portDisabled}
+                disabled={configDisabled}
                 oninput={onPortChange}
             />
         </div>
@@ -105,34 +108,36 @@
     }
 
     .power-button {
-        padding: 0.5rem 1rem;
+        padding: 0;
+        margin: 0;
         border: none;
-        border-radius: 999px;
-        color: white;
-        font-weight: 600;
+        border-radius: 100%;
         cursor: pointer;
-        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        background-color: var(--bg) !important;
+        transition: background-color 0.1s ease, opacity 0.15s ease, transform 0.15s ease;
+        
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    
+        &.running {
+            --bg: #0f9d58;
+            box-shadow: inset 0 0 12px hsl(from var(--bg) h s calc(l * 0.5) / 50%);
+        }
+    
+        &.stopped {
+            --bg: #d93025;
+            box-shadow: inset 0 0 12px hsl(from var(--bg) h s calc(l * 0.5) / 50%);
+        }
+    
+        &:not(:disabled):active {
+            transform: translateY(1px);
+            opacity: 0.9;
+            box-shadow: none;
+        }
     }
 
-    .power-button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-    .power-button.running {
-        background-color: #0f9d58;
-        box-shadow: 0 0 12px rgba(15, 157, 88, 0.5);
-    }
-
-    .power-button.stopped {
-        background-color: #d93025;
-        box-shadow: 0 0 12px rgba(217, 48, 37, 0.4);
-    }
-
-    .power-button:not(:disabled):active {
-        transform: translateY(1px);
-        box-shadow: none;
-    }
 
     .options-button {
         width: 2rem;
@@ -144,11 +149,14 @@
         border: none;
         background: var(--surface-2, rgba(0, 0, 0, 0.1));
         cursor: pointer;
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
     }
-
-    .options-button:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
+    
+    button img {
+        pointer-events: none;
     }
 
     .options-popover {
@@ -158,30 +166,27 @@
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-        padding: 0.75rem;
+        padding: 1rem 1.75rem;
         border-radius: 0.5rem;
         background: var(--surface-1, rgba(0, 0, 0, 0.85));
         color: white;
-        min-width: 200px;
+        min-width: 250px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         z-index: 10;
     }
 
-    .options-popover input {
-        width: 100%;
-    }
 
     .options-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 0.5rem;
+        & button {
+            border: none;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+        }
     }
 
-    .options-header button {
-        border: none;
-        background: transparent;
-        color: inherit;
-        cursor: pointer;
-    }
 </style>
