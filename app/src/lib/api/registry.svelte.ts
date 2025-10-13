@@ -4,6 +4,7 @@ import { GameWSConnection, type ServerWSEvent, type AcceptArgs } from "./ws";
 import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
 import z from "zod";
+import type { Session } from "$lib/app/session.svelte";
 
 export type WSConnectionRequest = {
     id: string;
@@ -14,10 +15,18 @@ export type WSConnectionRequest = {
     game: string;
 };
 
-export const REGISTRY = Symbol("registry");
+export const REGISTRY = "registry";
 
 export class Registry {
     public games: Game[] = $state([]);
+
+    private readonly session: Session;
+
+    constructor(session: Session) {
+        this.session = session;
+        this.session.onDispose(() => this.dispose());
+        console.log(`Created registry for session ${session.name} (${session.id})`);
+    }
 
     async tryConnect(req: WSConnectionRequest) {
         const id = req.id;
@@ -38,18 +47,22 @@ export class Registry {
         const conn = new GameWSConnection(req.id, req.version, channel);
         let gameName = req.version == "v1" ? `<Pending-${conn.id}>` : req.game;
         log.debug(`Creating game for '${gameName}'`);
-        const game = new Game(gameName, conn);
-        this.games.push(game);
-        conn.onclose = () => {
-            log.debug(`Game ${gameName} disconnected, removing`);
-            const i = this.games.indexOf(game);
-            this.games.splice(i, 1);
-        };
+        this.createGame(gameName, conn);
         await invoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
         if (conn.version == "v1") {
             log.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
             await conn.send(v1.zReregisterAll.parse({}));
         }
+    }
+
+    createGame(name: string, conn: GameWSConnection) {
+        const game = new Game(this.session, name, conn);
+        this.games.push(game);
+        conn.onclose = () => {
+            log.debug(`Game ${game.name} disconnected, removing`);
+            const i = this.games.indexOf(game);
+            this.games.splice(i, 1);
+        };
     }
 
     getGame(id: string) {
@@ -60,6 +73,14 @@ export class Registry {
         // TODO
         return true;
     }
+
+    dispose() {
+        for (const game of this.games) {
+            game.conn.dispose();
+        }
+        this.games.length = 0;
+    }
+
     // TODO: v1 conn (new game) then v2 conn for same game
     // python version kept games in state for ui, maybe we don't need to
     // (it reset all internals of a game on disconnect anyway)
@@ -71,6 +92,7 @@ export class Game {
     public name: string = $state(null!);
     // private readonly seenActions = new Set<string>(); // log new actions
     constructor(
+        private readonly session: Session,
         name: string,
         public readonly conn: GameWSConnection,
     ) {
@@ -107,7 +129,7 @@ export class Game {
                 log.info(`startup woo`);
                 break;
             case "context":
-                log.info(`TODO context: '${msg.data.message}'`);
+                this.session.context.client(this.name, msg.data.message, { silent: msg.data.silent });
                 break;
             case "actions/register":
                 this.registerActions(msg.data.actions);
@@ -120,8 +142,7 @@ export class Game {
             case "action/result":
                 const silent = msg.data.success;
                 let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
-                // TODO: inject context
-                // this.contextManager.client(this.name, msg.data.message, silent);
+                this.session.context.client(this.name, text, { silent });
                 break;
             case "shutdown/ready":
                 break;

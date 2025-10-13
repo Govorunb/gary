@@ -45,4 +45,4 @@ A **Modal Layer** will be present to replicate previous Panel modal behaviour.
 ## Note (important)
 
 This document is less of an instruction and more of a general direction.
-The UI port is currently underway, and may in places deviate from this document. Always check how things are currently implemented and prefer building on top of rather than over the current state.
+The UI port is currently underway, and may in places deviate from this document. Always check how things are currently implemented and prefer building on top of rather than overwriting the current implementation.

@@ -3,23 +3,27 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import * as log from "@tauri-apps/plugin-log";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import { clamp } from "./utils.svelte";
+import type { Session } from "./session.svelte";
 
 const STORAGE_KEY = "ws-server:port";
 const DEFAULT_PORT = 8000;
 
 type ServerConnections = string[] | null;
 
-export const SERVER_MANAGER = Symbol("serverManager");
+export const SERVER_MANAGER = "serverManager";
 
 export class ServerManager {
     port: number = $state(readStoredPort());
     connections: ServerConnections = $state(null);
     readonly running: boolean = $derived(this.connections != null);
 
+    private readonly session: Session;
     private readonly registry: Registry;
     private readonly subscriptions: UnlistenFn[] = $state([]);
 
-    constructor(registry: Registry) {
+    constructor(session: Session, registry: Registry) {
+        this.session = session;
+        this.session.onDispose(() => this.dispose());
         this.registry = registry;
         $effect(() => {
             localStorage.setItem(STORAGE_KEY, this.port.toString());
@@ -63,7 +67,7 @@ export class ServerManager {
         await this.reconcileConnections();
     }
 
-    destroy() {
+    dispose() {
         for (const unsub of this.subscriptions) {
             unsub();
         }

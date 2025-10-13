@@ -33,6 +33,15 @@ export abstract class ContextManager {
             customData: data,
         })
     }
+
+    actor(text: string, manual: boolean, options: MessageOptions, data?: CustomData) {
+        this.push({
+            source: { type: "actor", manual },
+            text,
+            options,
+            customData: data,
+        })
+    }
     
     push({...partialMsg}: Partial<Message> & Required<Pick<Message, "text" | "source">>) {
         const msg: Message = {

@@ -88,8 +88,11 @@ export class GameWSConnection {
     public async disconnect(code?: number, reason?: string) {
         if (this._closed) return;
 
-        await invoke('ws_close', { id: this.id, code, reason } satisfies CloseArgs);
-        this.dispose();
+        try {
+            await invoke('ws_close', { id: this.id, code, reason } satisfies CloseArgs);
+        } finally {
+            this.dispose();
+        }
     }
 }
 
