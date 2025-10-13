@@ -1,41 +1,21 @@
 <script lang="ts">
-    import { getContext, onDestroy, onMount } from "svelte";
-    import { preventDefault, throttleClick } from "$lib/app/utils.svelte";
-    import { SERVER_MANAGER_STORE_KEY } from "$lib/app/server.svelte";
-    import type { ServerManagerStore, ServerManager } from "$lib/app/server.svelte";
+    import { outclick, preventDefault } from "$lib/app/utils.svelte";
+    import { SERVER_MANAGER, type ServerManager } from "$lib/app/server.svelte";
+    import { injectAssert } from "$lib/app/utils/di";
+    import ServerConfig from "./ServerConfig.svelte";
 
-    let managerStore = getContext<ServerManagerStore>(SERVER_MANAGER_STORE_KEY);
-    let manager = $state<ServerManager | null>(null);
-    let unsubscribe: (() => void) | undefined = $state();
+    let manager = injectAssert<ServerManager>(SERVER_MANAGER);
 
     let showOptions = $state(false);
-    let localPort = $state(8000);
 
-    onMount(() => {
-        if (!managerStore) return;
-        unsubscribe = managerStore.subscribe(value => manager = value);
-    });
-
-    onDestroy(() => {
-        unsubscribe?.();
-    });
-
-    $effect(() => {
-        if (manager) {
-            localPort = manager.port;
-        }
-    });
-
-    let running = $derived(manager?.running ?? false);
-    let disabled = $derived(manager == null);
-    let configDisabled = $derived(running || disabled);
+    let running = $derived(manager.running);
+    let configDisabled = $derived(running);
     let pwrBtnSize = "40px";
 
-    let powerBtnTooltip = $derived(disabled ? "Internal error: server manager not found" : running ? "Stop server" : "Start server")
-    let optionsBtnTooltip = $derived(disabled ? "Internal error: server manager not found" : configDisabled ? "Server is running" : "Server options")
+    let powerBtnTooltip = $derived(running ? "Stop server" : "Start server")
+    let optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options")
 
     async function togglePower() {
-        if (!manager) return;
         await manager.toggle();
     }
 
@@ -43,58 +23,38 @@
         if (configDisabled) return;
         showOptions = !showOptions;
     }
-
-    function updatePort(value: number) {
-        manager?.setPort(value);
-    }
-
     
     $effect(() => {
         if (configDisabled) showOptions = false;
     })
 
     const handleContextMenu = preventDefault(() => {
-        if (disabled || configDisabled) return;
+        if (configDisabled) return;
         toggleOptions();
     });
-
-    function onPortChange(evt: Event) {
-        const target = evt.target as HTMLInputElement;
-        updatePort(target.valueAsNumber);
-    }
 </script>
 
 <div class="power-button-container">
     <button
         class={`power-button ${running ? "running" : "stopped"}`}
         style:height={pwrBtnSize}
-        {disabled}
-        {@attach throttleClick(500, togglePower)}
+        onclick={togglePower}
         oncontextmenu={handleContextMenu}
         aria-label={powerBtnTooltip}
         title={powerBtnTooltip}
     >
         <img src="power-button-power-on-svgrepo-com.svg" alt="Power button" width={pwrBtnSize} height={pwrBtnSize}>
     </button>
-    <button class="options-button" disabled={disabled || configDisabled} onclick={toggleOptions} title={optionsBtnTooltip} aria-label={optionsBtnTooltip}>
+    <button id="options-button" class="options-button" disabled={configDisabled} onclick={toggleOptions} title={optionsBtnTooltip} aria-label={optionsBtnTooltip}>
         <img src="cogwheel-configuration-gear-svgrepo-com.svg" alt="Server options" width="24" height="24">
     </button>
     {#if showOptions && !configDisabled}
-        <div class="options-popover">
+        <div class="options-popover" {@attach outclick(toggleOptions, [document.getElementById("options-button")!])}>
             <div class="options-header">
                 <span>Server options</span>
                 <button onclick={toggleOptions}>✕</button>
             </div>
-            <label for="power-port">Port</label>
-            <input
-                id="power-port"
-                type="number"
-                min="1024"
-                max="65535"
-                value={localPort}
-                disabled={configDisabled}
-                oninput={onPortChange}
-            />
+            <ServerConfig />
         </div>
     {/if}
 </div>

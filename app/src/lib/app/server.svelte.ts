@@ -2,14 +2,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import * as log from "@tauri-apps/plugin-log";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
-import { readable, type Readable } from "svelte/store";
+import { clamp } from "./utils.svelte";
 
 const STORAGE_KEY = "ws-server:port";
 const DEFAULT_PORT = 8000;
 
 type ServerConnections = string[] | null;
 
-export const SERVER_MANAGER_CONTEXT_KEY = "serverManager";
+export const SERVER_MANAGER = Symbol("serverManager");
 
 export class ServerManager {
     port: number = $state(readStoredPort());
@@ -17,29 +17,14 @@ export class ServerManager {
     readonly running: boolean = $derived(this.connections != null);
 
     private readonly registry: Registry;
-    private readonly unsubscribers: UnlistenFn[] = $state([]);
-    private readonly subscribers = new Set<(value: ServerManager) => void>();
+    private readonly subscriptions: UnlistenFn[] = $state([]);
 
     constructor(registry: Registry) {
         this.registry = registry;
         $effect(() => {
             localStorage.setItem(STORAGE_KEY, this.port.toString());
         });
-        $effect(() => {
-            void this.port;
-            void this.connections;
-            void this.running;
-            this.notifySubscribers();
-        });
         void this.initialize();
-    }
-
-    subscribe(run: (value: ServerManager) => void) {
-        this.subscribers.add(run);
-        run(this);
-        return () => {
-            this.subscribers.delete(run);
-        };
     }
 
     async start() {
@@ -79,30 +64,27 @@ export class ServerManager {
     }
 
     destroy() {
-        for (const unsubscribe of this.unsubscribers) {
-            try {
-                unsubscribe();
-            } catch (error) {
-                console.error("Failed to unsubscribe server manager listener:", error);
-            }
+        for (const unsub of this.subscriptions) {
+            unsub();
         }
-        this.unsubscribers.length = 0;
+        this.subscriptions.length = 0;
     }
 
     setPort(port: number) {
-        if (!Number.isFinite(port)) return;
-        const normalized = Math.trunc(port);
-        const clamped = Math.min(65535, Math.max(1024, normalized));
-        this.port = clamped;
+        if (!Number.isFinite(port)) {
+            log.error("Invalid port: " + port);
+            return;
+        }
+        this.port = clamp(Math.trunc(port), 1024, 65535);
     }
 
     private async initialize() {
         try {
-            this.unsubscribers.push(await listen<WSConnectionRequest>("ws-try-connect", (event) => {
-                this.registry.tryConnect(event.payload);
+            this.subscriptions.push(await listen<WSConnectionRequest>("ws-try-connect", (evt) => {
+                this.registry.tryConnect(evt.payload);
             }));
-            this.unsubscribers.push(await listen<ServerConnections>("server-state", (event) => {
-                this.connections = event.payload;
+            this.subscriptions.push(await listen<ServerConnections>("server-state", (evt) => {
+                this.connections = evt.payload;
                 void this.reconcileConnections();
             }));
         } catch (error) {
@@ -145,32 +127,10 @@ export class ServerManager {
             }
         }
     }
-
-    private notifySubscribers() {
-        for (const subscriber of this.subscribers) {
-            subscriber(this);
-        }
-    }
-}
-
-export type ServerManagerStore = Readable<ServerManager>;
-
-export const SERVER_MANAGER_STORE_KEY = "serverManagerStore";
-
-export function createServerManagerStore(manager: ServerManager): ServerManagerStore {
-    return readable(manager, (set) => {
-        const unsubscribe = manager.subscribe(set);
-        return () => {
-            unsubscribe();
-        };
-    });
 }
 
 function readStoredPort(): number {
-    if (typeof localStorage === "undefined") {
-        return DEFAULT_PORT;
-    }
     const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw == null ? NaN : Number.parseInt(raw, 10);
+    const parsed = parseInt(raw!); // it accepts nulls
     return Number.isNaN(parsed) ? DEFAULT_PORT : parsed;
 }

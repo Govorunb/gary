@@ -14,6 +14,7 @@ export type WSConnectionRequest = {
     game: string;
 };
 
+export const REGISTRY = Symbol("registry");
 
 export class Registry {
     public games: Game[] = $state([]);

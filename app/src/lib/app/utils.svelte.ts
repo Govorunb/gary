@@ -4,20 +4,26 @@ export function pick<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export const scrollNum: Attachment<HTMLInputElement> = (el) => {
-    if (el.type !== "number") return;
+export const webkitScrollNum: Attachment<HTMLInputElement> = (el) => {
+    if (el.type !== "number") {
+        console.warn("webkitScrollNum should only be attached to inputs of type 'number'");
+        return;
+    }
+    // on linux, tauri uses libwebkit2gtk, which has a browser that is just kinda weird and offputting
+    if (!navigator.platform.includes("Linux")) return;
     
-    el.addEventListener("wheel", (evt: WheelEvent) => {
-        // tauri uses libwebkit2gtk which has a browser that is just kinda weird and offputting
-        if (!navigator.platform.includes("Linux")) return;
-        
+    const listener = (evt: WheelEvent) => {
         const target = evt.target as HTMLInputElement;
         // increment/decrement on scroll (modern browsers do this by default btw)
         if (target.disabled) return;
         if (evt.deltaY == 0) return;
         evt.deltaY < 0 ? target.stepUp() : target.stepDown();
         target.dispatchEvent(new Event("input")); // svelte 5 targets 'input' and not 'change'
-    });
+    };
+    el.addEventListener("wheel", listener);
+    return () => {
+        el.removeEventListener("wheel", listener);
+    };
 };
 
 export function preventDefault<T, E extends Event, F extends (evt: E, ...args: any[]) => T>(func: F) {
@@ -45,6 +51,25 @@ export function throttleClick(delay: number, func: (evt: MouseEvent) => void): A
             if (timeout) clearTimeout(timeout);
             timeout = null;
             el.removeEventListener("click", listener);
+        }
+    };
+}
+
+export function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+}
+
+export function outclick(func: () => void, additionalTargets: HTMLElement[] = []): Attachment<HTMLElement> {
+    return (el) => {
+        const listener = (evt: MouseEvent): void => {
+            if (evt.target instanceof HTMLElement && (
+                el.contains(evt.target) || additionalTargets.some(target => target.contains(evt.target as any))
+            )) return;
+            func();
+        };
+        window.addEventListener("click", listener);
+        return () => {
+            window.removeEventListener("click", listener);
         }
     };
 }
