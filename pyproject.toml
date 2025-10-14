@@ -5,7 +5,7 @@ description = "A testing implementation of the LLM side of the Neuro-sama Game S
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "guidance>=0.2.1",
+    "guidance==0.2.1",
     "llama-cpp-python>=0.3.7", # undeclared guidance dependency
     "fastapi[standard]>=0.115.7",
     "pydantic>=2.11.3",

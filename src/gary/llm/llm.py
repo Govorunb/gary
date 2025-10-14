@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, NamedTuple, Self, cast
 from pydantic import TypeAdapter
 from loguru import logger
 
-import llama_cpp
 from guidance.models._engine import Engine
 from guidance import gen, with_temperature, select, json, models, system, user, assistant
 from guidance.chat import Llama3ChatTemplate, Phi3MiniChatTemplate, Qwen2dot5ChatTemplate
@@ -148,6 +147,7 @@ You are goal-oriented but curious. You aim to keep your actions varied and enter
         if isinstance(clone, Llarry):
             clone.persistent = set()
             engine = cast(StreamingLlamaCppEngine, engine)
+            import llama_cpp
             llama_cpp.llama_kv_cache_clear(engine.model_obj.ctx)
             engine.model_obj.reset()
         elif isinstance(clone, models.Transformers):

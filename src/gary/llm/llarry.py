@@ -10,7 +10,8 @@ from guidance.chat import ChatTemplate
 from guidance.models import Model, LlamaCpp
 from guidance.models._llama_cpp import LlamaCppEngine, LlamaCppTokenizer
 from guidance.models._engine import EngineClient, EngineState
-from llama_cpp import Llama
+if TYPE_CHECKING:
+    from llama_cpp import Llama
 
 # pyright: reportPrivateImportUsage=false
 
