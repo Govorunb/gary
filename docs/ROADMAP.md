@@ -4,7 +4,7 @@
 
 The project is currently undergoing a renovation, porting functionality and UI from Python to Tauri:
 
-- `src/gary/` - Stable Python app. Agents *must* not modify this project.
+- `src/gary/` - Stable Python app. Agents **must not** modify this project.
 - `app/` - In-dev Tauri port of the application.
     - `app/src` - Svelte 5 frontend. Almost all development will happen here. See `app/src/UI_PORT.md` for the current plan for porting the UI from the Python app.
     - `app/src-tauri` - Rust backend. Do not edit unless explicitly asked to.
@@ -18,7 +18,7 @@ The goal of the port is to keep functionality the same; however, some things wil
 
 #### Single Context
 
-Previously, each game hosted its own LLM with its own context. In the Tauri app, there will be one context shared between all game connections (e.g. two separate integration mods running in the same game).
+Previously, each game hosted its own LLM with its own context. In the Tauri app, there will be one context shared between all game connections (e.g. two independent integration mods running in the same game).
 
 #### Context enhancements
 
@@ -26,11 +26,11 @@ As mentioned previously, the context will be stored and managed separately from 
 
 ### Future plans
 
-After the port is complete, the Python app will be deprecated and removed. Then, some long-standing TODOs will finally be addressed:
+After the port is complete, the Python app will be deprecated and removed. Then, some long-standing TODOs may finally be addressed:
 
 #### Engine hot-swapping
 
-Previously, the LLM engine was selected on startup and could not be changed. It would be nice if the user was be able to pick the engine at runtime and switch between them as needed (maybe per-context, or per-game).
+Previously, the LLM engine was selected on startup and could not be changed. The user should be able to pick the engine at runtime and switch between them as needed (maybe per-context, or per-game).
 
 #### Remote LLM Support
 
@@ -52,3 +52,9 @@ Previously this was sort of kind of accomodated by allowing different logging le
 #### Configurable scheduler
 
 I want to see Randy speed through the schema test in 0.1 seconds
+
+#### Per-game tweaks/compat
+
+v2 of the API has been in proposals for a while now. If the spec turns out to land into an "evolving v1" state, old and new integrations will have the same version but completely different expectations - e.g. expecting `actions/reregister_all` on connect. This will require per-game behaviour tweaks for compatibility.
+
+The first step would be a UI (probably using the advanced sidebar), then maybe some automation (e.g. if after connect the game doesn't send actions in the first 2s, try sending a reregister; if the game then errors/disconnects because of a strict message handler, don't do it again).

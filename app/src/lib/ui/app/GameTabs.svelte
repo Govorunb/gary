@@ -2,8 +2,8 @@
     import { injectAssert } from "$lib/app/utils/di";
     import { REGISTRY, type Registry } from "$lib/api/registry.svelte";
     import ActionList from "./ActionList.svelte";
-    import Tooltip from "../common/Tooltip.svelte";
     import VersionBadge from "./VersionBadge.svelte";
+    import { Portal, Tooltip } from "@skeletonlabs/skeleton-svelte";
     import { clamp } from "$lib/app/utils.svelte";
 
     let registry = injectAssert<Registry>(REGISTRY);
@@ -23,19 +23,28 @@
                 <!-- TODO: context menu -->
                 <!-- TODO: retain UI on disconnect -->
                 <Tooltip>
-                    {#snippet tip()}
-                        <div class="row">
-                            <VersionBadge version={game.conn.version} />
-                            <p>ID: <b>{game.conn.id}</b></p>
-                            <button onclick={() => window.navigator.clipboard.writeText(game.conn.id)}>Copy</button>
-                            <button onclick={() => game.conn.disconnect()}>Disconnect</button>
-                        </div>
-                    {/snippet}
-                    <button class:active={activeTab === i} class:closed={game.conn.closed} onclick={() => activeTab = i}>
-                        <div class="row">
-                            <span>{game.name}</span>
-                        </div>
-                    </button>
+                    <Tooltip.Trigger>
+                        <button class:active={activeTab === i} class:closed={game.conn.closed} onclick={() => activeTab = i}>
+                            <div class="row">
+                                <span>{game.name}</span>
+                            </div>
+                        </button>
+                    </Tooltip.Trigger>
+                    <Portal>
+                        <Tooltip.Positioner>
+                            <Tooltip.Content>
+                                <div class="row">
+                                    <VersionBadge version={game.conn.version} />
+                                    <p>ID: <b>{game.conn.id}</b></p>
+                                    <button onclick={() => window.navigator.clipboard.writeText(game.conn.id)}>Copy</button>
+                                    <button onclick={() => game.conn.disconnect()}>Disconnect</button>
+                                </div>
+                                <Tooltip.Arrow style="--arrow-size: calc(var(--spacing) * 2)">
+                                    <Tooltip.ArrowTip />
+                                </Tooltip.Arrow>
+                            </Tooltip.Content>
+                        </Tooltip.Positioner>
+                    </Portal>
                 </Tooltip>
             {/each}
         </div>

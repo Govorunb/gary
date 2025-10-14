@@ -13,7 +13,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@skeletonlabs/floating-ui-svelte": "^0.3.9",
+    "@tailwindcss/vite": "^4.1.14",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-fs": "~2.4.2",
     "@tauri-apps/plugin-http": "~2.5.2",
@@ -25,10 +25,13 @@
     "json-schema-faker": "^0.5.9",
     "openai": "^6.2.0",
     "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.14",
     "uuid": "^13.0.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@skeletonlabs/skeleton": "^4.0.1",
+    "@skeletonlabs/skeleton-svelte": "^4.0.1",
     "@sveltejs/adapter-static": "^3.0.6",
     "@sveltejs/kit": "^2.9.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",

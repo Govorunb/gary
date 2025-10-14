@@ -22,6 +22,9 @@ logging.getLogger('asyncio').setLevel(999999999)
 def action(name: str, desc: str, schema: dict[str, Any] | None) -> ActionModel:
     return ActionModel(name=name, description=desc, schema=schema) # type: ignore
 
+# TODO: action schemas are now all {"type": "object"}
+# https://github.com/VedalAI/neuro-sdk/blob/main/CHANGELOG.md#29th-of-july-2025-0215-gmt
+# can move to mean tests instead :)
 ACTIONS = [
     action(
         "prim_str",
