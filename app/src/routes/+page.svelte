@@ -5,13 +5,9 @@
 </script>
 
 <div class="header">
-    <div class="buttons">
-        <PowerButton />
-        <ThemePicker />
-    </div>
-    <div class="overlap-text-center">
-        <h1>GCP (Gary Control Panel)</h1>
-    </div>
+    <PowerButton />
+    <h1>Gary Control Panel</h1> <!-- TODO: place engine controls here a-la LMStudio -->
+    <ThemePicker />
 </div>
 <div class="main">
     <GaryDashboard />
@@ -19,28 +15,24 @@
 
 <style>
     .header {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        grid-column-gap: 5px;
+        padding: 0 1rem;
+        align-items: center;
         background-color: light-dark(rgb(from aqua r g b / 60%), rgb(from aqua r g b / 30%));
         min-height: 60px;
-        position: relative;
-        z-index: -1;
-        
-        /* all of this just to actually center the text... */
-        & .overlap-text-center {
-            position: absolute;
-            z-index: 0;
-            width: 100%;
-            text-align: center;
+
+        /* since they're components, they have to be :global'd */
+        :global(& > :first-child) {
+            justify-self: start;
         }
-        & .buttons {
-            position: absolute;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-inline: 1rem;
-            margin: 0;
-            z-index: 1;
-            height: 100%;
-            width: calc(100% - 2rem);
+        /* h1 is just a tag so it does not need :global */
+        & > h1 {
+            justify-self: center;
+        }
+        :global(& > :last-child) {
+            justify-self: end;
         }
     }
 

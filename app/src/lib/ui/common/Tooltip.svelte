@@ -56,7 +56,15 @@
             {:else}
                 {@render tip()}
             {/if}
-            <FloatingArrow bind:ref={elemArrow} context={floating.context} fill="#575969" />
+            <FloatingArrow bind:ref={elemArrow} context={floating.context} fill="light-dark(#f6f6f6, #2f2f2f)" />
         </div>
     {/if}
 </div>
+
+<style>
+    .popover-neutral {
+        background-color: light-dark(#f6f6f6, #2f2f2f);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+    }
+</style>

@@ -4,9 +4,14 @@
     import ActionList from "./ActionList.svelte";
     import Tooltip from "../common/Tooltip.svelte";
     import VersionBadge from "./VersionBadge.svelte";
+    import { clamp } from "$lib/app/utils.svelte";
 
     let registry = injectAssert<Registry>(REGISTRY);
     let activeTab = $state(0);
+
+    $effect(() => {
+        activeTab = clamp(activeTab, 0, registry.games.length - 1);
+    });
 
 </script>
 
@@ -20,15 +25,15 @@
                 <Tooltip>
                     {#snippet tip()}
                         <div class="row">
+                            <VersionBadge version={game.conn.version} />
                             <p>ID: <b>{game.conn.id}</b></p>
                             <button onclick={() => window.navigator.clipboard.writeText(game.conn.id)}>Copy</button>
                             <button onclick={() => game.conn.disconnect()}>Disconnect</button>
                         </div>
                     {/snippet}
-                    <button class:active={activeTab === i} onclick={() => activeTab = i}>
+                    <button class:active={activeTab === i} class:closed={game.conn.closed} onclick={() => activeTab = i}>
                         <div class="row">
-                            <VersionBadge version={game.conn.version} />
-                            {game.name}
+                            <span>{game.name}</span>
                         </div>
                     </button>
                 </Tooltip>
@@ -49,17 +54,22 @@
     }
 
     button {
-        padding: 0.5rem 1rem;
+        padding: 0.5rem 0.5rem;
         border: none;
         background-color: transparent;
         cursor: pointer;
         margin-bottom: -1px;
         color: inherit;
+        height: 100%;
     }
     
     .active {
         border-bottom: 2px solid transparent;
         border-bottom-color: var(--accent-color, blue);
+    }
+
+    .closed {
+        opacity: 0.5;
     }
 
     .tab-content {
