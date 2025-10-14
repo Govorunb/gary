@@ -1,77 +1,62 @@
 <script lang="ts">
     import type { Snippet } from "svelte";
+    import { arrow, autoPlacement, autoUpdate, FloatingArrow, offset, useDismiss, useFloating, useHover, useInteractions, useRole } from "@skeletonlabs/floating-ui-svelte";
+    import { fade } from "svelte/transition";
 
     interface Props {
         tip: string | Snippet;
+        placement?: "top" | "bottom" | "left" | "right";
         children: Snippet;
     }
     let {
         tip,
+        placement = $bindable("top"),
         children
     }: Props = $props();
 
-    let showTimer: number | undefined = $state();
-    let hideTimer: number | undefined = $state();
-    let show = $state(false);
+    let open = $state(false);
+    let elemArrow: HTMLElement | null = $state(null);
 
-    function enter() {
-        clearTimeout(hideTimer);
-        if (!show) {
-            showTimer = setTimeout(() => show = true, 300);
-        }
-    }
-    function leave() {
-        clearTimeout(showTimer);
-        if (show) {
-            hideTimer = setTimeout(() => show = false, 500);
-        }
-    }
+    const floating = useFloating({
+        whileElementsMounted: autoUpdate,
+        get open() {
+            return open;
+        },
+        onOpenChange(v) {
+            open = v;
+        },
+        placement,
+        get middleware() {
+            return [offset(10), autoPlacement(), elemArrow && arrow({ element: elemArrow })];
+        },
+    });
+
+    const interactions = useInteractions([
+        useRole(floating.context, { role: "tooltip" }),
+        useHover(floating.context, { move: false, delay: 300 }),
+        useDismiss(floating.context),
+    ])
+
 </script>
 
-{#if !tip}
-    {@render children()}
-{:else}
-    <span
-        class="tooltip-wrapper"
-        role="presentation"
-        onmouseenter={enter}
-        onmouseleave={leave}
-    >
+<div>
+
+    <span bind:this={floating.elements.reference} {...interactions.getReferenceProps()}>
         {@render children()}
-
-        {#if show}
-            <div class="tooltip-container">
-                {#if typeof tip === 'string'}
-                    <span>{tip}</span>
-                {:else}
-                    {@render tip()}
-                {/if}
-            </div>
-        {/if}
     </span>
-{/if}
-
-<style>
-    .tooltip-wrapper {
-        display: contents;
-        position: relative;
-    }
-
-    .tooltip-container {
-        display: flex;
-		display: inline-block;
-		z-index: 1000;
-		position: fixed;
-		flex-direction: column;
-		justify-content: center;
-		width: fit-content;
-		padding: 4px 8px;
-		border: 1px solid red;
-		border-radius: 15px;
-		background-color: grey;
-		text-align: left;
-		white-space: pre-line;
-		word-break: break-word;
-		/* pointer-events: none; */
-    }
-</style>
+    {#if tip && open}
+        <div class="floating popover-neutral tooltip-container"
+        bind:this={floating.elements.floating}
+        style={floating.floatingStyles}
+        {...interactions.getFloatingProps()}
+        transition:fade={{ duration: 50 }}
+        >
+            {#if typeof tip === 'string'}
+                <span>{tip}</span>
+            {:else}
+                {@render tip()}
+            {/if}
+            <FloatingArrow bind:ref={elemArrow} context={floating.context} fill="#575969" />
+        </div>
+    {/if}
+</div>

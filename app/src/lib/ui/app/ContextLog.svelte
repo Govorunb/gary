@@ -24,6 +24,7 @@
 
 <!-- TODO: scrolling log -->
 <div class="context-log-container">
+    <h2>Context Log</h2>
     <!-- TODO: this should render as a grid (currently long messages will break the timestamp into two lines, misaligning everything) -->
     {#each session.context.userView as msg (msg.id)}
         <div class={['message', `source-${msg.source.type}`]}>
@@ -40,12 +41,12 @@
 <style>
     .context-log-container {
         border: 1px solid #ccc;
-        padding: 1rem;
         height: 100%;
+        padding: 0.5rem;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.2rem;
     }
 
     .message {

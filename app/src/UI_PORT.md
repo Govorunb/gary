@@ -42,6 +42,8 @@ On smaller widths, the right sidebar will merge into the left sidebar as a colla
 
 A **Modal Layer** will be present to replicate previous Panel modal behaviour.
 
+Refer to the Python side (`src/gary/web/`) for the reference implementation.
+
 ## Note (important)
 
 This document is less of an instruction and more of a general direction.

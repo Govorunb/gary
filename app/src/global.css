@@ -59,3 +59,10 @@ button {
 .chip {
   --border-radius: 20px;
 }
+
+.floating {
+	width: max-content;
+	position: absolute;
+	top: 0;
+	left: 0;
+}

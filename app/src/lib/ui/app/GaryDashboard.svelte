@@ -50,8 +50,9 @@
     .dashboard-layout {
         display: grid;
         grid-template-columns: 1fr 2fr 1fr;
-        height: 100vh;
+        flex: 1;
         width: 100%;
+        padding: 1rem;
     }
 
     .sidebar {

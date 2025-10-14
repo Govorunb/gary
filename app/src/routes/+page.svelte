@@ -5,51 +5,47 @@
 </script>
 
 <div class="header">
-    <PowerButton />
-    <h1>GCP (Gary Control Panel)</h1>
-    <ThemePicker />
+    <div class="buttons">
+        <PowerButton />
+        <ThemePicker />
+    </div>
+    <div class="overlap-text-center">
+        <h1>GCP (Gary Control Panel)</h1>
+    </div>
 </div>
-<GaryDashboard />
+<div class="main">
+    <GaryDashboard />
+</div>
 
 <style>
     .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-inline: 1rem;
-        margin: 0;
         background-color: light-dark(rgb(from aqua r g b / 60%), rgb(from aqua r g b / 30%));
-    }
-
-    :root {
-        font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-        font-size: 16px;
-        line-height: 24px;
-        font-weight: 400;
-
-        color: light-dark(#0f0f0f, #f6f6f6);
-        background-color: light-dark(#f6f6f6, #2f2f2f);
-
-        font-synthesis: none;
-        text-rendering: optimizeLegibility;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        -webkit-text-size-adjust: 100%;
-    }
-
-    .container {
-        margin: 0;
-        padding-top: 10vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        text-align: center;
+        min-height: 60px;
+        position: relative;
+        z-index: -1;
+        
+        /* all of this just to actually center the text... */
+        & .overlap-text-center {
+            position: absolute;
+            z-index: 0;
+            width: 100%;
+            text-align: center;
         }
+        & .buttons {
+            position: absolute;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-inline: 1rem;
+            margin: 0;
+            z-index: 1;
+            height: 100%;
+            width: calc(100% - 2rem);
+        }
+    }
 
-    .row {
+    .main {
         display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 15px;
+        flex: 1;
     }
 </style>
