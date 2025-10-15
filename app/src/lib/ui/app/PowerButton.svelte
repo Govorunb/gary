@@ -3,6 +3,7 @@
     import { SERVER_MANAGER, type ServerManager } from "$lib/app/server.svelte";
     import { injectAssert } from "$lib/app/utils/di";
     import ServerConfig from "./ServerConfig.svelte";
+    import { CirclePower, SlidersHorizontal } from "@lucide/svelte";
 
     let manager = injectAssert<ServerManager>(SERVER_MANAGER);
 
@@ -10,7 +11,7 @@
 
     let running = $derived(manager.running);
     let configDisabled = $derived(running);
-    let pwrBtnSize = "40px";
+    let pwrBtnSize = 40;
 
     let powerBtnTooltip = $derived(running ? "Stop server" : "Start server")
     let optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options")
@@ -36,17 +37,18 @@
 
 <div class="power-button-container">
     <button
-        class={`power-button ${running ? "running" : "stopped"}`}
-        style:height={pwrBtnSize}
+        class="power-button"
+        style:height="{pwrBtnSize}px"
+        style:width="{pwrBtnSize}px"
         onclick={togglePower}
         oncontextmenu={handleContextMenu}
         aria-label={powerBtnTooltip}
         title={powerBtnTooltip}
     >
-        <img src="power-button-power-on-svgrepo-com.svg" alt="Power button" width={pwrBtnSize} height={pwrBtnSize}>
+        <CirclePower size={pwrBtnSize} color={running ? "#0f9d58" : "#d93025"} style="pointer-events: none;" />
     </button>
     <button id="options-button" class="options-button" disabled={configDisabled} onclick={toggleOptions} title={optionsBtnTooltip} aria-label={optionsBtnTooltip}>
-        <img src="cogwheel-configuration-gear-svgrepo-com.svg" alt="Server options" width="24" height="24">
+        <SlidersHorizontal size=24 style="pointer-events: none;" />
     </button>
     {#if showOptions && !configDisabled}
         <div class="options-popover" {@attach outclick(toggleOptions, [document.getElementById("options-button")!])}>
@@ -73,22 +75,13 @@
         border: none;
         border-radius: 100%;
         cursor: pointer;
-        background-color: var(--bg) !important;
         transition: background-color 0.1s ease, opacity 0.15s ease, transform 0.15s ease;
+        box-shadow: inset 0 0 12px hsl(from var(--bg) h s calc(l * 0.5) / 50%);
+        background-color: #000;
         
         &:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-        }
-    
-        &.running {
-            --bg: #0f9d58;
-            box-shadow: inset 0 0 12px hsl(from var(--bg) h s calc(l * 0.5) / 50%);
-        }
-    
-        &.stopped {
-            --bg: #d93025;
-            box-shadow: inset 0 0 12px hsl(from var(--bg) h s calc(l * 0.5) / 50%);
         }
     
         &:not(:disabled):active {
@@ -109,14 +102,11 @@
         border: none;
         background: var(--surface-2, rgba(0, 0, 0, 0.1));
         cursor: pointer;
+        padding: 0;
         &:disabled {
             cursor: not-allowed;
             opacity: 0.6;
         }
-    }
-    
-    button img {
-        pointer-events: none;
     }
 
     .options-popover {
