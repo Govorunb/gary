@@ -8,7 +8,7 @@
     let registry = injectAssert<Registry>(REGISTRY);
 </script>
 
-<div class="row">
+<div class="flex items-center justify-center gap-4">
     <label for="port-input">Port</label>
     <input
         id="port-input"
@@ -21,12 +21,3 @@
         bind:value={manager.port}
     />
 </div>
-
-<style>
-    .row {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 15px;
-    }
-</style>

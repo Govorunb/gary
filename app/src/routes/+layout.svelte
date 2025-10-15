@@ -18,30 +18,6 @@
     })
 </script>
 
-<div class="app-root" role="application">
+<div class="flex min-h-screen flex-col" role="application">
     {@render children()}
 </div>
-
-<style>
-    .app-root {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-    }
-
-    :root {
-        font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-        font-size: 16px;
-        line-height: 20px;
-        font-weight: 400;
-
-        color: light-dark(#0f0f0f, #f6f6f6);
-        background-color: light-dark(#f6f6f6, #2f2f2f);
-
-        font-synthesis: none;
-        text-rendering: optimizeLegibility;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        -webkit-text-size-adjust: 100%;
-    }
-</style>

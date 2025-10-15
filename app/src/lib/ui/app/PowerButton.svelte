@@ -35,9 +35,9 @@
     });
 </script>
 
-<div class="power-button-container">
+<div class="relative flex items-center gap-2">
     <button
-        class="power-button"
+        class={`flex items-center justify-center rounded-full bg-neutral-900 text-white shadow-inner transition-all duration-150 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 dark:bg-neutral-100 dark:text-neutral-900 dark:focus-visible:ring-offset-neutral-100 ${running ? "ring-emerald-400/70 focus-visible:ring-emerald-300" : "ring-rose-500/70 focus-visible:ring-rose-300"}`}
         style:height="{pwrBtnSize}px"
         style:width="{pwrBtnSize}px"
         onclick={togglePower}
@@ -47,96 +47,31 @@
     >
         <CirclePower size={pwrBtnSize} color={running ? "#0f9d58" : "#d93025"} style="pointer-events: none;" />
     </button>
-    <button id="options-button" class="options-button" disabled={configDisabled} onclick={toggleOptions} title={optionsBtnTooltip} aria-label={optionsBtnTooltip}>
+    <button
+        id="options-button"
+        class="flex h-10 w-10 items-center justify-center rounded-full border border-transparent bg-neutral-200/80 text-neutral-700 shadow-sm transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-800/70 dark:text-neutral-200 dark:hover:bg-neutral-800"
+        disabled={configDisabled}
+        onclick={toggleOptions}
+        title={optionsBtnTooltip}
+        aria-label={optionsBtnTooltip}
+    >
         <SlidersHorizontal size=24 style="pointer-events: none;" />
     </button>
     {#if showOptions && !configDisabled}
-        <div class="options-popover" {@attach outclick(toggleOptions, [document.getElementById("options-button")!])}>
-            <div class="options-header">
+        <div
+            class="absolute left-0 top-full z-10 mt-3 flex min-w-[250px] flex-col gap-3 rounded-xl bg-neutral-900/95 p-5 text-sm text-neutral-50 shadow-2xl ring-1 ring-neutral-800 backdrop-blur"
+            {@attach outclick(toggleOptions, [document.getElementById("options-button")!])}
+        >
+            <div class="flex items-center justify-between gap-3 text-base font-semibold">
                 <span>Server options</span>
-                <button onclick={toggleOptions}>✕</button>
+                <button
+                    class="rounded-md p-1 text-neutral-100/80 transition hover:text-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-100/60"
+                    onclick={toggleOptions}
+                >
+                    ✕
+                </button>
             </div>
             <ServerConfig />
         </div>
     {/if}
 </div>
-
-<style>
-    .power-button-container {
-        position: relative;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .power-button {
-        padding: 0;
-        margin: 0;
-        border: none;
-        border-radius: 100%;
-        cursor: pointer;
-        transition: background-color 0.1s ease, opacity 0.15s ease, transform 0.15s ease;
-        box-shadow: inset 0 0 12px hsl(from var(--bg) h s calc(l * 0.5) / 50%);
-        background-color: #000;
-        
-        &:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-    
-        &:not(:disabled):active {
-            transform: translateY(1px);
-            opacity: 0.9;
-            box-shadow: none;
-        }
-    }
-
-
-    .options-button {
-        width: 2rem;
-        height: 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        border: none;
-        background: var(--surface-2, rgba(0, 0, 0, 0.1));
-        cursor: pointer;
-        padding: 0;
-        &:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-    }
-
-    .options-popover {
-        position: absolute;
-        top: 110%;
-        left: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        padding: 1rem 1.75rem;
-        border-radius: 0.5rem;
-        background: var(--surface-1, rgba(0, 0, 0, 0.85));
-        color: white;
-        min-width: 250px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        z-index: 10;
-    }
-
-
-    .options-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.5rem;
-        & button {
-            border: none;
-            background: transparent;
-            color: inherit;
-            cursor: pointer;
-        }
-    }
-
-</style>

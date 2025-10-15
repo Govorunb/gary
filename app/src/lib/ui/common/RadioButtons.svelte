@@ -44,52 +44,22 @@
     <span>{item}</span>
 {/snippet}
 
-<radio-picker role="radiogroup" class={_class}>
+<radio-picker role="radiogroup" class={`inline-flex overflow-hidden rounded-full border border-neutral-200/80 bg-neutral-100/80 text-sm text-neutral-700 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/70 dark:text-neutral-200 ${_class ?? ""}`}>
     {#each items as item, i}
         {@const dispName = typeof item === "string" ? item : i}
-        <label class="input button">
+        {@const isActive = selectedIndex === i}
+        <label
+            class={`relative flex cursor-pointer select-none items-center gap-2 px-3 py-1.5 font-medium transition hover:bg-neutral-200/80 focus-within:ring-2 focus-within:ring-sky-500/60 focus-within:ring-offset-2 focus-within:ring-offset-neutral-100 dark:hover:bg-neutral-800/70 dark:focus-within:ring-offset-neutral-900 first:rounded-l-full last:rounded-r-full ${i < items.length - 1 ? "border-r border-neutral-200/60 dark:border-neutral-700/80" : ""} ${isActive ? "bg-sky-500/20 text-sky-700 shadow-inner dark:bg-sky-500/30 dark:text-sky-100" : "text-neutral-700 dark:text-neutral-200"}`}>
             <input type="radio" group={groupName}
                 id="{groupName}_{dispName}"
                 value={dispName}
                 data-index={i}
                 checked={selectedIndex === i}
-                onchange={handleChange}>
-            <div class="radio-item">
+                onchange={handleChange}
+                class="peer sr-only" >
+            <div class="flex items-center gap-2">
                 {@render renderItem(item, i)}
             </div>
         </label>
     {/each}
 </radio-picker>
-
-<style>
-    radio-picker {
-        display: flex;
-        width: fit-content;
-        line-height: 15px;
-        & > label:first-child {
-            border-top-left-radius: var(--border-radius);
-            border-bottom-left-radius: var(--border-radius);
-        }
-        & > label:last-child {
-            border-top-right-radius: var(--border-radius);
-            border-bottom-right-radius: var(--border-radius);
-        }
-        label {
-            &:has(input:checked) {
-                background: Highlight !important;
-                box-shadow: inset 0px 0px 8px 0px #888;
-            }
-            &:has(input:focus-visible) {
-                outline: 2px solid light-dark(#000, #fff);
-            }
-            cursor: pointer;
-            border-radius: 0;
-        }
-        /* accessibility (screen readers, keyboard nav) */
-        input {
-            opacity: 0;
-            position: absolute;
-            pointer-events: none;
-        }
-    }
-</style>

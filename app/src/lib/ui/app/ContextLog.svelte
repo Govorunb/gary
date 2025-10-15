@@ -5,6 +5,14 @@
 
     let session = injectAssert<Session>(SESSION);
 
+    const messageBaseClasses = "flex gap-2 items-center rounded-lg border px-3 py-2 transition hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60";
+    const sourceAccent: Record<Source['type'], string> = {
+        system: "border-amber-400/40",
+        client: "border-sky-400/40",
+        user: "border-emerald-400/40",
+        actor: "border-purple-400/40",
+    };
+
     function getSourceIcon(source: Source): string {
         switch (source.type) {
             case "system":
@@ -23,69 +31,17 @@
 </script>
 
 <!-- TODO: scrolling log -->
-<div class="context-log-container">
-    <h2>Context Log</h2>
+<div class="flex h-full flex-col gap-2 overflow-hidden rounded-xl bg-white/80 p-4 text-sm shadow-sm ring-1 ring-neutral-200/60 backdrop-blur-sm dark:bg-neutral-900/70 dark:ring-neutral-800">
+    <h2 class="text-lg font-semibold text-neutral-800 dark:text-neutral-50">Context Log</h2>
     <!-- TODO: this should render as a grid (currently long messages will break the timestamp into two lines, misaligning everything) -->
     {#each session.context.userView as msg (msg.id)}
-        <div class={['message', `source-${msg.source.type}`]}>
-            <span class="icon">{getSourceIcon(msg.source)}</span>
-            <span class="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
+        <div class={`${messageBaseClasses} ${sourceAccent[msg.source.type]}`}>
+            <span class="text-lg">{getSourceIcon(msg.source)}</span>
+            <span class="text-xs text-neutral-500 dark:text-neutral-400">{msg.timestamp.toLocaleTimeString()}</span>
             {#if msg.source.type === 'client'}
-                <span class="source-name">{msg.source.name}:</span>
+                <span class="font-semibold text-neutral-700 dark:text-neutral-200">{msg.source.name}:</span>
             {/if}
-            <span class="text">{msg.text}</span>
+            <span class="whitespace-pre-wrap text-neutral-700 dark:text-neutral-100">{msg.text}</span>
         </div>
     {/each}
 </div>
-
-<style>
-    .context-log-container {
-        border: 1px solid #ccc;
-        height: 100%;
-        padding: 0.5rem;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-    }
-
-    .message {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        &:hover {
-            &.source-system {
-                background-color: light-dark(#f0f0f0, #00000058);
-            }
-            &.source-client {
-                background-color: light-dark(#f0f0f0, #00000058);
-            }
-            &.source-user {
-                background-color: light-dark(#f0f0f0, #00000058);
-            }
-            &.source-actor {
-                background-color: light-dark(#f0f0f0, #00000058);
-            }
-        }
-        cursor: pointer;
-    }
-
-    .icon {
-        font-size: 1.2rem;
-    }
-
-    .timestamp {
-        font-size: 0.8rem;
-        color: #666;
-    }
-
-    .source-name {
-        font-weight: bold;
-    }
-
-    .text {
-        white-space: pre-wrap;
-    }
-</style>
