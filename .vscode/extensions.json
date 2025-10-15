@@ -2,6 +2,7 @@
     "recommendations": [
         "redhat.vscode-yaml",
         "tamasfe.even-better-toml",
-        "ms-python.python"
+        "ms-python.python",
+        "bradlc.vscode-tailwindcss"
     ]
 }

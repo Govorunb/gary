@@ -72,3 +72,7 @@ button {
 	top: 0;
 	left: 0;
 }
+
+.row {
+    @apply flex items-center justify-center;
+}

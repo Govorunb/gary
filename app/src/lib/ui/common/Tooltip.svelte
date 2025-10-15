@@ -2,22 +2,28 @@
     import { Tooltip, Portal } from "@skeletonlabs/skeleton-svelte";
     import type { Snippet } from "svelte";
     import type { SvelteHTMLElements } from "svelte/elements";
+    import type { TooltipRootProps } from "@skeletonlabs/skeleton-svelte";
 
+    type SnippetOfHTML<T extends keyof SvelteHTMLElements> = Snippet<[SvelteHTMLElements[T]]>;
     type Props = {
-        trigger: Snippet<[SvelteHTMLElements['button']]>,
-        children: Snippet,
-    }
+        trigger: SnippetOfHTML<'button'>,
+        content?: SnippetOfHTML<'div'>,
+        children?: Snippet,
+    } & TooltipRootProps;
     let {
         trigger,
+        content,
         children,
+        ...props
     }: Props = $props();
 </script>
 
-<Tooltip>
+<Tooltip {...props}>
     <Tooltip.Trigger element={trigger} />
     <Portal>
         <Tooltip.Positioner>
-            <Tooltip.Content element={children}>
+            <Tooltip.Content element={content}>
+                {@render children?.()}
                 <Tooltip.Arrow style="--arrow-size: calc(var(--spacing) * 2)">
                     <Tooltip.ArrowTip />
                 </Tooltip.Arrow>

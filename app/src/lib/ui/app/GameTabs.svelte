@@ -5,6 +5,7 @@
     import VersionBadge from "./VersionBadge.svelte";
     import Tooltip from "../common/Tooltip.svelte";
     import { clamp } from "$lib/app/utils.svelte";
+    import GameTooltip from "./GameTooltip.svelte";
 
     let registry = injectAssert<Registry>(REGISTRY);
     let activeTab = $state(0);
@@ -22,20 +23,13 @@
             {#each registry.games as game, i (game.conn.id)}
                 <!-- TODO: context menu -->
                 <!-- TODO: retain UI on disconnect -->
-                <Tooltip>
+                <Tooltip interactive>
                     {#snippet trigger(attrs)}
                         <button {...attrs} class:active={activeTab === i} class:closed={game.conn.closed} onclick={() => activeTab = i}>
-                            <div class="row">
-                                <span>{game.name}</span>
-                            </div>
+                            <span>{game.name}</span>
                         </button>
                     {/snippet}
-                    <div class="row">
-                        <VersionBadge version={game.conn.version} />
-                        <p>ID: <b>{game.conn.id}</b></p>
-                        <button onclick={() => window.navigator.clipboard.writeText(game.conn.id)}>Copy</button>
-                        <button onclick={() => game.conn.disconnect()}>Disconnect</button>
-                    </div>
+                    <GameTooltip {game} />
                 </Tooltip>
             {/each}
         </div>
@@ -47,7 +41,7 @@
     {/if}
 </div>
 
-<style>
+<style lang="postcss">
     .tabs-header {
         display: flex;
         border-bottom: 1px solid light-dark(#ccc, #333);
@@ -74,11 +68,5 @@
 
     .tab-content {
         padding-top: 1rem;
-    }
-
-    .row {
-        display: flex;
-        align-items: center;
-        justify-content: center;
     }
 </style>
