@@ -1,21 +1,18 @@
 <!-- adapted from https://lyra.horse/blog/2025/08/you-dont-need-js/ -->
 <script lang="ts">
     import type { Snippet } from "svelte";
-    import type { ClassValue } from "svelte/elements";
 
     type Item = string;
     type Props = {
         items: Item[];
         groupName?: string;
         selectedIndex?: number;
-        class?: ClassValue;
         renderItem?: Snippet<[Item, number]>;
     }
     let {
         items,
         groupName = Math.random().toFixed(8),
         selectedIndex = $bindable(),
-        class: _class,
         renderItem = defaultRender,
     }: Props = $props();
 
@@ -44,22 +41,48 @@
     <span>{item}</span>
 {/snippet}
 
-<radio-picker role="radiogroup" class={`inline-flex overflow-hidden rounded-full border border-neutral-200/80 bg-neutral-100/80 text-sm text-neutral-700 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/70 dark:text-neutral-200 ${_class ?? ""}`}>
+<radio-picker role="radiogroup">
     {#each items as item, i}
         {@const dispName = typeof item === "string" ? item : i}
-        {@const isActive = selectedIndex === i}
-        <label
-            class={`relative flex cursor-pointer select-none items-center gap-2 px-3 py-1.5 font-medium transition hover:bg-neutral-200/80 focus-within:ring-2 focus-within:ring-sky-500/60 focus-within:ring-offset-2 focus-within:ring-offset-neutral-100 dark:hover:bg-neutral-800/70 dark:focus-within:ring-offset-neutral-900 first:rounded-l-full last:rounded-r-full ${i < items.length - 1 ? "border-r border-neutral-200/60 dark:border-neutral-700/80" : ""} ${isActive ? "bg-sky-500/20 text-sky-700 shadow-inner dark:bg-sky-500/30 dark:text-sky-100" : "text-neutral-700 dark:text-neutral-200"}`}>
+        <label>
             <input type="radio" group={groupName}
                 id="{groupName}_{dispName}"
                 value={dispName}
                 data-index={i}
                 checked={selectedIndex === i}
                 onchange={handleChange}
-                class="peer sr-only" >
-            <div class="flex items-center gap-2">
+                class="sr-only">
+            <div class="flex items-center gap-2 size-full">
                 {@render renderItem(item, i)}
             </div>
         </label>
     {/each}
 </radio-picker>
+
+<style lang="postcss">
+@reference "tailwindcss";
+@reference "@skeletonlabs/skeleton";
+@reference "@skeletonlabs/skeleton-svelte";
+@reference "@skeletonlabs/skeleton/themes/cerberus";
+
+radio-picker {
+    @apply inline-flex overflow-hidden rounded-full
+        border border-neutral-200/80 bg-neutral-100
+        text-sm text-neutral-700 shadow-sm;
+
+    & label {
+        @apply relative flex cursor-pointer select-none items-center gap-2 font-medium
+            px-2.5 py-1
+            hover:bg-neutral-200
+            size-full
+            first:rounded-l-full last:rounded-r-full;
+        &:focus-visible {
+            @apply border border-sky-500;
+        }
+        &:has(input:checked) {
+            @apply bg-primary-500/20
+            dark:bg-primary-600/50;
+        }
+    }
+}
+</style>

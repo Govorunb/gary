@@ -5,7 +5,7 @@ import time
 
 from collections import namedtuple
 from collections.abc import Sequence
-from typing import Self, cast
+from typing import Self, cast, TYPE_CHECKING
 from guidance.chat import ChatTemplate
 from guidance.models import Model, LlamaCpp
 from guidance.models._llama_cpp import LlamaCppEngine, LlamaCppTokenizer
@@ -231,7 +231,7 @@ class Llarry(LlamaCpp):
         return copy + new_prompt
 
 class LlarryTokenizer(LlamaCppTokenizer):
-    def __init__(self, model_obj: Llama, chat_template: ChatTemplate | str | None):
+    def __init__(self, model_obj: "Llama", chat_template: ChatTemplate | str | None):
         super().__init__(model_obj, chat_template)
         self._is_phi = "phi" in model_obj.model_path.lower()\
             or "phi" in model_obj.metadata.get("general.architecture", "").lower()

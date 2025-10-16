@@ -9,27 +9,19 @@
         @apply transition-colors duration-150;
     }
 
+    :root {
+        color-scheme: dark light;
+        &.light {
+            color-scheme: light;
+        }
+        &.dark {
+            color-scheme: dark;
+        }
+    }
+    
+
     body {
         @apply min-h-screen bg-neutral-100 font-sans text-base font-normal leading-5 text-neutral-900 antialiased;
         @apply dark:bg-neutral-900 dark:text-neutral-100;
     }
 }
-
-:root {
-    color-scheme: light dark;
-}
-
-:root:has(#theme_☀️:checked),
-:root:has(#theme_Light:checked) {
-    color-scheme: light;
-}
-
-:root:has(#theme_🌙:checked),
-:root:has(#theme_Dark:checked) {
-    color-scheme: dark;
-}
-/* 
-input,
-button {
-  outline: none;
-} */

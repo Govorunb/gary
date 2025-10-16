@@ -95,13 +95,20 @@ The Tauri application is in **early development** and represents the future dire
 - SvelteKit routed pages in `app/src/routes/`
 - Zod to validate incoming WebSocket messages
 
+#### Frontend Stack
+- Svelte 5
+- SvelteKit
+- Vite
+- Skeleton UI
+- Tailwind CSS
+- Lucide Icons
 
 ## Development Workflow
 
 ### Current Development Focus
 - Python app (`src/gary/`) is stable and manually maintained by the repo owner. Agent contributors should treat it as read-only.
-- The Tauri frontend (`app/src/`) is the focus for development work going forward.
-- The Tauri backend (`app/src-tauri`) should be treated as read-only unless explicitly instructed to work on it.
+- The Tauri app's Svelte frontend (`app/src/`) is the focus for development work going forward.
+- The Tauri app's Rust backend (`app/src-tauri`) should be treated as read-only unless explicitly instructed to work on it.
 
 
 ## Key Paths for LLM Project Navigation
