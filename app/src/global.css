@@ -5,23 +5,21 @@
 @import '@skeletonlabs/skeleton/themes/cerberus';
 
 @layer base {
-    *, *::before, *::after {
-        @apply transition-colors duration-150;
-    }
-
-    :root {
-        color-scheme: dark light;
-        &.light {
-            color-scheme: light;
-        }
-        &.dark {
-            color-scheme: dark;
-        }
-    }
-    
+    /* for some reason *only some* of the text transitions really slowly (>1s) */
+    /* * { @apply transition-colors duration-150; } */
 
     body {
         @apply min-h-screen bg-neutral-100 font-sans text-base font-normal leading-5 text-neutral-900 antialiased;
         @apply dark:bg-neutral-900 dark:text-neutral-100;
     }
 }
+
+@layer theme {
+    * {
+        @variant dark {
+            color-scheme: dark;
+        }
+    }
+}
+
+@custom-variant dark (&:where(.dark, .dark *));

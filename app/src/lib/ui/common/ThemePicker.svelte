@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onDestroy, onMount } from "svelte";
     import RadioButtons from "./RadioButtons.svelte";
     import { Monitor, Sun, Moon } from "@lucide/svelte";
 
@@ -7,12 +8,31 @@
     const savedTheme = localStorage.getItem("theme");
     let selectedIndex = $state(Math.max(0, themes.indexOf(savedTheme!)));
     let selectedTheme = $derived(themes[selectedIndex]);
-    // $inspect(selectedTheme);
+
+    const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
     $effect(() => {
         localStorage.setItem("theme", selectedTheme);
-        document.documentElement.classList.remove("system", "light", "dark");
-        document.documentElement.classList.add(themes[selectedIndex].toLowerCase());
+        if (selectedIndex == 0) {
+            setTheme(systemDark.matches ? "dark" : "light");
+        } else {
+            setTheme(themes[selectedIndex].toLowerCase());
+        }
     })
+    onMount(() => {
+        systemDark.addEventListener("change", systemThemeChanged);
+    });
+    onDestroy(() => {
+        systemDark.removeEventListener("change", systemThemeChanged);
+    });
+
+    function systemThemeChanged(evt: MediaQueryListEvent) {
+        if (selectedIndex != 0) return;
+        setTheme(evt.matches ? "dark" : "light");
+    }
+    function setTheme(theme: string) {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(theme);
+    }
 </script>
 
 
@@ -39,4 +59,3 @@
         @apply flex items-center size-full gap-2;
     }
 </style>
-
