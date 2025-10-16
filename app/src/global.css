@@ -6,7 +6,9 @@
 
 @layer base {
     /* for some reason *only some* of the text transitions really slowly (>1s) */
-    /* * { @apply transition-colors duration-150; } */
+    h1,h2,h3,h4,p,a,button,span,svg {
+        @apply transition-colors duration-150;
+    }
 
     body {
         @apply min-h-screen bg-neutral-100 font-sans text-base font-normal leading-5 text-neutral-900 antialiased;
@@ -22,4 +24,4 @@
     }
 }
 
-@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:where(.loading-theme, .dark, .dark *));
