@@ -30,7 +30,7 @@
         setTheme(evt.matches ? "dark" : "light");
     }
     function setTheme(theme: string) {
-        document.documentElement.classList.remove("light", "dark", "loading-theme");
+        document.documentElement.classList.remove("light", "dark");
         document.documentElement.classList.add(theme);
     }
 </script>

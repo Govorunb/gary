@@ -66,22 +66,24 @@
 @reference "@skeletonlabs/skeleton/themes/cerberus";
 
 radio-picker {
-    @apply inline-flex overflow-hidden rounded-full
+@apply inline-flex overflow-visible rounded-full
         border border-neutral-200/80 bg-neutral-100
-        text-sm text-neutral-700 shadow-sm;
+        text-sm text-neutral-700 shadow-sm
+        dark:border-neutral-800/80 dark:bg-neutral-900 dark:text-neutral-200;
 
     & label {
         @apply relative flex cursor-pointer select-none items-center gap-2 font-medium
             px-2.5 py-1
             hover:bg-neutral-200
             size-full
-            first:rounded-l-full last:rounded-r-full;
-        &:focus-visible {
-            @apply border border-sky-500;
+            first:rounded-l-full last:rounded-r-full
+            dark:hover:bg-neutral-700
+            dark:active:bg-neutral-800/80;
+        &:has(input:focus-visible) {
+            @apply outline-2 outline-tertiary-500 outline-offset-1;
         }
         &:has(input:checked) {
-            @apply bg-primary-500/20
-            dark:bg-primary-600/50;
+            @apply bg-primary-500/20 dark:bg-primary-600;
         }
     }
 }

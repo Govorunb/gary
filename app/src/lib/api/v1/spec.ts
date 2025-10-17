@@ -16,6 +16,9 @@ export type Action = z.infer<typeof zAction>;
 
 export const zGameMessageBase = z.strictObject({
     game: z.string(),
+    // *technically* an error to include this in dataless messages, but we ball
+    // (e.g. Abandoned Pub sends `startup` with `data: {}`)
+    data: z.object().optional(),
 });
 
 export const zStartup = z.strictObject({

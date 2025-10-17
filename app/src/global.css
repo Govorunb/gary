@@ -24,4 +24,4 @@
     }
 }
 
-@custom-variant dark (&:where(.loading-theme, .dark, .dark *));
+@custom-variant dark (&:where(.dark, .dark *));

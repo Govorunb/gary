@@ -44,7 +44,7 @@ impl ClientWSConnection {
 
     pub async fn lifecycle(&mut self) -> Result<(), String> {
         let _ = self.channel.send(ServerWSEvent::Connected);
-        // ignores Some(Err)
+        // FIXME: ignores Some(Err)
         while let Some(Ok(raw_msg)) = self.rx.next().await {
             match raw_msg {
                 Message::Binary(_) => {

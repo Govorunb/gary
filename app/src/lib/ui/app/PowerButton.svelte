@@ -3,7 +3,7 @@
     import { injectAssert } from "$lib/app/utils/di";
     import ServerConfig from "./ServerConfig.svelte";
     import { CirclePower, SlidersHorizontal } from "@lucide/svelte";
-    import { Popover, Portal, usePopover } from "@skeletonlabs/skeleton-svelte";
+    import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
 
     let manager = injectAssert<ServerManager>(SERVER_MANAGER);
 
@@ -12,11 +12,6 @@
 
     let powerBtnTooltip = $derived(running ? "Stop server" : "Start server");
     let optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options");
-    const id = $props.id();
-    const popover = usePopover({
-        id,
-        closeOnInteractOutside: true,
-    })
 
     async function togglePower() {
         await manager.toggle();
@@ -34,34 +29,34 @@
         >
             <CirclePower size={40} color={running ? "#0f9d58" : "#d93025"} class="pointer-events-none" />
         </button>
-        <Popover.Provider value={popover}>
+        <Popover>
             <Popover.Trigger>
-                <button
-                    id="options-button"
-                    class="options-button"
-                    disabled={configDisabled}
-                    title={optionsBtnTooltip}
-                    aria-label={optionsBtnTooltip}
-                    >
-                    <SlidersHorizontal size=20 class="pointer-events-none" />
-                </button>
+                {#snippet element(props)}
+                    <button {...props}
+                        class="options-button"
+                        disabled={configDisabled}
+                        title={optionsBtnTooltip}
+                        aria-label={optionsBtnTooltip}
+                        >
+                        <SlidersHorizontal size=20 class="pointer-events-none" />
+                    </button>
+                {/snippet}
             </Popover.Trigger>
             <Portal>
                 <Popover.Positioner class="z-20!">
                     <Popover.Content>
                         <div class="popover-content">
-                            <div class="popover-header">
-                                <span>Server options</span>
-                            </div>
                             <ServerConfig />
+                            <div class="popover-arrow">
+                                <Popover.Arrow>
+                                    <Popover.ArrowTip />
+                                </Popover.Arrow>
+                            </div>
                         </div>
-                        <Popover.Arrow>
-                            <Popover.ArrowTip />
-                        </Popover.Arrow>
                     </Popover.Content>
                 </Popover.Positioner>
             </Portal>
-        </Popover.Provider>
+        </Popover>
     </div>
     {#if running}
         <p class="text-sm">Server is running on port {manager.port}</p>
@@ -106,8 +101,14 @@
             dark:bg-neutral-800/70 dark:text-neutral-200 dark:hover:bg-neutral-800;
     }
 
+    .popover-arrow {
+        --arrow-size: calc(var(--spacing) * 4);
+        --arrow-background: var(--color-neutral-800);
+    }
+
     .popover-content {
-        @apply absolute left-0 top-full z-10 mt-3 flex min-w-[250px] flex-col gap-3 rounded-xl bg-neutral-800 border border-neutral-700 p-5 text-sm text-neutral-50 shadow-2xl ring-1 ring-neutral-800 backdrop-blur;
+        @apply relative left-0 top-full z-10 flex min-w-fit flex-col gap-3 rounded-xl;
+        @apply bg-neutral-800 border border-neutral-700 p-5 text-sm text-neutral-50 shadow-xl ring-1 ring-neutral-800;
     }
 
     .popover-header {

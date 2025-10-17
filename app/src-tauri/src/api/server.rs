@@ -191,13 +191,14 @@ async fn try_upgrade(ws: WebSocketUpgrade, app: AppHandle, version: ApiVersion) 
             let _ = app.emit("server-state", server.connections());
         }
         debug!("awaiting lifecycle for conn {id}");
-        let close_reason = (conn.lifecycle().await).err();
-        info!("conn {id} closed ({:?})", close_reason.clone().unwrap_or("normal closure".to_owned()));
+        // TODO: no error if closed by server
+        let close_error = (conn.lifecycle().await).err();
+        info!("conn {id} closed ({:?})", close_error.clone().unwrap_or("no error".to_owned()));
         {
             let state_mutex = app.state::<AppStateMutex>();
             let mut state = state_mutex.lock().await;
             if let Some(server) = state.server.as_mut() {
-                let _ = server.close(id, None, close_reason).await;
+                let _ = server.close(id, None, close_error).await;
                 let _ = app.emit("server-state", server.connections());
             }
         }

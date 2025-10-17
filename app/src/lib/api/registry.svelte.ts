@@ -109,8 +109,8 @@ export class Game {
         const msg = v1.zGameMessage.safeParse(msgMaybe);
         if (!msg.success) {
             const err = z.treeifyError(msg.error);
-            log.error(`Invalid message: ${txt}\n\tzod error: ${err}`);
-            await this.conn.disconnect(1006, `Invalid message: ${err}`);
+            log.error(`Invalid message: ${txt}\nzod errors: \n\t-${err.errors.join("\n\t-")}`);
+            await this.conn.disconnect(1006, `Invalid message with command '${err.properties?.command}':\nErrors: \n\t-${err.errors.join("\n\t-")}`);
             return;
         }
         await this.handle(msg.data);
