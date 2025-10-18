@@ -56,7 +56,7 @@ export class Registry {
         }
     }
 
-    createGame(name: string, conn: GameWSConnection) {
+    createGame(name: string, conn: GameWSConnection): Game {
         const game = new Game(this.session, name, conn);
         this.games.push(game);
         conn.onclose = () => {
@@ -64,6 +64,7 @@ export class Registry {
             const i = this.games.indexOf(game);
             this.games.splice(i, 1);
         };
+        return game;
     }
 
     getGame(id: string) {
@@ -140,7 +141,7 @@ export class Game {
                 log.info(`startup woo`);
                 break;
             case "context":
-                this.session.context.client(this.name, msg.data.message, { silent: msg.data.silent });
+                await this.context(msg.data.message, msg.data.silent);
                 break;
             case "actions/register":
                 this.registerActions(msg.data.actions);
@@ -149,16 +150,25 @@ export class Game {
                 this.unregisterActions(msg.data.actionNames);
                 break;
             case "actions/force":
+                // FIXME: should use event queue
+                this.session.scheduler.force_act();
                 break;
             case "action/result":
                 const silent = msg.data.success;
                 let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
-                this.session.context.client(this.name, text, { silent });
+                await this.context(text, silent);
                 break;
             case "shutdown/ready":
                 break;
             default:
                 log.warn(`Unimplemented command '${(msg as any).command}'`);
+        }
+    }
+
+    async context(text: string, silent: boolean) {
+        this.session.context.client(this.name, text, { silent });
+        if (!silent) {
+            this.session.scheduler.try_act();
         }
     }
 

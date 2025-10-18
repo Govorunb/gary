@@ -1,4 +1,5 @@
 import { v7 as uuid7 } from "uuid";
+import type { Session } from "./session.svelte";
 
 export abstract class ContextManager {
     readonly allMessages: Message[] = $state([]);
@@ -6,6 +7,10 @@ export abstract class ContextManager {
     readonly modelView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.model ?? true));
     /** A subset of messages that are visible to the user. */
     readonly userView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.user ?? true));
+
+    constructor(private readonly session: Session) {
+        
+    }
 
     system(text: string, options: MessageOptions, data?: CustomData) {
         this.push({

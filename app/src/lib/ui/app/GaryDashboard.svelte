@@ -4,7 +4,6 @@
     import ContextLog from "./ContextLog.svelte";
     import GameTabs from "./GameTabs.svelte";
     import { GameWSConnection } from "$lib/api/ws";
-    import { Game } from "$lib/api/registry.svelte";
     import { SESSION, type Session } from "$lib/app/session.svelte";
     import { Channel } from "@tauri-apps/api/core";
     import { v4 as uuid } from "uuid";
@@ -12,9 +11,11 @@
     let registry = injectAssert<Registry>(REGISTRY);
     let session = injectAssert<Session>(SESSION);
 
+    let counter = $state(1);
     function addDummyData() {
-        const dummyConn = new GameWSConnection(`dummy-${uuid()}`, "v1", new Channel());
-        const dummyGame = new Game(session, `Dummy Game ${registry.games.length + 1}`, dummyConn);
+        const i = counter++;
+        const dummyConn = new GameWSConnection(`dummy-${i}`, "v1", new Channel());
+        const dummyGame = registry.createGame(`Dummy Game ${i}`, dummyConn);
         dummyGame.actions.set("test_action", {
             name: "test_action",
             description: "This is a test action.",
@@ -25,7 +26,6 @@
                  },
              },
          });
-         registry.games.push(dummyGame);
          session.context.system("System message.", {});
          session.context.client(dummyGame.name, "Client message.", {});
          session.context.user("User message.", {});

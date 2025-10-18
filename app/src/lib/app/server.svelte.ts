@@ -23,10 +23,10 @@ export class ServerManager {
     private readonly subscriptions: UnlistenFn[] = $state([]);
     private readonly userPrefs: UserPrefs;
 
-    constructor(session: Session, registry: Registry, userPrefs: UserPrefs) {
+    constructor(session: Session, userPrefs: UserPrefs) {
         this.session = session;
-        this.session.onDispose(() => this.dispose());
-        this.registry = registry;
+        void this.session.onDispose(() => this.dispose());
+        this.registry = session.registry;
         this.userPrefs = userPrefs;
         void this.initialize();
     }

@@ -23,14 +23,20 @@ The **client** (game integration) connects to **server** (backend).
 Then, the following happens until either side disconnects (e.g. the game ends):
 1. Client registers **actions** as available to be performed
   - Actions contain an **action schema** (JSON schema) for **action data**
-2. As things happen in the game, the client sends **context** to inform the LLM
-3. At some point in time, the **LLM** on the server indicates it wants to perform an action and generates action data for it
+2. As things happen in the game, the client sends **context** to inform the **actor**
+3. At some point in time, the **actor** indicates it wants to perform an action and generates action data for it
 4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action
 5. The client responds with the **action result**, which is also inserted into context as feedback to the LLM
 6. The client may **unregister** the action, e.g. if it was a one-off action that is not repeatable
 7. At any point, the client may send a **force action** message with a subset of valid actions, which *requires* the server to send a response performing one of the given actions *as soon as possible*
 
 If the connection drops, on reconnect, the server will send a message prompting the client to re-register all currently available actions. The client should ignore it if no actions are available.
+
+In this application, the actor's role may be taken by different **engines**, such as:
+- Local LLMs (specifically through `llama_cpp`)
+- Remote services like OpenRouter
+- Randy (a random generator)
+- Tony ('Tony mode' is a term for when the user manually sends actions through the UI, superceding the active engine)
 
 ## Stable - Python Application (`src/gary/`)
 

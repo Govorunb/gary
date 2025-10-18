@@ -18,6 +18,7 @@
     let powerBtnTooltip = $derived(running ? "Stop server" : "Start server");
     let optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options");
 
+    // TODO: shutting off with connected games should be a hold action (~1s) with Shift+Click bypass
     async function togglePower() {
         try {
             await manager.toggle();

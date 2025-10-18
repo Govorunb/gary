@@ -36,8 +36,11 @@
     <!-- TODO: this should render as a grid (currently long messages will break the timestamp into two lines, misaligning everything) -->
     {#each session.context.userView as msg (msg.id)}
         <div class={`${messageBaseClasses} ${sourceAccent[msg.source.type]}`}>
+            <!-- TODO: put icon in corner (real estate) -->
+            <!-- TODO: more icons (silent, ephemeral, etc) in one or more corners -->
             <span class="text-lg">{getSourceIcon(msg.source)}</span>
             <span class="text-xs text-neutral-500 dark:text-neutral-400">{msg.timestamp.toLocaleTimeString()}</span>
+            <!-- TODO: click to focus that game's tab -->
             {#if msg.source.type === 'client'}
                 <span class="font-semibold text-neutral-700 dark:text-neutral-200">{msg.source.name}:</span>
             {/if}
