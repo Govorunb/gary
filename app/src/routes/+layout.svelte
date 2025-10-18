@@ -7,6 +7,7 @@
     import { onDestroy } from 'svelte';
     import { USER_PREFS, UserPrefs } from '$lib/app/prefs.svelte';
     import type { LayoutProps } from './$types.js';
+    import { Toaster } from "svelte-sonner";
 
     let { data, children }: LayoutProps = $props();
     
@@ -24,3 +25,5 @@
 <div class="flex min-h-screen flex-col" role="application">
     {@render children()}
 </div>
+
+<Toaster closeButton richColors position="bottom-right" theme={userPrefs.theme} />

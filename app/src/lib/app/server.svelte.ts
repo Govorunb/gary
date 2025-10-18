@@ -5,6 +5,7 @@ import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import { clamp } from "./utils.svelte";
 import type { Session } from "./session.svelte";
 import { UserPrefs } from "./prefs.svelte";
+import { toast } from "svelte-sonner";
 
 const STORAGE_KEY = "ws-server:port";
 const DEFAULT_PORT = 8000;
@@ -106,6 +107,9 @@ export class ServerManager {
 
         for (const id of serverOnly) {
             log.warn(`Closing server-only connection ${id}`);
+            toast.warning(`Closing server-only connection`, {
+                description: `ID: ${id}`,
+            });
             await invoke("ws_close", { id, code: 1000, reason: "UI out of sync, please reconnect" });
         }
 
@@ -114,6 +118,9 @@ export class ServerManager {
             if (game === undefined) {
                 log.error(`registry-only game at ${id} doesn't exist`);
             } else {
+                toast.warning(`Closing registry-only connection`, {
+                    description: `ID: ${id} (game ${game.name})`,
+                });
                 log.warn(`Closing registry-only connection ${id} (game ${game.name})`);
                 this.registry.games.splice(this.registry.games.indexOf(game), 1);
                 game.conn.dispose();

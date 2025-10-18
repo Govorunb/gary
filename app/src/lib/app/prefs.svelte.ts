@@ -1,5 +1,6 @@
 import z from "zod";
 import * as log from "@tauri-apps/plugin-log";
+import { toast } from "svelte-sonner";
 // import * as store from "@tauri-apps/plugin-store";
 
 export const USER_PREFS = "userPrefs";
@@ -34,10 +35,25 @@ export class UserPrefs {
         const dataStr = localStorage.getItem(USER_PREFS);
         const data = dataStr === null ? {} : JSON.parse(dataStr);
         const parsed = zUserPrefs.safeParse(data);
+        // most fields have defaults, so this should only fail in extreme cases
         if (!parsed.success) {
             const zodError = z.treeifyError(parsed.error);
-            // TODO: throw/surface error in app
-            log.error("failed to parse user prefs\n\tzod errors: \n\t-" + zodError.errors.join("\n\t-"));
+            // ideally should be a modal (open json for editing, try reload, use defaults)
+            // mayhaps we should have a loading/splash screen before dashboard init
+            const zodErrors = zodError.errors.join("\n\t-");
+            log.error("failed to parse user prefs\n\tzod errors: \n\t-" + zodErrors);
+            toast.error("Failed to parse user prefs", {
+                description: `Replaced prefs with defaults\n\tErrors:\n\t- ${zodErrors}`,
+                dismissable: true,
+                closeButton: true,
+                id: "prefs-load-error",
+                action: {
+                    label: "OK",
+                    onClick: () => {
+                        toast.dismiss("prefs-load-error");
+                    }
+                }
+            });
             return zUserPrefs.parse({});
         }
         log.debug("loaded prefs");

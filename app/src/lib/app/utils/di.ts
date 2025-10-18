@@ -1,4 +1,5 @@
 import { getContext, hasContext, setContext } from "svelte";
+import { toast } from "svelte-sonner";
 
 type DIKey = symbol | string;
 
@@ -7,6 +8,9 @@ export function inject<T extends {}>(key: DIKey): T | undefined {
 }
 export function injectAssert<T extends {}>(key: DIKey): T {
     if (!hasContext(key)) {
+        if (import.meta.env.DEV) {
+            toast.error(`(DI) No value provided for key ${key.toString()}`);
+        }
         throw new Error(`(DI) No value provided for key ${key.toString()}`);
     }
     return getContext(key);

@@ -3,9 +3,10 @@
     import { type ServerManager, SERVER_MANAGER } from "$lib/app/server.svelte";
     import { REGISTRY, type Registry } from "$lib/api/registry.svelte";
     import { injectAssert } from "$lib/app/utils/di";
+    import { USER_PREFS, type UserPrefs } from "$lib/app/prefs.svelte";
 
     let manager = injectAssert<ServerManager>(SERVER_MANAGER);
-    let registry = injectAssert<Registry>(REGISTRY);
+    let userPrefs = injectAssert<UserPrefs>(USER_PREFS);
 </script>
 
 <div class="flex items-center justify-center gap-4">
@@ -18,6 +19,6 @@
         min="1024"
         {@attach webkitScrollNum}
         placeholder="Port (default 8000)"
-        bind:value={manager.port}
+        bind:value={userPrefs.serverPort}
     />
 </div>

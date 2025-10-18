@@ -36,10 +36,13 @@ Previously, the LLM engine was selected on startup and could not be changed. The
 
 The Tauri app will support OpenAI-compatible remote APIs - specifically, OpenRouter will get direct support, with a generic engine exposed for other services.
 
-#### Miscellaneous wishlist
+#### Miscellaneous task list
 - Actual config UI (I can't believe this wasn't done already)
 - Launching game processes (enabling use of the proposed Shutdown API)
-- App logs should also show up in UI as notifications
+- App logs should also show up in UI (as accessible log/toast notifications)
+- Multi-game action collisions
+  With single-context (and single-engine) two games may register actions with the same name.
+  A possible solution is renaming the colliding actions to `action(game)` or something, only when passing the list of actions to the engine.
 
 #### UI Modes/Auto checks
 

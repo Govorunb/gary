@@ -102,6 +102,8 @@ The Tauri application is in **early development** and represents the future dire
 - Skeleton UI
 - Tailwind CSS
 - Lucide Icons
+- Svelte Sonner (for toasts)
+  - Skeleton UI already provides toasts, but Zag (their dependency) has a bug that makes it so toasts never get disposed internally and you reach max toasts very quickly
 
 ## Development Workflow
 

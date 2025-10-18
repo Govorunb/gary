@@ -7,6 +7,7 @@
     import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
     import { boolAttr } from "runed";
     import * as log from "@tauri-apps/plugin-log";
+    import { toast } from "svelte-sonner";
 
     let userPrefs = injectAssert<UserPrefs>(USER_PREFS);
     let manager = injectAssert<ServerManager>(SERVER_MANAGER);
@@ -27,8 +28,10 @@
             if (err_msg.includes("in use")) {
                 err_msg = `The port ${userPrefs.serverPort} is already in use. Check for other instances of Gary, Tony, etc.`;
             }
-            // TODO: toast
-            console.error(`${err_title}:\n${err_msg}`);
+            toast.error(err_title, {
+                description: err_msg,
+                id: "server-start-error",
+            });
         }
     }
 </script>

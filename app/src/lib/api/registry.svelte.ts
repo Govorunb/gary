@@ -5,6 +5,7 @@ import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
 import z from "zod";
 import type { Session } from "$lib/app/session.svelte";
+import { toast } from "svelte-sonner";
 
 export type WSConnectionRequest = {
     id: string;
@@ -109,8 +110,13 @@ export class Game {
         const msg = v1.zGameMessage.safeParse(msgMaybe);
         if (!msg.success) {
             const err = z.treeifyError(msg.error);
-            log.error(`Invalid message: ${txt}\nzod errors: \n\t-${err.errors.join("\n\t-")}`);
-            await this.conn.disconnect(1006, `Invalid message with command '${err.properties?.command}':\nErrors: \n\t-${err.errors.join("\n\t-")}`);
+            const zodErrors = err.errors.join("\n\t-");
+            toast.error("Invalid WebSocket message", {
+                description: `Game ${this.name} sent invalid message with command '${err.properties?.command}':\nErrors: \n\t-${zodErrors}`,
+                id: `invalid-websocket-message(${this.name})`,
+            });
+            log.error(`Invalid message: ${txt}\nzod errors: \n\t-${zodErrors}`);
+            await this.conn.disconnect(1006, `Invalid message with command '${err.properties?.command}':\nErrors: \n\t-${zodErrors}`);
             return;
         }
         await this.handle(msg.data);
@@ -118,10 +124,15 @@ export class Game {
 
     async handle(msg: v1.GameMessage) {
         log.trace(`Handling ${msg.command}`);
-        if (this.conn.version == "v1" && this.name === `<Pending-${this.conn.id}>`) {
+        if (this.conn.version == "v1") {
             // technically vulnerable but i'd like to see a game out in the wild actually guess its own id
             // could also just replace the game name on every single message, it's UB in the v1 spec so we can do whatever
-            log.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
+            if (this.name === `<Pending-${this.conn.id}>`) {
+                log.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
+            } else {
+                log.warn(`Game ${this.name} changed its name to ${msg.game}`);
+                toast.warning(`Game ${this.name} changed its name to ${msg.game}`);
+            }
             this.name = msg.game;
         }
         switch (msg.command) {
@@ -176,6 +187,9 @@ export class Game {
             const existed = this.actions.delete(action_name);
             const logMethod = existed ? log.info : log.warn;
             logMethod(`Unregistered ${existed ? '' : 'non-'}existing action ${action_name}`);
+            if (!existed) {
+                toast.warning(`Game ${this.name} unregistered non-existing action ${action_name}`);
+            }
         }
         log.info(`Actions unregistered: [${actions}]`);
     }

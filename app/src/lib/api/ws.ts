@@ -1,7 +1,8 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { error, info, warn } from "@tauri-apps/plugin-log";
+import * as log from "@tauri-apps/plugin-log";
 import type { NeuroMessage } from "./v1/spec";
+import { toast } from "svelte-sonner";
 
 type OnMessageHandler = (msg: string) => any;
 export type OnCloseHandler = (clientDisconnected?: CloseFrame) => void;
@@ -51,20 +52,22 @@ export class GameWSConnection {
         switch (evt.type) {
             case "connected":
                 // ??? log i guess (or some ui update)
+                toast.info(`Game ${this.shortId} connected`);
                 break;
             case "message":
                 if (this.onmessage) {
                     await this.onmessage(evt.text);
                 } else {
-                    warn(`Connection ${this.shortId} received a WS message but has no onmessage handler! I have no mouth and I must scream`);
+                    log.warn(`Connection ${this.shortId} received a WS message but has no onmessage handler! I have no mouth and I must scream`);
                 }
                 break;
             case "clientDisconnected":
-                info(`client ${this.shortId} disconnected`);
+                log.info(`client ${this.shortId} disconnected`);
                 this.dispose(evt);
                 break;
             case "wsError":
-                warn(`client ${this.shortId} broke its websocket: ${evt.err}`);
+                log.warn(`client ${this.shortId} broke its websocket: ${evt.err}`);
+                toast.error(`Game ${this.shortId} broke its websocket: ${evt.err}`);
                 // server websocket will close itself
                 this.dispose();
                 break;
@@ -80,7 +83,7 @@ export class GameWSConnection {
         try {
             await invoke('ws_send', { id: this.id, text } satisfies SendArgs);
         } catch (e) {
-            error(`Failed to send WS text: ${e}`);
+            log.error(`Failed to send WS text: ${e}`);
             throw e;
         }
     }
