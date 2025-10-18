@@ -1,49 +1,49 @@
 <script lang="ts">
-    import { onDestroy, onMount } from "svelte";
+    import { onMount } from "svelte";
     import RadioButtons from "./RadioButtons.svelte";
     import { Monitor, Sun, Moon } from "@lucide/svelte";
+    import { USER_PREFS, UserPrefs } from "$lib/app/prefs.svelte";
+    import { injectAssert } from "$lib/app/utils/di";
+    import { on } from "svelte/events";
 
     const themeIcons = [Monitor, Sun, Moon];
-    const themes = ["System", "Light", "Dark"];
-    const savedTheme = localStorage.getItem("theme");
-    let selectedIndex = $state(Math.max(0, themes.indexOf(savedTheme!)));
+    const themeTips = ["System", "Light", "Dark"] as const;
+    const themes = ["system", "light", "dark"] as const;
+    const userPrefs = injectAssert<UserPrefs>(USER_PREFS);
+    let selectedIndex = $state(0);
     let selectedTheme = $derived(themes[selectedIndex]);
 
     const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
     $effect(() => {
-        localStorage.setItem("theme", selectedTheme);
-        if (selectedIndex == 0) {
+        userPrefs.theme = selectedTheme;
+        if (selectedTheme === "system") {
             setTheme(systemDark.matches ? "dark" : "light");
         } else {
-            setTheme(themes[selectedIndex].toLowerCase());
+            setTheme(selectedTheme);
         }
+    });
+    $effect(() => {
+        selectedIndex = Math.max(0, themes.indexOf(userPrefs.theme));
     })
-    onMount(() => {
-        systemDark.addEventListener("change", systemThemeChanged);
-    });
-    onDestroy(() => {
-        systemDark.removeEventListener("change", systemThemeChanged);
-    });
+    onMount(() => on(systemDark, "change", systemThemeChanged));
 
     function systemThemeChanged(evt: MediaQueryListEvent) {
-        if (selectedIndex != 0) return;
+        if (selectedTheme !== "system") return;
         setTheme(evt.matches ? "dark" : "light");
     }
-    function setTheme(theme: string) {
+    function setTheme(theme: "dark" | "light") {
         document.documentElement.classList.remove("light", "dark");
         document.documentElement.classList.add(theme);
     }
 </script>
 
-
 <RadioButtons items={themes}
-    bind:selectedIndex={selectedIndex}
+    bind:selectedIndex
     groupName="theme">
     {#snippet renderItem(_, i: number)}
-        {@const theme = themes[i]}
         {@const Icon = themeIcons[i]}
-        <!-- FIXME: tooltip only on symbol (should be on the entire button) -->
-        <div title="{theme}" class="radio-item">
+        <!-- FIXME: tooltip only on symbol (should ideally be on the entire button) -->
+        <div title="{themeTips[i]}" class="radio-item">
             <Icon />
         </div>
     {/snippet}

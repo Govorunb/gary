@@ -4,7 +4,7 @@
 
     type Item = string;
     type Props = {
-        items: Item[];
+        readonly items: readonly Item[];
         groupName?: string;
         selectedIndex?: number;
         renderItem?: Snippet<[Item, number]>;

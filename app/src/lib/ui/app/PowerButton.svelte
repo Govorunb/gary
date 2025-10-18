@@ -1,10 +1,14 @@
 <script lang="ts">
     import { SERVER_MANAGER, type ServerManager } from "$lib/app/server.svelte";
+    import { USER_PREFS, type UserPrefs } from "$lib/app/prefs.svelte";
     import { injectAssert } from "$lib/app/utils/di";
     import ServerConfig from "./ServerConfig.svelte";
     import { CirclePower, SlidersHorizontal } from "@lucide/svelte";
     import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
+    import { boolAttr } from "runed";
+    import * as log from "@tauri-apps/plugin-log";
 
+    let userPrefs = injectAssert<UserPrefs>(USER_PREFS);
     let manager = injectAssert<ServerManager>(SERVER_MANAGER);
 
     let running = $derived(manager.running);
@@ -14,7 +18,18 @@
     let optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options");
 
     async function togglePower() {
-        await manager.toggle();
+        try {
+            await manager.toggle();
+        } catch (e) {
+            let err_title = `Failed to ${running ? "stop" : "start"} server`;
+            log.error(`${err_title}: ${e}`);
+            let err_msg = e as string;
+            if (err_msg.includes("in use")) {
+                err_msg = `The port ${userPrefs.serverPort} is already in use. Check for other instances of Gary, Tony, etc.`;
+            }
+            // TODO: toast
+            console.error(`${err_title}:\n${err_msg}`);
+        }
     }
 </script>
 
@@ -22,12 +37,12 @@
     <div class="power-button-container">
         <button
             class="power-button"
-            data-running={running}
+            data-running={boolAttr(running)}
             onclick={togglePower}
             aria-label={powerBtnTooltip}
             title={powerBtnTooltip}
         >
-            <CirclePower size={40} color={running ? "#0f9d58" : "#d93025"} class="pointer-events-none" />
+            <CirclePower size={40} class={["pointer-events-none", running ? "stroke-[#0f9d58]" : "stroke-[#d93025]"]} />
         </button>
         <Popover>
             <Popover.Trigger>
@@ -59,7 +74,7 @@
         </Popover>
     </div>
     {#if running}
-        <p class="text-sm">Server is running on port {manager.port}</p>
+        <p class="text-sm">Server is running on port {userPrefs.serverPort}</p>
     {:else}
         <p class="text-sm">Server is not running</p>
     {/if}
@@ -82,15 +97,7 @@
             bg-neutral-100 shadow-inner transition-all duration-150
             size-13
             hover:scale-101 active:scale-99
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900
-            dark:bg-neutral-800 dark:focus-visible:ring-offset-neutral-100;
-        &[data-running="true"] {
-            @apply ring-emerald-400/70 focus-visible:ring-emerald-300;
-        }
-    
-        &[data-running="false"] {
-            @apply ring-rose-500/70 focus-visible:ring-rose-300;
-        }
+            dark:bg-neutral-800;
     }
 
 

@@ -4,6 +4,7 @@ import * as log from "@tauri-apps/plugin-log";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import { clamp } from "./utils.svelte";
 import type { Session } from "./session.svelte";
+import { UserPrefs } from "./prefs.svelte";
 
 const STORAGE_KEY = "ws-server:port";
 const DEFAULT_PORT = 8000;
@@ -13,40 +14,36 @@ type ServerConnections = string[] | null;
 export const SERVER_MANAGER = "serverManager";
 
 export class ServerManager {
-    port: number = $state(readStoredPort());
     connections: ServerConnections = $state(null);
     readonly running: boolean = $derived(this.connections != null);
 
     private readonly session: Session;
     private readonly registry: Registry;
     private readonly subscriptions: UnlistenFn[] = $state([]);
+    private readonly userPrefs: UserPrefs;
 
-    constructor(session: Session, registry: Registry) {
+    constructor(session: Session, registry: Registry, userPrefs: UserPrefs) {
         this.session = session;
         this.session.onDispose(() => this.dispose());
         this.registry = registry;
-        $effect(() => {
-            localStorage.setItem(STORAGE_KEY, this.port.toString());
-        });
+        this.userPrefs = userPrefs;
         void this.initialize();
     }
 
     async start() {
         try {
-            await invoke("start_server", { port: this.port });
-        } catch (error) {
-            console.error("Failed to start server:", error);
+            await invoke("start_server", { port: this.userPrefs.serverPort });
+        } finally {
+            await this.sync();
         }
-        await this.sync();
     }
 
     async stop() {
         try {
             await invoke("stop_server");
-        } catch (error) {
-            console.error("Failed to stop server:", error);
+        } finally {
+            await this.sync();
         }
-        await this.sync();
     }
 
     async toggle() {
@@ -61,7 +58,7 @@ export class ServerManager {
         try {
             this.connections = await invoke<ServerConnections>("server_state");
         } catch (error) {
-            console.error("Failed to sync server state:", error);
+            log.error("Failed to sync server state:" + error);
             this.connections = null;
         }
         await this.reconcileConnections();
@@ -74,14 +71,6 @@ export class ServerManager {
         this.subscriptions.length = 0;
     }
 
-    setPort(port: number) {
-        if (!Number.isFinite(port)) {
-            log.error("Invalid port: " + port);
-            return;
-        }
-        this.port = clamp(Math.trunc(port), 1024, 65535);
-    }
-
     private async initialize() {
         try {
             this.subscriptions.push(await listen<WSConnectionRequest>("ws-try-connect", (evt) => {
@@ -92,7 +81,7 @@ export class ServerManager {
                 void this.reconcileConnections();
             }));
         } catch (error) {
-            console.error("Failed to subscribe to server-state events:", error);
+            log.error("Failed to subscribe to server-state events:" + error);
         }
 
         await this.sync();
@@ -131,10 +120,4 @@ export class ServerManager {
             }
         }
     }
-}
-
-function readStoredPort(): number {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = parseInt(raw!); // it accepts nulls
-    return Number.isNaN(parsed) ? DEFAULT_PORT : parsed;
 }
