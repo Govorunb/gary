@@ -52,6 +52,7 @@ export abstract class ContextManager {
         const msg: Message = {
             id: uuid7(),
             timestamp: new Date(),
+            // FIXME: not a deep merge
             options: {
                 silent: false,
                 visibility: {
@@ -80,6 +81,8 @@ type CustomData = Record<string, any>;
 export type Message = {
     id: string;
     timestamp: Date;
+    // TODO: maybe a "category"/"type" and this can just be an event stream for the entire app/session
+    // (would replace per-message visibility with per-category too, + user prefs)
     source: Source; // aka "role"
     text: string;
     options: MessageOptions;

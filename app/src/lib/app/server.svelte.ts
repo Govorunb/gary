@@ -2,13 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import * as log from "@tauri-apps/plugin-log";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
-import { clamp } from "./utils.svelte";
 import type { Session } from "./session.svelte";
 import { UserPrefs } from "./prefs.svelte";
 import { toast } from "svelte-sonner";
-
-const STORAGE_KEY = "ws-server:port";
-const DEFAULT_PORT = 8000;
 
 type ServerConnections = string[] | null;
 

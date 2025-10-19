@@ -5,6 +5,7 @@ import * as log from "@tauri-apps/plugin-log";
 import { zAct, zActData } from "$lib/api/v1/spec";
 import type { Engine } from "./engines";
 
+// TODO: pause on engine error (require user to acknowledge & manually resume)
 export class Scheduler {
     muted: boolean = $state(false);
     sleeping: boolean = $state(false);

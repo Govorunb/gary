@@ -3,6 +3,7 @@ import * as log from "@tauri-apps/plugin-log";
 import { Engine, zEngineAct, type EngineAct } from "..";
 import type { Session } from "$lib/app/session.svelte";
 import type { ContextManager, Message } from "$lib/app/context.svelte";
+import type { JSONSchema } from "openai/lib/jsonschema";
 
 export interface CommonLLMOptions {
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
@@ -93,7 +94,7 @@ You must perform one of the following actions, given this information:
         const anyOf: {}[] = [];
         res.anyOf = anyOf;
         for (const action of actions) {
-            const actionCallSchema = {
+            const actionCallSchema: JSONSchema = {
                 type: "object",
                 properties: {
                     action: { enum: [action.name] },
@@ -102,9 +103,11 @@ You must perform one of the following actions, given this information:
                 additionalProperties: false,
             };
             if (action.schema) {
-                // @ts-ignore
-                actionCallSchema.properties.data = action.schema;
-                actionCallSchema.required.push("data");
+                // TODO: openai quirks
+                // https://platform.openai.com/docs/guides/structured-outputs#all-fields-must-be-required
+                // https://platform.openai.com/docs/guides/structured-outputs#additionalproperties-false-must-always-be-set-in-objects
+                actionCallSchema.properties!.data = action.schema;
+                actionCallSchema.required!.push("data");
             }
             anyOf.push(actionCallSchema);
         }
