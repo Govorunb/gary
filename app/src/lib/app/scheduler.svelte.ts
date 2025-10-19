@@ -5,8 +5,6 @@ import * as log from "@tauri-apps/plugin-log";
 import { zAct, zActData } from "$lib/api/v1/spec";
 import type { Engine } from "./engines";
 
-export const SCHEDULER = "scheduler";
-
 export class Scheduler {
     muted: boolean = $state(false);
     sleeping: boolean = $state(false);

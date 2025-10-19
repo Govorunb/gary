@@ -1,26 +1,34 @@
-import { getContext, hasContext, setContext } from "svelte";
-import { toast } from "svelte-sonner";
+import { createContext } from "svelte";
+import { Session } from "../session.svelte";
+import type { Registry } from "$lib/api/registry.svelte";
+import { UserPrefs, type UserPrefsData } from "../prefs.svelte";
+import type { Scheduler } from "../scheduler.svelte";
+import { ServerManager } from "../server.svelte";
 
-type DIKey = symbol | string;
+const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
+const [ getSession, setSession ] = createContext<Session>();
+const [ getRegistry, setRegistry ] = createContext<Registry>();
+const [ getScheduler, setScheduler ] = createContext<Scheduler>();
+const [ getServerManager, setServerManager ] = createContext<ServerManager>();
 
-export function inject<T extends {}>(key: DIKey): T | undefined {
-    return getContext(key);
+export {
+    getUserPrefs,
+    getSession,
+    getRegistry,
+    getScheduler,
+    getServerManager,
 }
-export function injectAssert<T extends {}>(key: DIKey): T {
-    if (!hasContext(key)) {
-        if (import.meta.env.DEV) {
-            toast.error(`(DI) No value provided for key ${key.toString()}`);
-        }
-        throw new Error(`(DI) No value provided for key ${key.toString()}`);
-    }
-    return getContext(key);
-}
 
-export function provide<T extends {}>(key: DIKey, value: T): T {
-    return setContext(key, value);
-}
+export function initDI(userPrefsData: UserPrefsData) {
+    const userPrefs = new UserPrefs(userPrefsData);
+    const session = new Session("default");
+    const registry = session.registry;
+    const scheduler = session.scheduler;
+    const serverManager = new ServerManager(session, userPrefs);
 
-/** Initializes DI for a key - gets existing or registers new from factory. */
-export function init<T extends {}>(key: DIKey, factory: () => T): T {
-    return inject(key) ?? provide(key, factory());
+    setUserPrefs(userPrefs);
+    setSession(session);
+    setRegistry(registry);
+    setScheduler(scheduler);
+    setServerManager(serverManager);
 }

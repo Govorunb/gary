@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { injectAssert } from "$lib/app/utils/di";
-    import { SESSION, type Session } from "$lib/app/session.svelte";
-    import type { Message, Source } from "$lib/app/context.svelte";
+    import { getSession } from "$lib/app/utils/di";
+    import type { Source } from "$lib/app/context.svelte";
 
-    let session = injectAssert<Session>(SESSION);
+    let session = getSession();
 
     const messageBaseClasses = "flex gap-2 items-center rounded-lg border px-3 py-2 transition hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60";
     const sourceAccent: Record<Source['type'], string> = {

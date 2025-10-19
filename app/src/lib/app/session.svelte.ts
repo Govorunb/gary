@@ -4,8 +4,6 @@ import { Scheduler } from "./scheduler.svelte";
 import type { Engine } from "./engines";
 import { Registry } from "$lib/api/registry.svelte";
 
-export const SESSION = "session";
-
 /**
  * Represents a user session within the app.
  * 

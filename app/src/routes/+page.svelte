@@ -2,10 +2,9 @@
     import GaryDashboard from "$lib/ui/app/GaryDashboard.svelte";
     import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
     import PowerButton from "$lib/ui/app/PowerButton.svelte";
-    import { injectAssert } from "$lib/app/utils/di";
-    import { SESSION, type Session } from "$lib/app/session.svelte";
+    import { getSession } from "$lib/app/utils/di";
 
-    const session = injectAssert<Session>(SESSION);
+    const session = getSession();
 </script>
 
 <header>

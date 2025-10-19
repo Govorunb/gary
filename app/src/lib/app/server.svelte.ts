@@ -12,8 +12,6 @@ const DEFAULT_PORT = 8000;
 
 type ServerConnections = string[] | null;
 
-export const SERVER_MANAGER = "serverManager";
-
 export class ServerManager {
     connections: ServerConnections = $state(null);
     readonly running: boolean = $derived(this.connections != null);

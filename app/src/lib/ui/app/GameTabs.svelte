@@ -1,13 +1,11 @@
 <script lang="ts">
-    import { injectAssert } from "$lib/app/utils/di";
-    import { REGISTRY, type Registry } from "$lib/api/registry.svelte";
+    import { getRegistry } from "$lib/app/utils/di";
     import ActionList from "./ActionList.svelte";
-    import VersionBadge from "./VersionBadge.svelte";
     import Tooltip from "../common/Tooltip.svelte";
     import { clamp } from "$lib/app/utils.svelte";
     import GameTooltip from "./GameTooltip.svelte";
 
-    let registry = injectAssert<Registry>(REGISTRY);
+    let registry = getRegistry();
     let activeTab = $state(0);
 
     $effect(() => {

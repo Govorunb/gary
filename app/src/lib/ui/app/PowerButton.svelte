@@ -1,7 +1,5 @@
 <script lang="ts">
-    import { SERVER_MANAGER, type ServerManager } from "$lib/app/server.svelte";
-    import { USER_PREFS, type UserPrefs } from "$lib/app/prefs.svelte";
-    import { injectAssert } from "$lib/app/utils/di";
+    import { getUserPrefs, getServerManager } from "$lib/app/utils/di";
     import ServerConfig from "./ServerConfig.svelte";
     import { CirclePower, SlidersHorizontal } from "@lucide/svelte";
     import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
@@ -9,8 +7,8 @@
     import * as log from "@tauri-apps/plugin-log";
     import { toast } from "svelte-sonner";
 
-    let userPrefs = injectAssert<UserPrefs>(USER_PREFS);
-    let manager = injectAssert<ServerManager>(SERVER_MANAGER);
+    let userPrefs = getUserPrefs();
+    let manager = getServerManager();
 
     let running = $derived(manager.running);
     let configDisabled = $derived(running);

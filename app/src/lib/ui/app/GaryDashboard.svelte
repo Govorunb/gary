@@ -1,14 +1,12 @@
 <script lang="ts">
-    import { injectAssert } from "$lib/app/utils/di";
-    import { REGISTRY, type Registry } from "$lib/api/registry.svelte";
+    import { getRegistry, getSession } from "$lib/app/utils/di";
     import ContextLog from "./ContextLog.svelte";
     import GameTabs from "./GameTabs.svelte";
     import { GameWSConnection } from "$lib/api/ws";
-    import { SESSION, type Session } from "$lib/app/session.svelte";
     import { Channel } from "@tauri-apps/api/core";
 
-    let registry = injectAssert<Registry>(REGISTRY);
-    let session = injectAssert<Session>(SESSION);
+    let registry = getRegistry();
+    let session = getSession();
 
     let counter = $state(1);
     function addDummyData() {

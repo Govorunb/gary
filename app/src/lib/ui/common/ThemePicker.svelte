@@ -2,14 +2,13 @@
     import { onMount } from "svelte";
     import RadioButtons from "./RadioButtons.svelte";
     import { Monitor, Sun, Moon } from "@lucide/svelte";
-    import { USER_PREFS, UserPrefs } from "$lib/app/prefs.svelte";
-    import { injectAssert } from "$lib/app/utils/di";
+    import { getUserPrefs } from "$lib/app/utils/di";
     import { on } from "svelte/events";
 
     const themeIcons = [Monitor, Sun, Moon];
     const themeTips = ["System", "Light", "Dark"] as const;
     const themes = ["system", "light", "dark"] as const;
-    const userPrefs = injectAssert<UserPrefs>(USER_PREFS);
+    const userPrefs = getUserPrefs();
     let selectedIndex = $state(0);
     let selectedTheme = $derived(themes[selectedIndex]);
 
