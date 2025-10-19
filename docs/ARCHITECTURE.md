@@ -40,8 +40,8 @@ In this application, the actor's role may be fulfilled by different **engines**,
 - Randy (a random generator)
 - Tony ('Tony mode' is a term for when the user manually sends actions through the UI, superceding the active engine)
 
-The engine is prompted to act by a **scheduler**, which is responsible for processing an **event queue** (priority queue) of actions, context, and other messages.
-The engine may choose not to act if not forced. This use of the term "force" is similar in purpose to the actual WebSocket protocol, but is not the same thing, e.g. there would be no query or state, the engine just has to pick one of the available actions to perform.
+A **scheduler** is responsible for processing an **event queue** of actions, context, and other messages. When an event (or timer) calls for it, the scheduler prompts an engine to act.
+The engine may choose not to act if not forced. This use of the term "force" is similar in purpose to the WebSocket protocol, but is not the same thing - a scheduler may force an action without an incoming `actions/force`, e.g. if no actions were taken for a certain amount of time.
 
 ## Stable - Python Application (`src/gary/`)
 

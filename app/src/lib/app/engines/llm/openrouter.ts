@@ -1,8 +1,11 @@
 /* OpenRouter - realistically any OpenAI-compatible API (that supports structured outputs) */
 
 import type { Action, Act } from "$lib/api/v1/spec";
-import { LLMEngine, type CommonLLMOptions } from ".";
+import type { JSONSchema } from "openai/lib/jsonschema.mjs";
+import { LLMEngine, type CommonLLMOptions, type OpenAIContext } from ".";
+import { type Message } from "$lib/app/context.svelte";
 import { OpenAI } from 'openai';
+import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/index.mjs";
 
 export interface Options extends CommonLLMOptions {
     baseUrl?: string;
@@ -20,14 +23,30 @@ export class OpenRouter extends LLMEngine<Options> {
     constructor(options: Options) {
         super(options);
     }
-    async generate(schema: object): Promise<string> {
+    async generate(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Message> {
         const openai = new OpenAI({
             apiKey: this.options.apiKey,
             baseURL: this.options.baseUrl,
-            dangerouslyAllowBrowser: true,
+            dangerouslyAllowBrowser: true, // ...we have to...
         });
-        // convert context to OpenAI messages
-        // await openai.chat.completions.create({...});
+        let params: ChatCompletionCreateParamsNonStreaming = {
+            messages: context,
+            model: this.options.modelId as any, // OR accepts empty model
+        };
+        if (outputSchema) {
+            params.response_format = {
+                type: "json_schema",
+                json_schema: {
+                    // TODO: name/description (pass down?)
+                    name: "action",
+                    description: "",
+                    schema: outputSchema as any,
+                    strict: true,
+                },
+            };
+        }
+        const res = await openai.chat.completions.create(params);
+
         // validate/convert response to Act
         throw new Error("Method not implemented.");
     }

@@ -4,7 +4,7 @@ import type { Session } from "./session.svelte";
 export abstract class ContextManager {
     readonly allMessages: Message[] = $state([]);
     /** A subset of messages that are visible to the model. */
-    readonly modelView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.model ?? true));
+    readonly actorView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.model ?? true));
     /** A subset of messages that are visible to the user. */
     readonly userView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.user ?? true));
 
