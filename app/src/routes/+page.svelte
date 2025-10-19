@@ -12,13 +12,13 @@
     <div class="justify-self-start">
         <PowerButton />
     </div>
-    <h1 class="justify-self-center text-3xl font-semibold">
+    <h1 class="justify-self-center flex flex-row gap-3">
         {#if session.activeEngine}
-            {session.activeEngine.name}
+            <p class="text-3xl font-semibold">{session.activeEngine.name}</p>
             <button onclick={() => session.scheduler.try_act()} class="act-btn">Poke</button>
             <button onclick={() => session.scheduler.force_act()} class="act-btn">Force Act</button>
         {:else}
-        Gary Control Panel
+        <p class="text-3xl font-semibold">Gary Control Panel</p>
         {/if}
     </h1>
     <div class="justify-self-end">

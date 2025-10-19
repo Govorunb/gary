@@ -26,7 +26,8 @@ export class Randy extends Engine<RandyOptions> {
         });
     }
 
-    private generate(action: Action): Promise<any> {
+    private generate(action: Action): any {
+        if (!action.schema) return "null";
         return JSONSchemaFaker.generate(action.schema);
     }
 }

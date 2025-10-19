@@ -33,13 +33,13 @@
 </script>
 
 <div class="grid w-full flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,_1fr)_minmax(0,_2fr)_minmax(0,_1fr)]">
-    <aside class="flex flex-col gap-4 rounded-xl bg-white/80 p-4 shadow-sm ring-1 ring-neutral-200/70 backdrop-blur-sm dark:bg-neutral-900/70 dark:ring-neutral-700">
+    <aside class="section">
         <GameTabs />
     </aside>
-    <main class="flex flex-col gap-4 rounded-xl bg-white/90 p-4 shadow-sm ring-1 ring-neutral-200/70 backdrop-blur-sm dark:bg-neutral-900/80 dark:ring-neutral-700">
+    <main class="section">
         <ContextLog />
     </main>
-    <aside class="flex flex-col gap-4 rounded-xl bg-white/80 p-4 shadow-sm ring-1 ring-neutral-200/70 backdrop-blur-sm dark:bg-neutral-900/70 dark:ring-neutral-700">
+    <aside class="section">
         <h2 class="text-lg font-semibold">Settings</h2>
         <button
             class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900"
@@ -49,3 +49,15 @@
         </button>
     </aside>
 </div>
+
+<style lang="postcss">
+    @reference "tailwindcss";
+    @reference "@skeletonlabs/skeleton";
+    @reference "@skeletonlabs/skeleton-svelte";
+
+    .section {
+        @apply flex flex-col gap-4 rounded-xl p-4
+            bg-white/90 shadow-sm ring-1 ring-neutral-200/70
+            dark:bg-neutral-900/80 dark:ring-neutral-700/50;
+    }
+</style>

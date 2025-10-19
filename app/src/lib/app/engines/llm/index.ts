@@ -1,7 +1,7 @@
 import type { Action } from "$lib/api/v1/spec";
 import * as log from "@tauri-apps/plugin-log";
 import { Engine, zEngineAct, type EngineAct } from "..";
-import type { ContextManager } from "$lib/app/context.svelte";
+import type { Session } from "$lib/app/session.svelte";
 
 export interface CommonLLMOptions {
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
@@ -13,21 +13,19 @@ export interface CommonLLMOptions {
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
     abstract name: string;
 
-    constructor(options: TOptions, contextManager?: ContextManager) {
-        contextManager ? super(options, contextManager) : super(options);
-        this.contextManager.system(this.systemPrompt(), { silent: true });
+    constructor(options: TOptions) {
+        super(options);
     }
     
-    try_act(actions: Action[]): Promise<EngineAct | null> {
+    try_act(session: Session, actions: Action[]): Promise<EngineAct | null> {
         throw new Error("Method not implemented.");
     }
-    async force_act(actions: Action[], query: string, state: string): Promise<EngineAct> {
-        this.contextManager.client("todo", this.forcePrompt(query, state, actions), { silent: true });
+    async force_act(session: Session, actions: Action[], query: string, state: string): Promise<EngineAct> {
+        // context will be prepared from outside
+        // session.context.client("todo", this.forcePrompt(query, state, actions), { silent: true });
+        
         const gen = await this.generate(this.structuredOutputSchemaForActions(actions));
         return zEngineAct.parse(JSON.parse(gen))
-    }
-    context(message: string, silent: boolean): Promise<void> {
-        throw new Error("Method not implemented.");
     }
 
     // TODO: editable in UI

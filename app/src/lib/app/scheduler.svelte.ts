@@ -82,7 +82,7 @@ export class Scheduler {
             log.info(`Engine acting (forced): ${act.name}`);
             await game.conn.send(zAct.parse({data: act}));
         } else {
-            toast.error("Engine tried to run action not in any game", {
+            toast.error("Engine tried to run unregistered action", {
                 description: `Action: ${act.name}`,
             });
         }
