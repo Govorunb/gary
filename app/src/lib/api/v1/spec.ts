@@ -47,7 +47,7 @@ export const zUnregisterActions = z.strictObject({
     ...zGameMessageBase.shape,
     command: zConst("actions/unregister"),
     data: z.strictObject({
-        actionNames: z.array(z.string()),
+        action_names: z.array(z.string()),
     }),
 });
 

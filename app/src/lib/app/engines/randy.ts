@@ -2,6 +2,7 @@ import { type Action } from "$lib/api/v1/spec";
 import { pick as pickRandom } from "../utils.svelte";
 import { Engine, zEngineAct, type EngineAct } from ".";
 import {JSONSchemaFaker} from "json-schema-faker";
+import type { Session } from "../session.svelte";
 
 /** Randy - automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
  * 
@@ -11,13 +12,13 @@ import {JSONSchemaFaker} from "json-schema-faker";
 export class Randy extends Engine<RandyOptions> {
     readonly name: string = "Randy";
 
-    async try_act(actions: Action[]): Promise<EngineAct | null> {
+    async try_act(session: Session, actions: Action[]): Promise<EngineAct | null> {
         if (Math.random() < this.options.chanceDoNothing) {
             return null;
         }
-        return this.force_act(actions, "", "");
+        return this.force_act(session, actions, "", "");
     }
-    async force_act(actions: Action[], query: string, state: string): Promise<EngineAct> {
+    async force_act(_session: Session, actions: Action[], _query: string, _state: string): Promise<EngineAct> {
         const action = pickRandom(actions);
         return zEngineAct.parse({
             name: action.name,

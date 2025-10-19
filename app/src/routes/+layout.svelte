@@ -17,8 +17,8 @@
 
     const randy = new Randy({ chanceDoNothing: 0.2 });
     const session = init(SESSION, () => new Session("default"));
-    const registry = provide(REGISTRY, session.registry);
-    const scheduler = provide(SCHEDULER, session.scheduler);
+    const registry = init(REGISTRY, () => session.registry);
+    const scheduler = init(SCHEDULER, () => session.scheduler);
     session.activeEngine = randy; // TODO
 
     const serverManager = init(SERVER_MANAGER, () => new ServerManager(session, userPrefs));
@@ -32,4 +32,4 @@
     {@render children()}
 </div>
 
-<Toaster closeButton richColors position="bottom-right" theme={userPrefs.theme} />
+<Toaster closeButton richColors position="bottom-right" theme={userPrefs.theme} duration={10000} />

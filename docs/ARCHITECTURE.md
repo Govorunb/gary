@@ -21,22 +21,27 @@ Generally, the flow goes as follows:
 The **client** (game integration) connects to **server** (backend).
 
 Then, the following happens until either side disconnects (e.g. the game ends):
-1. Client registers **actions** as available to be performed
-  - Actions contain an **action schema** (JSON schema) for **action data**
-2. As things happen in the game, the client sends **context** to inform the **actor**
-3. At some point in time, the **actor** indicates it wants to perform an action and generates action data for it
-4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action
-5. The client responds with the **action result**, which is also inserted into context as feedback to the LLM
-6. The client may **unregister** the action, e.g. if it was a one-off action that is not repeatable
-7. At any point, the client may send a **force action** message with a subset of valid actions, which *requires* the server to send a response performing one of the given actions *as soon as possible*
+1. Client registers **actions** as available to be performed.
+  - Actions contain an **action schema** (JSON schema) for **action data**.
+2. As things happen in the game, the client sends **context** to inform the **actor**.
+3. At some point in time, the **actor** indicates it wants to perform an action and generates action data for it.
+4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action.
+5. The client responds with the **action result**, which is also inserted into context as feedback to the actor.
+6. The client may **unregister** the action, e.g. if it was a one-off action that is not repeatable.
+7. At any point, the client may send a **force action** message with a set of acceptable actions and additional information (namely, `query` detailing context for the choice and `state` to help inform the choice), which *requires* the server to send a response performing one of the given actions *as soon as possible*.
 
 If the connection drops, on reconnect, the server will send a message prompting the client to re-register all currently available actions. The client should ignore it if no actions are available.
 
-In this application, the actor's role may be taken by different **engines**, such as:
+### Implementation Details
+
+In this application, the actor's role may be fulfilled by different **engines**, such as:
 - Local LLMs (specifically through `llama_cpp`)
-- Remote services like OpenRouter
+- Remote OpenAI-compatible services like OpenRouter (others not officially supported)
 - Randy (a random generator)
 - Tony ('Tony mode' is a term for when the user manually sends actions through the UI, superceding the active engine)
+
+The engine is prompted to act by a **scheduler**, which is responsible for processing an **event queue** (priority queue) of actions, context, and other messages.
+The engine may choose not to act if not forced. This use of the term "force" is similar in purpose to the actual WebSocket protocol, but is not the same thing, e.g. there would be no query or state, the engine just has to pick one of the available actions to perform.
 
 ## Stable - Python Application (`src/gary/`)
 
@@ -128,7 +133,6 @@ The Tauri application is in **early development** and represents the future dire
 - `src/gary/llm/` - Language model integration
 
 ### Tauri App Essential Paths
-- `app/src/UI_PORT.md`- Current UI reimplementation plan
 - `app/src/lib/api/` - WebSocket API code (game integration)
 - `app/src/lib/app/` - Application logic
 - `app/src/lib/ui/` - Svelte components and utilities
@@ -138,15 +142,14 @@ The Tauri application is in **early development** and represents the future dire
 
 ## Project Structure Summary
 ```
-gary/
-├── src/gary/          # Python app (stable)
-│   ├── app.py         # FastAPI application
-|   ├── registry.py    # Game state management
-|   ├── spec.py        # WebSocket protocol
-│   ├── llm/           # LLM-related code (e.g. event scheduler)
-│   └── util/          # Utility code (e.g. config)
-│   ├── web/           # Panel web UI
-└── app/               # Tauri app (development)
-    ├── src/           # Svelte 5 frontend
-    └── src-tauri/     # Rust desktop backend
+src/gary/          # Python app (stable)
+├── app.py         # FastAPI application
+├── registry.py    # Game state management
+├── spec.py        # WebSocket protocol
+├── llm/           # LLM-related code (e.g. event scheduler)
+└── util/          # Utility code (e.g. config)
+├── web/           # Panel web UI
+app/               # Tauri app (development)
+├── src/           # Svelte 5 frontend & application logic
+└── src-tauri/     # Rust desktop backend
 ```

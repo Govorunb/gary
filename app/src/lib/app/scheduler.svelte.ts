@@ -38,7 +38,7 @@ export class Scheduler {
         if (actions.length === 0) {
             return;
         }
-        const act = await this.activeEngine!.try_act(actions);
+        const act = await this.activeEngine!.try_act(this.session, actions);
         if (!act) {
             log.debug(`Scheduler.try_act: engine chose not to act`);
             return;
@@ -72,7 +72,7 @@ export class Scheduler {
             log.info("Scheduler.force_act: no actions registered");
             return;
         }
-        const act = await this.activeEngine!.force_act(actions, "", "");
+        const act = await this.activeEngine!.force_act(this.session, actions, "", "");
         if (!act) {
             log.error(`Scheduler.force_act: engine chose not to act (should not be possible!)`);
             return;

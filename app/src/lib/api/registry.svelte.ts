@@ -108,16 +108,20 @@ export class Game {
 
     async recv(txt: string) {
         const msgMaybe = JSON.parse(txt);
+        if (!msgMaybe) {
+            await this.conn.disconnect(1006, "Empty WebSocket message (must have 'command' property)");
+            return;
+        }
         const msg = v1.zGameMessage.safeParse(msgMaybe);
         if (!msg.success) {
-            const err = z.treeifyError(msg.error);
-            const zodErrors = err.errors.join("\n\t-");
+            const err = msg.error;
+            const errorMessages = err.issues.map(i => i.message);
             toast.error("Invalid WebSocket message", {
-                description: `Game ${this.name} sent invalid message with command '${err.properties?.command}':\nErrors: \n\t-${zodErrors}`,
+                description: `Game ${this.name} sent invalid WS message. Errors: \n\t-${errorMessages.join("\n\t-")}`,
                 id: `invalid-websocket-message(${this.name})`,
             });
-            log.error(`Invalid message: ${txt}\nzod errors: \n\t-${zodErrors}`);
-            await this.conn.disconnect(1006, `Invalid message with command '${err.properties?.command}':\nErrors: \n\t-${zodErrors}`);
+            log.error(`Invalid WebSocket message received from game '${this.name}' (conn id ${this.conn.id})\nError(s): ${err.message}\nMessage: ${txt}`);
+            await this.conn.disconnect(1006, `Invalid WebSocket message: ${err.message}`);
             return;
         }
         await this.handle(msg.data);
@@ -130,7 +134,7 @@ export class Game {
             // could also just replace the game name on every single message, it's UB in the v1 spec so we can do whatever
             if (this.name === `<Pending-${this.conn.id}>`) {
                 log.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
-            } else {
+            } else if (this.name !== msg.game) {
                 log.warn(`Game ${this.name} changed its name to ${msg.game}`);
                 toast.warning(`Game ${this.name} changed its name to ${msg.game}`);
             }
@@ -147,7 +151,7 @@ export class Game {
                 this.registerActions(msg.data.actions);
                 break;
             case "actions/unregister":
-                this.unregisterActions(msg.data.actionNames);
+                this.unregisterActions(msg.data.action_names);
                 break;
             case "actions/force":
                 // FIXME: should use event queue
@@ -156,6 +160,7 @@ export class Game {
             case "action/result":
                 const silent = msg.data.success;
                 let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
+                text += msg.data.message ? `: ${msg.data.message}` : " (no message)";
                 await this.context(text, silent);
                 break;
             case "shutdown/ready":

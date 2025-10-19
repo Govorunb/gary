@@ -1,22 +1,35 @@
-# Project Roadmap
+# Project roadmap
 
-## Current Development
+## Current development
 
 The project is currently undergoing a renovation, porting functionality and UI from Python to Tauri:
 
 - `src/gary/` - Stable Python app. Agents **must not** modify this project.
 - `app/` - In-dev Tauri port of the application.
-    - `app/src` - Svelte 5 frontend. Almost all development will happen here. See `app/src/UI_PORT.md` for the current plan for porting the UI from the Python app.
+    - `app/src` - Svelte 5 frontend and application logic. Nearly all development will happen here.
     - `app/src-tauri` - Rust backend. Do not edit unless explicitly asked to.
 
-The immediate goal for the backend is to get at least Randy running and responding to actions.
-The frontend goal is to display the game, context, and actions (with sending as the next step). Track detailed UI milestones in `app/src/UI_PORT.md`.
+### Task list
+
+Backend:
+- [x] Get Randy running and responding to actions
+- [ ] Scheduler event queue (+ poke timer)
+- [ ] Local LLMs
+- [ ] Remote LLMs
+
+Frontend:
+- [ ] Tony mode (manual action sending)
+    - Code editor
+    - Syntax highlighting (`shiki`)
+- [ ] Auto-generated action forms (from schema)
+- [ ] Add functionality to context log
+
 
 ### Notable changes
 
 The goal of the port is to keep functionality the same; however, some things will change for the sake of simplifying development for game integrations. Internals are sure to change, but the UI may too - in other words, it won't be a complete one-to-one port.
 
-#### Single Context
+#### Single context
 
 Previously, each game hosted its own LLM with its own context. In the Tauri app, there will be one context shared between all game connections (e.g. two independent integration mods running in the same game).
 
@@ -30,7 +43,7 @@ After the port is complete, the Python app will be deprecated and removed. Then,
 
 #### Engine hot-swapping
 
-Previously, the LLM engine was selected on startup and could not be changed. The user should be able to pick the engine at runtime and switch between them as needed (maybe per-context, or per-game).
+Previously, the LLM engine was selected on startup and could not be changed. The user should be able to pick the engine at runtime and switch between them as needed (maybe per-context, or even per-game).
 
 #### Remote LLM Support
 
@@ -38,19 +51,25 @@ The Tauri app will support OpenAI-compatible remote APIs - specifically, OpenRou
 
 #### Miscellaneous task list
 - Actual config UI (I can't believe this wasn't done already)
+    - Editable config file (currently using `localStorage`)
+    - Reimplement presets/profiles again
 - Launching game processes (enabling use of the proposed Shutdown API)
 - App logs should also show up in UI (as accessible log/toast notifications)
 - Multi-game action collisions
   With single-context (and single-engine) two games may register actions with the same name.
   A possible solution is renaming the colliding actions to `action(game)` or something, only when passing the list of actions to the engine.
 
-#### UI Modes/Auto checks
+#### Strict ("prod") diagnostics
+
+The live production implementation contains implementation details of its own - e.g. the client should send action result responses *as soon as possible*, since (I assume) it waits for the result to insert it into Neuro's context directly after the action call. Gary may in the future provide diagnostics to help game integrations conform to the prod environment rather than an idealized test one.
+
+#### UI modes/auto checks
 
 I like the idea of collapsing everything down to just a list of connected games with a small display for any opinionated warnings/advice, to quickly test the behaviour of an integration and confirm it conforms to the spec and acts in an acceptable way.
 
 Same with e.g. accomodating someone testing their SDK implementation vs a game integration - they have different requirements, and it'd be nice to have modes that focus in on each of those workflows.
 
-Previously this was sort of kind of accomodated by allowing different logging levels for each module/"subsystem" (e.g. logging websockets at `trace` to diagnose message passing), but I wonder if that could be taken to the extreme.
+Previously this was sort of kind of accomodated by allowing different logging levels for each module/"subsystem" (e.g. logging websockets at `trace` to diagnose message passing), but I wonder if it could be made more ergonomic.
 
 #### Configurable scheduler
 

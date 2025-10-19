@@ -6,7 +6,6 @@
     import { GameWSConnection } from "$lib/api/ws";
     import { SESSION, type Session } from "$lib/app/session.svelte";
     import { Channel } from "@tauri-apps/api/core";
-    import { v4 as uuid } from "uuid";
 
     let registry = injectAssert<Registry>(REGISTRY);
     let session = injectAssert<Session>(SESSION);

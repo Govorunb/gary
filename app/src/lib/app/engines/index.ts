@@ -1,6 +1,6 @@
 import { zActData, type Action } from "$lib/api/v1/spec";
 import type z from "zod";
-import { ContextManager, DefaultContextManager } from "../context.svelte";
+import type { Session } from "../session.svelte";
 
 export const zEngineAct = zActData.omit({id: true});
 export type EngineAct = z.infer<typeof zEngineAct>;
@@ -8,11 +8,9 @@ export type EngineAct = z.infer<typeof zEngineAct>;
 export abstract class Engine<TOptions> {
     abstract readonly name: string;
 
-    constructor(public options: TOptions, protected contextManager: ContextManager = new DefaultContextManager()) {
-        if (contextManager.modelView.length > 0)
-            contextManager.clear();
+    constructor(public options: TOptions) {
     }
     
-    abstract try_act(actions: Action[]): Promise<EngineAct | null>;
-    abstract force_act(actions: Action[], query: string, state: string): Promise<EngineAct>;
+    abstract try_act(session: Session, actions: Action[]): Promise<EngineAct | null>;
+    abstract force_act(session: Session, actions: Action[], query: string, state: string): Promise<EngineAct>;
 }
