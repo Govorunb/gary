@@ -6,6 +6,7 @@ import { LLMEngine, type CommonLLMOptions, type OpenAIContext } from ".";
 import { type Message } from "$lib/app/context.svelte";
 import { OpenAI } from 'openai';
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/index.mjs";
+import * as log from "@tauri-apps/plugin-log";
 
 export interface Options extends CommonLLMOptions {
     baseUrl?: string;
@@ -19,16 +20,25 @@ export interface Options extends CommonLLMOptions {
 
 export class OpenRouter extends LLMEngine<Options> {
     readonly name: string = "OpenRouter";
+    static BASE_URL = "https://openrouter.ai/api/v1";
 
     constructor(options: Options) {
         super(options);
+        // TODO: remove and override once options are in user prefs
+        if (!options.baseUrl) {
+            options.baseUrl = OpenRouter.BASE_URL;
+        } else if (options.baseUrl !== OpenRouter.BASE_URL) {
+            log.warn(`OpenRouter baseUrl ${options.baseUrl} is not the expected ${OpenRouter.BASE_URL}`);
+        }
     }
+
     async generate(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Message> {
-        const openai = new OpenAI({
+        const clientOpts = {
             apiKey: this.options.apiKey,
             baseURL: this.options.baseUrl,
-            dangerouslyAllowBrowser: true, // ...we have to...
-        });
+            dangerouslyAllowBrowser: true,
+        };
+        const openai = new OpenAI(clientOpts);
         let params: ChatCompletionCreateParamsNonStreaming = {
             messages: context,
             model: this.options.modelId as any, // OR accepts empty model
@@ -47,7 +57,39 @@ export class OpenRouter extends LLMEngine<Options> {
         }
         const res = await openai.chat.completions.create(params);
 
-        // validate/convert response to Act
-        throw new Error("Method not implemented.");
+        const msg: Message = {
+            id: res.id,
+            timestamp: new Date(), // TODO zod
+            text: res.choices[0].message.content!, // TODO: error handling and all
+            source: {
+                type: "actor",
+                manual: false,
+            },
+            options: {
+                silent: true,
+            },
+            customData: {
+                [this.name]: { res },
+            }
+        }
+        this.fetchGenerationInfo(msg.id).then(gen => {
+            msg.customData![this.name].gen = gen;
+        });
+        return msg;
+    }
+
+    async fetchGenerationInfo(id: string) {
+        try {
+            const response = await fetch(`https://api.openrouter.ai/api/v1/generation?id=${id}`, {
+                headers: {
+                    "Authorization": `Bearer ${this.options.apiKey}`,
+                },
+            });
+            const data = await response.json();
+            return data;
+        } catch (e) {
+            log.error(`Failed to fetch OpenRouter generation info: ${e}`);
+            throw e;
+        }
     }
 }

@@ -4,6 +4,7 @@
     import GameTabs from "./GameTabs.svelte";
     import { GameWSConnection } from "$lib/api/ws";
     import { Channel } from "@tauri-apps/api/core";
+    import {env} from "$env/dynamic/private";
 
     let registry = getRegistry();
     let session = getSession();
@@ -28,6 +29,26 @@
          session.context.user("User message.", {});
          session.context.actor("Actor message. This one's going to be really long to test line widths, line breaks, and so on.\n\r\n\n\r\rBet you didn't expect carriage returns, too!", false, {});
      }
+
+
+    async function sendTestRequest() {
+        const request = {
+            // model: "openai/gpt-4o",
+            messages: [
+                { role: "user", content: "Test" },
+            ],
+        };
+        const response = await fetch("https://api.openrouter.ai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${env.OPENROUTER_API_KEY}`,
+            },
+            body: JSON.stringify(request),
+        });
+        const data = await response.json();
+        console.log(data);
+    }
 </script>
 
 <div class="grid w-full flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,_1fr)_minmax(0,_2fr)_minmax(0,_1fr)]">
@@ -44,6 +65,12 @@
             onclick={addDummyData}
         >
             Add Dummy Data
+        </button>
+        <button
+            class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900"
+            onclick={sendTestRequest}
+        >
+            Send test OpenRouter request
         </button>
     </aside>
 </div>

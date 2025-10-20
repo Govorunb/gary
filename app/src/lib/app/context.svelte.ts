@@ -4,7 +4,7 @@ import type { Session } from "./session.svelte";
 export abstract class ContextManager {
     readonly allMessages: Message[] = $state([]);
     /** A subset of messages that are visible to the model. */
-    readonly actorView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.model ?? true));
+    readonly actorView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.engine ?? true));
     /** A subset of messages that are visible to the user. */
     readonly userView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.user ?? true));
 
@@ -56,7 +56,7 @@ export abstract class ContextManager {
             options: {
                 silent: false,
                 visibility: {
-                    model: true,
+                    engine: true,
                     user: true,
                 }
             },
@@ -78,11 +78,12 @@ export class DefaultContextManager extends ContextManager {}
 
 type CustomData = Record<string, any>;
 
+// TODO: zod
 export type Message = {
     id: string;
     timestamp: Date;
     // TODO: maybe a "category"/"type" and this can just be an event stream for the entire app/session
-    // (would replace per-message visibility with per-category too, + user prefs)
+    // (would replace per-message visibility with per-category, + user prefs too)
     source: Source; // aka "role"
     text: string;
     options: MessageOptions;
@@ -95,14 +96,14 @@ export type Message = {
 }
 
 export type MessageOptions = {
-    /** Non-silent messages will prompt the model to act. Defaults to false. */
-    silent?: boolean;
-    /** Controls visibility of the message to the user and the model. */
+    /** Non-silent messages will prompt the engine to act. Defaults to false. */
+    silent?: boolean; // FIXME: makes no sense for actor messages
+    /** Controls visibility of the message to the user and the engine. */
     visibility?: {
         /** Defaults to true. */
         user?: boolean;
         /** Defaults to true. */
-        model?: boolean;
+        engine?: boolean;
     }
 }
 

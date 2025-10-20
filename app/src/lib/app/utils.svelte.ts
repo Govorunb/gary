@@ -1,4 +1,5 @@
 import type { Attachment } from "svelte/attachments";
+import z from "zod";
 
 export function pick<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -72,4 +73,9 @@ export function outclick(func: () => void, additionalTargets: HTMLElement[] = []
             window.removeEventListener("pointerdown", listener);
         }
     };
+}
+
+export function zConst<T extends z.core.util.Literal>(value: NonNullable<T>) {
+    // this lets us omit the field when constructing from e.g. `zStartup.parse({})`
+    return z.literal(value).default(value);
 }

@@ -1,10 +1,6 @@
 import { v4 as uuid4 } from "uuid";
 import * as z from 'zod';
-
-function zConst<T extends z.core.util.Literal>(value: NonNullable<T>) {
-    // this lets us omit the field when constructing from e.g. `zStartup.parse({})`
-    return z.literal(value).default(value);
-}
+import { zConst } from "../../app/utils.svelte";
 
 export const zAction = z.strictObject({
     name: z.string(),

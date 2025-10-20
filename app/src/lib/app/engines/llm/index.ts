@@ -4,6 +4,8 @@ import { Engine, zEngineAct, type EngineAct } from "..";
 import type { Session } from "$lib/app/session.svelte";
 import type { ContextManager, Message } from "$lib/app/context.svelte";
 import type { JSONSchema } from "openai/lib/jsonschema";
+import z from "zod";
+import { zConst } from "$lib/app/utils.svelte";
 
 export interface CommonLLMOptions {
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
@@ -29,7 +31,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const ctx = this.convertContext(session.context);
         const schema = this.structuredOutputSchemaForActions(actions);
         const gen = await this.generate(ctx, schema);
-        gen.options.visibility = {user: false, model: false};
+        gen.options.visibility = {user: false, engine: false};
         return zEngineAct.parse(JSON.parse(gen.text));
     }
 
@@ -87,12 +89,12 @@ You must perform one of the following actions, given this information:
         return prompt;
     }
 
-    protected structuredOutputSchemaForActions(actions: Action[]): object {
-        const res: Record<string, {}> = {
+    protected structuredOutputSchemaForActions(actions: Action[]): JSONSchema {
+        const acts: JSONSchema = {
             type: "object",
         };
-        const anyOf: {}[] = [];
-        res.anyOf = anyOf;
+        const actsAnyOf: JSONSchema[] = [];
+        acts.anyOf = actsAnyOf;
         for (const action of actions) {
             const actionCallSchema: JSONSchema = {
                 type: "object",
@@ -109,9 +111,28 @@ You must perform one of the following actions, given this information:
                 actionCallSchema.properties!.data = action.schema;
                 actionCallSchema.required!.push("data");
             }
-            anyOf.push(actionCallSchema);
+            actsAnyOf.push(actionCallSchema);
         }
-        return res;
+        const cmdAnyOf: JSONSchema[] = [{
+            description: "Perform an action.",
+            anyOf: actsAnyOf,
+        }];
+        const main: JSONSchema = {
+            type: "object",
+            description: "Choose a command to execute.",
+            properties: {
+                command: { anyOf: cmdAnyOf },
+            },
+            required: ["command"],
+            additionalProperties: false,
+        }
+        if (this.options.allowDoNothing) {
+            cmdAnyOf.push(z.toJSONSchema(zWait) as any);
+        }
+        if (this.options.allowYapping) {
+            cmdAnyOf.push(z.toJSONSchema(zSay) as any);
+        }
+        return main;
     }
 
     /** Generate a response adhering to the given schema. */
@@ -127,7 +148,7 @@ You must perform one of the following actions, given this information:
                 break;
             case "client":
                 role = "user";
-                text = `${msg.source.name}: ${text}`;
+                text = `Game (${msg.source.name}): ${text}`;
                 break;
             case "user":
                 role = "user";
@@ -146,3 +167,11 @@ You must perform one of the following actions, given this information:
         return ctx.actorView.map(msg => this.convertMessage(msg));
     }
 }
+
+export const zWait = zConst("wait").describe("Do nothing.");
+export const zSay = z.strictObject({
+    say: z.string()
+        .describe("The text to say out loud."),
+    notify: z.boolean().optional().default(false)
+        .describe("Whether this message requires the user's attention."),
+}).describe("Speak out loud to the user.");

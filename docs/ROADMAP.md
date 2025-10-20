@@ -77,6 +77,10 @@ I want to see Randy speed through the schema test in 0.1 seconds
 
 #### Per-game tweaks/compat
 
-v2 of the API has been in proposals for a while now. If the spec turns out to land into an "evolving v1" state, old and new integrations will have the same version but completely different expectations - e.g. expecting `actions/reregister_all` on connect. This will require per-game behaviour tweaks for compatibility.
+v2 of the API has been in proposals for a while now. If the spec turns out to land into an "evolving v1" state, old and new integrations will have the same version but completely different expectations - e.g. some would expect a `actions/reregister_all` on connect before registering actions, some would do it automatically (and, worst case, error out and disconnect if sent a `reregister_all`). This will require per-game behaviour tweaks for compatibility.
 
-The first step would be a UI (probably using the advanced sidebar), then maybe some automation (e.g. if after connect the game doesn't send actions in the first 2s, try sending a reregister; if the game then errors/disconnects because of a strict message handler, don't do it again).
+The first step would be a UI (probably using the advanced sidebar), then maybe some automation (e.g. if after connect the game doesn't send actions in the first 2s, try sending a reregister; if the game then errors/disconnects because of a strict message handler, don't do it again and remember in user prefs).
+
+#### Anonymized session data
+
+I'm still undecided on whether to have automatically-gathered telemetry (very unlikely - I follow the "data is poison" mantra) but if there's a manual copy-context-log-to-clipboard-as-JSON error report process, I'd like to make some toggles for redacting things from the log. Removing message text, timestamps, hiding individual messages, replacing IDs with monotonically increasing, etc.
