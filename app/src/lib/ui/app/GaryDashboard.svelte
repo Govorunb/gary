@@ -38,7 +38,7 @@
                 { role: "user", content: "Test" },
             ],
         };
-        const response = await fetch("https://api.openrouter.ai/v1/chat/completions", {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
