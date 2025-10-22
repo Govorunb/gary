@@ -39,3 +39,12 @@ Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`)
 The Rust side should handle as little as possible to keep the majority of app logic concentrated in just TypeScript (for maintainability). The only things that must be handed over to Rust are system calls and things that aren't possible to do on the frontend; for example, we can't host a WebSocket server from the system WebView, so we must use Rust for that. But, since the Rust side should stay out of app logic, it just forwards messages to the frontend and does not handle any of them.
 
 Rust will also handle local LLM generation through `llama-cpp`, which is currently yet to be implemented.
+
+### Agent Specific Workflows
+
+If you find instructions specific to you in this section, follow them. Otherwise, feel free to ignore them.
+
+**Google Gemini**: Adopt the "Gather, Plan, Act" workflow.
+1. First, gather the necessary information to fulfill the user's request. The general rule is: the more, the better. Get a full picture of the background behind the user's request and all parts of the system that interact with it. If the system seems critically important or tightly coupled, investigate deeper - e.g. two hops away instead of one.
+2. Then, outline the changes you intend to make. Do not make the changes yet. This is your chance to notice and consider any edge cases, oddities, and potential knock-on effects. You *may* create Markdown files to help you keep track of your tasks or notes.
+3. Once you are satisfied with the plan, implement it. If you encounter something unexpected or difficult consider whether you should continue or go back to step 1 and try again with the new information. If all else fails, ask the user for help.

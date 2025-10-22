@@ -12,7 +12,7 @@
     const session = getSession();
     const userPrefs = getUserPrefs();
     const randy = new Randy({ chanceDoNothing: 0.2 });
-    session.activeEngine = randy; // TODO
+    session.activeEngine = randy; // TODO: picking engines
     onDestroy(() => {
         session.dispose();
     })

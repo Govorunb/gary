@@ -4,12 +4,14 @@ import type { Registry } from "$lib/api/registry.svelte";
 import { UserPrefs, type UserPrefsData } from "../prefs.svelte";
 import type { Scheduler } from "../scheduler.svelte";
 import { ServerManager } from "../server.svelte";
+import type { OpenRouter } from "@openrouter/sdk";
 
 const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
 const [ getSession, setSession ] = createContext<Session>();
 const [ getRegistry, setRegistry ] = createContext<Registry>();
 const [ getScheduler, setScheduler ] = createContext<Scheduler>();
 const [ getServerManager, setServerManager ] = createContext<ServerManager>();
+const [ getOpenRouterClient, setOpenRouterClient ] = createContext<OpenRouter>();
 
 export {
     getUserPrefs,
@@ -17,6 +19,7 @@ export {
     getRegistry,
     getScheduler,
     getServerManager,
+    getOpenRouterClient,
 }
 
 export function initDI(userPrefsData: UserPrefsData) {

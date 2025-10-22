@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { getRegistry, getSession } from "$lib/app/utils/di";
+    import { getOpenRouterClient, getRegistry, getSession } from "$lib/app/utils/di";
     import ContextLog from "./ContextLog.svelte";
     import GameTabs from "./GameTabs.svelte";
     import { GameWSConnection } from "$lib/api/ws";
     import { Channel } from "@tauri-apps/api/core";
-    import {env} from "$env/dynamic/private";
+    import z from "zod";
 
     let registry = getRegistry();
     let session = getSession();
@@ -17,37 +17,25 @@
         dummyGame.actions.set("test_action", {
             name: "test_action",
             description: "This is a test action.",
-            schema: {
-                 type: "object",
-                 properties: {
-                     param1: { type: "string" },
-                 },
-             },
-         });
-         session.context.system("System message.", {});
-         session.context.client(dummyGame.name, "Client message.", {});
-         session.context.user("User message.", {});
-         session.context.actor("Actor message. This one's going to be really long to test line widths, line breaks, and so on.\n\r\n\n\r\rBet you didn't expect carriage returns, too!", false, {});
+            schema: z.toJSONSchema(z.strictObject({
+                param1: z.string(),
+            })),
+        });
+        session.context.system("System message.", {});
+        session.context.client(dummyGame.name, "Client message.", {});
+        session.context.user("User message.", {});
+        session.context.actor("Actor message. This one's going to be really long to test line widths, line breaks, and so on.\n\r\n\n\r\rBet you didn't expect carriage returns, too!", false, {});
      }
 
-
     async function sendTestRequest() {
-        const request = {
-            // model: "openai/gpt-4o",
+        const client = getOpenRouterClient();
+        const res = await client.chat.send({
+            model: "",
             messages: [
                 { role: "user", content: "Test" },
             ],
-        };
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${env.OPENROUTER_API_KEY}`,
-            },
-            body: JSON.stringify(request),
         });
-        const data = await response.json();
-        console.log(data);
+        console.log(res);
     }
 </script>
 

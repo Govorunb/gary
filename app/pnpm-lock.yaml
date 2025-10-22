@@ -11,6 +11,9 @@ importers:
       '@lucide/svelte':
         specifier: ^0.546.0
         version: 0.546.0(svelte@5.41.0)
+      '@openrouter/sdk':
+        specifier: 0.0.1-beta.1
+        version: 0.0.1-beta.1
       '@tailwindcss/vite':
         specifier: ^4.1.14
         version: 4.1.14(vite@7.1.10(jiti@2.6.1)(lightningcss@1.30.1))
@@ -300,6 +303,20 @@ packages:
     resolution: {integrity: sha512-qFVQ+BUJH9Swns7cag3Wik7VqKZfN2hwDZ2VazbZJc8VSqI0kgOZCZ2OVwrvNxdkl8Mw9M9H1ROB0BXh/WH/sA==}
     peerDependencies:
       svelte: ^5
+
+  '@openrouter/sdk@0.0.1-beta.1':
+    resolution: {integrity: sha512-QJRxafCAk9kQuxPFgZCWoknnhEIfYrshnkfglWsqDqKWIi8WjDY8ea6L6T+dcgbADBPcF9hu9V/Twh+0U8T5sg==}
+    peerDependencies:
+      '@tanstack/react-query': ^5
+      react: ^18 || ^19
+      react-dom: ^18 || ^19
+    peerDependenciesMeta:
+      '@tanstack/react-query':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
@@ -1190,6 +1207,9 @@ packages:
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
   zod@4.1.12:
     resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
 
@@ -1322,6 +1342,10 @@ snapshots:
   '@lucide/svelte@0.546.0(svelte@5.41.0)':
     dependencies:
       svelte: 5.41.0
+
+  '@openrouter/sdk@0.0.1-beta.1':
+    dependencies:
+      zod: 3.25.76
 
   '@polka/url@1.0.0-next.29': {}
 
@@ -2256,5 +2280,7 @@ snapshots:
   yallist@5.0.0: {}
 
   zimmerframe@1.1.4: {}
+
+  zod@3.25.76: {}
 
   zod@4.1.12: {}

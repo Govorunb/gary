@@ -6,6 +6,7 @@ import type { ContextManager, Message } from "$lib/app/context.svelte";
 import type { JSONSchema } from "openai/lib/jsonschema";
 import z from "zod";
 import { zConst } from "$lib/app/utils.svelte";
+import type { Message as OpenAIMessage } from "@openrouter/sdk/models";
 
 export interface CommonLLMOptions {
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
@@ -14,7 +15,7 @@ export interface CommonLLMOptions {
     allowYapping?: boolean;
 }
 
-export type OpenAIContext = any;
+export type OpenAIContext = OpenAIMessage[];
 
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
     abstract name: string;
@@ -140,7 +141,7 @@ You must perform one of the following actions, given this information:
 
     private convertMessage(msg: Message) {
         let text = msg.text;
-        let role = "invalid";
+        let role: OpenAIMessage['role'];
         switch (msg.source.type) {
             case "system":
                 role = "system";
@@ -157,6 +158,9 @@ You must perform one of the following actions, given this information:
             case "actor":
                 role = "assistant";
                 break;
+        }
+        if (!role) {
+            throw new Error("Invalid message source");
         }
         return {
             role,

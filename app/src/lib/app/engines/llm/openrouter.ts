@@ -1,16 +1,13 @@
-/* OpenRouter - realistically any OpenAI-compatible API (that supports structured outputs) */
-
-import type { Action, Act } from "$lib/api/v1/spec";
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
 import { LLMEngine, type CommonLLMOptions, type OpenAIContext } from ".";
 import { type Message } from "$lib/app/context.svelte";
-import { OpenAI } from 'openai';
-import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/index.mjs";
 import * as log from "@tauri-apps/plugin-log";
+import { toast } from "svelte-sonner";
+import { getOpenRouterClient } from "$lib/app/utils/di";
+import type { ChatGenerationParams, ChatResponse } from "@openrouter/sdk/models";
 
 export interface Options extends CommonLLMOptions {
-    baseUrl?: string;
-    apiKey?: string;
+    apiKey?: string; // TODO: [stronghold](https://github.com/tauri-apps/tauri-plugin-stronghold)
     modelId?: string;
     /** Preferred order of providers for the model. */
     providerSortList?: string[];
@@ -18,49 +15,38 @@ export interface Options extends CommonLLMOptions {
     displayUsage?: boolean;
 }
 
+type NonStreamingChatParams = ChatGenerationParams & { stream?: false | undefined };
+
 export class OpenRouter extends LLMEngine<Options> {
     readonly name: string = "OpenRouter";
-    static BASE_URL = "https://openrouter.ai/api/v1";
 
     constructor(options: Options) {
         super(options);
-        // TODO: remove and override once options are in user prefs
-        if (!options.baseUrl) {
-            options.baseUrl = OpenRouter.BASE_URL;
-        } else if (options.baseUrl !== OpenRouter.BASE_URL) {
-            log.warn(`OpenRouter baseUrl ${options.baseUrl} is not the expected ${OpenRouter.BASE_URL}`);
-        }
     }
 
     async generate(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Message> {
-        const clientOpts = {
-            apiKey: this.options.apiKey,
-            baseURL: this.options.baseUrl,
-            dangerouslyAllowBrowser: true,
-        };
-        const openai = new OpenAI(clientOpts);
-        let params: ChatCompletionCreateParamsNonStreaming = {
+        let params: NonStreamingChatParams = {
             messages: context,
-            model: this.options.modelId as any, // OR accepts empty model
+            model: this.options.modelId ?? "",
         };
         if (outputSchema) {
-            params.response_format = {
+            params.responseFormat = {
                 type: "json_schema",
-                json_schema: {
+                jsonSchema: {
                     // TODO: name/description (pass down?)
-                    name: "action",
+                    name: "",
                     description: "",
                     schema: outputSchema as any,
                     strict: true,
                 },
             };
         }
-        const res = await openai.chat.completions.create(params);
+        const res: ChatResponse = await getOpenRouterClient().chat.send(params satisfies NonStreamingChatParams);
 
         const msg: Message = {
             id: res.id,
             timestamp: new Date(), // TODO zod
-            text: res.choices[0].message.content!, // TODO: error handling and all
+            text: res.choices[0].message.content as string, // TODO: error handling and all
             source: {
                 type: "actor",
                 manual: false,
@@ -80,16 +66,13 @@ export class OpenRouter extends LLMEngine<Options> {
 
     async fetchGenerationInfo(id: string) {
         try {
-            const response = await fetch(`https://api.openrouter.ai/api/v1/generation?id=${id}`, {
-                headers: {
-                    "Authorization": `Bearer ${this.options.apiKey}`,
-                },
-            });
-            const data = await response.json();
-            return data;
+            const response = await getOpenRouterClient().generations.getGeneration({ id });
+            return response.data;
         } catch (e) {
             log.error(`Failed to fetch OpenRouter generation info: ${e}`);
-            throw e;
+            toast.error(`Failed to fetch OpenRouter generation info`, {
+                description: e instanceof Error ? e.message : (e as any).toString?.(),
+            });
         }
     }
 }

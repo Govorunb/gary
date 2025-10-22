@@ -5,6 +5,8 @@ import { toast } from "svelte-sonner";
 
 export const USER_PREFS = "userPrefs";
 
+// TODO: use a tauri store instead (json in appdata for free, auto saves too)
+// would still need a validation/coercion wrapper unfortunately
 export class UserPrefs {
     #data: UserPrefsData;
 
@@ -66,9 +68,14 @@ export class UserPrefs {
     }
 }
 
+export const zOpenRouterPrefs = z.strictObject({
+    apiKey: z.string().nullish(),
+});
+
 export const zUserPrefs = z.strictObject({
     theme: z.enum(["system", "light", "dark"]).default("system"),
     serverPort: z.int().min(1024).max(65535).default(8000),
+    openRouter: zOpenRouterPrefs.default(zOpenRouterPrefs.parse({})),
 });
 
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
