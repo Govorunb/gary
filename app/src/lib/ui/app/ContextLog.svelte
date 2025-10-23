@@ -1,18 +1,18 @@
 <script lang="ts">
     import { getSession } from "$lib/app/utils/di";
-    import type { Source } from "$lib/app/context.svelte";
+    import type { MessageSource } from "$lib/app/context.svelte";
 
     let session = getSession();
 
     const messageBaseClasses = "flex gap-2 items-center rounded-lg border px-3 py-2 transition hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60";
-    const sourceAccent: Record<Source['type'], string> = {
+    const sourceAccent: Record<MessageSource['type'], string> = {
         system: "border-amber-400/40",
         client: "border-sky-400/40",
         user: "border-emerald-400/40",
         actor: "border-purple-400/40",
     };
 
-    function getSourceIcon(source: Source): string {
+    function getSourceIcon(source: MessageSource): string {
         switch (source.type) {
             case "system":
                 return "⚙️";

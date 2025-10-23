@@ -1,6 +1,6 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
 import { LLMEngine, type CommonLLMOptions, type OpenAIContext } from ".";
-import { type Message } from "$lib/app/context.svelte";
+import { zActorSource, zMessage, zMessageOptions, type Message } from "$lib/app/context.svelte";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
 import { getOpenRouterClient } from "$lib/app/utils/di";
@@ -43,21 +43,14 @@ export class OpenRouter extends LLMEngine<Options> {
         }
         const res: ChatResponse = await getOpenRouterClient().chat.send(params satisfies NonStreamingChatParams);
 
-        const msg: Message = {
-            id: res.id,
-            timestamp: new Date(), // TODO zod
+        const msg = zMessage.decode({
             text: res.choices[0].message.content as string, // TODO: error handling and all
-            source: {
-                type: "actor",
-                manual: false,
-            },
-            options: {
-                silent: true,
-            },
+            source: zActorSource.decode({manual: false}),
+            options: zMessageOptions.decode({silent: true}),
             customData: {
                 [this.name]: { res },
-            }
-        }
+            },
+        })
         this.fetchGenerationInfo(msg.id).then(gen => {
             msg.customData![this.name].gen = gen;
         });

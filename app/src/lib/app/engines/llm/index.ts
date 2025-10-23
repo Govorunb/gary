@@ -32,7 +32,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const ctx = this.convertContext(session.context);
         const schema = this.structuredOutputSchemaForActions(actions);
         const gen = await this.generate(ctx, schema);
-        gen.options.visibility = {user: false, engine: false};
+        gen.options.visibilityOverrides = {user: false, engine: false};
         return zEngineAct.parse(JSON.parse(gen.text));
     }
 

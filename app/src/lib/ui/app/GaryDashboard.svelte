@@ -21,10 +21,10 @@
                 param1: z.string(),
             })),
         });
-        session.context.system("System message.", {});
-        session.context.client(dummyGame.name, "Client message.", {});
-        session.context.user("User message.", {});
-        session.context.actor("Actor message. This one's going to be really long to test line widths, line breaks, and so on.\n\r\n\n\r\rBet you didn't expect carriage returns, too!", false, {});
+        session.context.system({text: "System message."});
+        session.context.client(dummyGame.name, {text: "Client message."});
+        session.context.user({text: "User message."});
+        session.context.actor({text: "Actor message. This one's going to be really long to test line widths, line breaks, and so on.\n\r\n\n\r\rBet you didn't expect carriage returns, too!"}, false);
      }
 
     async function sendTestRequest() {

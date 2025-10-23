@@ -75,7 +75,7 @@ export function outclick(func: () => void, additionalTargets: HTMLElement[] = []
     };
 }
 
+/** This lets us omit the field when constructing discriminated union members from e.g. `zStartup.parse({})`. */
 export function zConst<T extends z.core.util.Literal>(value: NonNullable<T>) {
-    // this lets us omit the field when constructing from e.g. `zStartup.parse({})`
     return z.literal(value).default(value);
 }

@@ -1,68 +1,37 @@
 import { v7 as uuid7 } from "uuid";
 import type { Session } from "./session.svelte";
+import { z } from "zod";
+import { zConst } from "$lib/app/utils.svelte";
 
 export abstract class ContextManager {
     readonly allMessages: Message[] = $state([]);
     /** A subset of messages that are visible to the model. */
-    readonly actorView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.engine ?? true));
+    readonly actorView: Message[] = $derived(this.allMessages.filter(m => m.options.visibilityOverrides?.engine ?? true));
     /** A subset of messages that are visible to the user. */
-    readonly userView: Message[] = $derived(this.allMessages.filter(m => m.options.visibility?.user ?? true));
+    readonly userView: Message[] = $derived(this.allMessages.filter(m => m.options.visibilityOverrides?.user ?? true));
 
     constructor(private readonly session: Session) {
         
     }
 
-    system(text: string, options: MessageOptions, data?: CustomData) {
-        this.push({
-            source: { type: "system" },
-            text,
-            options,
-            customData: data,
-        })
+    system(partialMsg: SourcelessMessage) {
+        this.push({ source: { type: "system" }, ...partialMsg });
     }
     
-    client(name: string, text: string, options: MessageOptions, data?: CustomData) {
-        this.push({
-            source: { type: "client", name },
-            text,
-            options,
-            customData: data,
-        })
+    client(name: string, partialMsg: SourcelessMessage) {
+        this.push({ source: { type: "client", name }, ...partialMsg });
     }
 
-    user(text: string, options: MessageOptions, data?: CustomData) {
-        this.push({
-            source: { type: "user" },
-            text,
-            options,
-            customData: data,
-        })
+    user(partialMsg: SourcelessMessage) {
+        this.push({ source: { type: "user" }, ...partialMsg });
     }
 
-    actor(text: string, manual: boolean, options: MessageOptions, data?: CustomData) {
-        this.push({
-            source: { type: "actor", manual },
-            text,
-            options,
-            customData: data,
-        })
+    actor(partialMsg: SourcelessMessage, manual: boolean = false) {
+        this.push({ source: { type: "actor", manual }, ...partialMsg });
     }
-    
-    push({...partialMsg}: Partial<Message> & Required<Pick<Message, "text" | "source">>) {
-        const msg: Message = {
-            id: uuid7(),
-            timestamp: new Date(),
-            // FIXME: not a deep merge
-            options: {
-                silent: false,
-                visibility: {
-                    engine: true,
-                    user: true,
-                }
-            },
-            ...partialMsg
-        };
-        this.allMessages.push(msg);
+
+    push(msg: z.input<typeof zMessage>) {
+        this.allMessages.push(zMessage.decode(msg));
     }
 
     pop() {
@@ -76,60 +45,61 @@ export abstract class ContextManager {
 
 export class DefaultContextManager extends ContextManager {}
 
-type CustomData = Record<string, any>;
 
-// TODO: zod
-export type Message = {
-    id: string;
-    timestamp: Date;
+export const zSystemSource = z.strictObject({
+    type: zConst("system"),
+});
+
+export const zClientSource = z.strictObject({
+    type: zConst("client"),
+    name: z.string(),
+});
+
+export const zActorSource = z.strictObject({
+    type: zConst("actor"),
+    /** Whether the action was manually triggered by the user through the app UI. */
+    manual: z.boolean().default(false),
+});
+
+export const zUserSource = z.strictObject({
+    type: zConst("user"),
+});
+
+export const zSource = z.discriminatedUnion("type", [
+    zSystemSource.required({type: true}),
+    zClientSource.required({type: true}),
+    zActorSource.required({type: true}),
+    zUserSource.required({type: true}),
+]);
+
+export const zMessageOptions = z.strictObject({
+    /** Non-silent messages will prompt the engine to act. Defaults to false. */
+    silent: z.boolean().default(false), // FIXME: makes no sense for actor messages
+    visibilityOverrides: z.strictObject({
+        user: z.boolean().default(true),
+        engine: z.boolean().default(true),
+    }).optional().prefault({}),
+});
+
+export const zMessage = z.strictObject({
+    id: z.string().default(uuid7),
+    timestamp: z.coerce.date().default(() => new Date()),
     // TODO: maybe a "category"/"type" and this can just be an event stream for the entire app/session
-    // (would replace per-message visibility with per-category, + user prefs too)
-    source: Source; // aka "role"
-    text: string;
-    options: MessageOptions;
+    // would replace per-message visibility with per-category (making it configurable)
+    source: zSource, // aka "role"
+    text: z.string(),
+    options: zMessageOptions.prefault({}),
     /** The convention for storing data is to key it by the name of the engine, e.g.:
      * ```json
      * { "OpenRouter":{"requestInfo":{"id": ...,"usage":{ ... }} }
      * ```
     */
-    customData?: CustomData;
-}
+    customData: z.record(z.string(), z.any()).optional(),
+});
 
-export type MessageOptions = {
-    /** Non-silent messages will prompt the engine to act. Defaults to false. */
-    silent?: boolean; // FIXME: makes no sense for actor messages
-    /** Controls visibility of the message to the user and the engine. */
-    visibility?: {
-        /** Defaults to true. */
-        user?: boolean;
-        /** Defaults to true. */
-        engine?: boolean;
-    }
-}
+export const zSourcelessMessage = zMessage.omit({source: true});
+export type SourcelessMessage = z.input<typeof zSourcelessMessage>;
 
-export type Source = SystemSource | ClientSource | ActorSource | UserSource;
-
-/** Messages coming internally from the app (this one, with the server, not a client/game).
- * Example: game connect/disconnect messages.
-*/
-export type SystemSource = {
-    type: "system";
-}
-
-/** Messages coming from a connected WebSocket client, e.g. a game. */
-export type ClientSource = {
-    type: "client";
-    name: string;
-}
-
-/** Messages from an "actor" (Randy, an LLM, Tony (the user), etc.) */
-export type ActorSource = {
-    type: "actor";
-    /** Whether the action was manually triggered by the user through the app UI. */
-    manual: boolean;
-}
-
-/** Messages manually inserted into the context by the user (human) through the app UI. */
-export type UserSource = {
-    type: "user";
-}
+export type Message = z.infer<typeof zMessage>;
+export type MessageOptions = z.infer<typeof zMessageOptions>;
+export type MessageSource = z.infer<typeof zSource>;
