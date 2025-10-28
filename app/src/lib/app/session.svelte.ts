@@ -3,11 +3,13 @@ import { DefaultContextManager } from "./context.svelte";
 import { Scheduler } from "./scheduler.svelte";
 import type { Engine } from "./engines";
 import { Registry } from "$lib/api/registry.svelte";
+import type { UserPrefs } from "./prefs.svelte";
 
 /**
  * Represents a user session within the app.
  * 
  * Maybe in the future the app can save/load sessions, or run multiple at once, or something.
+ * For now, it's just a "tree root"/"manager manager" kind of thing.
  */
 export class Session {
     readonly id: string;
@@ -18,13 +20,13 @@ export class Session {
     name: string;
     private ondispose: (() => void)[];
 
-    constructor(name: string) {
+    constructor(name: string, private readonly userPrefs: UserPrefs) {
         this.id = uuidv4();
         this.name = $state(name);
         this.ondispose = [];
         this.context = new DefaultContextManager(this);
         this.registry = new Registry(this);
-        this.scheduler = new Scheduler(this);
+        this.scheduler = new Scheduler(this, this.userPrefs);
     }
 
     onDispose(callback: () => void): () => void {

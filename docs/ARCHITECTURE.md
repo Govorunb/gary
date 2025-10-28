@@ -27,18 +27,19 @@ Then, the following happens until either side disconnects (e.g. the game ends):
 3. At some point in time, the **actor** indicates it wants to perform an action and generates action data for it.
 4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action.
 5. The client responds with the **action result**, which is also inserted into context as feedback to the actor.
-6. The client may **unregister** the action, e.g. if it was a one-off action that is not repeatable.
+6. The client may **unregister** actions if they are no longer available (e.g. non-repeatable action was executed).
 7. At any point, the client may send a **force action** message with a set of acceptable actions and additional information (namely, `query` detailing context for the choice and `state` to help inform the choice), which *requires* the server to send a response performing one of the given actions *as soon as possible*.
 
-If the connection drops, on reconnect, the server will send a message prompting the client to re-register all currently available actions. The client should ignore it if no actions are available.
+If the connection drops, on reconnect, the server will send a message prompting the client to re-register all currently available actions. The client may ignore it if no actions are available, or send an empty 'register' message.
 
 ### Implementation Details
 
 In this application, the actor's role may be fulfilled by different **engines**, such as:
-- Local LLMs (specifically through `llama_cpp`)
+- Local LLMs (specifically through OpenAI-compatible server hosts like LMStudio/Ollama)
 - Remote OpenAI-compatible services like OpenRouter (others not officially supported)
 - Randy (a random generator)
-- Tony ('Tony mode' is a term for when the user manually sends actions through the UI, superceding the active engine)
+
+There's also Tony, which is not an actual engine; 'Tony mode' is a term for when the user manually sends actions through the UI, superceding the active engine.
 
 A session **scheduler** is responsible for processing an **event queue** of WebSocket messages coming from games. When an event (or timer) calls for it, the scheduler prompts an engine to act.
 The engine may choose not to act if not forced. This use of the term "force" is similar in purpose to the WebSocket protocol, but is not the same thing - a scheduler may force an action without an incoming `actions/force`, e.g. if no actions were taken for a certain amount of time.
@@ -89,14 +90,12 @@ The Tauri application is in **early development** and represents the future dire
 #### Tauri (`app/src-tauri/`)
 - Rust backend for desktop application
 - Handles acting as the WebSocket server, relaying messages to the frontend
-- Also responsible for LLM generation (planned, not implemented yet)
 - Tauri plugins to allow the frontend to invoke common system calls:
   - File system access (`@tauri-apps/plugin-fs`)
   - HTTP client (`@tauri-apps/plugin-http`)
   - Logging (`@tauri-apps/plugin-log`)
   - Notifications (`@tauri-apps/plugin-notification`)
   - Store API (`@tauri-apps/plugin-store`)
-  - WebSocket client (`@tauri-apps/plugin-websocket`)
 
 #### Frontend Structure (`app/src/`)
 - Application code in `app/src/lib/`
@@ -104,7 +103,6 @@ The Tauri application is in **early development** and represents the future dire
     - App logic (e.g. config) in `app/src/lib/app/`
     - Svelte 5 UI components and utilities in `app/src/lib/ui/`
 - SvelteKit routed pages in `app/src/routes/`
-- Zod to validate incoming WebSocket messages
 
 #### Frontend Stack
 - Svelte 5
@@ -113,8 +111,10 @@ The Tauri application is in **early development** and represents the future dire
 - Skeleton UI
 - Tailwind CSS
 - Lucide Icons
-- Svelte Sonner (for toasts)
+- Svelte Sonner (toasts)
   - Skeleton UI already provides toasts, but Zag (their dependency) has a bug that makes it so toasts never get disposed internally and you reach max toasts very quickly
+- neverthrow (`Result` type for error handling)
+- Zod (parsing & validation)
 
 ## Development Workflow
 
@@ -124,32 +124,17 @@ The Tauri application is in **early development** and represents the future dire
 - The Tauri app's Rust backend (`app/src-tauri`) should be treated as read-only unless explicitly instructed to work on it.
 
 
-## Key Paths for LLM Project Navigation
+## Essential Paths for Project Navigation
 
-### Python App Essential Paths
+### Python App
 - `src/gary/app.py` - Main FastAPI application and WebSocket handler
-- `src/gary/web/ui.py` - Panel web interface implementation
-- `src/gary/registry.py` - Game instance management
+- `src/gary/web/ui.py` - Panel web interface
+- `src/gary/registry.py` - Game connection/instance management
 - `src/gary/llm/` - Language model integration
 
-### Tauri App Essential Paths
+### Tauri App
 - `app/src/lib/api/` - WebSocket API code (game integration)
 - `app/src/lib/app/` - Application logic
 - `app/src/lib/ui/` - Svelte components and utilities
 - `app/src/routes/` - Application pages and routing
 - `app/src-tauri/` - Rust backend and Tauri configuration
-
-
-## Project Structure Summary
-```
-src/gary/          # Python app (stable)
-├── app.py         # FastAPI application
-├── registry.py    # Game state management
-├── spec.py        # WebSocket protocol
-├── llm/           # LLM-related code (e.g. event scheduler)
-└── util/          # Utility code (e.g. config)
-├── web/           # Panel web UI
-app/               # Tauri app (development)
-├── src/           # Svelte 5 frontend & application logic
-└── src-tauri/     # Rust desktop backend
-```

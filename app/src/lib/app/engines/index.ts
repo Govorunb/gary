@@ -11,6 +11,6 @@ export abstract class Engine<TOptions> {
     constructor(public options: TOptions) {
     }
     
-    abstract try_act(session: Session, actions: Action[]): Promise<EngineAct | null>;
-    abstract force_act(session: Session, actions: Action[], query: string, state: string): Promise<EngineAct>;
+    abstract tryAct(session: Session, actions: Action[]): Promise<EngineAct | null>;
+    abstract forceAct(session: Session, actions: Action[], query: string, state: string): Promise<EngineAct>;
 }

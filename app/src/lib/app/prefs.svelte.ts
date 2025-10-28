@@ -1,7 +1,6 @@
 import z from "zod";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
-// import * as store from "@tauri-apps/plugin-store";
 
 export const USER_PREFS = "userPrefs";
 
@@ -19,10 +18,10 @@ export class UserPrefs {
     }
 
     get theme() {
-        return this.#data.theme;
+        return this.#data.app.theme;
     }
     set theme(theme: "system" | "light" | "dark") {
-        this.#data.theme = zUserPrefs.shape.theme.parse(theme);
+        this.#data.app.theme = zAppPrefs.shape.theme.parse(theme);
     }
 
     get serverPort() {
@@ -33,6 +32,7 @@ export class UserPrefs {
     }
 
     // TODO: file storage down the road (to make it user editable)
+    // or just use [tauri-store](https://github.com/ferreira-tb/tauri-store/)
     static async loadData(): Promise<UserPrefsData> {
         const dataStr = localStorage.getItem(USER_PREFS);
         const data = dataStr === null ? {} : JSON.parse(dataStr);
@@ -40,7 +40,7 @@ export class UserPrefs {
         // most fields have defaults, so this should only fail in extreme cases
         if (!parsed.success) {
             const zodError = z.treeifyError(parsed.error);
-            // ideally should be a modal (open json for editing, try reload, use defaults)
+            // ideally should be a modal (open json in system editor, try reload, use defaults)
             // mayhaps we should have a loading/splash screen before dashboard init
             const zodErrors = zodError.errors.join("\n\t-");
             log.error("failed to parse user prefs\n\tzod errors: \n\t-" + zodErrors);
@@ -56,7 +56,7 @@ export class UserPrefs {
                     }
                 }
             });
-            return zUserPrefs.parse({});
+            return zUserPrefs.decode({});
         }
         log.debug("loaded prefs");
         return parsed.data;
@@ -68,14 +68,22 @@ export class UserPrefs {
     }
 }
 
+export const zAppPrefs = z.strictObject({
+    theme: z.enum(["system", "light", "dark"]).default("system"),
+});
+
 export const zOpenRouterPrefs = z.strictObject({
     apiKey: z.string().nullish(),
 });
 
 export const zUserPrefs = z.strictObject({
-    theme: z.enum(["system", "light", "dark"]).default("system"),
-    serverPort: z.int().min(1024).max(65535).default(8000),
-    openRouter: zOpenRouterPrefs.default(zOpenRouterPrefs.parse({})),
+    app: zAppPrefs.prefault({}),
+    serverPort: z.coerce.number().int().min(1024).max(65535).default(8000),
+    engines: z.strictObject({
+        openRouter: zOpenRouterPrefs.prefault({}),
+    }).prefault({}),
 });
 
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
+export type AppPrefs = z.infer<typeof zAppPrefs>;
+export type OpenRouterPrefs = z.infer<typeof zOpenRouterPrefs>;

@@ -12,13 +12,13 @@ import type { Session } from "../session.svelte";
 export class Randy extends Engine<RandyOptions> {
     readonly name: string = "Randy";
 
-    async try_act(session: Session, actions: Action[]): Promise<EngineAct | null> {
+    async tryAct(session: Session, actions: Action[]): Promise<EngineAct | null> {
         if (Math.random() < this.options.chanceDoNothing) {
             return null;
         }
-        return this.force_act(session, actions, "", "");
+        return this.forceAct(session, actions, "", "");
     }
-    async force_act(_session: Session, actions: Action[], _query: string, _state: string): Promise<EngineAct> {
+    async forceAct(_session: Session, actions: Action[], _query: string, _state: string): Promise<EngineAct> {
         const action = pickRandom(actions);
         return zEngineAct.parse({
             name: action.name,

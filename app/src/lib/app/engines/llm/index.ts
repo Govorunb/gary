@@ -24,10 +24,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         super(options);
     }
     
-    try_act(session: Session, actions: Action[]): Promise<EngineAct | null> {
+    tryAct(session: Session, actions: Action[]): Promise<EngineAct | null> {
         throw new Error("Method not implemented.");
     }
-    async force_act(session: Session, actions: Action[], query: string, state: string): Promise<EngineAct> {
+    async forceAct(session: Session, actions: Action[], query: string, state: string): Promise<EngineAct> {
         // don't write to context, it will be prepared from outside
         const ctx = this.convertContext(session.context);
         const schema = this.structuredOutputSchemaForActions(actions);

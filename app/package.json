@@ -25,6 +25,7 @@
     "@tauri-apps/plugin-store": "~2.4.0",
     "@tauri-apps/plugin-websocket": "~2.4.0",
     "json-schema-faker": "^0.5.9",
+    "neverthrow": "^8.2.0",
     "openai": "^6.5.0",
     "postcss": "^8.5.6",
     "runed": "^0.35.1",
@@ -44,5 +45,6 @@
     "svelte-check": "^4.3.3",
     "typescript": "~5.9.3",
     "vite": "^7.1.10"
-  }
+  },
+  "packageManager": "pnpm@10.19.0+sha512.c9fc7236e92adf5c8af42fd5bf1612df99c2ceb62f27047032f4720b33f8eacdde311865e91c411f2774f618d82f320808ecb51718bfa82c060c4ba7c76a32b8"
 }

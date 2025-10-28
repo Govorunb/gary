@@ -24,7 +24,7 @@ export {
 
 export function initDI(userPrefsData: UserPrefsData) {
     const userPrefs = new UserPrefs(userPrefsData);
-    const session = new Session("default");
+    const session = new Session("default", userPrefs);
     const registry = session.registry;
     const scheduler = session.scheduler;
     const serverManager = new ServerManager(session, userPrefs);

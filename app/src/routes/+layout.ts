@@ -13,6 +13,7 @@ export const csr = true;
 // technically blocks the initial render so is it really async anyway
 export const load: LayoutLoad = async () => {
     return {
+        // theoretically we can redirect to an error page if prefs fail to load
         userPrefsData: await UserPrefs.loadData(),
     }
 }

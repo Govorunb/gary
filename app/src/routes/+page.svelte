@@ -14,8 +14,8 @@
     <h1 class="justify-self-center flex flex-row gap-3">
         {#if session.activeEngine}
             <p class="text-3xl font-semibold">{session.activeEngine.name}</p>
-            <button onclick={() => session.scheduler.try_act()} class="act-btn">Poke</button>
-            <button onclick={() => session.scheduler.force_act()} class="act-btn">Force Act</button>
+            <button onclick={() => session.scheduler.tryAct()} class="act-btn">Poke</button>
+            <button onclick={() => session.scheduler.forceAct()} class="act-btn">Force Act</button>
         {:else}
         <p class="text-3xl font-semibold">Gary Control Panel</p>
         {/if}
