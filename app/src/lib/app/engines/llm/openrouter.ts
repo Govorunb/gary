@@ -1,6 +1,6 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
 import { LLMEngine, type CommonLLMOptions, type OpenAIContext } from ".";
-import { zActorSource, zMessage, zMessageOptions, type Message } from "$lib/app/context.svelte";
+import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
 import { getOpenRouterClient } from "$lib/app/utils/di";
@@ -46,7 +46,7 @@ export class OpenRouter extends LLMEngine<Options> {
         const msg = zMessage.decode({
             text: res.choices[0].message.content as string, // TODO: error handling and all
             source: zActorSource.decode({manual: false}),
-            options: zMessageOptions.decode({silent: true}),
+            silent: true,
             customData: {
                 [this.name]: { res },
             },

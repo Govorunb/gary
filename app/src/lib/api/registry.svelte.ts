@@ -153,7 +153,7 @@ export class Game {
                 break;
             case "actions/force":
                 // FIXME: should use event queue
-                this.session.scheduler.force_act();
+                this.session.scheduler.forceAct();
                 break;
             case "action/result":
                 const silent = msg.data.success;
@@ -169,9 +169,9 @@ export class Game {
     }
 
     async context(text: string, silent: boolean) {
-        this.session.context.client(this.name, text, { silent });
+        this.session.context.client(this.name, { text, silent });
         if (!silent) {
-            this.session.scheduler.try_act();
+            this.session.scheduler.tryAct();
         }
     }
 
