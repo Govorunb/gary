@@ -76,14 +76,24 @@ export const zOpenRouterPrefs = z.strictObject({
     apiKey: z.string().nullish(),
 });
 
+export const zOpenAIPrefs = z.strictObject({
+    apiKey: z.string().nullish(),
+    serverUrl: z.url().default("https://api.openai.com/v1"),
+    modelId: z.string().nullish(),
+    organization: z.string().nullish(),
+    project: z.string().nullish(),
+});
+
 export const zUserPrefs = z.strictObject({
     app: zAppPrefs.prefault({}),
     serverPort: z.coerce.number().int().min(1024).max(65535).default(8000),
     engines: z.strictObject({
         openRouter: zOpenRouterPrefs.prefault({}),
+        openai: zOpenAIPrefs.prefault({}),
     }).prefault({}),
 });
 
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
 export type AppPrefs = z.infer<typeof zAppPrefs>;
 export type OpenRouterPrefs = z.infer<typeof zOpenRouterPrefs>;
+export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
