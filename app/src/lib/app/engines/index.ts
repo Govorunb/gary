@@ -14,6 +14,13 @@ export abstract class Engine<TOptions> {
         this.options = $derived(userPrefs.engines[engineId]);
     }
     
-    abstract tryAct(session: Session, actions: Action[]): Promise<EngineAct | null>;
-    abstract forceAct(session: Session, actions: Action[], query: string, state: string): Promise<EngineAct>;
+    abstract tryAct(session: Session, actions?: Action[]): Promise<EngineAct | null>;
+    abstract forceAct(session: Session, actions: Action[]): Promise<EngineAct>;
+
+    protected resolveActions(session: Session, actions?: Action[]): Action[] {
+        if (actions?.length) {
+            return actions;
+        }
+        return session.registry.games.flatMap((game) => Array.from(game.actions.values()));
+    }
 }

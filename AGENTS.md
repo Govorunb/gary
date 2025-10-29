@@ -39,7 +39,7 @@ Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`)
 Zod use should follow these conventions:
 - Schemas should be named `zSomeType`; omit "Schema" from the name since the `z` prefix makes it obvious
 - Prefer `strictObject` over `object` unless extra fields are explicitly meant to be allowed
-- For discriminated unions, use our `zConst` utility (that combines `z.literal` and `z.default`) to make object creation easy - e.g. with it, we can just use `zMyUnionMemberSubtype.decode({})` and omit the discriminator field entirely. Do note that this is not acceptable for validating values coming from outside.
+- For discriminated unions, use our `zConst` utility (that combines `z.literal` and `z.default`) to make object creation easy - e.g. with it, we can just use `zMyUnionMemberSubtype.decode({})` and omit the discriminator field entirely. Do note that `.decode({})` is not acceptable for validating values coming from outside.
 - When constructing objects in code from literals, prefer `zMyType.decode(input)` as it enables type checking whereas the `zMyType.parse(input)` parameter is typed as `unknown`. Use `parse` for outside input.
 
 ### Backend

@@ -3,11 +3,12 @@ import { LLMEngine, type CommonLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
-import { getOpenRouterClient } from "$lib/app/utils/di";
 import type { ChatGenerationParams, ChatResponse } from "@openrouter/sdk/models";
+import type { UserPrefs } from "$lib/app/prefs.svelte";
+import { OpenRouter as OpenRouterClient, type SDKOptions } from "@openrouter/sdk";
 
 export interface Options extends CommonLLMOptions {
-    apiKey?: string; // TODO: [stronghold](https://github.com/tauri-apps/tauri-plugin-stronghold)
+    apiKey?: string; // TODO: keyring?
     modelId?: string;
     /** Preferred order of providers for the model. */
     providerSortList?: string[];
@@ -17,11 +18,18 @@ export interface Options extends CommonLLMOptions {
 
 type NonStreamingChatParams = ChatGenerationParams & { stream?: false | undefined };
 
+export const ENGINE_ID = "openrouter";
+
 export class OpenRouter extends LLMEngine<Options> {
     readonly name: string = "OpenRouter";
+    private client: OpenRouterClient;
 
-    constructor(options: Options) {
-        super(options);
+    constructor(userPrefs: UserPrefs) {
+        super(userPrefs, ENGINE_ID);
+        let clientOpts: SDKOptions = $derived({
+            apiKey: this.options.apiKey,
+        });
+        this.client = new OpenRouterClient(clientOpts);
     }
 
     async generate(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Message> {
@@ -41,7 +49,7 @@ export class OpenRouter extends LLMEngine<Options> {
                 },
             };
         }
-        const res: ChatResponse = await getOpenRouterClient().chat.send(params satisfies NonStreamingChatParams);
+        const res: ChatResponse = await this.client.chat.send(params satisfies NonStreamingChatParams);
 
         const msg = zMessage.decode({
             text: res.choices[0].message.content as string, // TODO: error handling and all
@@ -59,7 +67,7 @@ export class OpenRouter extends LLMEngine<Options> {
 
     async fetchGenerationInfo(id: string) {
         try {
-            const response = await getOpenRouterClient().generations.getGeneration({ id });
+            const response = await this.client.generations.getGeneration({ id });
             return response.data;
         } catch (e) {
             log.error(`Failed to fetch OpenRouter generation info: ${e}`);

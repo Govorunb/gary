@@ -20,13 +20,17 @@ export type OpenAIContext = OpenAIMessage[];
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
     abstract name: string;
 
-    tryAct(session: Session, actions: Action[]): Promise<EngineAct | null> {
+    tryAct(session: Session, actions?: Action[]): Promise<EngineAct | null> {
         throw new Error("Method not implemented.");
     }
-    async forceAct(session: Session, actions: Action[], query: string, state: string): Promise<EngineAct> {
+    async forceAct(session: Session, actions: Action[]): Promise<EngineAct> {
+        const resolvedActions = this.resolveActions(session, actions);
+        if (!resolvedActions.length) {
+            throw new Error("forceAct called with no available actions");
+        }
         // don't write to context, it will be prepared from outside
         const ctx = this.convertContext(session.context);
-        const schema = this.structuredOutputSchemaForActions(actions);
+        const schema = this.structuredOutputSchemaForActions(resolvedActions);
         const gen = await this.generate(ctx, schema);
         gen.visibilityOverrides = {user: false, engine: false}; // TODO: maybe don't need
         return zEngineAct.parse(JSON.parse(gen.text));

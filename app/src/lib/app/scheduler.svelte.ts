@@ -81,7 +81,7 @@ export class Scheduler {
             return;
         }
         // TODO: catch errors (neverthrow)
-        const act = await this.activeEngine!.forceAct(this.session, actions, "", "");
+        const act = await this.activeEngine!.forceAct(this.session, actions);
         if (!act) {
             log.error(`Scheduler.forceAct: engine chose not to act (should not be possible!)`);
             return;

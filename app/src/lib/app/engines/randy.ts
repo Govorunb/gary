@@ -15,15 +15,23 @@ export class Randy extends Engine<RandyOptions> {
         super(userPrefs, "randy");
     }
 
-    async tryAct(session: Session, actions: Action[]): Promise<EngineAct | null> {
+    async tryAct(session: Session, actions?: Action[]): Promise<EngineAct | null> {
+        const resolvedActions = this.resolveActions(session, actions);
+        if (!resolvedActions.length) {
+            return null;
+        }
         if (Math.random() < this.options.chanceDoNothing) {
             return null;
         }
-        return this.forceAct(session, actions);
+        return this.forceAct(session, resolvedActions);
     }
 
-    async forceAct(_session: Session, actions: Action[]): Promise<EngineAct> {
-        const action = pickRandom(actions);
+    async forceAct(session: Session, actions?: Action[]): Promise<EngineAct> {
+        const resolvedActions = this.resolveActions(session, actions);
+        if (!resolvedActions.length) {
+            throw new Error("forceAct called with no available actions");
+        }
+        const action = pickRandom(resolvedActions);
         return zEngineAct.decode({
             name: action.name,
             data: JSON.stringify(this.generate(action)),
