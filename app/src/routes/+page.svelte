@@ -12,6 +12,7 @@
         <PowerButton />
     </div>
     <h1 class="justify-self-center flex flex-row gap-3">
+        <!-- TODO: engine picker -->
         {#if session.activeEngine}
             <p class="text-3xl font-semibold">{session.activeEngine.name}</p>
             <button onclick={() => session.scheduler.tryAct()} class="act-btn">Poke</button>

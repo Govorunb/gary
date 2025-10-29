@@ -2,7 +2,7 @@
 
 Gary is a project that allows LLMs to interface with controllable client apps ("game integrations"). It implements a backend for the [Neuro-sama SDK](https://github.com/vedalai/neuro-sdk) to allow developers of game integrations to test them on a system approximating the production one.
 
-Refer to `docs/ARCHITECTURE.md` for a technical overview of the project's architecture if needed.
+Refer to `docs/ARCHITECTURE.md` for a technical overview of the project's architecture.
 
 `docs/ROADMAP.md` contains the current development goals. Keep these in mind when implementing or planning.
 
@@ -48,7 +48,7 @@ The Rust side should handle as little as possible to keep the majority of app lo
 
 ### Agent Specific Workflows
 
-If you find instructions specific to you in this section, follow them. Otherwise, feel free to ignore them.
+Follow any instructions specific to you in this section, and ignore instructions not meant for you.
 
 #### Google Gemini
 

@@ -3,14 +3,13 @@
     import { onDestroy } from 'svelte';
     import type { LayoutProps } from './$types.js';
     import { Toaster } from "svelte-sonner";
-    import { getRandy, getSession, getUserPrefs, initDI } from '$lib/app/utils/di';
+    import { getSession, getUserPrefs, initDI } from '$lib/app/utils/di';
 
     let { data, children }: LayoutProps = $props();
     
     initDI(data.userPrefsData);
     const session = getSession();
     const userPrefs = getUserPrefs();
-    session.activeEngine = getRandy(); // TODO: picking engines
     onDestroy(() => {
         session.dispose();
     })
@@ -20,4 +19,4 @@
     {@render children()}
 </div>
 
-<Toaster closeButton richColors position="bottom-right" theme={userPrefs.theme} duration={10000} />
+<Toaster closeButton richColors position="bottom-right" theme={userPrefs.app.theme} duration={10000} />

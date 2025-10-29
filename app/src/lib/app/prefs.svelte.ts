@@ -1,6 +1,9 @@
 import z from "zod";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
+import { zOpenRouterPrefs, type OpenRouterPrefs } from "./engines/llm/openrouter";
+import { zOpenAIPrefs, type OpenAIPrefs } from "./engines/llm/openai";
+import { zRandyPrefs, type RandyPrefs } from "./engines/randy";
 
 export const USER_PREFS = "userPrefs";
 
@@ -15,20 +18,16 @@ export class UserPrefs {
             this.save();
         })
         this.#data = $state(zUserPrefs.parse(data));
+        // TODO: proxy w/ setters that parse through zod
     }
-
-    get theme() {
-        return this.#data.app.theme;
+    get app() {
+        return this.#data.app;
     }
-    set theme(theme: "system" | "light" | "dark") {
-        this.#data.app.theme = zAppPrefs.shape.theme.parse(theme);
+    get server() {
+        return this.#data.server;
     }
-
-    get serverPort() {
-        return this.#data.serverPort;
-    }
-    set serverPort(port: number) {
-        this.#data.serverPort = zUserPrefs.shape.serverPort.parse(port);
+    get engines() {
+        return this.#data.engines;
     }
 
     // TODO: file storage down the road (to make it user editable)
@@ -70,30 +69,22 @@ export class UserPrefs {
 
 export const zAppPrefs = z.strictObject({
     theme: z.enum(["system", "light", "dark"]).default("system"),
+    selectedEngine: z.string().default("randy"),
 });
 
-export const zOpenRouterPrefs = z.strictObject({
-    apiKey: z.string().nullish(),
-});
-
-export const zOpenAIPrefs = z.strictObject({
-    apiKey: z.string().nullish(),
-    serverUrl: z.url().default("https://api.openai.com/v1"),
-    modelId: z.string().nullish(),
-    organization: z.string().nullish(),
-    project: z.string().nullish(),
+export const zServerPrefs = z.strictObject({
+    port: z.coerce.number().int().min(1024).max(65535).default(8000),
+    // TODO: server behavior toggles (e.g. conflict resolution)
 });
 
 export const zUserPrefs = z.strictObject({
     app: zAppPrefs.prefault({}),
-    serverPort: z.coerce.number().int().min(1024).max(65535).default(8000),
-    engines: z.strictObject({
+    server: zServerPrefs.prefault({}),
+    engines: z.object({
         openRouter: zOpenRouterPrefs.prefault({}),
-        openai: zOpenAIPrefs.prefault({}),
-    }).prefault({}),
+        randy: zRandyPrefs.prefault({}),
+    }).catchall(zOpenAIPrefs).prefault({}),
 });
 
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
 export type AppPrefs = z.infer<typeof zAppPrefs>;
-export type OpenRouterPrefs = z.infer<typeof zOpenRouterPrefs>;
-export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;

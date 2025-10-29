@@ -16,6 +16,6 @@
         min="1024"
         {@attach webkitScrollNum}
         placeholder="Port (default 8000)"
-        bind:value={userPrefs.serverPort}
+        bind:value={userPrefs.server.port}
     />
 </div>

@@ -25,7 +25,7 @@
             log.error(`${err_title}: ${e}`);
             let err_msg = e as string;
             if (err_msg.includes("in use")) {
-                err_msg = `The port ${userPrefs.serverPort} is already in use. Check for other instances of Gary, Tony, etc.`;
+                err_msg = `The port ${userPrefs.server.port} is already in use. Check for other instances of Gary, Tony, etc.`;
             }
             toast.error(err_title, {
                 description: err_msg,
@@ -76,7 +76,7 @@
         </Popover>
     </div>
     {#if running}
-        <p class="text-sm">Server is running on port {userPrefs.serverPort}</p>
+        <p class="text-sm">Server is running on port {userPrefs.server.port}</p>
     {:else}
         <p class="text-sm">Server is not running</p>
     {/if}

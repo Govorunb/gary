@@ -27,7 +27,7 @@ export class ServerManager {
 
     async start() {
         try {
-            await invoke("start_server", { port: this.userPrefs.serverPort });
+            await invoke("start_server", { port: this.userPrefs.server.port });
         } finally {
             await this.sync();
         }

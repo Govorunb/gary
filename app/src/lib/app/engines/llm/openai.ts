@@ -1,5 +1,5 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { LLMEngine, type CommonLLMOptions, type OpenAIContext } from ".";
+import { LLMEngine, zLLMOptions, type CommonLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";
@@ -7,29 +7,29 @@ import type { ClientOptions } from "openai";
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
+import z from "zod";
 
-export interface Options extends CommonLLMOptions {
-    apiKey?: string;
-    serverUrl: string;
-    modelId?: string;
-    organization?: string;
-    project?: string;
-}
+/** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
+ * This engine may have multiple instances active at once, each with a generated ID and a user-defined name.
+ */
+export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
+    readonly name: string;
+    readonly id: string;
+    private readonly client: OpenAI;
 
-export class OpenAIEngine extends LLMEngine<Options> {
-
-    constructor(userPrefs: UserPrefs, engineId: string, public readonly name: string) {
+    constructor(userPrefs: UserPrefs, engineId: string) {
         super(userPrefs, engineId);
-    }
-
-    private createClient() {
-        const config: ClientOptions = {
+        this.id = engineId;
+        this.name = $derived(this.options.name);
+        this.client = new OpenAI({
             apiKey: this.options.apiKey,
             baseURL: this.options.serverUrl,
-            organization: this.options.organization,
-            project: this.options.project,
-        };
-        return new OpenAI(config);
+        } satisfies ClientOptions);
+        $effect(() => {
+            // TODO: test reactivity
+            this.client.apiKey = this.options.apiKey!;
+            this.client.baseURL = this.options.serverUrl;
+        })
     }
 
     private toChatMessages(context: OpenAIContext): ChatCompletionMessageParam[] {
@@ -42,8 +42,6 @@ export class OpenAIEngine extends LLMEngine<Options> {
         if (!model) {
             throw new Error("OpenAI engine is missing a model ID");
         }
-
-        const client = this.createClient();
 
         const messages = this.toChatMessages(context);
         const params: ChatCompletionCreateParamsNonStreaming = {
@@ -64,15 +62,10 @@ export class OpenAIEngine extends LLMEngine<Options> {
         }
 
         try {
-            const res = await client.chat.completions.create(params);
-            const choice = res.choices[0];
-            const content = choice?.message?.content;
-            if (!content) {
-                throw new Error("No content returned from OpenAI");
-            }
+            const res = await this.client.chat.completions.create(params);
 
             const msg = zMessage.decode({
-                text: typeof content === "string" ? content : String(content),
+                text: res.choices[0].message.content!, // TODO: error handling
                 source: zActorSource.decode({ manual: false }),
                 silent: true,
                 customData: {
@@ -88,3 +81,13 @@ export class OpenAIEngine extends LLMEngine<Options> {
         }
     }
 }
+
+export const zOpenAIPrefs = zLLMOptions.extend({
+    name: z.string(),
+    /** Leave empty if your server doesn't need authentication. (e.g. local) */
+    apiKey: z.string().default(""),
+    serverUrl: z.url().default("https://api.openai.com/v1"),
+    modelId: z.string().optional(),
+});
+
+export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;

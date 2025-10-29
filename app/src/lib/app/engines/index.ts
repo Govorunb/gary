@@ -11,7 +11,7 @@ export abstract class Engine<TOptions> {
     readonly options: TOptions;
 
     constructor(public userPrefs: UserPrefs, engineId: string) {
-        this.options = $derived(userPrefs.engines[engineId]);
+        this.options = $derived(userPrefs.engines[engineId] as TOptions);
     }
     
     abstract tryAct(session: Session, actions?: Action[]): Promise<EngineAct | null>;

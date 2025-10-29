@@ -14,7 +14,7 @@
 
     const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
     $effect(() => {
-        userPrefs.theme = selectedTheme;
+        userPrefs.app.theme = selectedTheme;
         if (selectedTheme === "system") {
             setTheme(systemDark.matches ? "dark" : "light");
         } else {
@@ -22,7 +22,7 @@
         }
     });
     $effect(() => {
-        selectedIndex = Math.max(0, themes.indexOf(userPrefs.theme));
+        selectedIndex = Math.max(0, themes.indexOf(userPrefs.app.theme));
     })
     onMount(() => on(systemDark, "change", systemThemeChanged));
 

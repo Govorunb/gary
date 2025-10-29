@@ -6,9 +6,10 @@ import type { Session } from "../session.svelte";
 import z from "zod";
 import type { UserPrefs } from "../prefs.svelte";
 
-/** Randy - automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
+/** Automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
+ * Has a configurable chance to skip acting.
  */
-export class Randy extends Engine<RandyOptions> {
+export class Randy extends Engine<RandyPrefs> {
     readonly name: string = "Randy";
 
     constructor(userPrefs: UserPrefs) {
@@ -44,9 +45,14 @@ export class Randy extends Engine<RandyOptions> {
     }
 }
 
-export const zRandyOptions = z.strictObject({
-    /** On try_act (when not forced, e.g. on non-silent context), this is the chance to do nothing instead of an action. Number between 0 and 1. */
-    chanceDoNothing: z.number().min(0).max(1),
+export const zRandyPrefs = z.strictObject({
+    /** The chance to do nothing instead of acting.
+     * Applicable when prompted to act but not forced (e.g. on non-silent context).
+     * Can be used to approximate LLMs getting distracted, experiencing internal errors, etc.
+     * 
+     * Number between 0 and 1.
+     * */
+    chanceDoNothing: z.number().min(0).max(1).default(0.2),
 });
 
-export type RandyOptions = z.infer<typeof zRandyOptions>;
+export type RandyPrefs = z.infer<typeof zRandyPrefs>;

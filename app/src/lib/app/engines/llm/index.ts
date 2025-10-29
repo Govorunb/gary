@@ -8,12 +8,14 @@ import z from "zod";
 import { zConst } from "$lib/app/utils.svelte";
 import type { Message as OpenAIMessage } from "@openrouter/sdk/models";
 
-export interface CommonLLMOptions {
+export const zLLMOptions = z.strictObject({
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
-    allowDoNothing?: boolean;
+    allowDoNothing: z.boolean().default(false),
     /** Let the model trauma dump about its horrid life circumstances instead of doing something useful to society. Approximates realistic human behavior. */
-    allowYapping?: boolean;
-}
+    allowYapping: z.boolean().default(false),
+});
+
+export type CommonLLMOptions = z.infer<typeof zLLMOptions>;
 
 export type OpenAIContext = OpenAIMessage[];
 
@@ -21,19 +23,39 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     abstract name: string;
 
     tryAct(session: Session, actions?: Action[]): Promise<EngineAct | null> {
-        throw new Error("Method not implemented.");
+        return this.actInner(session, actions, false);
     }
-    async forceAct(session: Session, actions: Action[]): Promise<EngineAct> {
-        const resolvedActions = this.resolveActions(session, actions);
-        if (!resolvedActions.length) {
-            throw new Error("forceAct called with no available actions");
+    async forceAct(session: Session, actions?: Action[]): Promise<EngineAct> {
+        const act = await this.actInner(session, actions, true);
+        if (!act) {
+            throw new Error("Force act did not act");
         }
-        // don't write to context, it will be prepared from outside
+        return act;
+    }
+
+    async actInner(session: Session, actions?: Action[], isForce: boolean = false) {
+        const resolvedActions = this.resolveActions(session, actions);
+        if (isForce && !resolvedActions.length) {
+            throw new Error("Tried to force act with no available actions");
+        }
         const ctx = this.convertContext(session.context);
-        const schema = this.structuredOutputSchemaForActions(resolvedActions);
+        const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
         const gen = await this.generate(ctx, schema);
-        gen.visibilityOverrides = {user: false, engine: false}; // TODO: maybe don't need
-        return zEngineAct.parse(JSON.parse(gen.text));
+        const command = JSON.parse(gen.text)['command'];
+        if (zWait.safeParse(command).success) {
+            if (isForce) {
+                throw new Error("Internal error - force act allowed waiting");
+            }
+            return null;
+        }
+        if (zSay.safeParse(command).success) {
+            if (isForce) {
+                throw new Error("Internal error - force act allowed yapping");
+            }
+            // TODO: insert into context
+            return null;
+        }
+        return zEngineAct.parse(command);
     }
 
     // TODO: configurable prompts (editor?)
@@ -90,7 +112,7 @@ You must perform one of the following actions, given this information:
         return prompt;
     }
 
-    protected structuredOutputSchemaForActions(actions: Action[]): JSONSchema {
+    protected structuredOutputSchemaForActions(actions: Action[], isForce: boolean = false): JSONSchema {
         const acts: JSONSchema = {
             type: "object",
         };
@@ -127,10 +149,10 @@ You must perform one of the following actions, given this information:
             required: ["command"],
             additionalProperties: false,
         }
-        if (this.options.allowDoNothing) {
+        if (!isForce && this.options.allowDoNothing) {
             cmdAnyOf.push(z.toJSONSchema(zWait) as any);
         }
-        if (this.options.allowYapping) {
+        if (!isForce && this.options.allowYapping) {
             cmdAnyOf.push(z.toJSONSchema(zSay) as any);
         }
         return main;

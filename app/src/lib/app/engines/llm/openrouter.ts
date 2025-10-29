@@ -1,26 +1,16 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { LLMEngine, type CommonLLMOptions, type OpenAIContext } from ".";
+import { LLMEngine, zLLMOptions, type CommonLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
 import type { ChatGenerationParams, ChatResponse } from "@openrouter/sdk/models";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import { OpenRouter as OpenRouterClient, type SDKOptions } from "@openrouter/sdk";
+import z from "zod";
 
-export interface Options extends CommonLLMOptions {
-    apiKey?: string; // TODO: keyring?
-    modelId?: string;
-    /** Preferred order of providers for the model. */
-    providerSortList?: string[];
-    /** Display token usage and costs inline in the actor message. Adds a bit of l*tency to the response. */
-    displayUsage?: boolean;
-}
+export const ENGINE_ID = "openRouter";
 
-type NonStreamingChatParams = ChatGenerationParams & { stream?: false | undefined };
-
-export const ENGINE_ID = "openrouter";
-
-export class OpenRouter extends LLMEngine<Options> {
+export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     readonly name: string = "OpenRouter";
     private client: OpenRouterClient;
 
@@ -33,9 +23,13 @@ export class OpenRouter extends LLMEngine<Options> {
     }
 
     async generate(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Message> {
+        type NonStreamingChatParams = ChatGenerationParams & { stream?: false | undefined };
+
         let params: NonStreamingChatParams = {
             messages: context,
-            model: this.options.modelId ?? "",
+            model: this.options.model ?? "openrouter/auto",
+            // @ts-expect-error
+            models: this.options.extraModels, // TODO: watch the OpenAPI spec
         };
         if (outputSchema) {
             params.responseFormat = {
@@ -56,11 +50,11 @@ export class OpenRouter extends LLMEngine<Options> {
             source: zActorSource.decode({manual: false}),
             silent: true,
             customData: {
-                [this.name]: { res },
+                [ENGINE_ID]: { res },
             },
         })
         this.fetchGenerationInfo(msg.id).then(gen => {
-            msg.customData![this.name].gen = gen;
+            msg.customData![ENGINE_ID].gen = gen;
         });
         return msg;
     }
@@ -77,3 +71,22 @@ export class OpenRouter extends LLMEngine<Options> {
         }
     }
 }
+
+export const zOpenRouterPrefs = zLLMOptions.safeExtend({
+    apiKey: z.string().optional(),
+    /** OpenRouter model identifier.
+     * Can be:
+     * - Empty or "openrouter/auto" for auto routing
+     * - A model slug ("gpt-5")
+     * - A preset slug ("@preset/my-precious")
+     * - Suffixes (":nitro", ":free") are supported as normal
+     * See [OpenRouter docs](https://openrouter.ai/docs/features/model-routing) for more info.
+     * */
+    model: z.string().optional(),
+    /** A list of additional models to try if the first one fails. */
+    extraModels: z.array(z.string()).optional(),
+    /** Preferred order of providers for the model. Leave empty to let OpenRouter decide. */
+    providerSortList: z.array(z.string()).optional(),
+});
+
+export type OpenRouterPrefs = z.infer<typeof zOpenRouterPrefs>;
