@@ -50,7 +50,7 @@ export class Registry {
         await invoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
         if (conn.version == "v1") {
             log.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
-            await conn.send(v1.zReregisterAll.parse({}));
+            await conn.send(v1.zReregisterAll.decode({}));
         }
     }
 

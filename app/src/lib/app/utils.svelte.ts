@@ -1,7 +1,7 @@
 import type { Attachment } from "svelte/attachments";
 import z from "zod";
 
-export function pick<T>(arr: T[]) {
+export function pickRandom<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
@@ -75,7 +75,7 @@ export function outclick(func: () => void, additionalTargets: HTMLElement[] = []
     };
 }
 
-/** This lets us omit the field when constructing discriminated union members from e.g. `zStartup.parse({})`. */
+/** This lets us omit the field when constructing from e.g. `zStartup.decode({})`. */
 export function zConst<T extends z.core.util.Literal>(value: NonNullable<T>) {
     return z.literal(value).default(value);
 }

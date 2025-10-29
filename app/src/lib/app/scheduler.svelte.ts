@@ -59,8 +59,8 @@ export class Scheduler {
         const game = this.registry.games.find(g => g.actions.has(act.name));
         if (game) {
             log.info(`Engine acting: ${act.name}`);
-            const actData = zActData.parse({...act});
-            await game.conn.send(zAct.parse({data: actData}));
+            const actData = zActData.decode({...act});
+            await game.conn.send(zAct.decode({data: actData}));
         } else {
             toast.error("Engine selected unknown action", {
                 description: `Action: ${act.name}`,
@@ -89,7 +89,7 @@ export class Scheduler {
         const game = this.registry.games.find(g => g.actions.has(act.name));
         if (game) {
             log.info(`Engine acting (forced): ${act.name}`);
-            await game.conn.send(zAct.parse({data: act}));
+            await game.conn.send(zAct.decode({data: act}));
         } else {
             toast.error("Engine selected unknown action", {
                 description: `Action: ${act.name}`,

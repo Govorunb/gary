@@ -4,14 +4,16 @@ import type { Registry } from "$lib/api/registry.svelte";
 import { UserPrefs, type UserPrefsData } from "../prefs.svelte";
 import type { Scheduler } from "../scheduler.svelte";
 import { ServerManager } from "../server.svelte";
-import type { OpenRouter } from "@openrouter/sdk";
+import { Randy } from "../engines/randy";
+import { OpenRouter } from "../engines/llm/openrouter";
 
 const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
 const [ getSession, setSession ] = createContext<Session>();
 const [ getRegistry, setRegistry ] = createContext<Registry>();
 const [ getScheduler, setScheduler ] = createContext<Scheduler>();
 const [ getServerManager, setServerManager ] = createContext<ServerManager>();
-const [ getOpenRouterClient, setOpenRouterClient ] = createContext<OpenRouter>();
+const [ getRandy, setRandy ] = createContext<Randy>();
+const [ getOpenRouter, setOpenRouter ] = createContext<OpenRouter>();
 
 export {
     getUserPrefs,
@@ -19,7 +21,8 @@ export {
     getRegistry,
     getScheduler,
     getServerManager,
-    getOpenRouterClient,
+    getRandy,
+    getOpenRouter,
 }
 
 export function initDI(userPrefsData: UserPrefsData) {
@@ -28,10 +31,14 @@ export function initDI(userPrefsData: UserPrefsData) {
     const registry = session.registry;
     const scheduler = session.scheduler;
     const serverManager = new ServerManager(session, userPrefs);
+    const randy = new Randy(userPrefs);
+    const openrouter = new OpenRouter(userPrefs);
 
     setUserPrefs(userPrefs);
     setSession(session);
     setRegistry(registry);
     setScheduler(scheduler);
     setServerManager(serverManager);
+    setRandy(randy);
+    setOpenRouter(openrouter);
 }

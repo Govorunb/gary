@@ -20,10 +20,6 @@ export type OpenAIContext = OpenAIMessage[];
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
     abstract name: string;
 
-    constructor(options: TOptions) {
-        super(options);
-    }
-    
     tryAct(session: Session, actions: Action[]): Promise<EngineAct | null> {
         throw new Error("Method not implemented.");
     }
@@ -36,7 +32,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         return zEngineAct.parse(JSON.parse(gen.text));
     }
 
-    // TODO: editable in UI
+    // TODO: configurable prompts (editor?)
     systemPrompt() {
         let prompt = `\
 You are an expert gamer AI. Your main purpose is playing games. To do this, you will perform in-game actions via JSON function calls to a special software integration system.
@@ -149,7 +145,7 @@ You must perform one of the following actions, given this information:
                 break;
             case "client":
                 role = "user";
-                text = `Game (${msg.source.name}): ${text}`;
+                text = `Game (${msg.source.name}): ${text}`; // TODO: escape
                 break;
             case "user":
                 role = "user";
