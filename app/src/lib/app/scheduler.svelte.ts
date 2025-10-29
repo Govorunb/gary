@@ -2,9 +2,8 @@ import type { Session } from "./session.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
 import { toast } from "svelte-sonner";
 import * as log from "@tauri-apps/plugin-log";
-import { zAct, zActData } from "$lib/api/v1/spec";
+import { zAct, zActData, type Action } from "$lib/api/v1/spec";
 import type { Engine } from "./engines";
-import type { UserPrefs } from "./prefs.svelte";
 
 // TODO: pause on engine error (require user to acknowledge & manually resume)
 export class Scheduler {
@@ -18,10 +17,17 @@ export class Scheduler {
     private activeEngine: Engine<any> | null;
     public readonly canAct: boolean;
     public readonly activeMutes: string[];
-    // priority queue
-    public readonly eventQueue = $state([]);
+    /** A signal telling the scheduler to prompt the active engine to act as soon as possible.
+     * This can be flipped true by:
+     * - Non-silent context messages
+     * - Idle timers (TODO)
+     * - Manual user actions
+     * And it is flipped false when attempting to act.
+     * Note: this means the act may fail, or the actor may choose not to act; this still consumes the pending signal.
+     */
+    public actPending = $state(false);
 
-    constructor(private readonly session: Session, private readonly userPrefs: UserPrefs) {
+    constructor(private readonly session: Session) {
         this.registry = this.session.registry;
         this.activeEngine = $derived(this.session.activeEngine);
         this.canAct = $derived(!this.muted && !this.sleeping && !this.errored);
@@ -37,7 +43,12 @@ export class Scheduler {
                 out.push('paused due to error');
             }
             return out;
-        })
+        });
+        $effect(() => {
+            if (this.canAct && this.actPending) {
+                this.tryAct();
+            }
+        });
     }
 
     async tryAct() {
@@ -51,7 +62,9 @@ export class Scheduler {
         if (actions.length === 0) {
             return;
         }
+        // TODO: catch errors (neverthrow)
         const act = await this.activeEngine!.tryAct(this.session, actions);
+        this.actPending = false;
         if (!act) {
             log.debug(`Scheduler.tryAct: engine chose not to act`);
             return;
@@ -63,25 +76,28 @@ export class Scheduler {
             await game.conn.send(zAct.decode({data: actData}));
         } else {
             toast.error("Engine selected unknown action", {
-                description: `Action: ${act.name}`,
+                description: `Action: ${act.name}\nThis action was not registered by any game`,
             });
         }
     }
 
-    async forceAct() {
+    async forceAct(actions?: Action[]) {
         const ignores = this.checkIgnored();
         if (ignores.length) {
             log.warn(`Scheduler.forceAct ignored - ${ignores.join("; ")}`);
             return;
         }
         
-        const actions = this.registry.games.flatMap(g => Array.from(g.actions.values()));
+        const actionsProvided = actions !== undefined;
+        actions ??= this.registry.games.flatMap(g => Array.from(g.actions.values()));
         if (actions.length === 0) {
-            log.info("Scheduler.forceAct: no actions registered");
+            const logMethod = actionsProvided ? log.error : log.info;
+            logMethod(`Scheduler.forceAct: no actions ${actionsProvided ? "provided" : "registered"}`);
             return;
         }
         // TODO: catch errors (neverthrow)
         const act = await this.activeEngine!.forceAct(this.session, actions);
+        this.actPending = false;
         if (!act) {
             log.error(`Scheduler.forceAct: engine chose not to act (should not be possible!)`);
             return;
@@ -92,7 +108,7 @@ export class Scheduler {
             await game.conn.send(zAct.decode({data: act}));
         } else {
             toast.error("Engine selected unknown action", {
-                description: `Action: ${act.name}`,
+                description: `Action: ${act.name}\nThis action was not registered by any game`,
             });
         }
     }
@@ -104,7 +120,7 @@ export class Scheduler {
         //     out.push(`muted: ${mutes.map(([k]) => k).join(", ")}`);
         // }
         if (!this.canAct) {
-            out.push(`cannot act: ${this.activeMutes.join(", ")}`);
+            out.push(`cannot act (${this.activeMutes.join(", ")})`);
         }
         if (!this.activeEngine) {
             out.push(`no loaded engine`);
