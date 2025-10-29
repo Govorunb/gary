@@ -1,9 +1,9 @@
 import z from "zod";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
-import { zOpenRouterPrefs, type OpenRouterPrefs } from "./engines/llm/openrouter";
-import { zOpenAIPrefs, type OpenAIPrefs } from "./engines/llm/openai";
-import { zRandyPrefs, type RandyPrefs } from "./engines/randy";
+import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
+import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
+import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 
 export const USER_PREFS = "userPrefs";
 
@@ -15,6 +15,12 @@ export class UserPrefs {
     constructor(data: UserPrefsData) {
         $effect(() => {
             void this.#data;
+            // ??? i thought these were supposed to be deeply reactive
+            // void this.#data.app;
+            // void this.#data.app.theme;
+            // void this.#data.app.selectedEngine;
+            // void this.#data.server;
+            // void this.#data.engines;
             this.save();
         })
         this.#data = $state(zUserPrefs.parse(data));
@@ -57,7 +63,11 @@ export class UserPrefs {
             });
             return zUserPrefs.decode({});
         }
-        log.debug("loaded prefs");
+        log.info(`loaded prefs: ${JSON.stringify(parsed.data)}`);
+        // TODO: fixups
+        if (!Reflect.has(parsed.data.engines, parsed.data.app.selectedEngine)) {
+            parsed.data.app.selectedEngine = RANDY_ID;
+        }
         return parsed.data;
     }
 
@@ -69,7 +79,7 @@ export class UserPrefs {
 
 export const zAppPrefs = z.strictObject({
     theme: z.enum(["system", "light", "dark"]).default("system"),
-    selectedEngine: z.string().default("randy"),
+    selectedEngine: z.string().default(RANDY_ID),
 });
 
 export const zServerPrefs = z.strictObject({

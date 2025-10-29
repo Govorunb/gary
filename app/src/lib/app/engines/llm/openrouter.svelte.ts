@@ -1,5 +1,5 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { LLMEngine, zLLMOptions, type CommonLLMOptions, type OpenAIContext } from ".";
+import { LLMEngine, zLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";

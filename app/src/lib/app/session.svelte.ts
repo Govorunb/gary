@@ -1,11 +1,14 @@
 import { v4 as uuidv4 } from "uuid";
 import { DefaultContextManager } from "./context.svelte";
 import { Scheduler } from "./scheduler.svelte";
-import type { Engine } from "./engines";
+import type { Engine } from "./engines/index.svelte";
 import { Registry } from "$lib/api/registry.svelte";
 import type { UserPrefs } from "./prefs.svelte";
-import { OpenAIEngine, zOpenAIPrefs } from "./engines/llm/openai";
+import { OpenAIEngine, zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import * as log from "@tauri-apps/plugin-log";
+import { getOpenRouter, getRandy } from "./utils/di";
+import { ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
+import { ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 
 /**
  * Represents a user session within the app.
@@ -18,8 +21,10 @@ export class Session {
     readonly context: DefaultContextManager;
     readonly registry: Registry;
     readonly scheduler: Scheduler;
-    activeEngine: Engine<any> | null = $state(null);
-    customEngines: OpenAIEngine[] = $state([]);
+    
+    customEngines: Record<string, Engine<any>> = $state({});
+    activeEngine: Engine<any>;
+
     name: string;
     private ondispose: (() => void)[];
 
@@ -31,12 +36,26 @@ export class Session {
         this.registry = new Registry(this);
         this.scheduler = new Scheduler(this);
         log.info(`Created session ${name} (${this.id})`);
-        
-        const customEngines = Object.keys(this.userPrefs.engines)
-            .filter((key) => key !== "randy" && key !== "openRouter");
-        for (const engineId of customEngines) {
-            this.initCustomEngine(engineId);
+        for (const id of Object.keys(this.userPrefs.engines)) {
+            if (id === RANDY_ID || id === OPENROUTER_ID) {
+                continue;
+            }
+            this.initCustomEngine(id);
         }
+        this.activeEngine = $derived.by(() => this.getEngine(this.userPrefs.app.selectedEngine));
+    }
+
+    private getEngine(id: string): Engine<any> {
+        if (id === RANDY_ID) {
+            return getRandy();
+        } else if (id === OPENROUTER_ID) {
+            return getOpenRouter();
+        }
+        if (!this.customEngines[id]) {
+            log.error(`Tried to get engine ${id} but it doesn't exist, reverting to Randy`);
+            return getRandy();
+        }
+        return this.customEngines[id];
     }
 
     onDispose(callback: () => void): () => void {
@@ -55,23 +74,20 @@ export class Session {
             callback();
         }
         this.ondispose.length = 0;
-        this.customEngines.length = 0;
+        this.customEngines = {};
         log.info(`Disposed session ${this.name} (${this.id})`);
     }
 
-    public initCustomEngine(id?: string) {
-        if (id === 'randy' || id === 'openRouter') {
-            log.error(`Invalid engine ID: ${id}`);
-            return;
-        }
+    public initCustomEngine(id?: string): string {
         if (!id) {
             id = uuidv4();
             this.userPrefs.engines[id] = zOpenAIPrefs.decode({
                 name: id.substring(0, 8),
             });
         }
-        const engine = new OpenAIEngine(this.userPrefs, id);
-        this.customEngines.push(engine);
-        log.info(`Initialized custom engine ${engine.name} (${id})`);
+        this.customEngines[id] = new OpenAIEngine(this.userPrefs, id);
+        // active engine will be set by the picker
+        log.info(`Initialized custom engine ${id}`);
+        return id;
     }
 }

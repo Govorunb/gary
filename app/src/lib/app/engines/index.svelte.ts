@@ -9,8 +9,10 @@ export type EngineAct = z.infer<typeof zEngineAct>;
 export abstract class Engine<TOptions> {
     abstract readonly name: string;
     readonly options: TOptions;
+    readonly id: string;
 
     constructor(public userPrefs: UserPrefs, engineId: string) {
+        this.id = engineId;
         this.options = $derived(userPrefs.engines[engineId] as TOptions);
     }
     

@@ -14,22 +14,20 @@ import z from "zod";
  */
 export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     readonly name: string;
-    readonly id: string;
     private readonly client: OpenAI;
 
     constructor(userPrefs: UserPrefs, engineId: string) {
         super(userPrefs, engineId);
-        this.id = engineId;
         this.name = $derived(this.options.name);
+        // TODO: needs reactivity
+        // we can't have $state/$derived
+        // $effect won't run since these can be constructed outside an effect root
+        //
         this.client = new OpenAI({
             apiKey: this.options.apiKey,
             baseURL: this.options.serverUrl,
+            dangerouslyAllowBrowser: true, // we have to...
         } satisfies ClientOptions);
-        $effect(() => {
-            // TODO: test reactivity
-            this.client.apiKey = this.options.apiKey!;
-            this.client.baseURL = this.options.serverUrl;
-        })
     }
 
     private toChatMessages(context: OpenAIContext): ChatCompletionMessageParam[] {

@@ -12,7 +12,9 @@
     const userPrefs = getUserPrefs();
     onDestroy(() => {
         session.dispose();
-    })
+    });
+    (window as any).SESSION = session;
+    (window as any).USER_PREFS = userPrefs;
 </script>
 
 <div class="flex min-h-screen flex-col" role="application">

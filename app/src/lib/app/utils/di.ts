@@ -4,8 +4,8 @@ import type { Registry } from "$lib/api/registry.svelte";
 import { UserPrefs, type UserPrefsData } from "../prefs.svelte";
 import type { Scheduler } from "../scheduler.svelte";
 import { ServerManager } from "../server.svelte";
-import { Randy } from "../engines/randy";
-import { OpenRouter } from "../engines/llm/openrouter";
+import { Randy } from "../engines/randy.svelte";
+import { OpenRouter } from "../engines/llm/openrouter.svelte";
 
 const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
 const [ getSession, setSession ] = createContext<Session>();

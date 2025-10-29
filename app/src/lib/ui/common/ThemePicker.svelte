@@ -9,7 +9,7 @@
     const themeTips = ["System", "Light", "Dark"] as const;
     const themes = ["system", "light", "dark"] as const;
     const userPrefs = getUserPrefs();
-    let selectedIndex = $state(0);
+    let selectedIndex = $state(themes.indexOf(userPrefs.app.theme));
     let selectedTheme = $derived(themes[selectedIndex]);
 
     const systemDark = window.matchMedia("(prefers-color-scheme: dark)");

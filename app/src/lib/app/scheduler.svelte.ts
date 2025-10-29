@@ -3,7 +3,7 @@ import type { Registry } from "$lib/api/registry.svelte";
 import { toast } from "svelte-sonner";
 import * as log from "@tauri-apps/plugin-log";
 import { zAct, zActData, type Action } from "$lib/api/v1/spec";
-import type { Engine } from "./engines";
+import type { Engine } from "./engines/index.svelte";
 
 // TODO: pause on engine error (require user to acknowledge & manually resume)
 export class Scheduler {

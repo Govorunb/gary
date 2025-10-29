@@ -3,6 +3,8 @@
     import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
     import PowerButton from "$lib/ui/app/PowerButton.svelte";
     import { getSession } from "$lib/app/utils/di";
+    import EnginePicker from "$lib/ui/app/EnginePicker.svelte";
+    import { HandFist, Pointer } from "@lucide/svelte";
 
     const session = getSession();
 </script>
@@ -11,14 +13,15 @@
     <div class="justify-self-start">
         <PowerButton />
     </div>
-    <h1 class="justify-self-center flex flex-row gap-3">
-        <!-- TODO: engine picker -->
+    <h1 class="justify-self-center flex flex-row items-center gap-3">
+        <EnginePicker />
         {#if session.activeEngine}
-            <p class="text-3xl font-semibold">{session.activeEngine.name}</p>
-            <button onclick={() => session.scheduler.tryAct()} class="act-btn">Poke</button>
-            <button onclick={() => session.scheduler.forceAct()} class="act-btn">Force Act</button>
-        {:else}
-        <p class="text-3xl font-semibold">Gary Control Panel</p>
+            <button onclick={() => session.scheduler.tryAct()} class="act-btn" title="Poke (Try act)">
+                <Pointer />
+            </button>
+            <button onclick={() => session.scheduler.forceAct()} class="act-btn" title="Force Act">
+                <HandFist />
+            </button>
         {/if}
     </h1>
     <div class="justify-self-end">

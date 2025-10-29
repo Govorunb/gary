@@ -1,6 +1,6 @@
 import type { Action } from "$lib/api/v1/spec";
 import * as log from "@tauri-apps/plugin-log";
-import { Engine, zEngineAct, type EngineAct } from "..";
+import { Engine, zEngineAct, type EngineAct } from "../index.svelte";
 import type { Session } from "$lib/app/session.svelte";
 import type { ContextManager, Message } from "$lib/app/context.svelte";
 import type { JSONSchema } from "openai/lib/jsonschema";

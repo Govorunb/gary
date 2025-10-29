@@ -1,11 +1,12 @@
 import { type Action } from "$lib/api/v1/spec";
 import { pickRandom } from "../utils.svelte";
-import { Engine, zEngineAct, type EngineAct } from ".";
+import { Engine, zEngineAct, type EngineAct } from "./index.svelte";
 import { JSONSchemaFaker } from "json-schema-faker";
 import type { Session } from "../session.svelte";
 import z from "zod";
 import type { UserPrefs } from "../prefs.svelte";
 
+export const ENGINE_ID = "randy";
 /** Automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
  * Has a configurable chance to skip acting.
  */
@@ -13,7 +14,7 @@ export class Randy extends Engine<RandyPrefs> {
     readonly name: string = "Randy";
 
     constructor(userPrefs: UserPrefs) {
-        super(userPrefs, "randy");
+        super(userPrefs, ENGINE_ID);
     }
 
     async tryAct(session: Session, actions?: Action[]): Promise<EngineAct | null> {
@@ -40,7 +41,7 @@ export class Randy extends Engine<RandyPrefs> {
     }
 
     private generate(action: Action): any {
-        if (!action.schema) return "null";
+        if (!action.schema) return null;
         return JSONSchemaFaker.generate(action.schema);
     }
 }
