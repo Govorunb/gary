@@ -25,13 +25,11 @@ tauri-plugin-notification = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-store = "2"
 tauri-plugin-websocket = "2"
-uuid = { version = "1.18.1", features = ["v4", "serde"] }
+uuid = { version = "1.18", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["full"] }
-thiserror = "2.0.16"
-anyhow = "1.0.99"
+tokio-tungstenite = { version = "0.28" }
+thiserror = "2"
+anyhow = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
-log = { version = "0.4.28", features = ["kv_serde"] }
-axum = { version = "0.8.4", features = ["ws", "macros"] }
-
-# just for offline docs tooltips
-tokio-tungstenite = { version = "0.27.0" }
+log = { version = "0.4", features = ["kv_serde"] }
+axum = { version = "0.8", features = ["ws", "macros"] }
