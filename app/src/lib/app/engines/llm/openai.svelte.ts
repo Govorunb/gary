@@ -10,7 +10,7 @@ import { toast } from "svelte-sonner";
 import z from "zod";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
- * This engine may have multiple instances active at once, each with a generated ID and a user-defined name.
+ * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
  */
 export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     readonly name: string;
@@ -25,14 +25,6 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
             baseURL: this.options.serverUrl,
             dangerouslyAllowBrowser: true, // we have to...
         } satisfies ClientOptions);
-        // FIXME: can't have reactivity if created "at runtime" (i.e. not during initial load)
-        // fix is probably to have some "effectify" function and set up an effect on session that calls it for newly added engines
-        if ($effect.tracking()) {
-            $effect(() => {
-                // this.client.apiKey = this.options.apiKey; // already gets the current value every request
-                this.client.baseURL = this.options.serverUrl;
-            });
-        }
     }
 
     private toChatMessages(context: OpenAIContext): ChatCompletionMessageParam[] {
@@ -63,6 +55,10 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
                 },
             };
         }
+        // ooga booga me no have reactivity because can be instantiate at runtime, outside root effect
+        // so me use pull model instead of push model. hoh
+        // i just know seniorberry shake head and wag finger from inside cloud, but i the one that feel alive
+        this.client.baseURL = this.options.serverUrl;
 
         try {
             const res = await this.client.chat.completions.create(params);
@@ -85,6 +81,9 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     }
 }
 
+// TODO: generation params (temperature, etc)
+// however: https://platform.openai.com/docs/guides/latest-model#gpt-5-parameter-compatibility
+// gpt5 xor temperature/top_p/logprobs
 export const zOpenAIPrefs = z.looseObject({
     name: z.string(),
     ...zLLMOptions.shape,
