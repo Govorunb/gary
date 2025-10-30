@@ -13,6 +13,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@faker-js/faker": "^10.1.0",
     "@lucide/svelte": "^0.548.0",
     "@openrouter/sdk": "0.0.1-beta.16",
     "@tailwindcss/vite": "^4.1.16",

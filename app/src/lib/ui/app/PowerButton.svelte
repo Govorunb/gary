@@ -64,11 +64,9 @@
                     <Popover.Content>
                         <div class="popover-content">
                             <ServerConfig />
-                            <div class="popover-arrow">
-                                <Popover.Arrow>
-                                    <Popover.ArrowTip />
-                                </Popover.Arrow>
-                            </div>
+                            <Popover.Arrow class="global-popover-arrow">
+                                <Popover.ArrowTip />
+                            </Popover.Arrow>
                         </div>
                     </Popover.Content>
                 </Popover.Positioner>
@@ -108,11 +106,6 @@
             bg-neutral-200/80 text-neutral-700 shadow-sm transition hover:bg-neutral-200
             disabled:cursor-not-allowed disabled:opacity-60
             dark:bg-neutral-800/70 dark:text-neutral-200 dark:hover:bg-neutral-800;
-    }
-
-    .popover-arrow {
-        --arrow-size: calc(var(--spacing) * 4);
-        --arrow-background: var(--color-neutral-800);
     }
 
     .popover-content {

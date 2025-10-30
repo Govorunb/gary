@@ -4,6 +4,7 @@ import { toast } from "svelte-sonner";
 import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
+import { ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 
 export const USER_PREFS = "userPrefs";
 
@@ -13,17 +14,13 @@ export class UserPrefs {
     #data: UserPrefsData;
 
     constructor(data: UserPrefsData) {
+        this.#data = $state(zUserPrefs.parse(data));
         $effect(() => {
-            void this.#data;
-            // ??? i thought these were supposed to be deeply reactive
-            // void this.#data.app;
-            // void this.#data.app.theme;
-            // void this.#data.app.selectedEngine;
-            // void this.#data.server;
-            // void this.#data.engines;
+            // normally $effect only tracks what's referenced inside the function
+            // (which is the objects themselves and not their properties)
+            // this somehow tracks everything though, fancy that
             this.save();
         })
-        this.#data = $state(zUserPrefs.parse(data));
         // TODO: proxy w/ setters that parse through zod
     }
     get app() {
@@ -63,7 +60,7 @@ export class UserPrefs {
             });
             return zUserPrefs.decode({});
         }
-        log.info(`loaded prefs: ${JSON.stringify(parsed.data)}`);
+        log.debug(`loaded prefs: ${JSON.stringify(parsed.data)}`);
         // TODO: fixups
         if (!Reflect.has(parsed.data.engines, parsed.data.app.selectedEngine)) {
             parsed.data.app.selectedEngine = RANDY_ID;
@@ -87,14 +84,28 @@ export const zServerPrefs = z.strictObject({
     // TODO: server behavior toggles (e.g. conflict resolution)
 });
 
+// TODO $env:MY_ENV_VAR
+
 export const zUserPrefs = z.strictObject({
     app: zAppPrefs.prefault({}),
     server: zServerPrefs.prefault({}),
     engines: z.object({
         openRouter: zOpenRouterPrefs.prefault({}),
         randy: zRandyPrefs.prefault({}),
+        ollama: zOpenAIPrefs.prefault({
+            name: "Local server (Ollama)",
+            serverUrl: "http://localhost:11434",
+            apiKey: "",
+        }),
+        lmstudio: zOpenAIPrefs.prefault({
+            name: "Local server (LMStudio)",
+            serverUrl: "http://localhost:1234",
+            apiKey: "",
+        }),
     }).catchall(zOpenAIPrefs).prefault({}),
 });
 
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
 export type AppPrefs = z.infer<typeof zAppPrefs>;
+
+export const KNOWN_ENGINE_IDS = [RANDY_ID, OPENROUTER_ID, 'ollama', 'lmstudio'];

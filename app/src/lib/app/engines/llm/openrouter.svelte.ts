@@ -16,9 +16,9 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 
     constructor(userPrefs: UserPrefs) {
         super(userPrefs, ENGINE_ID);
-        let clientOpts: SDKOptions = $derived({
-            apiKey: this.options.apiKey,
-        });
+        let clientOpts: SDKOptions = {
+            apiKey: async () => this.options.apiKey,
+        };
         this.client = new OpenRouterClient(clientOpts);
     }
 
@@ -28,8 +28,10 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         let params: NonStreamingChatParams = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
+            // TODO: watch the package, they'll include it some day maybe
+            // (web docs say this exists)
             // @ts-expect-error
-            models: this.options.extraModels, // TODO: watch the OpenAPI spec
+            models: this.options.extraModels,
         };
         if (outputSchema) {
             params.responseFormat = {
@@ -72,8 +74,9 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     }
 }
 
-export const zOpenRouterPrefs = zLLMOptions.safeExtend({
-    apiKey: z.string().optional(),
+export const zOpenRouterPrefs = z.strictObject({
+    ...zLLMOptions.shape,
+    apiKey: z.string().default(""),
     /** OpenRouter model identifier.
      * Can be:
      * - Empty or "openrouter/auto" for auto routing

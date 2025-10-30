@@ -19,15 +19,20 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     constructor(userPrefs: UserPrefs, engineId: string) {
         super(userPrefs, engineId);
         this.name = $derived(this.options.name);
-        // TODO: needs reactivity
-        // we can't have $state/$derived
-        // $effect won't run since these can be constructed outside an effect root
-        //
+        
         this.client = new OpenAI({
-            apiKey: this.options.apiKey,
+            apiKey: async () => this.options.apiKey,
             baseURL: this.options.serverUrl,
             dangerouslyAllowBrowser: true, // we have to...
         } satisfies ClientOptions);
+        // FIXME: can't have reactivity if created "at runtime" (i.e. not during initial load)
+        // fix is probably to have some "effectify" function and set up an effect on session that calls it for newly added engines
+        if ($effect.tracking()) {
+            $effect(() => {
+                // this.client.apiKey = this.options.apiKey; // already gets the current value every request
+                this.client.baseURL = this.options.serverUrl;
+            });
+        }
     }
 
     private toChatMessages(context: OpenAIContext): ChatCompletionMessageParam[] {
@@ -80,8 +85,9 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     }
 }
 
-export const zOpenAIPrefs = zLLMOptions.extend({
+export const zOpenAIPrefs = z.looseObject({
     name: z.string(),
+    ...zLLMOptions.shape,
     /** Leave empty if your server doesn't need authentication. (e.g. local) */
     apiKey: z.string().default(""),
     serverUrl: z.url().default("https://api.openai.com/v1"),

@@ -1,19 +1,18 @@
 <script lang="ts">
-    import { getOpenRouter, getRandy, getSession, getUserPrefs } from '$lib/app/utils/di';
+    import { getSession, getUserPrefs } from '$lib/app/utils/di';
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
-    import { ENGINE_ID as RANDY_ID } from '$lib/app/engines/randy.svelte';
-    import { ENGINE_ID as OPENROUTER_ID } from '$lib/app/engines/llm/openrouter.svelte';
     import { Engine } from '$lib/app/engines/index.svelte';
-    import { Cog } from '@lucide/svelte';
+    import { CirclePlus, Cog } from '@lucide/svelte';
 
     const session = getSession();
     const userPrefs = getUserPrefs();
 
-    let engineEntries = $derived(Object.entries(session.customEngines));
+    let engines = $derived(Object.entries(session.engines));
 
     function createOpenAICompatible() {
-        const id = session.initCustomEngine();
+        const id = session.initEngine();
         selectEngine(id);
+        (document.activeElement as HTMLButtonElement)?.blur();
     }
     function selectEngine(id: string) {
         userPrefs.app.selectedEngine = id;
@@ -49,13 +48,12 @@
                             </button>
                         </div>
                     {/snippet}
-                    {@render engineButton(OPENROUTER_ID, getOpenRouter())}
-                    {#each engineEntries as [id, engine]}
+                    {#each engines as [id, engine] (id)}
                         {@render engineButton(id, engine)}
                     {/each}
-                    {@render engineButton(RANDY_ID, getRandy())}
                     <button class="item add-new" onclick={createOpenAICompatible}>
-                        + Add OpenAI-compatible service
+                        <CirclePlus />
+                        <span>Add OpenAI-compatible server</span>
                     </button>
                 </div>
             </Popover.Content>
@@ -70,13 +68,19 @@
 
     .trigger {
         @apply text-3xl font-semibold;
-        @apply bg-primary-800 border-none rounded-md p-2;
+        @apply bg-secondary-400 border-none rounded-md p-2;
         @apply focus:ring-2 focus:ring-primary-500;
     }
 
     .popover-content {
-        @apply flex flex-col gap-2 bg-neutral-700 p-4 max-h-[calc(100vh-8em)] overflow-scroll;
+        @apply flex flex-col gap-2 bg-surface-200-800/85 p-4 max-h-[calc(100vh-8em)] overflow-scroll;
         @apply rounded-lg;
+        @apply border-2 min-w-100 border-neutral-900/30;
+        /* real smarty pants behavior
+        https://github.com/tailwindlabs/tailwindcss/issues/13844
+        https://github.com/tauri-apps/tauri/issues/14040
+        */
+        -webkit-backdrop-filter: blur(2px);
     }
 
     .row {
@@ -89,12 +93,12 @@
         @apply focus:ring-2 focus:ring-primary-500;
         @apply dark:bg-primary-200 dark:text-primary-900;
         &:hover:not(:disabled) {
-            @apply bg-primary-300/80;
-            @apply dark:bg-primary-600/80;
+            @apply bg-primary-300;
+            @apply dark:bg-primary-600;
         }
         &:active:not(:disabled) {
-            @apply bg-primary-800/80 text-primary-50;
-            @apply dark:bg-primary-800/80 dark:text-primary-50;
+            @apply bg-primary-800 text-primary-50;
+            @apply dark:bg-primary-800 dark:text-primary-50;
         }
     }
     
@@ -105,7 +109,8 @@
     }
     
     .add-new {
-        @apply text-sm font-normal rounded-md;
+        @apply text-sm font-semibold rounded-md;
+        @apply flex flex-row gap-2;
     }
 
 </style>
