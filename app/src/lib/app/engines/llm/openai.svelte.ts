@@ -61,6 +61,11 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.client.baseURL = this.options.serverUrl;
 
         try {
+            // after evaluating tools/responses api - it all sucks bad
+            // ollama still doesn't support it, nor `tool_choice`
+            // lmstudio has responses (allegedly stateful) but doesn't support `strict` in tool definitions (ouch)
+            // it also doesn't seem to constrain generation with `text.format` at all?
+            // so... `response_format` on `chat/completions` it is
             const res = await this.client.chat.completions.create(params);
 
             const msg = zMessage.decode({

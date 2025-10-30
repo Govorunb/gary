@@ -28,10 +28,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         let params: NonStreamingChatParams = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
-            // TODO: sdk in beta, watch the package, they'll include it some day maybe
-            // (web docs say these exist, i assume they just ripped the openai openapi spec to start with)
-            // (update: these *are* on the responses api. we can't use the responses api because it doesn't support structured outputs/responseFormat. gutted.)
-            // (it might be possible to finagle all this into tools; however: sucks)
+            // TODO: sdk in beta, watch the package, they'll copy these over from the responses api some day maybe
             // @ts-expect-error
             models: this.options.extraModels,
             provider: {
