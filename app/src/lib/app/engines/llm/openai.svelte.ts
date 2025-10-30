@@ -21,7 +21,7 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.name = $derived(this.options.name);
         
         this.client = new OpenAI({
-            apiKey: async () => this.options.apiKey,
+            apiKey: async () => this.options.apiKey, // FIXME: it thinks empty strings aren't strings smh
             baseURL: this.options.serverUrl,
             dangerouslyAllowBrowser: true, // we have to...
         } satisfies ClientOptions);

@@ -94,13 +94,13 @@ export const zUserPrefs = z.strictObject({
         randy: zRandyPrefs.prefault({}),
         ollama: zOpenAIPrefs.prefault({
             name: "Local server (Ollama)",
-            serverUrl: "http://localhost:11434",
-            apiKey: "",
+            serverUrl: "http://localhost:11434/v1",
+            apiKey: " ", // OAI client doesn't like empty strings
         }),
         lmstudio: zOpenAIPrefs.prefault({
             name: "Local server (LMStudio)",
-            serverUrl: "http://localhost:1234",
-            apiKey: "",
+            serverUrl: "http://localhost:1234/v1",
+            apiKey: " ",
         }),
     }).catchall(zOpenAIPrefs).prefault({}),
 });

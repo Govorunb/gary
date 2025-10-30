@@ -41,7 +41,11 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const ctx = this.convertContext(session.context);
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
         const gen = await this.generate(ctx, schema);
+        // FIXME: JSON.parse can fail here (unterminated string)
+        console.log(gen);
+        console.log(gen.text);
         const command = JSON.parse(gen.text)['command'];
+        console.log(command);
         if (zWait.safeParse(command).success) {
             if (isForce) {
                 throw new Error("Internal error - force act allowed waiting");
@@ -55,14 +59,17 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             // TODO: insert into context
             return null;
         }
-        return zEngineAct.parse(command);
+        return zEngineAct.parse({
+            name: command['action'],
+            data: JSON.stringify(command['data']),
+        });
     }
 
     // TODO: configurable prompts (editor?)
     systemPrompt() {
         let prompt = `\
 You are an expert gamer AI. Your main purpose is playing games. To do this, you will perform in-game actions via JSON function calls to a special software integration system.
-You are goal-oriented but curious. You should aim to keep your actions varied and entertaining.
+You are goal-oriented and curious. You should aim to keep your actions varied and entertaining.
 
 ## Name
 
@@ -88,27 +95,6 @@ You must perform one of the following actions, given this information:
     "available_actions": ${JSON.stringify(available_actions)}
 }
 \`\`\``;
-        return prompt;
-    }
-
-    tryPrompt(available_actions: Action[]) {
-        let prompt = `Decide what to do next based on previous context.`;
-        if (available_actions.length > 0) {
-            prompt += "\nThe following actions are available to you:"
-            prompt += "\n```json\n"
-            prompt += JSON.stringify(available_actions)
-            prompt += "\n```";
-        }
-        let options = ["ACT"];
-        if (this.options.allowYapping) {
-            options.push("SAY");
-        }
-        if (this.options.allowDoNothing) {
-            options.push("WAIT");
-        }
-        // TODO: with python/guidance, we had two LLM calls - first to decide whether to act, then the actual action data
-        // with a remote provider, it *should* just be a single call, even if it makes this a bit more complex (for l*tency purposes, one round trip is better than two)
-        prompt += `\nRespond with one of these options: ${JSON.stringify(options)}`;
         return prompt;
     }
 
@@ -166,7 +152,7 @@ You must perform one of the following actions, given this information:
         let role: OpenAIMessage['role'];
         switch (msg.source.type) {
             case "system":
-                role = "system";
+                role = "developer";
                 text = `System: ${text}`;
                 break;
             case "client":
