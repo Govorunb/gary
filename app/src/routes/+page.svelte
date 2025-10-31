@@ -36,6 +36,7 @@
     @reference "tailwindcss";
     @reference "@skeletonlabs/skeleton";
     @reference "@skeletonlabs/skeleton-svelte";
+    @reference "@skeletonlabs/skeleton/themes/cerberus";
 
     header {
         @apply grid grid-cols-[1fr_auto_1fr] items-center gap-1 px-4 py-3;
@@ -46,8 +47,8 @@
         @apply flex flex-1 overflow-scroll;
     }
     .act-btn {
-        @apply ml-2 px-2 py-1 rounded-xl
-        bg-primary-200 dark:bg-primary-800
-        border border-neutral-900 dark:border-neutral-100;
+        @apply ml-2 px-2 py-1 rounded-xl;
+        @apply bg-neutral-200 dark:bg-neutral-800;
+        @apply border border-surface-100 dark:border-surface-900;
     }
 </style>

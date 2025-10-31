@@ -17,12 +17,17 @@ Additionally, since this is a frontend for an entirely client-side app, no serve
 #### Frontend Tips
 Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`) and prefer explicit CSS classes with `@apply` directives; e.g.:
 ```svelte
-<script lang="ts>
-</script>
+<script lang="ts"></script>
 
 <div class="my-component" />
 
-<style>
+<style lang="postcss">
+    /* references are required to recognize some directives */
+    @reference "tailwindcss";
+    @reference "@skeletonlabs/skeleton";
+    @reference "@skeletonlabs/skeleton-svelte";
+    @reference "@skeletonlabs/skeleton/themes/cerberus";
+
     .my-component {
         @apply flex items-center gap-2 px-4 py-2 rounded-md
             border border-neutral-200 bg-neutral-100
@@ -46,15 +51,4 @@ Zod use should follow these conventions:
 
 The Rust side should handle as little as possible to keep the majority of app logic concentrated in just TypeScript (for maintainability). The only things that must be handed over to Rust are system calls and things that aren't possible to do on the frontend; for example, we can't host a WebSocket server from the system WebView, so we must use Rust for that. But, since the Rust side should stay out of app logic, it just forwards messages to the frontend and does not handle any of them.
 
-### Agent Specific Workflows
-
-Follow any instructions specific to you in this section.
-
-#### Google Gemini
-
-Adopt the "Gather, Plan, Act" workflow.
-1. First, gather the necessary information to fulfill the user's request. The general rule is: the more, the better. Get a full picture of the background behind the user's request and all parts of the system that interact with it. If the system seems critically important or tightly coupled, investigate an additional hop away from it to understand all potential knock-on effects.
-2. Then, outline the changes you intend to make. Do not make the changes yet. This is your chance to notice and consider any edge cases, oddities, and potential knock-on effects. You *may* create Markdown files to help you keep track of your tasks or notes. Use high-level pseudocode for the outline. This will point you towards where you may need to investigate further. If you're not confident, go back to step 1 to refine the plan.
-3. Once you are satisfied with the plan, ask the user to approve it. Then, provided all is well, you're free to start building. If you encounter something unexpected or difficult, evaluate whether to push through or go back to step 1 and try again with the new information. If all else fails, don't be afraid to ask the user for help or other collaboration.
-
-Stay focused on the given task. Do what the user asks and no more (or less).
+This means that, in general, your changes should stay in the frontend.

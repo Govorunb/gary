@@ -79,3 +79,7 @@ export function outclick(func: () => void, additionalTargets: HTMLElement[] = []
 export function zConst<T extends z.core.util.Literal>(value: NonNullable<T>) {
     return z.literal(value).default(value);
 }
+
+export function shortId() {
+    return Math.random().toString(36).substring(2);
+}

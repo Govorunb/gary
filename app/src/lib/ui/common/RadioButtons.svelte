@@ -1,6 +1,8 @@
 <!-- adapted from https://lyra.horse/blog/2025/08/you-dont-need-js/ -->
 <script lang="ts">
+    import { shortId } from "$lib/app/utils.svelte";
     import type { Snippet } from "svelte";
+    import type { SvelteHTMLElements } from "svelte/elements";
 
     type Item = string;
     type Props = {
@@ -8,27 +10,26 @@
         groupName?: string;
         selectedIndex?: number;
         renderItem?: Snippet<[Item, number]>;
+        getItemLabelProps?: (item: Item, i: number) => SvelteHTMLElements['label'];
     }
     let {
         items,
-        groupName = Math.random().toFixed(8),
+        groupName = shortId(),
         selectedIndex = $bindable(),
         renderItem = defaultRender,
+        getItemLabelProps = () => ({}),
     }: Props = $props();
 
     function handleChange(event: Event & { currentTarget: EventTarget & HTMLInputElement; }) {
-        if (event.currentTarget.checked) {
-            const iStr = event.currentTarget.attributes.getNamedItem('data-index')!.value;
-            const i = parseInt(iStr);
-            select(i);
-        }
+        if (!event.currentTarget.checked) return;
+        
+        const iStr = event.currentTarget.attributes.getNamedItem('data-index')!.value;
+        const i = parseInt(iStr);
+        selectIndex(i);
     }
 
-    function select(i: number) {
-        selectedIndex = i;
-    }
     export function selectIndex(i: number) {
-        select(i);
+        selectedIndex = i;
     }
     export function selectValue(val: Item) {
         const i = items.indexOf(val);
@@ -44,7 +45,7 @@
 <radio-picker role="radiogroup">
     {#each items as item, i}
         {@const dispName = typeof item === "string" ? item : i}
-        <label>
+        <label {...getItemLabelProps(item, i)}>
             <input type="radio" group={groupName}
                 id="{groupName}_{dispName}"
                 value={dispName}

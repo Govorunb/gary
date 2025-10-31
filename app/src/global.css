@@ -11,8 +11,8 @@
     }
 
     body {
-        @apply min-h-screen bg-neutral-100 font-sans text-base font-normal leading-5 text-neutral-900 antialiased;
-        @apply dark:bg-neutral-900 dark:text-neutral-100;
+        @apply min-h-screen bg-surface-100 font-sans text-base font-normal leading-5 text-neutral-900 antialiased;
+        @apply dark:bg-surface-900 dark:text-neutral-100;
     }
     .global-popover-arrow {
         --arrow-size: calc(var(--spacing) * 4);

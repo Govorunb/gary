@@ -34,15 +34,19 @@
         document.documentElement.classList.remove("light", "dark");
         document.documentElement.classList.add(theme);
     }
+    function getItemLabelProps(item: string, i: number) {
+        return {
+            title: themeTips[i],
+        };
+    }
 </script>
 
-<RadioButtons items={themes}
-    bind:selectedIndex
-    groupName="theme">
+<RadioButtons items={themes} groupName="theme"
+    bind:selectedIndex {getItemLabelProps}
+>
     {#snippet renderItem(_, i: number)}
         {@const Icon = themeIcons[i]}
-        <!-- FIXME: tooltip only on symbol (should ideally be on the entire button) -->
-        <div title="{themeTips[i]}" class="radio-item">
+        <div class="radio-item">
             <Icon />
         </div>
     {/snippet}
