@@ -13,29 +13,34 @@ The project is currently undergoing a renovation, porting functionality and UI f
 
 Backend:
 - [x] Get Randy running and responding to actions
-- [ ] Scheduler event queue (+ poke timer)
-- [ ] Local LLMs
-- [ ] Remote LLMs
+    - [x] Scheduler with manual poke/force
+    - [ ] Timer for poke/force (both timers reset when an action is performed; poke resets on attempt)
+- [x] OpenRouter
+- [x] Other OpenAI-compatible services (Local LLMs, OpenAI proper, etc)
 
 Frontend:
 - [ ] Tony mode (manual action sending)
-    - Code editor
-    - Syntax highlighting (`shiki`)
+    - [ ] Code editor
+    - [ ] Syntax highlighting (`shiki`)
+    - [ ] Validation with shift-click override
 - [ ] Auto-generated action forms (from schema)
+    - [ ] Primitives
+    - [ ] Enums
+    - [ ] Arrays
+    - [ ] Objects (& nesting)
+    - [ ] Unions (maybe, they're not supported in sdk)
+    - [ ] Optional properties
 - [ ] Add functionality to context log
+    - [ ] Click for details dialog
+    - [ ] Corner indicators for source, silent/ephemeral
+    - [ ] Buttons to copy message text, ID, etc
+    - [ ] Editing the log - edit message text, remove message
+- [ ] Engine config
+    - [ ] API key (field or PKCE)
+    - [ ] Model field (+helper directing to OpRt website)
+    - [ ] Allow waiting/yapping
+    - [ ] `$env:MY_ENV_VAR` for prefs
 
-
-### Notable changes
-
-The goal of the port is to keep functionality the same; however, some things will change for the sake of simplifying development for game integrations. Internals are sure to change, but the UI may too - in other words, it won't be a complete one-to-one port.
-
-#### Single context
-
-Previously, each game hosted its own LLM with its own context. In the Tauri app, there will be one context shared between all game connections (e.g. two independent integration mods running in the same game).
-
-#### Context enhancements
-
-As mentioned previously, the context will be stored and managed separately from the LLM, as an array of messages enriched with metadata (e.g. timestamp, source of message like "game" or "system", etc). This will require converting the messages to the standard "role-message" format for LLMs.
 
 ### Future plans
 
@@ -54,14 +59,14 @@ The Tauri app will support OpenAI-compatible remote APIs - specifically, OpenRou
     - Editable config file (currently using `localStorage`)
     - Reimplement presets/profiles again
 - Launching game processes (enabling use of the proposed Shutdown API)
-- App logs should also show up in UI (as accessible log/toast notifications)
+- App logs should also show up in UI (accessible as scroll log/toast notifications)
 - Multi-game action collisions
   With single-context (and single-engine) two games may register actions with the same name.
   A possible solution is renaming the colliding actions to `action(game)` or something, only when passing the list of actions to the engine.
 
 #### Strict ("prod") diagnostics
 
-The live production implementation contains implementation details of its own - e.g. the client should send action result responses *as soon as possible*, since (I assume) it waits for the result to insert it into Neuro's context directly after the action call. Gary may in the future provide diagnostics to help game integrations conform to the prod environment rather than an idealized test one.
+The live production implementation contains implementation details of its own - e.g. the client should send action result responses *as soon as possible*, since (I assume) it behaves like an LLM tool call, i.e. it waits for the result to insert it into Neuro's context directly after the action call to resume generation. Gary may in the future provide diagnostics to help game integrations conform to the prod environment rather than an idealized test one.
 
 #### UI modes/auto checks
 
@@ -71,7 +76,7 @@ Same with e.g. accomodating someone testing their SDK implementation vs a game i
 
 Previously this was sort of kind of accomodated by allowing different logging levels for each module/"subsystem" (e.g. logging websockets at `trace` to diagnose message passing), but I wonder if it could be made more ergonomic.
 
-#### Configurable scheduler
+#### Configure scheduler timers
 
 I want to see Randy speed through the schema test in 0.1 seconds
 
@@ -83,4 +88,4 @@ The first step would be a UI (probably using the advanced sidebar), then maybe s
 
 #### Anonymized session data
 
-I'm still undecided on whether to have automatically-gathered telemetry (very unlikely - I follow the "data is poison" mantra) but if there's a manual copy-context-log-to-clipboard-as-JSON error report process, I'd like to make some toggles for redacting things from the log. Removing message text, timestamps, hiding individual messages, replacing IDs with monotonically increasing, etc.
+I'm still undecided on whether to have automatically-gathered telemetry (very unlikely - I prefer the "data is poison" position) but if there's a manual copy-context-log-to-clipboard-as-JSON error report process, I'd like to make some toggles for redacting things from the log. Removing message text, timestamps, hiding individual messages, replacing IDs with monotonically increasing, etc.

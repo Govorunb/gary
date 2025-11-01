@@ -100,7 +100,7 @@ The Tauri application is in **early development** and represents the future dire
 #### Frontend Structure (`app/src/`)
 - Application code in `app/src/lib/`
     - Neuro SDK protocol/WebSocket-related code in `app/src/lib/api/`
-    - App logic (e.g. config) in `app/src/lib/app/`
+    - App logic (engines, config) in `app/src/lib/app/`
     - Svelte 5 UI components and utilities in `app/src/lib/ui/`
 - SvelteKit routed pages in `app/src/routes/`
 

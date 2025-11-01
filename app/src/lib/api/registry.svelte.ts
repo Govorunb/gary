@@ -1,9 +1,9 @@
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { Channel } from "@tauri-apps/api/core";
 import * as log from "@tauri-apps/plugin-log";
 import { GameWSConnection, type ServerWSEvent, type AcceptArgs } from "./ws";
 import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
-import z from "zod";
+import { safeInvoke } from "$lib/app/utils.svelte";
 import type { Session } from "$lib/app/session.svelte";
 import { toast } from "svelte-sonner";
 
@@ -31,11 +31,11 @@ export class Registry {
         const id = req.id;
         // approve/deny connection
         if (req.version != "v1" && req.version != "v2") {
-            await invoke('ws_deny', { id, reason: "Invalid version" });
+            await safeInvoke('ws_deny', { id, reason: "Invalid version" });
             return;
         }
         if (req.version != "v1" && !this.validateGameName(req.game)) {
-            await invoke('ws_deny', { id, reason: "Invalid game name" });
+            await safeInvoke('ws_deny', { id, reason: "Invalid game name" });
             return;
         }
         await this.accept(req);
@@ -47,7 +47,7 @@ export class Registry {
         let gameName = req.version == "v1" ? `<Pending-${conn.id}>` : req.game;
         log.debug(`Creating game for '${gameName}'`);
         this.createGame(gameName, conn);
-        await invoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
+        await safeInvoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
         if (conn.version == "v1") {
             log.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
             await conn.send(v1.zReregisterAll.decode({}));
@@ -97,7 +97,14 @@ export class Game {
         public readonly conn: GameWSConnection,
     ) {
         this.name = name;
+        conn.onconnect = async () => void toast.info(`${this.name} connected`);
         conn.onmessage = (txt) => this.recv(txt);
+        conn.onwserror = async (err) => {
+            log.warn(`client ${this.name} broke its websocket: ${err}`);
+            toast.error(`Game ${this.name} broke its websocket`, {
+                description: err,
+            });
+        }
     }
 
     public get version() {

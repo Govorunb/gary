@@ -28,7 +28,7 @@
      }
 </script>
 
-<div class="grid w-full flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,_1fr)_minmax(0,_2fr)_minmax(0,_1fr)]">
+<div class="grid w-full flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]">
     <aside class="section">
         <GameTabs />
     </aside>

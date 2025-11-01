@@ -1,5 +1,7 @@
 import type { Attachment } from "svelte/attachments";
 import z from "zod";
+import { ok, err, type Result, ResultAsync } from "neverthrow";
+import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 
 export function pickRandom<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -10,7 +12,7 @@ export const webkitScrollNum: Attachment<HTMLInputElement> = (el) => {
         console.warn("webkitScrollNum should only be attached to inputs of type 'number'");
         return;
     }
-    // on linux, tauri uses libwebkit2gtk, which has a browser that is just kinda weird and offputting
+    // on linux, tauri uses libwebkit2gtk, which is just kinda generally weird and offputting
     if (!navigator.platform.includes("Linux")) return;
     
     const listener = (evt: WheelEvent) => {
@@ -35,44 +37,8 @@ export function preventDefault<T, E extends Event, F extends (evt: E, ...args: a
     return f as F;
 }
 
-export function throttleClick(delay: number, func: (evt: MouseEvent) => void): Attachment<HTMLButtonElement> {
-    return (el) => {
-        let timeout: number | null = null;
-        const listener = (evt: MouseEvent): void => {
-            if (timeout) clearTimeout(timeout);
-            el.disabled = true;
-            timeout = setTimeout(() => {
-                el.disabled = false;
-            }, delay);
-            func(evt);
-        };
-        el.addEventListener("click", listener);
-        // cleanup func
-        return () => {
-            if (timeout) clearTimeout(timeout);
-            timeout = null;
-            el.removeEventListener("click", listener);
-        }
-    };
-}
-
 export function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
-}
-
-export function outclick(func: () => void, additionalTargets: HTMLElement[] = []): Attachment<HTMLElement> {
-    return (el) => {
-        const listener = (evt: MouseEvent): void => {
-            if (evt.target instanceof HTMLElement && (
-                el.contains(evt.target) || additionalTargets.some(target => target.contains(evt.target as any))
-            )) return;
-            func();
-        };
-        window.addEventListener("pointerdown", listener);
-        return () => {
-            window.removeEventListener("pointerdown", listener);
-        }
-    };
 }
 
 /** This lets us omit the field when constructing from e.g. `zStartup.decode({})`. */
@@ -83,3 +49,35 @@ export function zConst<T extends z.core.util.Literal>(value: NonNullable<T>) {
 export function shortId() {
     return Math.random().toString(36).substring(2);
 }
+
+export function parseError<E extends Error>(e: E): E;
+export function parseError(e: unknown): Error;
+export function parseError(e: unknown): Error {
+    if (e instanceof Error) return e;
+    const stringed = e?.toString?.();
+    if (stringed === "[object Object]") {
+        return new Error(JSON.stringify(e));
+    }
+    return new Error(stringed);
+}
+
+export function jsonParse(s: string): Result<any, Error> {
+    try {
+        return ok(JSON.parse(s));
+    } catch (e: unknown) {
+        return err(parseError(e));
+    }
+}
+
+export function safeInvoke<TRet = void>(cmd: string, args?: InvokeArgs, options?: InvokeOptions): ResultAsync<TRet, string> {
+    return ResultAsync.fromPromise(invoke(cmd, args, options), s => s as string);
+}
+
+declare module "neverthrow" {
+    interface ResultAsync<T, E> {
+        finally(fn: () => void): ResultAsync<T, E>;
+    }
+}
+ResultAsync.prototype.finally = function <T, E>(fn: () => void): ResultAsync<T, E> {
+    return this.andTee(fn).orTee(fn);
+};

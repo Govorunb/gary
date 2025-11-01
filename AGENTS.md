@@ -39,7 +39,12 @@ Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`)
 </style>
 ```
 
-With `neverthrow`, use `AsyncResult<T>` instead of `Promise<Result<T>>`.
+#### neverthrow
+
+With `neverthrow`:
+- Use `ResultAsync<T>` instead of `Promise<Result<T>>`
+- Generally, prefer `Result.fromThrowable`/`ResultAsync.fromThrowable` instead of try/catch; stylistically, use whatever fits in the existing code
+- Handle errors immediately - either pass the error up or send a log/toast and swallow it
 
 #### Zod
 

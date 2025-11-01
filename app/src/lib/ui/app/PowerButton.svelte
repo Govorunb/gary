@@ -18,9 +18,9 @@
 
     // TODO: shutting off with connected games should be a hold action (~1s) with Shift+Click bypass
     async function togglePower() {
-        try {
-            await manager.toggle();
-        } catch (e) {
+        let res = await manager.toggle();
+        if (res.isErr()) {
+            const e = res.error;
             let err_title = `Failed to ${running ? "stop" : "start"} server`;
             log.error(`${err_title}: ${e}`);
             let err_msg = e as string;

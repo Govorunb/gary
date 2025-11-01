@@ -13,6 +13,7 @@
     onDestroy(() => {
         session.dispose();
     });
+    // debugging
     (window as any).SESSION = session;
     (window as any).USER_PREFS = userPrefs;
 </script>

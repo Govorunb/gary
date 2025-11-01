@@ -5,6 +5,7 @@ import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
 import { UserPrefs } from "./prefs.svelte";
 import { toast } from "svelte-sonner";
+import { safeInvoke } from "./utils.svelte";
 
 type ServerConnections = string[] | null;
 
@@ -22,64 +23,38 @@ export class ServerManager {
         void this.session.onDispose(() => this.dispose());
         this.registry = session.registry;
         this.userPrefs = userPrefs;
-        void this.initialize();
+        // these can't(?) fail
+        listen<WSConnectionRequest>("ws-try-connect", (evt) => {
+            this.registry.tryConnect(evt.payload);
+        }).then(unsub => this.subscriptions.push(unsub));
+        listen<ServerConnections>("server-state", (evt) => {
+            this.connections = evt.payload;
+            void this.reconcileConnections();
+        }).then(unsub => this.subscriptions.push(unsub));
+        void this.sync();
     }
 
     async start() {
-        try {
-            await invoke("start_server", { port: this.userPrefs.server.port });
-        } finally {
-            await this.sync();
-        }
+        return safeInvoke("start_server", { port: this.userPrefs.server.port })
+            .orTee(e => log.error(`Failed to start server: ${e}`))
+            .finally(() => this.sync());
     }
 
     async stop() {
-        try {
-            await invoke("stop_server");
-        } finally {
-            await this.sync();
-        }
+        return safeInvoke("stop_server")
+            .orTee(e => log.error(`Failed to stop server: ${e}`))
+            .finally(() => this.sync());
     }
 
     async toggle() {
-        if (this.running) {
-            await this.stop();
-        } else {
-            await this.start();
-        }
+        return this.running ? this.stop() : this.start();
     }
 
     async sync() {
-        try {
-            this.connections = await invoke<ServerConnections>("server_state");
-        } catch (error) {
-            log.error("Failed to sync server state:" + error);
-            this.connections = null;
-        }
+        this.connections = await safeInvoke<ServerConnections>("server_state")
+            .orTee(e => log.error(`Failed to sync server state: ${e}`))
+            .unwrapOr(null);
         await this.reconcileConnections();
-    }
-
-    dispose() {
-        for (const unsub of this.subscriptions) {
-            unsub();
-        }
-        this.subscriptions.length = 0;
-    }
-
-    private async initialize() {
-        try {
-            this.subscriptions.push(await listen<WSConnectionRequest>("ws-try-connect", (evt) => {
-                this.registry.tryConnect(evt.payload);
-            }));
-            this.subscriptions.push(await listen<ServerConnections>("server-state", (evt) => {
-                this.connections = evt.payload;
-                void this.reconcileConnections();
-            }));
-        } catch (error) {
-            log.error("Failed to subscribe to server-state events:" + error);
-        }
-
-        await this.sync();
     }
 
     private async reconcileConnections() {
@@ -104,7 +79,7 @@ export class ServerManager {
             toast.warning(`Closing server-only connection`, {
                 description: `ID: ${id}`,
             });
-            await invoke("ws_close", { id, code: 1000, reason: "UI out of sync, please reconnect" });
+            await safeInvoke("ws_close", { id, code: 1000, reason: "UI out of sync, please reconnect" });
         }
 
         for (const id of regOnly) {
@@ -120,5 +95,12 @@ export class ServerManager {
                 game.conn.dispose();
             }
         }
+    }
+
+    dispose() {
+        // keep running for HMR (reloaded session picks up backend state)
+        // if (this.running) void this.stop();
+        this.subscriptions.forEach(unsub => unsub());
+        this.subscriptions.length = 0;
     }
 }
