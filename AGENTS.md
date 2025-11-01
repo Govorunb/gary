@@ -14,7 +14,7 @@ Current LLMs are likely to output outdated Svelte code that uses legacy features
 
 Additionally, since this is a frontend for an entirely client-side app, no server-side code patterns will work. It will render in the user's system WebView, which means Node is also not available, and system calls are handled through IPC messages to Tauri (e.g. filesystem access is handled through the `@tauri-apps/plugin-fs` Tauri plugin).
 
-#### Frontend Tips
+#### Miscellaneous Frontend Tips
 Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`) and prefer explicit CSS classes with `@apply` directives; e.g.:
 ```svelte
 <script lang="ts"></script>
@@ -38,6 +38,8 @@ Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`)
     }
 </style>
 ```
+
+With `neverthrow`, use `AsyncResult<T>` instead of `Promise<Result<T>>`.
 
 #### Zod
 

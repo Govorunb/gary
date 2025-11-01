@@ -44,6 +44,7 @@ export class GameWSConnection {
     }
 
     checkClosed() {
+        // dev time assertion, throwing is fine here
         if (this._closed) throw new Error(`Connection id '${this.shortId}' is closed`);
     }
 
