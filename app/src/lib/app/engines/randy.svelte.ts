@@ -1,10 +1,11 @@
 import { type Action } from "$lib/api/v1/spec";
 import { pickRandom } from "../utils.svelte";
-import { Engine, zEngineAct, type EngineAct } from "./index.svelte";
+import { Engine, EngineError, zEngineAct, type EngineAct } from "./index.svelte";
 import { JSONSchemaFaker } from "json-schema-faker";
 import type { Session } from "../session.svelte";
 import z from "zod";
 import type { UserPrefs } from "../prefs.svelte";
+import { errAsync, okAsync, type ResultAsync } from "neverthrow";
 
 export const ENGINE_ID = "randy";
 /** Automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
@@ -17,27 +18,27 @@ export class Randy extends Engine<RandyPrefs> {
         super(userPrefs, ENGINE_ID);
     }
 
-    async tryAct(session: Session, actions?: Action[]): Promise<EngineAct | null> {
+    tryAct(session: Session, actions?: Action[]): ResultAsync<EngineAct | null, EngineError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
-            return null;
+            return okAsync(null);
         }
         if (Math.random() < this.options.chanceDoNothing) {
-            return null;
+            return okAsync(null);
         }
         return this.forceAct(session, resolvedActions);
     }
 
-    async forceAct(session: Session, actions?: Action[]): Promise<EngineAct> {
+    forceAct(session: Session, actions?: Action[]): ResultAsync<EngineAct, EngineError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
-            throw new Error("forceAct called with no available actions");
+            return errAsync(new EngineError("forceAct called with no available actions"));
         }
         const action = pickRandom(resolvedActions);
-        return zEngineAct.decode({
+        return okAsync(zEngineAct.decode({
             name: action.name,
             data: JSON.stringify(this.generate(action)),
-        });
+        }));
     }
 
     private generate(action: Action): any {

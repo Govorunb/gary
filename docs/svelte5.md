@@ -1,6 +1,6 @@
 # Svelte 5 Guide for Agents
 
-This document provides essential information for AI agents working with Svelte 5 to avoid outputting outdated Svelte 4 code patterns.
+Many currently deployed LLMs have training cutoffs before (or shortly after) Svelte 5's release, leading to a lack of training data for Svelte 5. This document provides essential information for AI agents working with Svelte 5 to avoid writing outdated Svelte 4 code patterns.
 
 ## Core Changes in Svelte 5
 
@@ -8,54 +8,33 @@ This document provides essential information for AI agents working with Svelte 5
 
 Svelte 5 introduces **runes** - functions with a `$` prefix that control reactivity:
 
-- **`$state()`** - Creates reactive state (replaces implicit `let` reactivity)
-- **`$derived()`** - Creates computed/derived values (replaces `$:` statements)
-- **`$effect()`** - Creates side effects (replaces side-effect `$:` statements)
+- **`$state()`** - Reactive state (replaces implicit `let` reactivity)
+- **`$derived()`** - Computed/derived values, recomputed when dependencies change (replaces `$:` statements)
+- **`$effect()`** - Side effects that rerun when dependencies change (replaces side-effect `$:` statements)
 - **`$props()`** - Declares component props (replaces `export let`)
 
 ### 2. Key Patterns
 
-#### State Management
+#### Reactive State and Side Effects
 ```svelte
-<!-- Svelte 4 -->
-<script>
+<!-- Svelte 4 - outdated -->
+<script lang="ts">
+  const someValue = 0; // Non-reactive
   let count = 0;  // Implicitly reactive
-</script>
-
-<!-- Svelte 5 -->
-<script>
-  let count = $state(0);  // Explicitly reactive
-</script>
-```
-
-#### Computed Values
-```svelte
-<!-- Svelte 4 -->
-<script>
-  let count = 0;
   $: double = count * 2;  // Computed value
-</script>
-
-<!-- Svelte 5 -->
-<script>
-  let count = $state(0);
-  let double = $derived(count * 2);  // Computed value
-</script>
-```
-
-#### Side Effects
-```svelte
-<!-- Svelte 4 -->
-<script>
-  let count = 0;
+  // Side effect
   $: if (count > 5) {
     console.log('Count is high!');
   }
 </script>
 
-<!-- Svelte 5 -->
-<script>
-  let count = $state(0);
+<!-- Svelte 5 - use this now -->
+<script lang="ts">
+  const someValue = 0; // Non-reactive
+  let otherValue = 1; // Still non-reactive
+  let count = $state(0);  // Explicitly reactive
+  let double = $derived(count * 2);  // Computed value
+  // Side effect
   $effect(() => {
     if (count > 5) {
       console.log('Count is high!');
@@ -66,128 +45,73 @@ Svelte 5 introduces **runes** - functions with a `$` prefix that control reactiv
 
 #### Component Props
 ```svelte
-<!-- Svelte 4 -->
-<script>
+<!-- Svelte 4 - outdated -->
+<script lang="ts">
   export let name;
-  export let age = 25;
-</script>
-
-<!-- Svelte 5 -->
-<script>
-  let { name, age = 25 } = $props();
-</script>
-```
-
-### 3. Component Props with Advanced Patterns
-
-#### Renaming Props
-```svelte
-<!-- Svelte 4 -->
-<script>
-  export let className;
-  export { className as class };
-</script>
-
-<!-- Svelte 5 -->
-<script>
-  let { class: className } = $props();
-</script>
-```
-
-#### Rest Props
-```svelte
-<!-- Svelte 4 -->
-<script>
-  export let primary = true;
+  export let age = 25; // Default value
+  export { name as myName }; // Renaming props
   // Other props available via $$restProps
+  // All props available via $$props
 </script>
 
-<!-- Svelte 5 -->
-<script>
-  let { primary = true, ...rest } = $props();
+<!-- Svelte 5 - use this now -->
+<script lang="ts">
+  let {
+    myName: name, // Renaming props
+    age = 25, // Default value
+    ...restProps // Other props
+  } = $props();
+  let props = $props(); // All props available by not destructuring
 </script>
 ```
 
+#### Events
+```svelte
+<!-- Svelte 4 - outdated -->
+<script lang="ts">
+  let count = 0;
+  function onclick() {
+    count++;
+  }
+</script>
+<button on:click={onclick}>Clicks: {count}</button>
+
+<!-- Svelte 5 - use this now -->
+<script lang="ts">
+  let count = $state(0);
+  function onclick() {
+    count++;
+  }
+</script>
+<button onclick={onclick}>Clicks: {count}</button>
+<!-- Note: when the attribute has the exact same name as the value, you can omit the name -->
+<button {onclick}>Clicks: {count}</button> <!-- Same result -->
+```
+
+In Svelte 5, prefer passing callback props to components rather than event dispatchers.
+```svelte
+<!-- Svelte 5 -->
+<script lang="ts">
+  let { 
+    turnLeft,
+    turnRight
+  } = $props();
+  let speed = $state(0);
+</script>
+<button onclick={() => speed++}>+</button>
+<button onclick={() => speed--}>-</button>
+<p>Speed: {speed}</p>
+<button onclick={() => turnLeft(speed)}>Turn Left</button>
+<button onclick={() => turnRight(speed)}>Turn Right</button>
+```
 
 ## Important Notes for Agents
 
-1. **Always use explicit runes** - Never assume `let` declarations are reactive
+1. **Always use explicit runes** - `let` declarations are no longer implicitly reactive
 2. **Props are destructured** - Use `$props()` and destructuring syntax
 3. **No more stores for simple state** - Use `$state()` instead of writable stores for component state
 4. **Events are attributes** - Use `onclick` instead of `on:click` for DOM events
 5. **Snippets replace slots** - Use `{#snippet}` blocks instead of `<slot>` elements
-
-## Why These Changes?
-
-- **Explicit over implicit**: Makes reactivity behavior predictable
-- **Universal reactivity**: Same patterns work in components and `.svelte.js` files
-- **Better tooling**: TypeScript-friendly and easier for editors to understand
-- **Reduced gotchas**: Fixes ordering issues and stale value problems from Svelte 4
-
-## Example: Complete Component Migration
-
-```svelte
-<!-- Svelte 4 Component -->
-<script>
-  import { onMount } from 'svelte';
-  import { writable } from 'svelte/store';
-
-  export let title = 'Hello';
-  export let items = [];
-
-  const store = writable(0);
-  let count = 0;
-  $: doubled = count * 2;
-
-  $: if (count > 10) {
-    console.log('High count!');
-  }
-
-  onMount(() => {
-    console.log('Mounted');
-  });
-
-  function increment() {
-    count++;
-    store.update(n => n + 1);
-  }
-</script>
-
-<h1>{title}</h1>
-<button on:click={increment}>Click me</button>
-<p>Count: {count}, Doubled: {doubled}</p>
-
-<!-- Svelte 5 Component -->
-<script>
-  import { onMount } from 'svelte';
-  import { writable } from 'svelte/store';
-
-  let { title = 'Hello', items = [] } = $props();
-
-  const store = writable(0);
-  let count = $state(0);
-  let doubled = $derived(count * 2);
-
-  $effect(() => {
-    if (count > 10) {
-      console.log('High count!');
-    }
-  });
-
-  onMount(() => {
-    console.log('Mounted');
-  });
-
-  function increment() {
-    count++;
-    store.update(n => n + 1);
-  }
-</script>
-
-<h1>{title}</h1>
-<button onclick={increment}>Click me</button>
-<p>Count: {count}, Doubled: {doubled}</p>
-```
 
 ## Resources
 

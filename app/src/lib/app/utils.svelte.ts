@@ -81,3 +81,11 @@ declare module "neverthrow" {
 ResultAsync.prototype.finally = function <T, E>(fn: () => void): ResultAsync<T, E> {
     return this.andTee(fn).orTee(fn);
 };
+
+export function safeParse<T>(z: z.ZodType<T>, o: unknown): Result<T, z.ZodError<T>> {
+    const res = z.safeParse(o);
+    if (res.success) {
+        return ok(res.data);
+    }
+    return err(res.error);
+}

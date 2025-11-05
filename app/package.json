@@ -15,7 +15,7 @@
   "dependencies": {
     "@faker-js/faker": "^10.1.0",
     "@lucide/svelte": "^0.548.0",
-    "@openrouter/sdk": "0.0.1-beta.16",
+    "@openrouter/sdk": "0.1.1",
     "@tailwindcss/vite": "^4.1.16",
     "@tauri-apps/api": "^2.9.0",
     "@tauri-apps/plugin-fs": "~2.4.4",

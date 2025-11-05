@@ -1,5 +1,5 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { LLMEngine, zLLMOptions, type CommonLLMOptions, type OpenAIContext } from ".";
+import { ConfigError, GenError, LLMEngine, zLLMOptions, type CommonLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";
@@ -8,6 +8,8 @@ import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
 import z from "zod";
+import { err, ok, Result, ResultAsync } from "neverthrow";
+import { EngineError } from "../index.svelte";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
@@ -32,10 +34,14 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         return context as ChatCompletionMessageParam[];
     }
 
-    async generate(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Message> {
+    generate(context: OpenAIContext, outputSchema?: JSONSchema) : ResultAsync<Message, EngineError> {
+        return new ResultAsync(this.generateCore(context, outputSchema));
+    }
+
+    async generateCore(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
         const model = this.options.modelId;
         if (!model) {
-            throw new Error("OpenAI engine is missing a model ID");
+            return err(new ConfigError("OpenAI engine is missing a model ID"));
         }
 
         const messages = this.toChatMessages(context);
@@ -60,29 +66,27 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         // i just know seniorberry shake head and wag finger from inside cloud, but i the one that feel alive
         this.client.baseURL = this.options.serverUrl;
 
-        try {
-            // after evaluating tools/responses api - it all sucks bad
-            // ollama still doesn't support it, nor `tool_choice`
-            // lmstudio has responses (allegedly stateful) but doesn't support `strict` in tool definitions (ouch)
-            // it also doesn't seem to constrain generation with `text.format` at all?
-            // so... `response_format` on `chat/completions` it is
-            const res = await this.client.chat.completions.create(params);
-
-            const msg = zMessage.decode({
-                text: res.choices[0].message.content!, // TODO: error handling
-                source: zActorSource.decode({ manual: false }),
-                silent: true,
-                customData: {
-                    [this.name]: { response: res },
-                },
-            });
-            return msg;
-        } catch (error) {
-            const description = error instanceof Error ? error.message : `${error}`;
-            log.error(`OpenAI request failed: ${description}`);
-            toast.error("OpenAI request failed", { description });
-            throw error;
+        // after evaluating tools/responses api - it all sucks bad
+        // ollama still doesn't support it, nor `tool_choice`
+        // lmstudio has responses (allegedly stateful) but doesn't support `strict` in tool definitions (ouch)
+        // it also doesn't seem to constrain generation with `text.format` at all?
+        // so... `response_format` on `chat/completions` it is
+        const res = await ResultAsync.fromPromise(
+            this.client.chat.completions.create(params),
+            (error) => new OpenAIError(`OpenAI request failed: ${error}`, error as Error, false),
+        );
+        if (res.isErr()) {
+            return err(res.error);
         }
+        const msg = zMessage.decode({
+            text: res.value.choices[0].message.content!, // TODO: error handling
+            source: zActorSource.decode({ manual: false }),
+            silent: true,
+            customData: {
+                [this.id]: { response: res.value },
+            },
+        });
+        return ok(msg);
     }
 }
 
@@ -99,3 +103,5 @@ export const zOpenAIPrefs = z.looseObject({
 });
 
 export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
+
+export class OpenAIError extends EngineError {}

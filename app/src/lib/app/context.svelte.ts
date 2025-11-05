@@ -73,12 +73,12 @@ export const zMessage = z.strictObject({
         user: z.boolean().default(true),
         engine: z.boolean().default(true),
     }).optional().prefault({}),
-    /** The convention for storing data is to key it by the name of the engine, e.g.:
+    /** The convention for storing data is to key it by the ID of the engine, e.g.:
      * ```json
-     * { "OpenRouter":{"requestInfo":{"id": ...,"usage":{ ... }} }
+     * { "openRouter":{"requestInfo":{"id": ...,"usage":{ ... }} }
      * ```
     */
-    customData: z.record(z.string(), z.any()).optional(),
+    customData: z.record(z.string(), z.any()).default({}),
 });
 
 export const zSourcelessMessage = zMessage.omit({source: true});

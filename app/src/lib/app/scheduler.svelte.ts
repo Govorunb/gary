@@ -3,7 +3,8 @@ import type { Registry } from "$lib/api/registry.svelte";
 import { toast } from "svelte-sonner";
 import * as log from "@tauri-apps/plugin-log";
 import { zAct, zActData, type Action } from "$lib/api/v1/spec";
-import type { Engine } from "./engines/index.svelte";
+import { EngineError, type Engine } from "./engines/index.svelte";
+import { err, ok } from "neverthrow";
 
 // TODO: pause on engine error (require user to acknowledge & manually resume)
 export class Scheduler {
@@ -23,7 +24,7 @@ export class Scheduler {
      * - Idle timers (TODO)
      * - Manual user actions
      * And it is flipped false when attempting to act.
-     * Note: this means the act may fail, or the actor may choose not to act; this still consumes the pending signal.
+     * Note: the act may fail, or the actor may choose not to act; the pending signal is still consumed in either case.
      */
     public actPending = $state(false);
 
@@ -55,19 +56,23 @@ export class Scheduler {
         const ignores = this.checkIgnored();
         if (ignores.length) {
             log.debug(`Scheduler.tryAct ignored - ${ignores.join("; ")}`);
-            return;
+            return err({type: "ignored", ignores});
         }
 
         const actions = this.registry.games.flatMap(g => Array.from(g.actions.values()));
         if (actions.length === 0) {
-            return;
+            return err({type: "noActions"});
         }
-        // TODO: catch errors (neverthrow)
-        const act = await this.activeEngine!.tryAct(this.session, actions);
+        const actRes = await this.activeEngine!.tryAct(this.session, actions);
         this.actPending = false;
+        if (actRes.isErr()) {
+            this.onError(actRes.error);
+            return err(actRes.error);
+        }
+        const act = actRes.value;
         if (!act) {
             log.debug(`Scheduler.tryAct: engine chose not to act`);
-            return;
+            return ok(null);
         }
         const game = this.registry.games.find(g => g.actions.has(act.name));
         if (game) {
@@ -85,7 +90,7 @@ export class Scheduler {
         const ignores = this.checkIgnored();
         if (ignores.length) {
             log.warn(`Scheduler.forceAct ignored - ${ignores.join("; ")}`);
-            return;
+            return err({type: "ignored", ignores});
         }
         
         const actionsProvided = actions !== undefined;
@@ -93,24 +98,25 @@ export class Scheduler {
         if (actions.length === 0) {
             const logMethod = actionsProvided ? log.error : log.info;
             logMethod(`Scheduler.forceAct: no actions ${actionsProvided ? "provided" : "registered"}`);
-            return;
+            return err({type: "noActions"});
         }
-        // TODO: catch errors (neverthrow)
-        const act = await this.activeEngine!.forceAct(this.session, actions);
+        const actRes = await this.activeEngine!.forceAct(this.session, actions);
         this.actPending = false;
-        if (!act) {
-            log.error(`Scheduler.forceAct: engine chose not to act (should not be possible!)`);
-            return;
+        if (actRes.isErr()) {
+            this.onError(actRes.error);
+            return err(actRes.error);
         }
+        const act = actRes.value;
         const game = this.registry.games.find(g => g.actions.has(act.name));
-        if (game) {
-            log.info(`Engine acting (forced): ${act.name}`);
-            await game.conn.send(zAct.decode({data: act}));
-        } else {
+        if (!game) {
             toast.error("Engine selected unknown action", {
                 description: `Action: ${act.name}\nThis action was not registered by any game`,
             });
+            return err({type: "actionNotFound", action: act.name});
         }
+        log.info(`Engine acting (forced): ${act.name}`);
+        await game.conn.send(zAct.decode({data: act}));
+        return ok(act);
     }
 
     private checkIgnored() {
@@ -128,14 +134,29 @@ export class Scheduler {
         return out;
     }
 
-    private onError(err: string) {
-        toast.error("Engine error", {
-            description: err,
+    private onError(err: EngineError) {
+        toast.error("Engine error: " + err.message, {
+            description: (err.cause as Error)?.message,
         });
         this.errored = true;
     }
 
+    /** Should only be called through a manual action by the user. */
     public clearError() {
         this.errored = false;
     }
 }
+
+export type ActError = Ignored | NoActions | ActionNotFound | EngineError;
+
+export type Ignored = {
+    type: "ignored";
+    ignores: string[];
+};
+export type NoActions = {
+    type: "noActions";
+};
+export type ActionNotFound = {
+    type: "actionNotFound";
+    action: string;
+};

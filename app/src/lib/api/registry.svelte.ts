@@ -82,9 +82,10 @@ export class Registry {
     }
 
     // TODO: v1 conn (new game) then v2 conn for same game
-    // python version kept games in state for ui, maybe we don't need to
-    // (it reset all internals of a game on disconnect anyway)
-    // 1 (global) llm instance means 1 (global) context, so we don't need to keep games around (except for seen actions maybe)
+    // python version kept games in state for ui, maybe we don't need to (it reset all internals of a game on disconnect anyway)
+    // 1 global session means 1 global context, so we don't need to keep games around (except for seen actions maybe)
+    // i think the solution is to not merge new connections for the same game (whether we keep disconnected games or not)
+    // (i.e. if a game disconnects and reconnects, it's treated as completely new)
 }
 
 export class Game {
@@ -159,7 +160,7 @@ export class Game {
                 this.unregisterActions(msg.data.action_names);
                 break;
             case "actions/force":
-                // FIXME: should use event queue
+                // TODO: see what happens when we're already busy generating (race conditions)
                 this.session.scheduler.forceAct();
                 break;
             case "action/result":

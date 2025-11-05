@@ -15,8 +15,8 @@ importers:
         specifier: ^0.548.0
         version: 0.548.0(svelte@5.43.0)
       '@openrouter/sdk':
-        specifier: 0.0.1-beta.16
-        version: 0.0.1-beta.16
+        specifier: 0.1.1
+        version: 0.1.1
       '@tailwindcss/vite':
         specifier: ^4.1.16
         version: 4.1.16(vite@7.1.12(jiti@2.6.1)(lightningcss@1.30.2))
@@ -310,8 +310,8 @@ packages:
     peerDependencies:
       svelte: ^5
 
-  '@openrouter/sdk@0.0.1-beta.16':
-    resolution: {integrity: sha512-dyLtjcSuaQHn0FEzc3Cx1wqCkjdNeFhBH69FnAT6cBtzQWszimtJTMxkFlihXinZSw+oCZ+zmP4WRHE1pHHh4g==}
+  '@openrouter/sdk@0.1.1':
+    resolution: {integrity: sha512-VYk6o4HG948nbcbm+wTnim3HTEjg1key/x2BXbABFoJOGNsMPH9Jo9IgceghGFVg7/tTxRuuN0u0sByF0Te+3Q==}
     peerDependencies:
       '@tanstack/react-query': ^5
       react: ^18 || ^19
@@ -1334,7 +1334,7 @@ snapshots:
     dependencies:
       svelte: 5.43.0
 
-  '@openrouter/sdk@0.0.1-beta.16':
+  '@openrouter/sdk@0.1.1':
     dependencies:
       zod: 4.1.12
 

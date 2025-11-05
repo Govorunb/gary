@@ -12,9 +12,12 @@ Refer to `docs/ARCHITECTURE.md` for a technical overview of the project's archit
 
 Current LLMs are likely to output outdated Svelte code that uses legacy features like implicit reactivity or `$:` statements. Svelte 5 has changed drastically from the previous versions, so review `docs/svelte5.md` and the [Svelte 5 docs](https://svelte.dev/docs) for a refresher on the new runes-based model.
 
-Additionally, since this is a frontend for an entirely client-side app, no server-side code patterns will work. It will render in the user's system WebView, which means Node is also not available, and system calls are handled through IPC messages to Tauri (e.g. filesystem access is handled through the `@tauri-apps/plugin-fs` Tauri plugin).
+Additionally, since this is a frontend for an entirely client-side app, no server-side code patterns will work. The app will render in the user's system WebView, which means Node is also not available, and system calls are handled through IPC messages to Tauri (e.g. filesystem access is handled through the `@tauri-apps/plugin-fs` Tauri plugin).
 
 #### Miscellaneous Frontend Tips
+
+Explore `app/src/lib/app/utils.svelte.ts` for commonly reused functionality.
+
 Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`) and prefer explicit CSS classes with `@apply` directives; e.g.:
 ```svelte
 <script lang="ts"></script>
@@ -41,10 +44,14 @@ Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`)
 
 #### neverthrow
 
-With `neverthrow`:
-- Use `ResultAsync<T>` instead of `Promise<Result<T>>`
-- Generally, prefer `Result.fromThrowable`/`ResultAsync.fromThrowable` instead of try/catch; stylistically, use whatever fits in the existing code
-- Handle errors immediately - either pass the error up or send a log/toast and swallow it
+Neverthrow documentation is available at `docs/neverthrow.md`. Read the first 20 lines for a cheatsheet, the first 120 for basic usage, or the whole file for a full reference.
+
+When implementing fallible operations:
+- Generally, prefer `Result.fromThrowable`/`ResultAsync.fromThrowable`/`ResultAsync.fromPromise` instead of try/catch; stylistically, use whatever fits in the existing code
+    - `ResultAsync.fromPromise` is for regular promise code; `fromThrowable` is for code that may throw synchronously (before the promise first suspends)
+- Functions marked `async` must return `Promise<Result<T, E>>` by JavaScript rules; otherwise, prefer `Result<T, E>`/`ResultAsync<T, E>` instead.
+- Handle errors immediately - return the error, passing it up; or, if the caller doesn't expect a Result, send a log/toast and swallow it
+- The point of `neverthrow` is to avoid throwing. Functions returning `Result` or `ResultAsync` should **never** throw. If you see a `throw` statement inside one of those that's not paired with an extremely good justification, report it immediately as a bug.
 
 #### Zod
 

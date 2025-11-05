@@ -3,34 +3,43 @@ import { LLMEngine, zLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import * as log from "@tauri-apps/plugin-log";
 import { toast } from "svelte-sonner";
-import type { ChatGenerationParams, ChatResponse } from "@openrouter/sdk/models";
+import type { ChatGenerationParams } from "@openrouter/sdk/models";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
-import { OpenRouter as OpenRouterClient, type SDKOptions } from "@openrouter/sdk";
+import { type SDKOptions } from "@openrouter/sdk";
 import z from "zod";
+import { err, ok, ResultAsync, type Result } from "neverthrow";
+import { EngineError } from "../index.svelte";
+import { chatSend } from "@openrouter/sdk/funcs/chatSend";
+import { generationsGetGeneration } from "@openrouter/sdk/funcs/generationsGetGeneration";
+import { OpenRouterCore } from "@openrouter/sdk/core.js";
 
 export const ENGINE_ID = "openRouter";
 
 export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     readonly name: string = "OpenRouter";
-    private client: OpenRouterClient;
+    private client: OpenRouterCore;
 
     constructor(userPrefs: UserPrefs) {
         super(userPrefs, ENGINE_ID);
         let clientOpts: SDKOptions = {
             apiKey: async () => this.options.apiKey,
         };
-        this.client = new OpenRouterClient(clientOpts);
+        this.client = new OpenRouterCore(clientOpts);
     }
 
-    async generate(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Message> {
+    generate(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError> {
+        return new ResultAsync(this.generateCore(context, outputSchema));
+    }
+
+    async generateCore(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
         type NonStreamingChatParams = ChatGenerationParams & { stream?: false | undefined };
 
         let params: NonStreamingChatParams = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
+            models: this.options.extraModels,
             // TODO: sdk in beta, watch the package, they'll copy these over from the responses api some day maybe
             // @ts-expect-error
-            models: this.options.extraModels,
             provider: {
                 order: this.options.providerSortList,
                 requireParameters: true,
@@ -48,32 +57,36 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
                 },
             };
         }
-        const res: ChatResponse = await this.client.chat.send(params satisfies NonStreamingChatParams);
+        const res = await chatSend(this.client, params satisfies NonStreamingChatParams);
+        if (!res.ok) {
+            return err(new EngineError("Failed to generate", res.error, false));
+        }
+
+        log.trace(`Raw OpenRouter response: ${JSON.stringify(res.value)}`);
+        const resp = res.value.choices[0];
+        if (resp.finishReason != "stop" && resp.finishReason != "length") {
+            return err(new EngineError(`Unexpected finishReason ${resp.finishReason}`, undefined, false))
+        }
 
         const msg = zMessage.decode({
-            text: res.choices[0].message.content as string, // TODO: error handling and all
+            text: res.value.choices[0].message.content as string,
             source: zActorSource.decode({manual: false}),
             silent: true,
             customData: {
-                [ENGINE_ID]: { res },
+                [this.id]: { res },
             },
         })
-        this.fetchGenerationInfo(msg.id).then(gen => {
-            msg.customData![ENGINE_ID].gen = gen;
-        });
-        return msg;
-    }
-
-    async fetchGenerationInfo(id: string) {
-        try {
-            const response = await this.client.generations.getGeneration({ id });
-            return response.data;
-        } catch (e) {
-            log.error(`Failed to fetch OpenRouter generation info: ${e}`);
-            toast.error(`Failed to fetch OpenRouter generation info`, {
-                description: e instanceof Error ? e.message : (e as any).toString?.(),
+        void generationsGetGeneration(this.client, { id: res.value.id })
+            .then(r => {
+                if (r.ok) {
+                    msg.customData[this.id].gen = r.value;
+                } else {
+                    const errMsg = `Failed to fetch OpenRouter generation info for request ${msg.id}`;
+                    log.error(`${errMsg}: ${r.error}`);
+                    toast.error(errMsg, { description: `${r.error}` });
+                }
             });
-        }
+        return ok(msg);
     }
 }
 
