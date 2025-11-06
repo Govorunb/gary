@@ -6,17 +6,17 @@ import { zAct, zActData, type Action } from "$lib/api/v1/spec";
 import { EngineError, type Engine } from "./engines/index.svelte";
 import { err, ok } from "neverthrow";
 
-// TODO: pause on engine error (require user to acknowledge & manually resume)
 export class Scheduler {
     /** Explicitly muted, e.g. through the app UI. */
     public muted = $state(false);
     /** Simulating a busy state, e.g. pretending to wait for TTS. */
     public sleeping = $state(false);
     /** Paused due to an engine error that requires user intervention. */
-    public errored = $state(false);
+    public errored = $state(false); // TODO: surface in UI
+    public readonly canAct: boolean = $derived(!this.muted && !this.sleeping && !this.errored);
+
     private readonly registry: Registry;
     private activeEngine: Engine<any> | null;
-    public readonly canAct: boolean;
     public readonly activeMutes: string[];
     /** A signal telling the scheduler to prompt the active engine to act as soon as possible.
      * This can be flipped true by:
@@ -31,7 +31,6 @@ export class Scheduler {
     constructor(private readonly session: Session) {
         this.registry = this.session.registry;
         this.activeEngine = $derived(this.session.activeEngine);
-        this.canAct = $derived(!this.muted && !this.sleeping && !this.errored);
         this.activeMutes = $derived.by(() => {
             const out = [];
             if (this.muted) {

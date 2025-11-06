@@ -7,6 +7,15 @@
     import { HandFist, Pointer } from "@lucide/svelte";
 
     const session = getSession();
+
+    function poke(force: boolean) {
+        session.scheduler.clearError(); // manual action from user, implicitly acknowledged error
+        if (force) {
+            session.scheduler.forceAct();
+        } else {
+            session.scheduler.tryAct();
+        }
+    }
 </script>
 
 <header>
@@ -16,10 +25,10 @@
     <h1 class="justify-self-center flex flex-row items-center gap-3">
         <EnginePicker />
         {#if session.activeEngine}
-            <button onclick={() => session.scheduler.tryAct()} class="act-btn" title="Poke (Try act)">
+            <button onclick={() => poke(false)} class="act-btn" title="Poke (Try act)">
                 <Pointer />
             </button>
-            <button onclick={() => session.scheduler.forceAct()} class="act-btn" title="Force Act">
+            <button onclick={() => poke(true)} class="act-btn" title="Force Act">
                 <HandFist />
             </button>
         {/if}

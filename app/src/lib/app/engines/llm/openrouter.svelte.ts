@@ -119,7 +119,7 @@ export const zOpenRouterPrefs = z.strictObject({
      * - Empty or "openrouter/auto" for auto routing
      * - A model slug ("gpt-5")
      * - A preset slug ("@preset/my-precious")
-     * - Suffixes (":nitro", ":free") are supported as normal
+     * - Variants (":nitro", ":free") are supported as normal
      * See [OpenRouter docs](https://openrouter.ai/docs/features/model-routing) for more info.
      * */
     model: z.string().optional(),
