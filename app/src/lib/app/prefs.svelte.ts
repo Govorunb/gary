@@ -61,7 +61,7 @@ export class UserPrefs {
             return zUserPrefs.decode({});
         }
         log.debug(`loaded prefs: ${JSON.stringify(parsed.data)}`);
-        // TODO: fixups
+        // TODO: dedicated thing for fixups/migrations
         if (!Reflect.has(parsed.data.engines, parsed.data.app.selectedEngine)) {
             parsed.data.app.selectedEngine = RANDY_ID;
         }
@@ -92,17 +92,22 @@ export const zUserPrefs = z.strictObject({
     engines: z.object({
         openRouter: zOpenRouterPrefs.prefault({}),
         randy: zRandyPrefs.prefault({}),
-        ollama: zOpenAIPrefs.prefault({
+    })
+    // all others are OpenAI-compatible
+    .catchall(zOpenAIPrefs)
+    // first-time defaults
+    .prefault(() => ({
+        ollama: zOpenAIPrefs.decode({
             name: "Local server (Ollama)",
             serverUrl: "http://localhost:11434/v1",
             apiKey: " ", // OAI client doesn't like empty strings
         }),
-        lmstudio: zOpenAIPrefs.prefault({
+        lmstudio: zOpenAIPrefs.decode({
             name: "Local server (LMStudio)",
             serverUrl: "http://localhost:1234/v1",
             apiKey: " ",
         }),
-    }).catchall(zOpenAIPrefs).prefault({}),
+    })),
 });
 
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
