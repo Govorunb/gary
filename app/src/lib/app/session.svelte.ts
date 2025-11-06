@@ -50,6 +50,18 @@ export class Session {
         return this.engines[id];
     }
 
+    public deleteEngine(id: string) {
+        if (id === RANDY_ID || id === OPENROUTER_ID) {
+            log.error(`Tried to delete system engine ${id}`);
+            return;
+        }
+        if (this.activeEngine.id === id) {
+            this.activeEngine = this.engines[RANDY_ID];
+        }
+        delete this.engines[id];
+        delete this.userPrefs.engines[id];
+    }
+
     onDispose(callback: () => void): () => void {
         this.ondispose.push(callback);
         return () => {

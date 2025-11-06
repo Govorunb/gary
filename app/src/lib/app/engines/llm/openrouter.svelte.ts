@@ -11,6 +11,7 @@ import { err, ok, ResultAsync, type Result } from "neverthrow";
 import { EngineError } from "../index.svelte";
 import { chatSend } from "@openrouter/sdk/funcs/chatSend";
 import { generationsGetGeneration } from "@openrouter/sdk/funcs/generationsGetGeneration";
+import { apiKeysGetCurrentKeyMetadata } from "@openrouter/sdk/funcs/apiKeysGetCurrentKeyMetadata";
 import { OpenRouterCore } from "@openrouter/sdk/core.js";
 
 export const ENGINE_ID = "openRouter";
@@ -37,13 +38,6 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         let params: NonStreamingChatParams = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
-            models: this.options.extraModels,
-            // TODO: sdk in beta, watch the package, they'll copy these over from the responses api some day maybe
-            // @ts-expect-error
-            provider: {
-                order: this.options.providerSortList,
-                requireParameters: true,
-            },
         };
         if (outputSchema) {
             params.responseFormat = {
@@ -88,6 +82,33 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             });
         return ok(msg);
     }
+
+    async testConnection(): Promise<Result<void, EngineError>> {
+        if (!this.options.apiKey) {
+            return err(new EngineError("API key is required", undefined, false));
+        }
+
+        const res = await apiKeysGetCurrentKeyMetadata(this.client);
+        if (!res.ok) {
+            return err(new EngineError("Invalid API key", res.error, false));
+        }
+
+        return ok(undefined);
+    }
+
+    static async testApiKey(apiKey: string): Promise<Result<void, EngineError>> {
+        if (!apiKey) {
+            return err(new EngineError("API key is required", undefined, false));
+        }
+
+        const client = new OpenRouterCore({ apiKey: async () => apiKey });
+        const res = await apiKeysGetCurrentKeyMetadata(client);
+        if (!res.ok) {
+            return err(new EngineError("Invalid API key", res.error, false));
+        }
+
+        return ok(undefined);
+    }
 }
 
 export const zOpenRouterPrefs = z.strictObject({
@@ -102,10 +123,6 @@ export const zOpenRouterPrefs = z.strictObject({
      * See [OpenRouter docs](https://openrouter.ai/docs/features/model-routing) for more info.
      * */
     model: z.string().optional(),
-    /** Preferred order of providers for the model. Leave empty to let OpenRouter decide. */
-    providerSortList: z.array(z.string()).optional(),
-    /** A list of additional models to try if the first one fails. */
-    extraModels: z.array(z.string()).optional(),
 });
 
 export type OpenRouterPrefs = z.infer<typeof zOpenRouterPrefs>;

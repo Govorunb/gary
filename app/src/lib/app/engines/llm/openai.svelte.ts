@@ -23,10 +23,14 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.name = $derived(this.options.name);
         
         this.client = new OpenAI({
-            apiKey: async () => this.options.apiKey, // FIXME: it thinks empty strings aren't strings smh
+            apiKey: async () => this.fixupApiKey(this.options.apiKey),
             baseURL: this.options.serverUrl,
             dangerouslyAllowBrowser: true, // we have to...
         } satisfies ClientOptions);
+    }
+
+    private fixupApiKey(key: string) {
+        return key || " "; // the client thinks empty strings aren't strings smh
     }
 
     private toChatMessages(context: OpenAIContext): ChatCompletionMessageParam[] {
@@ -94,7 +98,7 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
 // however: https://platform.openai.com/docs/guides/latest-model#gpt-5-parameter-compatibility
 // gpt5 xor temperature/top_p/logprobs
 export const zOpenAIPrefs = z.looseObject({
-    name: z.string(),
+    name: z.string().nonempty(),
     ...zLLMOptions.shape,
     /** Leave empty if your server doesn't need authentication. (e.g. local) */
     apiKey: z.string().default(""),

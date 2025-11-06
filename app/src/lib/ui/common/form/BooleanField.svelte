@@ -12,14 +12,11 @@
         disabled = false,
         description = ""
     }: Props = $props();
-
-    let inputId = $state(`input-${Math.random().toString(36).substring(2, 9)}`);
 </script>
 
 <div class="field-container">
-    <label for={inputId} class="checkbox-label">
+    <label class="checkbox-label">
         <input
-            id={inputId}
             type="checkbox"
             {disabled}
             bind:checked={value}

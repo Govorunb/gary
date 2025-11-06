@@ -1,35 +1,45 @@
 <script lang="ts">
     import { getSession, getUserPrefs } from '$lib/app/utils/di';
-    import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
+    import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
     import { Engine } from '$lib/app/engines/index.svelte';
-    import { CirclePlus, Cog, ArrowLeft } from '@lucide/svelte';
+    import { CirclePlus, Cog, ArrowLeft, Trash } from '@lucide/svelte';
     import EngineConfig from './EngineConfig.svelte';
+    import { PressedKeys } from 'runed';
+    import { toast } from 'svelte-sonner';
+    import { ENGINE_ID as RANDY_ID } from '$lib/app/engines/randy.svelte';
+    import { ENGINE_ID as OPENROUTER_ID } from '$lib/app/engines/llm/openrouter.svelte';
+    import { fade } from 'svelte/transition';
 
     const session = getSession();
     const userPrefs = getUserPrefs();
 
     let engines = $derived(Object.entries(session.engines));
     let selectedEngineId: string | null = $state(null);
-    let configState: 'list' | 'config' = $derived(selectedEngineId != null ? 'config' : 'list');
+    const keys = new PressedKeys();
+    let shiftPressed = $derived(keys.has('Shift'));
+    $effect(() => {
+        void shiftPressed; // otherwise, it stops being updated on switching to config
+        // which makes the "delete" mode stuck even if you release shift
+    })
 
     function createOpenAICompatible() {
         const id = session.initEngine();
         selectEngine(id);
         (document.activeElement as HTMLButtonElement)?.blur();
     }
-    
+
     function selectEngine(id: string) {
         userPrefs.app.selectedEngine = id;
     }
-    
+
     function openConfig(engineId: string) {
         selectedEngineId = engineId;
     }
-    
+
     function closeConfig() {
         selectedEngineId = null;
     }
-    
+
     function handleEngineClick(engineId: string, event: MouseEvent) {
         if (event.altKey) {
             openConfig(engineId);
@@ -38,64 +48,84 @@
             (document.activeElement as HTMLButtonElement)?.blur();
         }
     }
+
+    function canDelete(id: string) {
+        return id !== RANDY_ID && id !== OPENROUTER_ID
+            && session.activeEngine.id !== id;
+    }
+
+    function deleteEngine(id: string) {
+        if (!canDelete(id)) {
+            toast.error("Cannot delete engine");
+            return;
+        }
+        session.deleteEngine(id);
+    }
 </script>
 
-<Popover>
-    <Popover.Trigger>
+<Dialog>
+    <Dialog.Trigger>
         <button class="trigger">{session.activeEngine.name}</button>
-    </Popover.Trigger>
+    </Dialog.Trigger>
     <Portal>
-        <Popover.Positioner>
-            <Popover.Content>
+        <Dialog.Backdrop class="fixed inset-0 z-50 bg-surface-50-950/50" />
+        <Dialog.Positioner class="fixed inset-0 z-50 flex justify-center items-center">
+            <Dialog.Content>
                 <div class="popover-content">
-                    {#if configState === 'list'}
-                        <!-- Engine List View -->
-                        <div class="list-header">
-                            <h3>Select Engine</h3>
-                        </div>
-                        {#snippet engineButton(id: string, engine: Engine<any>)}
+                    {#if !selectedEngineId}
+                        <div class="list-view">
+                            <!-- Engine List View -->
+                            <div class="list-header">
+                                <h3>Select Engine</h3>
+                            </div>
+                            {#snippet engineRow(id: string, engine: Engine<any>)}
+                                {@const del = shiftPressed && canDelete(id)}
+                                <div class="row" out:fade>
+                                    <button class="item"
+                                        onclick={(e) => handleEngineClick(id, e)}
+                                        class:active={session.activeEngine.id === id}
+                                        disabled={session.activeEngine.id === id}
+                                    >
+                                        {engine.name}
+                                    </button>
+                                    <!-- two-in-one to preserve tab focus (otherwise you literally can't press this on keyboard) -->
+                                    <button class={del ? "trash" : "config"} onclick={() => del ? deleteEngine(id) : openConfig(id)}>
+                                        {#if del}<Trash />{:else}<Cog />{/if}
+                                    </button>
+                                </div>
+                            {/snippet}
+                            {#each engines as [id, engine] (id)}
+                                {@render engineRow(id, engine)}
+                            {/each}
                             <div class="row">
-                                <button class="item"
-                                    onclick={(e) => handleEngineClick(id, e)}
-                                    class:active={session.activeEngine.id === id}
-                                    disabled={session.activeEngine.id === id}
-                                >
-                                    {engine.name}
-                                </button>
-                                <button class="config" onclick={() => openConfig(id)}>
-                                    <Cog />
+                                <button class="item add-new" onclick={createOpenAICompatible}>
+                                    <CirclePlus />
+                                    <span>Add OpenAI-compatible server</span>
                                 </button>
                             </div>
-                        {/snippet}
-                        {#each engines as [id, engine] (id)}
-                            {@render engineButton(id, engine)}
-                        {/each}
-                        <button class="item add-new" onclick={createOpenAICompatible}>
-                            <CirclePlus />
-                            <span>Add OpenAI-compatible server</span>
-                        </button>
-                    {:else if configState === 'config'}
-                        <!-- Engine Config View -->
-                        <div class="config-header">
-                            <button class="back-button" onclick={closeConfig}>
-                                <ArrowLeft />
-                            </button>
-                            <h3>Configure Engine</h3>
                         </div>
-                        <div class="config-content">
-                            {#if selectedEngineId && session.engines[selectedEngineId]}
-                                <p>Config for: {session.engines[selectedEngineId].name}</p>
-                                <EngineConfig engineId={selectedEngineId} onClose={closeConfig} />
-                            {:else}
-                                <p>Engine not found</p>
-                            {/if}
+                    {:else}
+                        <div class="config-view">
+                            <div class="config-header">
+                                <button class="back-button" onclick={closeConfig}>
+                                    <ArrowLeft />
+                                </button>
+                                <h3>{session.engines[selectedEngineId].name}</h3>
+                            </div>
+                            <div class="config-content">
+                                {#if selectedEngineId && session.engines[selectedEngineId]}
+                                    <EngineConfig engineId={selectedEngineId} onClose={closeConfig} />
+                                {:else}
+                                    <p>Engine not found</p>
+                                {/if}
+                            </div>
                         </div>
                     {/if}
                 </div>
-            </Popover.Content>
-        </Popover.Positioner>
+            </Dialog.Content>
+        </Dialog.Positioner>
     </Portal>
-</Popover>
+</Dialog>
 
 <style lang="postcss">
     @reference "tailwindcss";
@@ -109,9 +139,12 @@
     }
 
     .popover-content {
-        @apply flex flex-col gap-2 bg-surface-200-800/85 p-4 max-h-[calc(100vh-8em)] overflow-scroll;
+        @apply grid;
+        & * { grid-area: 1 / 1; } /* list/config need to occupy the same space (otherwise they vertically stack on transition which looks awful) */
+        @apply bg-surface-200-800/85 p-4 max-h-[calc(100vh-8em)] overflow-x-hidden overflow-y-scroll;
         @apply rounded-lg;
         @apply border-2 min-w-100 border-neutral-900/30;
+        @apply min-w-200;
         /* real smarty pants behavior
         https://github.com/tailwindlabs/tailwindcss/issues/13844
         https://github.com/tauri-apps/tauri/issues/14040
@@ -122,7 +155,7 @@
     .row {
         @apply flex min-h-12;
     }
-    
+
     .item {
         @apply text-xl font-semibold flex-1;
         @apply bg-primary-700 border-r border-neutral-900/20 rounded-l-md p-2;
@@ -137,32 +170,44 @@
             @apply dark:bg-primary-800 dark:text-primary-50;
         }
     }
-    
+
     .config {
         @apply relative right-0;
         @apply rounded-r-md p-2;
         @apply bg-neutral-400 text-neutral-50;
     }
-    
+
+    .trash {
+        @apply relative right-0;
+        @apply rounded-r-md p-2;
+        @apply bg-error-800 text-error-50;
+    }
+
     .add-new {
         @apply text-sm font-semibold rounded-md;
-        @apply flex flex-row gap-2;
+        @apply flex flex-row gap-2 h-10 flex-none;
+    }
+
+    .list-view {
+        @apply flex flex-col gap-2;
     }
 
     .list-header {
         @apply mb-4;
+        & h3 {
+            @apply text-lg font-semibold;
+        }
     }
 
-    .list-header h3 {
-        @apply text-lg font-semibold;
+    .config-view {
+        @apply flex flex-col gap-2;
     }
 
     .config-header {
         @apply flex items-center gap-2 mb-4;
-    }
-
-    .config-header h3 {
-        @apply text-lg font-semibold;
+        & h3 {
+            @apply text-lg font-semibold;
+        }
     }
 
     .back-button {

@@ -29,17 +29,12 @@
 </script>
 
 <div class="engine-config">
-    <div class="config-header">
-        <h4>Randy Configuration</h4>
-    </div>
-
     <div class="config-form">
-        <NumberField 
-            bind:value={dirtyConfig.chanceDoNothing} 
-            label="Chance to Do Nothing" 
-            min={0} 
-            max={1} 
-            step={0.1}
+        <NumberField
+            bind:value={dirtyConfig.chanceDoNothing}
+            label="Chance to Do Nothing"
+            min={0} max={1} step={0.1}
+            slider
             description="Probability (0-1) of skipping an action"
         />
     </div>
@@ -68,14 +63,6 @@
 
     .engine-config {
         @apply flex flex-col gap-4;
-    }
-
-    .config-header {
-        @apply border-b border-neutral-200 dark:border-neutral-700 pb-2;
-    }
-
-    .config-header h4 {
-        @apply text-lg font-semibold text-neutral-900 dark:text-neutral-100;
     }
 
     .config-form {

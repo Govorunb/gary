@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { shortId } from '$lib/app/utils.svelte';
+
     interface Props {
         value: number;
         label?: string;
@@ -9,6 +11,7 @@
         max?: number;
         step?: number;
         description?: string;
+        slider?: boolean;
     }
 
     let { 
@@ -20,10 +23,11 @@
         min,
         max,
         step = 1,
-        description = ""
+        description = "",
+        slider = false
     }: Props = $props();
 
-    let inputId = $state(`input-${Math.random().toString(36).substring(2, 9)}`);
+    let inputId = $state(`input-${shortId()}`);
 </script>
 
 <div class="field-container">
@@ -35,18 +39,26 @@
             {/if}
         </label>
     {/if}
-    <input
-        id={inputId}
-        type="number"
-        {placeholder}
-        {required}
-        {disabled}
-        {min}
-        {max}
-        {step}
-        bind:value
-        class="field-input"
-    />
+    {#snippet input()}
+        <input
+            id={inputId}
+            type={slider ? "range" : "number"}
+            {required}
+            {disabled}
+            {min} {max} {step}
+            bind:value
+            class="field-input"
+            class:field-slider={slider}
+        />
+    {/snippet}
+    {#if slider}
+        <div class="w-full flex items-center gap-2">
+            {@render input()}
+            <span class="min-w-6">{value}</span>
+        </div>
+    {:else}
+        {@render input()}
+    {/if}
     {#if description}
         <div class="field-description">{description}</div>
     {/if}
@@ -73,6 +85,13 @@
         @apply px-3 py-2 border border-neutral-300 rounded-md
             focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
             dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100
+            disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+
+    .field-slider {
+        @apply px-1 py-0 border-0 rounded-md w-full
+            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+            dark:bg-neutral-800 dark:text-neutral-100
             disabled:opacity-50 disabled:cursor-not-allowed;
     }
 

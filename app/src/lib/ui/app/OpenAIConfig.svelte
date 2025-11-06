@@ -31,10 +31,6 @@
 </script>
 
 <div class="engine-config">
-    <div class="config-header">
-        <h4>OpenAI-compatible Configuration</h4>
-    </div>
-
     <div class="config-form">
         <StringField 
             bind:value={dirtyConfig.name} 
@@ -95,14 +91,6 @@
 
     .engine-config {
         @apply flex flex-col gap-4;
-    }
-
-    .config-header {
-        @apply border-b border-neutral-200 dark:border-neutral-700 pb-2;
-    }
-
-    .config-header h4 {
-        @apply text-lg font-semibold text-neutral-900 dark:text-neutral-100;
     }
 
     .config-form {

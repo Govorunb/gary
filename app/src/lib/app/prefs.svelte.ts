@@ -90,8 +90,8 @@ export const zUserPrefs = z.strictObject({
     app: zAppPrefs.prefault({}),
     server: zServerPrefs.prefault({}),
     engines: z.object({
-        openRouter: zOpenRouterPrefs.prefault({}),
         randy: zRandyPrefs.prefault({}),
+        openRouter: zOpenRouterPrefs.prefault({})
     })
     // all others are OpenAI-compatible
     .catchall(zOpenAIPrefs)
@@ -100,12 +100,12 @@ export const zUserPrefs = z.strictObject({
         ollama: zOpenAIPrefs.decode({
             name: "Local server (Ollama)",
             serverUrl: "http://localhost:11434/v1",
-            apiKey: " ", // OAI client doesn't like empty strings
+            apiKey: "",
         }),
         lmstudio: zOpenAIPrefs.decode({
             name: "Local server (LMStudio)",
             serverUrl: "http://localhost:1234/v1",
-            apiKey: " ",
+            apiKey: "",
         }),
     })),
 });

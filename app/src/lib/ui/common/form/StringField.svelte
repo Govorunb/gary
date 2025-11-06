@@ -1,12 +1,16 @@
 <script lang="ts">
+    import { shortId } from "$lib/app/utils.svelte";
+    import { Eye, EyeOff } from "@lucide/svelte";
+    import type { Snippet } from "svelte";
+
     interface Props {
         value?: string;
-        label?: string;
+        label?: string | Snippet;
         placeholder?: string;
         required?: boolean;
         disabled?: boolean;
         password?: boolean;
-        description?: string;
+        description?: string | Snippet;
     }
 
     let { 
@@ -19,29 +23,54 @@
         description = ""
     }: Props = $props();
 
-    let inputId = $state(`input-${Math.random().toString(36).substring(2, 9)}`);
+    let inputId = $state(`input-${shortId()}`);
+    let showPassword = $state(false);
 </script>
 
 <div class="field-container">
     {#if label}
         <label for={inputId} class="field-label">
-            {label}
+            {#if typeof label === "string"}
+                {label}
+            {:else}
+                {@render label()}
+            {/if}
             {#if required}
                 <span class="required">*</span>
             {/if}
         </label>
     {/if}
-    <input
-        id={inputId}
-        type={password ? "password" : "text"}
-        {placeholder}
-        {required}
-        {disabled}
-        bind:value
-        class="field-input"
-    />
+    <div class="input-wrapper">
+        <input
+            id={inputId}
+            type={password && !showPassword ? "password" : "text"}
+            {placeholder}
+            {required}
+            {disabled}
+            bind:value
+            class="field-input"
+        />
+        {#if password}
+            <button
+                type="button"
+                class="peek-button"
+                onclick={() => showPassword = !showPassword}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+                {#if showPassword}
+                    <EyeOff />
+                {:else}
+                    <Eye />
+                {/if}
+            </button>
+        {/if}
+    </div>
     {#if description}
-        <div class="field-description">{description}</div>
+        {#if typeof description === "string"}
+            <div class="field-description">{description}</div>
+        {:else}
+            {@render description()}
+        {/if}
     {/if}
 </div>
 
@@ -63,7 +92,7 @@
     }
 
     .field-input {
-        @apply px-3 py-2 border border-neutral-300 rounded-md
+        @apply px-3 py-2 pr-10 border border-neutral-300 rounded-md
             focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
             dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100
             disabled:opacity-50 disabled:cursor-not-allowed;
@@ -71,5 +100,16 @@
 
     .field-description {
         @apply text-xs text-neutral-500 dark:text-neutral-400;
+    }
+
+    .input-wrapper {
+        @apply relative w-full;
+        & input {
+            @apply w-full;
+        }
+    }
+
+    .peek-button {
+        @apply absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 focus:outline-none bg-transparent border-none cursor-pointer z-10;
     }
 </style>

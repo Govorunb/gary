@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { shortId } from "$lib/app/utils.svelte";
+
     interface Props {
         value: string;
         label?: string;
@@ -17,7 +19,7 @@
         description = ""
     }: Props = $props();
 
-    let inputId = $state(`input-${Math.random().toString(36).substring(2, 9)}`);
+    let inputId = $state(`input-${shortId()}`);
 </script>
 
 <div class="field-container">
