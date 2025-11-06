@@ -2,20 +2,41 @@
     import { getSession, getUserPrefs } from '$lib/app/utils/di';
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
     import { Engine } from '$lib/app/engines/index.svelte';
-    import { CirclePlus, Cog } from '@lucide/svelte';
+    import { CirclePlus, Cog, ArrowLeft } from '@lucide/svelte';
+    import EngineConfig from './EngineConfig.svelte';
 
     const session = getSession();
     const userPrefs = getUserPrefs();
 
     let engines = $derived(Object.entries(session.engines));
+    let selectedEngineId: string | null = $state(null);
+    let configState: 'list' | 'config' = $derived(selectedEngineId != null ? 'config' : 'list');
 
     function createOpenAICompatible() {
         const id = session.initEngine();
         selectEngine(id);
         (document.activeElement as HTMLButtonElement)?.blur();
     }
+    
     function selectEngine(id: string) {
         userPrefs.app.selectedEngine = id;
+    }
+    
+    function openConfig(engineId: string) {
+        selectedEngineId = engineId;
+    }
+    
+    function closeConfig() {
+        selectedEngineId = null;
+    }
+    
+    function handleEngineClick(engineId: string, event: MouseEvent) {
+        if (event.altKey) {
+            openConfig(engineId);
+        } else {
+            selectEngine(engineId);
+            (document.activeElement as HTMLButtonElement)?.blur();
+        }
     }
 </script>
 
@@ -26,35 +47,50 @@
     <Portal>
         <Popover.Positioner>
             <Popover.Content>
-                <!-- list of rows for each engine (active highlighted and unclickable) -->
-                <!-- last row is a button to add new engine -->
-                <!-- essentially a radio button (/app/src/lib/ui/common/RadioButtons.svelte) but:
-                    - vertical
-                    - the last option changes the items array
-                -->
                 <div class="popover-content">
-                    {#snippet engineButton(id: string, engine: Engine<any>)}
-                        <div class="row">
-                            <button class="item"
-                                onclick={() => selectEngine(id)}
-                                class:active={session.activeEngine.id === id}
-                                disabled={session.activeEngine.id === id}
-                            >
-                                {engine.name}
-                            </button>
-                            <!-- TODO: config button that opens another popover -->
-                            <button class="config">
-                                <Cog />
-                            </button>
+                    {#if configState === 'list'}
+                        <!-- Engine List View -->
+                        <div class="list-header">
+                            <h3>Select Engine</h3>
                         </div>
-                    {/snippet}
-                    {#each engines as [id, engine] (id)}
-                        {@render engineButton(id, engine)}
-                    {/each}
-                    <button class="item add-new" onclick={createOpenAICompatible}>
-                        <CirclePlus />
-                        <span>Add OpenAI-compatible server</span>
-                    </button>
+                        {#snippet engineButton(id: string, engine: Engine<any>)}
+                            <div class="row">
+                                <button class="item"
+                                    onclick={(e) => handleEngineClick(id, e)}
+                                    class:active={session.activeEngine.id === id}
+                                    disabled={session.activeEngine.id === id}
+                                >
+                                    {engine.name}
+                                </button>
+                                <button class="config" onclick={() => openConfig(id)}>
+                                    <Cog />
+                                </button>
+                            </div>
+                        {/snippet}
+                        {#each engines as [id, engine] (id)}
+                            {@render engineButton(id, engine)}
+                        {/each}
+                        <button class="item add-new" onclick={createOpenAICompatible}>
+                            <CirclePlus />
+                            <span>Add OpenAI-compatible server</span>
+                        </button>
+                    {:else if configState === 'config'}
+                        <!-- Engine Config View -->
+                        <div class="config-header">
+                            <button class="back-button" onclick={closeConfig}>
+                                <ArrowLeft />
+                            </button>
+                            <h3>Configure Engine</h3>
+                        </div>
+                        <div class="config-content">
+                            {#if selectedEngineId && session.engines[selectedEngineId]}
+                                <p>Config for: {session.engines[selectedEngineId].name}</p>
+                                <EngineConfig engineId={selectedEngineId} onClose={closeConfig} />
+                            {:else}
+                                <p>Engine not found</p>
+                            {/if}
+                        </div>
+                    {/if}
                 </div>
             </Popover.Content>
         </Popover.Positioner>
@@ -111,6 +147,30 @@
     .add-new {
         @apply text-sm font-semibold rounded-md;
         @apply flex flex-row gap-2;
+    }
+
+    .list-header {
+        @apply mb-4;
+    }
+
+    .list-header h3 {
+        @apply text-lg font-semibold;
+    }
+
+    .config-header {
+        @apply flex items-center gap-2 mb-4;
+    }
+
+    .config-header h3 {
+        @apply text-lg font-semibold;
+    }
+
+    .back-button {
+        @apply p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700;
+    }
+
+    .config-content {
+        @apply flex flex-col gap-4;
     }
 
 </style>
