@@ -226,7 +226,7 @@ ACTIONS = [
     ),
     action(
         "mean_test",
-        "Mean test for backends and frontends.",
+        "Mean test for backends and frontends. Don't worry if this doesn't pass.",
         {
             "type": "object",
             "properties": {
@@ -239,15 +239,18 @@ ACTIONS = [
                             "properties": {
                                 "anyOf": {"type": "null"},
                                 "null": {"type": "boolean"},
-                                "<lr>hello loguru users</>": "<test><lr>ABCDE</>\\",
-                            }
+                                "<lr>hello loguru users</>": "<test><lr>ABCDE</>\nAnd now, for something completely JSON.parse: \\",
+                            },
+                            "additionalProperties": True,
+                            "required": ["invisible_man"]
                         }
                     ]
                 },
                 "jsf bug #1e5e9": {"type": "integer", "maximum": -1},
+                "randy killer": {"type": "float", "multipleOf": 0.5},
                 "": {"type": "integer", "minimum": 10000.5},
             },
-            "required": ["oneOf", "jsf bug #1e5e9", ""],
+            "required": ["oneOf", "jsf bug #1e5e9", "randy killer", ""],
         },
     ),
     action(

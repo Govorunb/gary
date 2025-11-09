@@ -52,6 +52,7 @@ export function renderJson(json: string, options?: Options): Promise<string> {
             light: 'vitesse-light',
             dark: 'vitesse-dark',
         },
+        defaultColor: 'light-dark()',
         transformers: [
             options.lineNumbers ? lineNumbersTransformer : {},
             options.lineWrap ? lineWrapTransformer : {},
