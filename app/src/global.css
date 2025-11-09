@@ -26,6 +26,32 @@
             color-scheme: dark;
         }
     }
+    .shiki.line-wrap {
+        text-wrap: stable;
+    }
+    .shiki, .shiki span {
+        @variant dark {
+            color: var(--shiki-dark) !important;
+            background-color: var(--shiki-dark-bg) !important;
+            font-style: var(--shiki-dark-font-style) !important;
+            font-weight: var(--shiki-dark-font-weight) !important;
+            text-decoration: var(--shiki-dark-text-decoration) !important;
+        }
+    }
+    /* https://github.com/shikijs/shiki/issues/3#issuecomment-830564854 */
+    .shiki.line-numbers code {
+        counter-reset: step;
+        counter-increment: step 0;
+        & .line::before {
+            content: counter(step);
+            counter-increment: step;
+            width: 1rem;
+            margin-right: 1rem !important;
+            display: inline-block;
+            text-align: right;
+            color: rgba(115,138,148,.4)
+        }
+    }
 }
 
 @custom-variant dark (&:where(.dark, .dark *));

@@ -3,7 +3,7 @@ import * as z from 'zod';
 import { zConst } from "../../app/utils.svelte";
 
 export const zAction = z.strictObject({
-    name: z.string(),
+    name: z.string().nonempty(),
     description: z.string().optional(),
     schema: z.record(z.string(), z.any()).nullable(),
 });
@@ -11,7 +11,7 @@ export const zAction = z.strictObject({
 export type Action = z.infer<typeof zAction>;
 
 export const zGameMessageBase = z.strictObject({
-    game: z.string(),
+    game: z.string().nonempty(),
     // *technically* an error to include this in dataless messages, but we ball
     // (e.g. Abandoned Pub sends `startup` with `data: {}`)
     data: z.object().optional(),
@@ -53,7 +53,7 @@ export const zForceAction = z.strictObject({
     data: z.strictObject({
         state: z.string().optional(),
         query: z.string(),
-        ephemeral_context: z.boolean().optional(),
+        ephemeral_context: z.boolean().default(false),
         action_names: z.array(z.string()),
     }),
 });
@@ -97,7 +97,7 @@ export type GameMessage = z.infer<typeof zGameMessage>;
 
 export const zActData = z.strictObject({
     id: z.string().default(uuid4),
-    name: z.string(),
+    name: z.string().nonempty(),
     data: z.string().nullish(),
 });
 export const zAct = z.strictObject({
