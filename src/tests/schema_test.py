@@ -239,18 +239,28 @@ ACTIONS = [
                             "properties": {
                                 "anyOf": {"type": "null"},
                                 "null": {"type": "boolean"},
-                                "<lr>hello loguru users</>": "<test><lr>ABCDE</>\nAnd now, for something completely JSON.parse: \\",
+                                "<lr>hello loguru users</>": "<test><lr>ABCDE</>\n<pre>And now, for something completely JSON.parse: \"\\\"</pre>\\",
                             },
+                            # exclusiveMin/Max were changed from bool to number at some point
+                            # this might fool validators that pick which spec to validate against by searching for whether bool/number is used
+                            "exclusiveMinimum": True,
                             "additionalProperties": True,
                             "required": ["invisible_man"]
                         }
                     ]
                 },
-                "jsf bug #1e5e9": {"type": "integer", "maximum": -1},
-                "randy killer": {"type": "float", "multipleOf": 0.5},
+                "py jsf bug #1e5e9": {"type": "integer", "maximum": -1},
+                "randy killer (js jsf)": {
+                    "type": "object",
+                    "properties": {
+                        "1": {"type": "number", "multipleOf": 0.5},
+                        "2": {"type": "number", "exclusiveMinimum": 5, "exclusiveMaximum": 10},
+                    },
+                    "required": ["1", "2"],
+                },
                 "": {"type": "integer", "minimum": 10000.5},
             },
-            "required": ["oneOf", "jsf bug #1e5e9", "randy killer", ""],
+            "required": ["oneOf", "py jsf bug #1e5e9", "randy killer (js jsf)", ""],
         },
     ),
     action(

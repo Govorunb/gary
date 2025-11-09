@@ -1,6 +1,7 @@
+cargo-features = ["trim-paths"]
 [package]
 name = "gary"
-version = "0.1.0"
+version = "1.0.0-alpha.1"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2024"
@@ -13,6 +14,18 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+
+[profile.dev]
+incremental = true
+
+# https://v2.tauri.app/concept/size/
+[profile.release]
+lto = true
+opt-level = "z"
+panic = "abort"
+strip = true
+trim-paths = "all"
+# rustflags = ["-Cdebuginfo=0"] # unstable
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
