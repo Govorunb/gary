@@ -20,8 +20,7 @@ Backend:
 
 Frontend:
 - [ ] Tony mode (manual action sending)
-    - [ ] Code editor
-    - [ ] Syntax highlighting (`shiki`)
+    - [ ] Code editor (`codemirror`)
     - [ ] Validation with shift-click override
 - [ ] Auto-generated action forms (from schema)
     - [ ] Primitives

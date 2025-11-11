@@ -1,6 +1,6 @@
 <script lang="ts">
     import { getRegistry } from "$lib/app/utils/di";
-    import ActionList from "./ActionList.svelte";
+    import GameActionList from "./GameActionList.svelte";
     import Tooltip from "../common/Tooltip.svelte";
     import { clamp } from "$lib/app/utils.svelte";
     import GameTooltip from "./GameTooltip.svelte";
@@ -36,7 +36,7 @@
             {/each}
         </div>
         <div class="mt-4 flex-1 overflow-hidden">
-            <ActionList game={registry.games[activeTab]} />
+            <GameActionList game={registry.games[activeTab]} />
         </div>
     {:else}
         <p class="text-sm text-neutral-600 dark:text-neutral-300">No games connected.</p>

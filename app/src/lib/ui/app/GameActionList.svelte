@@ -10,7 +10,7 @@
 
 </script>
 
-<div class="flex h-full flex-col overflow-y-auto pr-1 text-sm">
+<div class="flex h-full flex-col gap-2 overflow-y-auto pr-1 text-sm">
     {#if game}
         {#each [...game.actions.values()] as action (action.name)}
             <GameAction {action} />
