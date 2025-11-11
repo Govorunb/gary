@@ -61,11 +61,16 @@
         }
         session.deleteEngine(id);
     }
+    function rightClick(e: MouseEvent) {
+        e.preventDefault();
+        openConfig(session.activeEngine.id);
+        (e.target as HTMLButtonElement).click();
+    }
 </script>
 
 <Dialog onOpenChange={(d) => (!d.open) && closeConfig()}>
     <Dialog.Trigger>
-        <button class="trigger">{session.activeEngine.name}</button>
+        <button class="trigger" oncontextmenu={rightClick}>{session.activeEngine.name}</button>
     </Dialog.Trigger>
     <Portal>
         <Dialog.Backdrop class="fixed inset-0 bg-surface-50-950/50" />
@@ -80,17 +85,19 @@
                             </div>
                             {#snippet engineRow(id: string, engine: Engine<any>)}
                                 {@const del = shiftPressed && canDelete(id)}
+                                {@const Icon = del ? Trash : Cog}
                                 <div class="row" out:fade>
                                     <button class="item"
                                         onclick={(e) => handleEngineClick(id, e)}
                                         class:active={session.activeEngine.id === id}
                                         disabled={session.activeEngine.id === id}
+                                        title={`ID: ${engine.id}`}
                                     >
                                         {engine.name}
                                     </button>
                                     <!-- two-in-one to preserve tab focus (otherwise you literally can't press this on keyboard) -->
                                     <button class={del ? "trash" : "config"} onclick={() => del ? deleteEngine(id) : openConfig(id)}>
-                                        {#if del}<Trash />{:else}<Cog />{/if}
+                                        <Icon />
                                     </button>
                                 </div>
                             {/snippet}
@@ -131,6 +138,7 @@
     @reference "tailwindcss";
     @reference "@skeletonlabs/skeleton";
     @reference "@skeletonlabs/skeleton-svelte";
+    @reference "@skeletonlabs/skeleton/themes/cerberus";
 
     .trigger {
         @apply text-3xl font-semibold;

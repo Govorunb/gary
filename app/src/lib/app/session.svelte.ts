@@ -85,7 +85,7 @@ export class Session {
         if (!id) {
             id = uuidv4();
             this.userPrefs.engines[id] = zOpenAIPrefs.decode({
-                name: id.substring(8),
+                name: id.substring(0, 8),
             });
         }
         switch (id) {
