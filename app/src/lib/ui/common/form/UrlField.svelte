@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { shortId } from "$lib/app/utils.svelte";
+    import { shortId } from "$lib/app/utils";
 
     interface Props {
         value: string;

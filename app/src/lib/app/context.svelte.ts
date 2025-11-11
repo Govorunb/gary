@@ -1,7 +1,7 @@
 import { v7 as uuid7 } from "uuid";
 import type { Session } from "./session.svelte";
 import { z } from "zod";
-import { zConst } from "$lib/app/utils.svelte";
+import { zConst } from "$lib/app/utils";
 
 export abstract class ContextManager {
     readonly allMessages: Message[] = $state([]);

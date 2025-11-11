@@ -95,22 +95,16 @@ export const horizontalScroll: Attachment<HTMLElement> = (el) => {
     });
 };
 
-// (0.5, 0.01) -> 0.50
-// (1234, 10) -> 1234
-// (1234, 0.00001) -> 1234.00000
-// (1234.000001, 10) -> 1234.000001
-// (-567, 10) -> -567
-// (-567, 0.01) -> -567.01
 /**
  * Format a number to at least the precision of the step.
  * 
  * Examples:
- * toStepPrecision(0.5, 0.01) -> "0.50"
- * toStepPrecision(1234, 10) -> "1234"
- * toStepPrecision(1234, 0.00001) -> "1234.00000"
- * toStepPrecision(1234.000001, 10) -> "1234.000001"
- * toStepPrecision(-567, 10) -> "-567"
- * toStepPrecision(-567, 0.01) -> "-567.01"
+ * - `(0.5, 0.01)` -> `"0.50"`
+ * - `(1234, 10)` -> `"1234"`
+ * - `(1234, 0.00001)` -> `"1234.00000"`
+ * - `(1234.000001, 10)` -> `"1234.000001"`
+ * - `(-567, 10)` -> `"-567"`
+ * - `(-567, 0.01)` -> `"-567.00"`
  */
 export function toStepPrecision(value: number, step: number): string {
     if (!Number.isFinite(value) || step === 0 || step >= 1) {

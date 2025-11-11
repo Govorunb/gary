@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { toStepPrecision, shortId } from '$lib/app/utils.svelte';
+    import { toStepPrecision, shortId } from '$lib/app/utils';
 
     interface Props {
         value: number;

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { webkitScrollNum } from "$lib/app/utils.svelte";
+    import { webkitScrollNum } from "$lib/app/utils";
     import { getServerManager, getUserPrefs } from "$lib/app/utils/di";
     
     let manager = getServerManager();

@@ -3,7 +3,7 @@ import * as log from "@tauri-apps/plugin-log";
 import { GameWSConnection, type ServerWSEvent, type AcceptArgs, BaseWSConnection } from "./ws";
 import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
-import { safeInvoke } from "$lib/app/utils.svelte";
+import { safeInvoke } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";
 import { toast } from "svelte-sonner";
 

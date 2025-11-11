@@ -1,12 +1,10 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, GenError, LLMEngine, zLLMOptions, type CommonLLMOptions, type OpenAIContext } from ".";
+import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";
 import type { ClientOptions } from "openai";
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import * as log from "@tauri-apps/plugin-log";
-import { toast } from "svelte-sonner";
 import z from "zod";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import { EngineError } from "../index.svelte";

@@ -2,7 +2,7 @@ import { Channel } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import * as log from "@tauri-apps/plugin-log";
 import type { NeuroMessage } from "./v1/spec";
-import { safeInvoke } from "$lib/app/utils.svelte";
+import { safeInvoke } from "$lib/app/utils";
 
 type OnMessageHandler = (msg: string) => any;
 type OnCloseHandler = (clientDisconnected?: CloseFrame) => void;

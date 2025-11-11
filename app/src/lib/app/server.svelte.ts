@@ -5,7 +5,7 @@ import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
 import { UserPrefs } from "./prefs.svelte";
 import { toast } from "svelte-sonner";
-import { safeInvoke } from "./utils.svelte";
+import { safeInvoke } from "./utils";
 
 type ServerConnections = string[] | null;
 

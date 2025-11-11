@@ -1,6 +1,6 @@
 <!-- adapted from https://lyra.horse/blog/2025/08/you-dont-need-js/ -->
 <script lang="ts">
-    import { shortId } from "$lib/app/utils.svelte";
+    import { shortId } from "$lib/app/utils";
     import type { Snippet } from "svelte";
     import type { SvelteHTMLElements } from "svelte/elements";
 

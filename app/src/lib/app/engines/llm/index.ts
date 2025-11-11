@@ -5,7 +5,7 @@ import type { Session } from "$lib/app/session.svelte";
 import type { ContextManager, Message } from "$lib/app/context.svelte";
 import type { JSONSchema } from "openai/lib/jsonschema";
 import z from "zod";
-import { jsonParse, zConst } from "$lib/app/utils.svelte";
+import { jsonParse, zConst } from "$lib/app/utils";
 import type { Message as OpenAIMessage } from "@openrouter/sdk/models";
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import { sendNotification } from "@tauri-apps/plugin-notification";

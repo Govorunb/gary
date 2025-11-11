@@ -2,7 +2,7 @@
     import { getRegistry } from "$lib/app/utils/di";
     import GameActionList from "./GameActionList.svelte";
     import Tooltip from "../common/Tooltip.svelte";
-    import { clamp, horizontalScroll } from "$lib/app/utils.svelte";
+    import { clamp, horizontalScroll } from "$lib/app/utils";
     import GameTooltip from "./GameTooltip.svelte";
 
     let registry = getRegistry();

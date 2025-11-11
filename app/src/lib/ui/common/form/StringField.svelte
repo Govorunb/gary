@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { shortId } from "$lib/app/utils.svelte";
+    import { shortId } from "$lib/app/utils";
     import { Eye, EyeOff } from "@lucide/svelte";
     import type { Snippet } from "svelte";
 
