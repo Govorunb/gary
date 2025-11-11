@@ -4,8 +4,7 @@
     import BooleanField from '../common/form/BooleanField.svelte';
     import type { ConfigProps } from './EngineConfig.svelte';
     import { toast } from 'svelte-sonner';
-    import { ExternalLinkIcon, Info } from '@lucide/svelte';
-    import Tooltip from '../common/Tooltip.svelte';
+    import { ExternalLinkIcon } from '@lucide/svelte';
 
     let { config = $bindable(), onSave }: ConfigProps<typeof ENGINE_ID> = $props();
 
@@ -62,32 +61,20 @@
 
 <div class="engine-config">
     <div class="config-form">
-        {#snippet apiKeyLabel()}
-            <p>
-                API Key
-                <Tooltip interactive>
-                    {#snippet trigger(attrs)}
-                        <button {...attrs}>
-                            <Info size="14" />
-                        </button>
-                    {/snippet}
-                    <div class="flex flex-col gap-1 bg-surface-800 p-2 rounded-md">
-                        <p class="note">
-                            Visit 
-                            <a href="https://openrouter.ai/settings/keys" target="_blank">
-                                <span class="link">OpenRouter <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-                            </a>
-                            to generate an API key.
-                        </p>
-                    </div>
-                </Tooltip>
+        {#snippet apiKeyDesc()}
+            <p class="note">
+                Visit 
+                <a href="https://openrouter.ai/settings/keys" target="_blank">
+                    <span class="link">OpenRouter <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
+                </a>
+                to generate an API key.
             </p>
         {/snippet}
         <StringField 
             bind:value={dirtyConfig.apiKey} 
-            label={apiKeyLabel} 
+            label="API Key"
             password 
-            description="Your OpenRouter API key"
+            description={apiKeyDesc}
         />
         <button 
             class="test-connection-button" 
@@ -96,49 +83,37 @@
         >
             {isTestingConnection ? "Testing..." : "Test Connection"}
         </button>
-        {#snippet modelLabel()}
-            <p>
-                Model
-                <Tooltip interactive>
-                    {#snippet trigger(attrs)}
-                        <button {...attrs}>
-                            <Info size="14" />
-                        </button>
-                    {/snippet}
-                    <div class="flex flex-col gap-1 bg-surface-800 p-2 rounded-md">
-                        <p class="note">
-                            Visit 
-                            <a href="https://openrouter.ai/models" target="_blank">
-                                <span class="link">OpenRouter <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-                            </a>
-                            to pick a model.
-                        </p>
-                        <p class="note">
-                            <a href="https://openrouter.ai/docs/features/presets" target="_blank">
-                                <span class="link">Presets <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-                            </a>
-                            and
-                            <a href="https://openrouter.ai/docs/faq#what-are-model-variants" target="_blank">
-                                <span class="link">variants <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-                            </a>
-                            are supported.
-                        </p>
-                    </div>
-                </Tooltip>
-            </p>
+        {#snippet modelDesc()}
+            <div class="flex flex-col gap-1">
+                <p class="note">
+                    Visit 
+                    <a href="https://openrouter.ai/models" target="_blank">
+                        <span class="link">OpenRouter <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
+                    </a>
+                    to pick a model.
+                    <a href="https://openrouter.ai/docs/features/presets" target="_blank">
+                        <span class="link">Presets <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
+                    </a>
+                    and
+                    <a href="https://openrouter.ai/docs/faq#what-are-model-variants" target="_blank">
+                        <span class="link">variants <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
+                    </a>
+                    are supported.
+                    <br/>
+                    To configure preferred providers or fallback models, create a
+                    <a href="https://openrouter.ai/docs/features/presets" target="_blank">
+                        <span class="link">preset <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
+                    </a>
+                    in your OpenRouter account.
+                </p>
+            </div>
         {/snippet}
         <StringField 
-            bind:value={dirtyConfig.model} 
-            label={modelLabel} 
+            bind:value={dirtyConfig.model}
+            label="Model"
             placeholder="openrouter/auto"
-            description="Model identifier (slug)"
+            description={modelDesc}
         />
-        <p class="note">To configure preferred providers or fallback models, create a
-            <a href="https://openrouter.ai/docs/features/presets" target="_blank">
-                <span class="link">preset <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-            </a>
-            in your OpenRouter account.
-        </p>
         <BooleanField 
             bind:value={dirtyConfig.allowDoNothing} 
             label="Allow Do Nothing" 

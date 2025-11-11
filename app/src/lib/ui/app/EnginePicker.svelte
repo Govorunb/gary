@@ -63,13 +63,13 @@
     }
 </script>
 
-<Dialog>
+<Dialog onOpenChange={(d) => (!d.open) && closeConfig()}>
     <Dialog.Trigger>
         <button class="trigger">{session.activeEngine.name}</button>
     </Dialog.Trigger>
     <Portal>
-        <Dialog.Backdrop class="fixed inset-0 z-50 bg-surface-50-950/50" />
-        <Dialog.Positioner class="fixed inset-0 z-50 flex justify-center items-center">
+        <Dialog.Backdrop class="fixed inset-0 bg-surface-50-950/50" />
+        <Dialog.Positioner class="fixed inset-0 flex justify-center items-center">
             <Dialog.Content>
                 <div class="popover-content">
                     {#if !selectedEngineId}
