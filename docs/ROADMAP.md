@@ -7,11 +7,11 @@ The project is currently undergoing a renovation, porting functionality and UI f
 - `src/gary/` - Stable Python app. Agents **must not** modify this project.
 - `app/` - In-dev Tauri port of the application.
     - `app/src` - Svelte 5 frontend and application logic. Nearly all development will happen here.
-    - `app/src-tauri` - Rust backend. Do not edit unless explicitly asked to.
+    - `app/src-tauri` - Rust backend. Only edit if explicitly asked to.
 
 ### Task list
 
-Backend:
+App logic:
 - [x] Get Randy running and responding to actions
     - [x] Scheduler with manual poke/force
     - [ ] Timer for poke/force (both timers reset when an action is performed; poke resets on attempt)

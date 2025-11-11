@@ -2,7 +2,7 @@
     import { getRegistry } from "$lib/app/utils/di";
     import GameActionList from "./GameActionList.svelte";
     import Tooltip from "../common/Tooltip.svelte";
-    import { clamp } from "$lib/app/utils.svelte";
+    import { clamp, horizontalScroll } from "$lib/app/utils.svelte";
     import GameTooltip from "./GameTooltip.svelte";
 
     let registry = getRegistry();
@@ -14,10 +14,11 @@
 
 </script>
 
-<!-- TODO: limit width (horizontal scroll on the tabs) -->
 <div class="flex h-full flex-col">
     {#if registry.games.length > 0}
-        <div class="flex items-end gap-2 border-b border-neutral-200 dark:border-neutral-700">
+        <div class="flex items-end gap-2 border-b border-neutral-200 dark:border-neutral-700 overflow-x-scroll"
+            {@attach horizontalScroll}
+        >
             {#each registry.games as game, i (game.conn.id)}
                 <!-- TODO: context menu -->
                 <!-- TODO: retain UI on disconnect -->

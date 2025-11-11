@@ -8,7 +8,6 @@ import { OpenAIEngine, zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import * as log from "@tauri-apps/plugin-log";
 import { Randy, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
-import { faker } from "@faker-js/faker";
 
 /**
  * Represents a user session within the app.
@@ -86,7 +85,7 @@ export class Session {
         if (!id) {
             id = uuidv4();
             this.userPrefs.engines[id] = zOpenAIPrefs.decode({
-                name: faker.word.noun().replace(/^\w/g, c => c.toUpperCase()),
+                name: id.substring(8),
             });
         }
         switch (id) {

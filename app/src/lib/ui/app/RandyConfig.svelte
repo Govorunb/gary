@@ -33,7 +33,7 @@
         <NumberField
             bind:value={dirtyConfig.chanceDoNothing}
             label="Chance to Do Nothing"
-            min={0} max={1} step={0.1}
+            min={0} max={1} step={0.01}
             slider
             description="Probability (0-1) of skipping an action"
         />

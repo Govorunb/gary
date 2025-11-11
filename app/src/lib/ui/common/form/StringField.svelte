@@ -24,7 +24,7 @@
     }: Props = $props();
 
     let inputId = $state(`input-${shortId()}`);
-    let showPassword = $state(false);
+    let peekingPassword = $state(false);
 </script>
 
 <div class="field-container">
@@ -43,25 +43,23 @@
     <div class="input-wrapper">
         <input
             id={inputId}
-            type={password && !showPassword ? "password" : "text"}
+            type={password && !peekingPassword ? "password" : "text"}
             {placeholder}
             {required}
             {disabled}
             bind:value
             class="field-input"
         />
-        {#if password}
+        {#if password && (value || peekingPassword)}
+            {@const Icon = peekingPassword ? EyeOff : Eye}
             <button
                 type="button"
                 class="peek-button"
-                onclick={() => showPassword = !showPassword}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                onclick={() => peekingPassword = !peekingPassword}
+                aria-label={peekingPassword ? "Hide" : "Show"}
+                title={peekingPassword ? "Hide" : "Show"}
             >
-                {#if showPassword}
-                    <EyeOff />
-                {:else}
-                    <Eye />
-                {/if}
+                <Icon />
             </button>
         {/if}
     </div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { shortId } from '$lib/app/utils.svelte';
+    import { toStepPrecision, shortId } from '$lib/app/utils.svelte';
 
     interface Props {
         value: number;
@@ -43,8 +43,8 @@
         <input
             id={inputId}
             type={slider ? "range" : "number"}
-            {required}
-            {disabled}
+            {placeholder}
+            {required} {disabled}
             {min} {max} {step}
             bind:value
             class="field-input"
@@ -54,7 +54,7 @@
     {#if slider}
         <div class="w-full flex items-center gap-2">
             {@render input()}
-            <span class="min-w-6">{value}</span>
+            <span class="min-w-6">{toStepPrecision(value, step)}</span>
         </div>
     {:else}
         {@render input()}

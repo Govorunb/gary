@@ -1,6 +1,6 @@
 import { Channel } from "@tauri-apps/api/core";
 import * as log from "@tauri-apps/plugin-log";
-import { GameWSConnection, type ServerWSEvent, type AcceptArgs } from "./ws";
+import { GameWSConnection, type ServerWSEvent, type AcceptArgs, BaseWSConnection } from "./ws";
 import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
 import { safeInvoke } from "$lib/app/utils.svelte";
@@ -54,7 +54,7 @@ export class Registry {
         }
     }
 
-    createGame(name: string, conn: GameWSConnection): Game {
+    createGame(name: string, conn: BaseWSConnection): Game {
         const game = new Game(this.session, name, conn);
         this.games.push(game);
         conn.onclose = () => {
@@ -95,7 +95,7 @@ export class Game {
     constructor(
         private readonly session: Session,
         name: string,
-        public readonly conn: GameWSConnection,
+        public readonly conn: BaseWSConnection,
     ) {
         this.name = name;
         conn.onconnect = async () => void toast.info(`${this.name} connected`);

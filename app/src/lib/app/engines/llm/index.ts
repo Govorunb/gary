@@ -87,7 +87,7 @@ You are goal-oriented and curious. You should aim to keep your actions varied an
 
 ## Name
 
-Assume your name is Gary unless the user refers to you otherwise. You may also expect to be called Neuro or Evil by games.`;
+Assume your name is Gary unless the user refers to you otherwise. You may also expect to be called Neuro (Neuro-sama) or Evil (Evil Neuro) by games.`;
         if (this.options.allowYapping) {
             prompt += `
 ## Communication

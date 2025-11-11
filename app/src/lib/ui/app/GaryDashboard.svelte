@@ -2,8 +2,7 @@
     import { getRegistry, getSession } from "$lib/app/utils/di";
     import ContextLog from "./ContextLog.svelte";
     import GameTabs from "./GameTabs.svelte";
-    import { GameWSConnection } from "$lib/api/ws";
-    import { Channel } from "@tauri-apps/api/core";
+    import { DummyWSConnection } from "$lib/api/ws";
     import z from "zod";
 
     let registry = getRegistry();
@@ -12,7 +11,7 @@
     let counter = $state(1);
     function addDummyData() {
         const i = counter++;
-        const dummyConn = new GameWSConnection(`dummy-${i}`, "v1", new Channel());
+        const dummyConn = new DummyWSConnection(`dummy-${i}`, "v1");
         const dummyGame = registry.createGame(`Dummy Game ${i}`, dummyConn);
         dummyGame.actions.set("test_action", {
             name: "test_action",

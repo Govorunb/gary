@@ -15,7 +15,6 @@
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/state": "^6.5.2",
-    "@faker-js/faker": "^10.1.0",
     "@lucide/svelte": "^0.548.0",
     "@openrouter/sdk": "0.1.1",
     "@tailwindcss/vite": "^4.1.16",
