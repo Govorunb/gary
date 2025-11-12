@@ -18,8 +18,8 @@ importers:
         specifier: ^0.548.0
         version: 0.548.0(svelte@5.43.6)
       '@openrouter/sdk':
-        specifier: 0.1.1
-        version: 0.1.1
+        specifier: ^0.1.10
+        version: 0.1.10
       '@tailwindcss/vite':
         specifier: ^4.1.17
         version: 4.1.17(vite@7.2.2(jiti@2.6.1)(lightningcss@1.30.2))
@@ -354,8 +354,8 @@ packages:
   '@marijn/find-cluster-break@1.0.2':
     resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
 
-  '@openrouter/sdk@0.1.1':
-    resolution: {integrity: sha512-VYk6o4HG948nbcbm+wTnim3HTEjg1key/x2BXbABFoJOGNsMPH9Jo9IgceghGFVg7/tTxRuuN0u0sByF0Te+3Q==}
+  '@openrouter/sdk@0.1.10':
+    resolution: {integrity: sha512-vFAYlzT+3Kw3VKB895YcvbLNjxWqF3AEYI7O2gJB1el1Eh+Ui+aX69iw91s9wOgQx/dLls3ocv8nmYBALuFs6Q==}
     peerDependencies:
       '@tanstack/react-query': ^5
       react: ^18 || ^19
@@ -1617,7 +1617,7 @@ snapshots:
 
   '@marijn/find-cluster-break@1.0.2': {}
 
-  '@openrouter/sdk@0.1.1':
+  '@openrouter/sdk@0.1.10':
     dependencies:
       zod: 4.1.12
 
