@@ -114,7 +114,7 @@ export function toStepPrecision(value: number, step: number): string {
     const stepFractionDigits = clamp(Math.ceil(-Math.log10(Math.abs(step))), 0, 20);
     if (stepFractionDigits === 0) return value.toString();
     
-    const valDigits = -Math.floor(Math.log10(Math.abs(value)));
+    const valDigits = value === 0 ? 0 : -Math.floor(Math.log10(Math.abs(value)));
     if (valDigits > stepFractionDigits) return value.toString(); // already more precise than required
 
     return value.toFixed(stepFractionDigits);
