@@ -1,13 +1,13 @@
 import * as log from "@tauri-apps/plugin-log";
 import Ajv from "ajv";
-import type { GameWSSender, InternalWSConnection } from "$lib/api/ws";
+import type { GameWSSender } from "$lib/api/ws";
 import * as v1 from "$lib/api/v1/spec";
 import { jsonParse, safeParse } from "../utils";
 
 export type ActionResult = Omit<v1.ActionResult['data'], 'id'>;
 
 export abstract class ClientGame {
-    protected readonly ajv = new Ajv();
+    protected readonly ajv = new Ajv({ validateFormats: false });
     protected forceActionInterval?: ReturnType<typeof setInterval>;
     protected readonly registeredActions = new Map<string, v1.Action>();
 

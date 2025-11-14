@@ -30,7 +30,15 @@
 </script>
 
 <div class="flex flex-col gap-2">
-    <h2 class="text-lg font-semibold text-neutral-800 dark:text-neutral-50">Context Log</h2>
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-neutral-800 dark:text-neutral-50">Context Log</h2>
+        <button 
+            class="px-3 py-1 text-sm rounded-md border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-700 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 transition-colors"
+            onclick={() => session.context.clear()}
+        >
+            Clear Context
+        </button>
+    </div>
     <!-- TODO: scrolling log component ($effect() to scroll to bottom unless manually scrolled up, etc.) -->
     <div class="flex flex-col-reverse"> <!-- instead of reversing the array -->
         <div class="flex h-full max-h-[calc(100vh-12rem)] flex-col gap-2 overflow-scroll rounded-xl bg-white/80 p-4 text-sm shadow-sm ring-1 ring-neutral-200/60 backdrop-blur-sm dark:bg-neutral-900/70 dark:ring-neutral-800">
