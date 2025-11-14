@@ -1,9 +1,11 @@
 <script lang="ts">
-    import { getRegistry } from "$lib/app/utils/di";
+    import { getRegistry, getSession } from "$lib/app/utils/di";
     import GameActionList from "./GameActionList.svelte";
     import Tooltip from "../common/Tooltip.svelte";
     import { clamp, horizontalScroll } from "$lib/app/utils";
     import GameTooltip from "./GameTooltip.svelte";
+    import { InternalWSConnection, GameWSSender } from "$lib/api/ws";
+    import { SchemaTestGame } from "$lib/app/schema-test";
 
     let registry = getRegistry();
     let activeTab = $state(0);
@@ -12,6 +14,14 @@
         activeTab = clamp(activeTab, 0, registry.games.length - 1);
     });
 
+    async function startSchemaTest() {
+        const conn = new InternalWSConnection(`schema-test-${Date.now()}`, "v1");
+        const schemaTestGame = new SchemaTestGame(new GameWSSender(conn));
+        
+        registry.createGame("JSON Schema Test", conn);
+
+        await schemaTestGame.lifecycle();
+    }
 </script>
 
 <div class="flex h-full flex-col">
@@ -41,5 +51,11 @@
         </div>
     {:else}
         <p class="text-sm text-neutral-600 dark:text-neutral-300">No games connected.</p>
+        <button
+            class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900"
+            onclick={startSchemaTest}
+        >
+            Schema Test
+        </button>
     {/if}
 </div>

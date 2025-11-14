@@ -1,30 +1,6 @@
 <script lang="ts">
-    import { getRegistry, getSession } from "$lib/app/utils/di";
     import ContextLog from "./ContextLog.svelte";
     import GameTabs from "./GameTabs.svelte";
-    import { DummyWSConnection } from "$lib/api/ws";
-    import z from "zod";
-
-    let registry = getRegistry();
-    let session = getSession();
-
-    let counter = $state(1);
-    function addDummyData() {
-        const i = counter++;
-        const dummyConn = new DummyWSConnection(`dummy-${i}`, "v1");
-        const dummyGame = registry.createGame(`Dummy Game ${i}`, dummyConn);
-        dummyGame.actions.set("test_action", {
-            name: "test_action",
-            description: "This is a test action.",
-            schema: z.toJSONSchema(z.strictObject({
-                param1: z.string(),
-            })),
-        });
-        session.context.system({text: "System message."});
-        session.context.client(dummyGame.name, {text: "Client message."});
-        session.context.user({text: "User message."});
-        session.context.actor({text: "Actor message. This one's going to be really long to test line widths, line breaks, and so on.\n\r\n\n\r\rBet you didn't expect carriage returns, too!"}, false);
-     }
 </script>
 
 <div class="grid w-full flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]">
@@ -34,15 +10,6 @@
     <main class="section">
         <ContextLog />
     </main>
-    <aside class="section">
-        <h2 class="text-lg font-semibold">Settings</h2>
-        <button
-            class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900"
-            onclick={addDummyData}
-        >
-            Add Dummy Data
-        </button>
-    </aside>
 </div>
 
 <style lang="postcss">

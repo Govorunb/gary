@@ -57,11 +57,11 @@ export class Registry {
     createGame(name: string, conn: BaseWSConnection): Game {
         const game = new Game(this.session, name, conn);
         this.games.push(game);
-        conn.onclose = () => {
+        conn.onclose(() => {
             log.debug(`Game ${game.name} disconnected, removing`);
             const i = this.games.indexOf(game);
             this.games.splice(i, 1);
-        };
+        });
         return game;
     }
 
@@ -98,14 +98,14 @@ export class Game {
         public readonly conn: BaseWSConnection,
     ) {
         this.name = name;
-        conn.onconnect = async () => void toast.info(`${this.name} connected`);
-        conn.onmessage = (txt) => this.recv(txt);
-        conn.onwserror = async (err) => {
+        conn.onconnect(async () => void toast.info(`${this.name} connected`));
+        conn.onmessage((txt) => this.recv(txt));
+        conn.onwserror(async (err) => {
             log.warn(`client ${this.name} broke its websocket: ${err}`);
             toast.error(`Game ${this.name} broke its websocket`, {
                 description: err,
             });
-        }
+        });
     }
 
     public get version() {
