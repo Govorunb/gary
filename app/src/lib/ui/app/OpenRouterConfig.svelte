@@ -4,7 +4,7 @@
     import BooleanField from '../common/form/BooleanField.svelte';
     import type { ConfigProps } from './EngineConfig.svelte';
     import { toast } from 'svelte-sonner';
-    import { ExternalLinkIcon } from '@lucide/svelte';
+    import OutLink from '../common/OutLink.svelte';
 
     let { config = $bindable(), onSave }: ConfigProps<typeof ENGINE_ID> = $props();
 
@@ -64,9 +64,7 @@
         {#snippet apiKeyDesc()}
             <p class="note">
                 Visit 
-                <a href="https://openrouter.ai/settings/keys" target="_blank">
-                    <span class="link">OpenRouter <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-                </a>
+                <OutLink href="https://openrouter.ai/settings/keys">OpenRouter</OutLink>
                 to generate an API key.
             </p>
         {/snippet}
@@ -87,24 +85,14 @@
             <div class="flex flex-col gap-1">
                 <p class="note">
                     Visit 
-                    <a href="https://openrouter.ai/models" target="_blank">
-                        <span class="link">OpenRouter <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-                    </a>
+                    <OutLink href="https://openrouter.ai/models">OpenRouter</OutLink>
                     to pick a model.
-                    <a href="https://openrouter.ai/docs/features/presets" target="_blank">
-                        <span class="link">Presets <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-                    </a>
+                    <OutLink href="https://openrouter.ai/docs/features/presets">Presets</OutLink>
                     and
-                    <a href="https://openrouter.ai/docs/faq#what-are-model-variants" target="_blank">
-                        <span class="link">variants <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-                    </a>
+                    <OutLink href="https://openrouter.ai/docs/faq#what-are-model-variants">variants</OutLink>
                     are supported.
                     <br/>
-                    To configure preferred providers or fallback models, create a
-                    <a href="https://openrouter.ai/docs/features/presets" target="_blank">
-                        <span class="link">preset <ExternalLinkIcon style="display:inline-block;" size="14" /></span>
-                    </a>
-                    in your OpenRouter account.
+                    To configure preferred providers or fallback models, create a preset in your OpenRouter account.
                 </p>
             </div>
         {/snippet}
@@ -178,8 +166,5 @@
     }
     .note {
         @apply text-xs text-neutral-500 dark:text-neutral-300;
-    }
-    .link {
-        @apply text-primary-600 hover:underline;
     }
 </style>
