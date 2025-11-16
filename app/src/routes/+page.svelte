@@ -53,7 +53,7 @@
         @apply text-neutral-900 dark:text-neutral-100;
     }
     main {
-        @apply flex flex-1 overflow-scroll;
+        @apply flex flex-1 overflow-hidden;
     }
     .act-btn {
         @apply ml-2 px-2 py-1 rounded-xl;

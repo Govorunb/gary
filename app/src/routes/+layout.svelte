@@ -18,7 +18,7 @@
     (window as any).USER_PREFS = userPrefs;
 </script>
 
-<div class="flex min-h-screen flex-col" role="application">
+<div class="flex flex-col h-screen" role="application">
     {@render children()}
 </div>
 

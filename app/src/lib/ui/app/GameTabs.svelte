@@ -47,9 +47,10 @@
                 </Tooltip>
             {/each}
         </div>
-        <div class="mt-4 flex-1 overflow-hidden">
-            <GameActionList game={registry.games[activeTab]} />
-        </div>
+        {@const game = registry.games[activeTab]}
+        {#if game}
+            <GameActionList {game} />
+        {/if}
     {:else}
         <p class="text-sm text-neutral-600 dark:text-neutral-300">No games connected.</p>
         <button

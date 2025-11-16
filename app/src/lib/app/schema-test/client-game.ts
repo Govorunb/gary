@@ -109,6 +109,7 @@ export abstract class ClientGame {
         
         this.forceActionInterval = setInterval(async () => {
             if (!this.registeredActions.size) return;
+            return; // temp
 
             const force: v1.ForceAction = v1.zForceAction.decode({
                 command: "actions/force",
