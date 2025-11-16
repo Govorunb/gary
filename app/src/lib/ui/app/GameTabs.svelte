@@ -25,6 +25,7 @@
 </script>
 
 <div class="flex h-full flex-col">
+    <h2>Games</h2>
     {#if registry.games.length > 0}
         <div class="flex items-end gap-2 border-b border-neutral-200 dark:border-neutral-700 overflow-x-scroll"
             {@attach horizontalScroll}
@@ -59,3 +60,14 @@
         </button>
     {/if}
 </div>
+
+<style lang="postcss">
+    @reference "tailwindcss";
+    @reference "@skeletonlabs/skeleton";
+    @reference "@skeletonlabs/skeleton-svelte";
+
+    h2 {
+        @apply self-center;
+        @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
+    }
+</style>
