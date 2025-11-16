@@ -13,14 +13,22 @@
     const session = getSession();
     const userPrefs = getUserPrefs();
 
+    let open = $state(false);
     let engines = $derived(Object.entries(session.engines));
     let selectedEngineId: string | null = $state(null);
     const keys = new PressedKeys();
     let shiftPressed = $derived(keys.has('Shift'));
     $effect(() => {
-        void shiftPressed; // otherwise, it stops being updated on switching to config
+        // otherwise, it stops being updated on switching to config
         // which makes the "delete" mode stuck even if you release shift
+        void shiftPressed;
+        
+        if (!open) {
+            closeConfig();
+        }
     })
+    // TODO: teach hotkey
+    keys.onKeys(['Control', 'e'], () => open = !open);
 
     function createOpenAICompatible() {
         const id = session.initEngine();
@@ -68,7 +76,7 @@
     }
 </script>
 
-<Dialog onOpenChange={(d) => (!d.open) && closeConfig()}>
+<Dialog {open} onOpenChange={(d) => open = d.open}>
     <Dialog.Trigger>
         <button class="trigger" oncontextmenu={rightClick}>{session.activeEngine.name}</button>
     </Dialog.Trigger>
