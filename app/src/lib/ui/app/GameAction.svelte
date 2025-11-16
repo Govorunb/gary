@@ -15,7 +15,7 @@
     let view: EditorView | null = null;
     $effect(() => {
         if (actionJson) {
-            // TODO: @lezer/highlight recommended over a full editor
+            // TODO: CM recommends @lezer/highlight over a full editor
             view ??= new EditorView({
                 parent: schemaEl,
                 doc: actionJson,

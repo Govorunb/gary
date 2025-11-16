@@ -36,13 +36,10 @@
     }
 
     function handleSave<E extends EngineId>(config: Engines[E]) {
-        // Update the actual config with proper type assertion
         userPrefs.engines[engineId] = config;
         
-        // Update last used timestamp
-        // TODO: Implement timestamp tracking
+        // TODO: timestamps to sort by
         
-        // Close config
         onClose();
     }
 </script>

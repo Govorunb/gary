@@ -56,7 +56,6 @@
     <!-- TODO: scrolling log component ($effect() to scroll to bottom unless manually scrolled up, etc.) -->
     <div class="reverse-log"> <!-- instead of reversing the array -->
         <div class="log">
-            <!-- TODO: this should render as a grid (currently long messages will break the timestamp into two lines, misaligning everything) -->
             {#each session.context.userView as msg (msg.id)}
                 <div class="message {msg.source.type}">
                     <!-- TODO: put icon in corner (real estate) -->

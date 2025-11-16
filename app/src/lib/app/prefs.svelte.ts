@@ -51,6 +51,7 @@ export class UserPrefs {
                 dismissable: true,
                 closeButton: true,
                 id: "prefs-load-error",
+                position: "top-center",
                 action: {
                     label: "OK",
                     onClick: () => {
@@ -64,6 +65,18 @@ export class UserPrefs {
         // TODO: dedicated thing for fixups/migrations
         if (!Reflect.has(parsed.data.engines, parsed.data.app.selectedEngine)) {
             parsed.data.app.selectedEngine = RANDY_ID;
+            toast.warning("Selected engine not found, defaulting to Randy", {
+                dismissable: true,
+                closeButton: true,
+                id: "prefs-selected-engine-not-found",
+                position: "top-center",
+                action: {
+                    label: "OK",
+                    onClick: () => {
+                        toast.dismiss("prefs-selected-engine-not-found");
+                    }
+                }
+            });
         }
         return parsed.data;
     }
@@ -84,7 +97,9 @@ export const zServerPrefs = z.strictObject({
     // TODO: server behavior toggles (e.g. conflict resolution)
 });
 
-// TODO $env:MY_ENV_VAR
+// TODO: env syntax
+// $env:MY_ENV_VAR
+// {env:MY_ENV_VAR}
 
 export const zUserPrefs = z.strictObject({
     app: zAppPrefs.prefault({}),

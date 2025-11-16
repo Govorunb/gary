@@ -37,6 +37,7 @@
 
 <div class="flex flex-row items-center gap-3">
     <div class="power-button-container">
+        <!-- TODO: see how theme colors look instead (surface/primary) -->
         <button
             class="power-button"
             data-running={boolAttr(running)}

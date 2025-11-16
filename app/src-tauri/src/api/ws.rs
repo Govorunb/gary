@@ -44,8 +44,8 @@ impl ClientWSConnection {
 
     pub async fn lifecycle(&mut self) -> Result<(), String> {
         let _ = self.channel.send(ServerWSEvent::Connected);
-        // FIXME: ignores Some(Err)
-        while let Some(Ok(raw_msg)) = self.rx.next().await {
+        while let Some(res) = self.rx.next().await {
+            let raw_msg = res.map_err(|e| e.to_string())?;
             match raw_msg {
                 Message::Binary(_) => {
                     let err_msg = "Received binary message".to_owned();

@@ -8,11 +8,11 @@ import { err, ok } from "neverthrow";
 
 export class Scheduler {
     /** Explicitly muted, e.g. through the app UI. */
-    public muted = $state(false);
+    public muted = $state(false); // TODO: expose in UI (button next to poke/force)
     /** Simulating a busy state, e.g. pretending to wait for TTS. */
-    public sleeping = $state(false);
+    public sleeping = $state(false); // TODO: badge on engine picker
     /** Paused due to an engine error that requires user intervention. */
-    public errored = $state(false); // TODO: surface in UI
+    public errored = $state(false); // TODO: surface in UI (replace mute button) (+ first time teaching tip)
     public readonly canAct: boolean = $derived(!this.muted && !this.sleeping && !this.errored);
 
     private readonly registry: Registry;
