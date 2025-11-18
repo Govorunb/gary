@@ -1,4 +1,4 @@
-import * as log from "@tauri-apps/plugin-log";
+import r from "$lib/app/utils/reporting";
 import type { GameWSSender } from "$lib/api/ws";
 import { ClientGame } from "./client-game";
 import * as v1 from "$lib/api/v1/spec";
@@ -36,7 +36,7 @@ export class SchemaTestGame extends ClientGame {
         }
 
         if (this.samsara && this.registeredActions.size === 0) {
-            log.info("[schema-test] No more actions - reregistering all. The eternal cycle continues");
+            r.info("[schema-test] No more actions - reregistering all. The eternal cycle continues");
             await this.resetActions();
         }
 
@@ -47,20 +47,20 @@ export class SchemaTestGame extends ClientGame {
         const action = this.actions.get(name);
 
         if (!action) {
-            log.error(`[schema-test] Unknown action: ${name}`);
+            r.error(`[schema-test] Unknown action: ${name}`);
             return { success: false, message: `Unknown action '${name}'` };
         }
 
         if (!this.registeredActions.has(name)) {
-            log.warn(`[schema-test] Called '${name}' out of turn (unregistered)`);
+            r.warn(`[schema-test] Called '${name}' out of turn (unregistered)`);
         }
 
         const validation = this.validateData(action.schema, data);
         if (!validation.valid) {
-            log.warn(`[schema-test] '${name}' failed validation: ${validation.error}\ndata: ${JSON.stringify(data)}`);
+            r.warn(`[schema-test] '${name}' failed validation: ${validation.error}\ndata: ${JSON.stringify(data)}`);
             return { success: false, message: `Invalid data: ${validation.error}` };
         }
-        log.info(`[schema-test] [${name}] Success`);
+        r.info(`[schema-test] [${name}] Success`);
 
         this.registeredActions.delete(name);
         await this.unregisterActions([name]);
@@ -92,7 +92,7 @@ export class SchemaTestGame extends ClientGame {
     }
 
     protected async hello() {
-        log.info(`[schema-test] Registering ${this.actions.size} actions`);
+        r.info(`[schema-test] Registering ${this.actions.size} actions`);
         super.hello();
         
         await this.sendContext(

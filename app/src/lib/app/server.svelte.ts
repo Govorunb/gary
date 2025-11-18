@@ -1,6 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import * as log from "@tauri-apps/plugin-log";
+import r from "$lib/app/utils/reporting";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
 import { UserPrefs } from "./prefs.svelte";
@@ -36,13 +35,13 @@ export class ServerManager {
 
     async start() {
         return safeInvoke("start_server", { port: this.userPrefs.server.port })
-            .orTee(e => log.error(`Failed to start server: ${e}`))
+            .orTee(e => r.error(`Failed to start server`, e))
             .finally(() => this.sync());
     }
 
     async stop() {
         return safeInvoke("stop_server")
-            .orTee(e => log.error(`Failed to stop server: ${e}`))
+            .orTee(e => r.error(`Failed to stop server`, e))
             .finally(() => this.sync());
     }
 
@@ -52,7 +51,7 @@ export class ServerManager {
 
     async sync() {
         this.connections = await safeInvoke<ServerConnections>("server_state")
-            .orTee(e => log.error(`Failed to sync server state: ${e}`))
+            .orTee(e => r.error(`Failed to sync server state`, e))
             .unwrapOr(null);
         await this.reconcileConnections();
     }
@@ -60,7 +59,7 @@ export class ServerManager {
     private async reconcileConnections() {
         if (this.connections == null) {
             if (this.registry.games.length > 0) {
-                log.warn("Server stopped, removing all games");
+                r.warn("Server stopped, removing all games");
                 for (const game of this.registry.games) {
                     game.conn.dispose();
                 }
@@ -75,7 +74,7 @@ export class ServerManager {
         const regOnly = regConns.difference(serverConns);
 
         for (const id of serverOnly) {
-            log.warn(`Closing server-only connection ${id}`);
+            r.warn(`Closing server-only connection ${id}`);
             toast.warning(`Closing server-only connection`, {
                 description: `ID: ${id}`,
             });
@@ -85,12 +84,12 @@ export class ServerManager {
         for (const id of regOnly) {
             const game = this.registry.games.find(g => g.conn.id === id);
             if (game === undefined) {
-                log.error(`registry-only game at ${id} doesn't exist`);
+                r.error(`Registry-only game at ${id} doesn't exist`);
             } else {
                 toast.warning(`Closing registry-only connection`, {
                     description: `ID: ${id} (game ${game.name})`,
                 });
-                log.warn(`Closing registry-only connection ${id} (game ${game.name})`);
+                r.warn(`Closing registry-only connection ${id} (game ${game.name})`);
                 this.registry.games.splice(this.registry.games.indexOf(game), 1);
                 game.conn.dispose();
             }

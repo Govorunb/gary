@@ -1,10 +1,10 @@
 import z from "zod";
-import * as log from "@tauri-apps/plugin-log";
-import { toast } from "svelte-sonner";
+import r from "$lib/app/utils/reporting";
 import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
+import { toast } from "svelte-sonner";
 
 export const USER_PREFS = "userPrefs";
 
@@ -41,39 +41,46 @@ export class UserPrefs {
         const parsed = zUserPrefs.safeParse(data);
         // most fields have defaults, so this should only fail in extreme cases
         if (!parsed.success) {
-            const zodError = z.treeifyError(parsed.error);
+            const zodError = parsed.error;
             // ideally should be a modal (open json in system editor, try reload, use defaults)
             // mayhaps we should have a loading/splash screen before dashboard init
-            const zodErrors = zodError.errors.join("\n\t-");
-            log.error("failed to parse user prefs\n\tzod errors: \n\t-" + zodErrors);
-            toast.error("Failed to parse user prefs", {
-                description: `Replaced prefs with defaults\n\tErrors:\n\t- ${zodErrors}`,
-                dismissable: true,
-                closeButton: true,
-                id: "prefs-load-error",
-                position: "top-center",
-                action: {
-                    label: "OK",
-                    onClick: () => {
-                        toast.dismiss("prefs-load-error");
+
+            r.error("Failed to parse user prefs. They will be replaced with defaults", {
+                toast: {
+                    description: `Error(s): ${zodError.message}`,
+                    dismissable: true,
+                    closeButton: true,
+                    id: "prefs-load-error",
+                    position: "top-center",
+                    action: {
+                        label: "OK",
+                        onClick: () => {
+                            toast.dismiss("prefs-load-error");
+                        }
                     }
+                },
+                ctx: {
+                    issues: zodError.issues,
+                    data,
                 }
             });
             return zUserPrefs.decode({});
         }
-        log.debug(`loaded prefs: ${JSON.stringify(parsed.data)}`);
+        r.debug(`loaded prefs: ${JSON.stringify(parsed.data)}`);
         // TODO: dedicated thing for fixups/migrations
         if (!Reflect.has(parsed.data.engines, parsed.data.app.selectedEngine)) {
             parsed.data.app.selectedEngine = RANDY_ID;
-            toast.warning("Selected engine not found, defaulting to Randy", {
-                dismissable: true,
-                closeButton: true,
-                id: "prefs-selected-engine-not-found",
-                position: "top-center",
-                action: {
-                    label: "OK",
-                    onClick: () => {
-                        toast.dismiss("prefs-selected-engine-not-found");
+            r.warn("Selected engine not found, defaulting to Randy", {
+                toast: {
+                    dismissable: true,
+                    closeButton: true,
+                    id: "prefs-selected-engine-not-found",
+                    position: "top-center",
+                    action: {
+                        label: "OK",
+                        onClick: () => {
+                            toast.dismiss("prefs-selected-engine-not-found");
+                        }
                     }
                 }
             });
@@ -83,7 +90,7 @@ export class UserPrefs {
 
     async save() {
         localStorage.setItem(USER_PREFS, JSON.stringify(this.#data));
-        log.debug("saved prefs");
+        r.debug("saved prefs");
     }
 }
 

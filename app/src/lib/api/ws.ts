@@ -1,14 +1,14 @@
 import { Channel } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import * as log from "@tauri-apps/plugin-log";
+import r from "$lib/app/utils/reporting";
 import type { NeuroMessage, GameMessage } from "./v1/spec";
-import { safeInvoke } from "$lib/app/utils";
+import { safeInvoke, type Awaitable } from "$lib/app/utils";
 import { err, ok, Ok, type Result } from "neverthrow";
 
-type OnMessageHandler = (msg: string) => any;
-type OnCloseHandler = (clientDisconnected?: CloseFrame) => void;
-type OnConnectHandler = () => Promise<void>;
-type OnWSErrorHandler = (err: string) => Promise<void>;
+type OnMessageHandler = (msg: string) => Awaitable;
+type OnCloseHandler = (clientDisconnected?: CloseFrame) => Awaitable;
+type OnConnectHandler = () => Awaitable;
+type OnWSErrorHandler = (err: string) => Awaitable;
 
 export abstract class BaseWSConnection {
     #disposed: boolean = false;
@@ -48,24 +48,24 @@ export abstract class BaseWSConnection {
     public async receiveRaw(text: string) {
         if (this.#disposed) return;
         if (!this.#onmessage.length) {
-            log.warn(`Connection ${this.shortId} received a WS message but has no onmessage handler! I have no mouth and I must scream`);
+            r.warn(`Connection ${this.shortId} received a WS message but has no onmessage handler! I have no mouth and I must scream`);
         }
-        for (const message of this.#onmessage) {
-            await message(text);
+        for (const cbMessage of this.#onmessage) {
+            await cbMessage(text);
         }
     }
 
     protected async connect() {
         if (this.#disposed) return;
-        for (const connect of this.#onconnect) {
-            await connect();
+        for (const cbConnect of this.#onconnect) {
+            await cbConnect();
         }
     }
 
     protected async error(err: string) {
         if (this.#disposed) return;
-        for (const error of this.#onwserror) {
-            await error(err);
+        for (const cbError of this.#onwserror) {
+            await cbError(err);
         }
     }
 
@@ -73,7 +73,7 @@ export abstract class BaseWSConnection {
 
     protected clientDisconnect(clientDisconnected?: CloseFrame) {
         if (this.#disposed) return;
-        log.info(`client ${this.shortId} disconnected`);
+        r.info(`client ${this.shortId} disconnected`);
         this.dispose(clientDisconnected);
     }
 
@@ -146,14 +146,14 @@ export class GameWSConnection extends BaseWSConnection {
     public async sendRaw(text: string) {
         this.devAssertNotDisposed();
         await safeInvoke('ws_send', { id: this.id, text } satisfies SendArgs)
-            .orTee(e => log.error(`Tauri failed to send WS text: ${e}`));
+            .orTee(e => r.error(`Tauri failed to send WS text`, e));
     }
 
     public async disconnect(code?: number, reason?: string) {
         if (this.closed) return;
 
         await safeInvoke('ws_close', { id: this.id, code, reason } satisfies CloseArgs)
-            .orTee(e => log.error(`Tauri failed to close WS: ${e}`));
+            .orTee(e => r.error(`Tauri failed to close WS`, e));
         this.dispose();
     }
 }
@@ -168,9 +168,9 @@ export class InternalWSConnection extends BaseWSConnection {
 
     public async sendRaw(text: string) {
         this.devAssertNotDisposed();
-        log.trace(`Internal connection ${this.shortId} sent: ${text}`);
+        r.verbose(`Internal connection ${this.shortId} sent: ${text}`);
         if (!this.sendListeners.length) {
-            log.warn(`${this.shortId} screaming into the void`);
+            r.warn(`${this.shortId} screaming into the void`);
         }
         for (const listener of this.sendListeners) {
             listener(ok(text));
@@ -179,7 +179,7 @@ export class InternalWSConnection extends BaseWSConnection {
 
     public async disconnect(code?: number, reason?: string) {
         if (this.closed) return;
-        log.trace(`Internal connection ${this.shortId} disconnecting: ${code} (${reason || 'no reason'})`);
+        r.verbose(`Internal connection ${this.shortId} disconnecting: ${code} (${reason || 'no reason'})`);
         this.dispose();
     }
 

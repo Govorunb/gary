@@ -1,5 +1,5 @@
 import type { Action } from "$lib/api/v1/spec";
-import * as log from "@tauri-apps/plugin-log";
+import r from "$lib/app/utils/reporting";
 import { Engine, EngineError, zEngineAct, type EngineAct } from "../index.svelte";
 import type { Session } from "$lib/app/session.svelte";
 import type { ContextManager, Message } from "$lib/app/context.svelte";
@@ -95,7 +95,7 @@ Assume your name is Gary unless the user refers to you otherwise. You may also e
 You may choose to speak, whether to communicate with the user running your software or just to think out loud.
 Remember that your only means of interacting with the game is through actions. In-game characters cannot hear you speak unless there is a specific action for it.`;
         }
-        log.trace(`System prompt: ${prompt}`);
+        r.verbose(`System prompt: ${prompt}`);
         return prompt;
     }
 

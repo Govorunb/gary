@@ -4,8 +4,7 @@
     import { CirclePower, SlidersHorizontal } from "@lucide/svelte";
     import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
     import { boolAttr } from "runed";
-    import * as log from "@tauri-apps/plugin-log";
-    import { toast } from "svelte-sonner";
+    import r from "$lib/app/utils/reporting";
 
     let userPrefs = getUserPrefs();
     let manager = getServerManager();
@@ -20,16 +19,18 @@
     async function togglePower() {
         let res = await manager.toggle();
         if (res.isErr()) {
-            const e = res.error;
             let err_title = `Failed to ${running ? "stop" : "start"} server`;
-            log.error(`${err_title}: ${e}`);
-            let err_msg = e as string;
+            let err_msg = res.error;
             if (err_msg.includes("in use")) {
                 err_msg = `The port ${userPrefs.server.port} is already in use. Check for other instances of Gary, Tony, etc.`;
             }
-            toast.error(err_title, {
-                description: err_msg,
-                id: "server-start-error",
+            r.error({
+                message: err_title,
+                toast: {
+                    description: err_msg,
+                    id: "server-start-error",
+                },
+                ctx: {error: res.error}
             });
         }
     }

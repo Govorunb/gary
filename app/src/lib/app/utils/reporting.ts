@@ -13,10 +13,17 @@ export interface Reporter {
     verbose: ReportFunc;
     debug: ReportFunc;
     info: ReportFunc;
-    success: ReportFunc;
+    success: ReportFunc; // success toast
     warn: ReportFunc;
     error: ReportFunc;
-    fatal: ReportFunc;
+    fatal: ReportFunc; // TODO: modal for fatal
+    
+    /** @deprecated use verbose */
+    trace: ReportFunc;
+    /** @deprecated use warn */
+    warning: ReportFunc;
+    /** @deprecated use fatal */
+    critical: ReportFunc;
 }
 
 export enum LogLevel {
@@ -51,9 +58,16 @@ export type ReportFunc = {
 
 class DefaultReporter implements Reporter {
     defaultToastOptions: ToastOptions = {};
+    trace: ReportFunc;
+    warning: ReportFunc;
+    critical: ReportFunc;
 
-    constructor(public level: LogLevel, public autoToastLevel: LogLevel = LogLevel.Warning) {}
-    
+    constructor(public level: LogLevel, public autoToastLevel: LogLevel = LogLevel.Warning) {
+        this.trace = this.verbose;
+        this.warning = this.warn;
+        this.critical = this.fatal;
+    }
+
     verbose(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Verbose, args);
     }

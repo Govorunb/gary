@@ -1,4 +1,4 @@
-import * as log from "@tauri-apps/plugin-log";
+import r from "$lib/app/utils/reporting";
 import Ajv from "ajv";
 import type { GameWSSender } from "$lib/api/ws";
 import * as v1 from "$lib/api/v1/spec";
@@ -19,7 +19,7 @@ export abstract class ClientGame {
     protected async handleMessage(text: string) {
         const msg = jsonParse(text)
             .andThen(m => safeParse(v1.zNeuroMessage, m))
-            .orTee(e => log.error(`Failed to parse message: ${e}`));
+            .orTee(e => r.error(`Failed to parse message`, String(e)));
         if (msg.isOk()) {
             await this.handle(msg.value);
         }
@@ -34,7 +34,7 @@ export abstract class ClientGame {
                 await this.hello();
                 break;
             default:
-                log.warn(`Unhandled message type: ${(msg as any).command}`);
+                r.warn(`Unhandled message type: ${(msg as any).command}`);
         }
     }
 

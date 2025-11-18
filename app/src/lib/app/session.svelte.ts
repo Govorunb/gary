@@ -5,7 +5,7 @@ import type { Engine } from "./engines/index.svelte";
 import { Registry } from "$lib/api/registry.svelte";
 import type { UserPrefs } from "./prefs.svelte";
 import { OpenAIEngine, zOpenAIPrefs } from "./engines/llm/openai.svelte";
-import * as log from "@tauri-apps/plugin-log";
+import r from "$lib/app/utils/reporting";
 import { Randy, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 
@@ -34,7 +34,7 @@ export class Session {
         this.context = new DefaultContextManager(this);
         this.registry = new Registry(this);
         this.scheduler = new Scheduler(this);
-        log.info(`Created session ${name} (${this.id})`);
+        r.debug(`Created session ${name} (${this.id})`);
         for (const id of Object.keys(this.userPrefs.engines)) {
             this.initEngine(id);
         }
@@ -43,7 +43,7 @@ export class Session {
 
     private getEngine(id: string): Engine<any> {
         if (!this.engines[id]) {
-            log.error(`Tried to get engine ${id} but it doesn't exist, reverting to Randy`);
+            r.error(`Tried to get engine ${id} but it doesn't exist, reverting to Randy`);
             id = RANDY_ID;
         }
         return this.engines[id];
@@ -51,7 +51,7 @@ export class Session {
 
     public deleteEngine(id: string) {
         if (id === RANDY_ID || id === OPENROUTER_ID) {
-            log.error(`Tried to delete system engine ${id}`);
+            r.error(`Tried to delete system engine ${id}`);
             return;
         }
         if (this.activeEngine.id === id) {
@@ -78,7 +78,7 @@ export class Session {
         }
         this.ondispose.length = 0;
         this.engines = {};
-        log.info(`Disposed session ${this.name} (${this.id})`);
+        r.info(`Disposed session ${this.name} (${this.id})`);
     }
 
     public initEngine(id?: string): string {
@@ -87,6 +87,7 @@ export class Session {
             this.userPrefs.engines[id] = zOpenAIPrefs.decode({
                 name: id.substring(0, 8),
             });
+            r.success(`Created engine ${id.substring(0, 8)}`);
         }
         switch (id) {
             case RANDY_ID:
@@ -99,7 +100,7 @@ export class Session {
                 this.engines[id] = new OpenAIEngine(this.userPrefs, id);
                 break;
         }
-        log.info(`Initialized engine ${id}`);
+        r.debug(`Initialized engine ${id}`);
         return id;
     }
 }

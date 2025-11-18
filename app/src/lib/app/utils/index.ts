@@ -119,3 +119,5 @@ export function toStepPrecision(value: number, step: number): string {
 
     return value.toFixed(stepFractionDigits);
 }
+
+export type Awaitable<T = void> = T | Promise<T>;

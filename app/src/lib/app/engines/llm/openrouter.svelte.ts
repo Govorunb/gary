@@ -1,8 +1,7 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
 import { LLMEngine, zLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
-import * as log from "@tauri-apps/plugin-log";
-import { toast } from "svelte-sonner";
+import r from "$lib/app/utils/reporting";
 import type { ChatGenerationParams } from "@openrouter/sdk/models";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import { type SDKOptions } from "@openrouter/sdk";
@@ -56,7 +55,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             return err(new EngineError("Failed to generate", res.error, false));
         }
 
-        log.trace(`Raw OpenRouter response: ${JSON.stringify(res.value)}`);
+        r.trace(`Raw OpenRouter response: ${JSON.stringify(res.value)}`);
         const resp = res.value.choices[0];
         if (resp.finishReason != "stop" && resp.finishReason != "length") {
             return err(new EngineError(`Unexpected finishReason ${resp.finishReason}`, undefined, false))
@@ -71,13 +70,12 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             },
         })
         void generationsGetGeneration(this.client, { id: res.value.id })
-            .then(r => {
-                if (r.ok) {
-                    msg.customData[this.id].gen = r.value;
+            .then(res => {
+                if (res.ok) {
+                    msg.customData[this.id].gen = res.value;
                 } else {
                     const errMsg = `Failed to fetch OpenRouter generation info for request ${msg.id}`;
-                    log.error(`${errMsg}: ${r.error}`);
-                    toast.error(errMsg, { description: `${r.error}` });
+                    r.error(errMsg, String(res.error));
                 }
             });
         return ok(msg);

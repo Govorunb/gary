@@ -1,11 +1,10 @@
 import { Channel } from "@tauri-apps/api/core";
-import * as log from "@tauri-apps/plugin-log";
+import r, { LogLevel } from "$lib/app/utils/reporting";
 import { GameWSConnection, type ServerWSEvent, type AcceptArgs, BaseWSConnection } from "./ws";
 import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
 import { safeInvoke } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";
-import { toast } from "svelte-sonner";
 
 export type WSConnectionRequest = {
     id: string;
@@ -45,11 +44,11 @@ export class Registry {
         const channel = new Channel<ServerWSEvent>();
         const conn = new GameWSConnection(req.id, req.version, channel);
         let gameName = req.version == "v1" ? `<Pending-${conn.id}>` : req.game;
-        log.debug(`Creating game for '${gameName}'`);
+        r.debug(`Creating game '${gameName}' (${req.version})`);
         this.createGame(gameName, conn);
         await safeInvoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
         if (conn.version == "v1") {
-            log.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
+            r.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
             await conn.send(v1.zReregisterAll.decode({}));
         }
     }
@@ -58,7 +57,7 @@ export class Registry {
         const game = new Game(this.session, name, conn);
         this.games.push(game);
         conn.onclose(() => {
-            log.debug(`Game ${game.name} disconnected, removing`);
+            r.info(`${game.name} disconnected`, { toast: true });
             const i = this.games.indexOf(game);
             this.games.splice(i, 1);
         });
@@ -95,12 +94,12 @@ export class Game {
         public readonly conn: BaseWSConnection,
     ) {
         this.name = name;
-        conn.onconnect(async () => void toast.info(`${this.name} connected`));
+        conn.onconnect(() => r.info(`${this.name} connected`, { toast: true }));
         conn.onmessage((txt) => this.recv(txt));
-        conn.onwserror(async (err) => {
-            log.warn(`client ${this.name} broke its websocket: ${err}`);
-            toast.error(`Game ${this.name} broke its websocket`, {
-                description: err,
+        conn.onwserror((err) => {
+            r.warn(`${this.name} broke its websocket`, {
+                details: err,
+                toast: { level: LogLevel.Error },
             });
         });
     }
@@ -118,12 +117,16 @@ export class Game {
         const msg = v1.zGameMessage.safeParse(msgMaybe);
         if (!msg.success) {
             const err = msg.error;
-            const errorMessages = err.issues.map(i => i.message);
-            toast.error("Invalid WebSocket message", {
-                description: `Game ${this.name} sent invalid WS message. Errors: \n\t-${errorMessages.join("\n\t-")}`,
-                id: `invalid-websocket-message(${this.name})`,
+            r.error(`${this.name} sent invalid WebSocket message`, {
+                toast: {
+                    id: `invalid-websocket-message(${this.conn.shortId})`,
+                    description: `Error(s): ${err.message}\nMessage: ${txt}`,
+                },
+                ctx: {
+                    issues: err.issues,
+                    message: txt,
+                },
             });
-            log.error(`Invalid WebSocket message received from game '${this.name}' (conn id ${this.conn.id})\nError(s): ${err.message}\nMessage: ${txt}`);
             await this.conn.disconnect(1006, `Invalid WebSocket message: ${err.message}`);
             return;
         }
@@ -131,21 +134,20 @@ export class Game {
     }
 
     async handle(msg: v1.GameMessage) {
-        log.trace(`Handling ${msg.command}`);
+        r.verbose(`Handling ${msg.command}`);
         if (this.conn.version == "v1") {
             // technically vulnerable but i'd like to see a game out in the wild actually guess its own id
             // could also just replace the game name on every single message, it's UB in the v1 spec so we can do whatever
             if (this.name === `<Pending-${this.conn.id}>`) {
-                log.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
+                r.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
             } else if (this.name !== msg.game) {
-                log.warn(`Game ${this.name} changed its name to ${msg.game}`);
-                toast.warning(`Game ${this.name} changed its name to ${msg.game}`);
+                r.warn(`${this.name} changed name to ${msg.game}`);
             }
             this.name = msg.game;
         }
         switch (msg.command) {
             case "startup":
-                log.info(`startup woo`);
+                r.info(`(${this.name}) startup woo`);
                 break;
             case "context":
                 await this.context(msg.data.message, msg.data.silent);
@@ -169,7 +171,7 @@ export class Game {
             case "shutdown/ready":
                 break;
             default:
-                log.warn(`Unimplemented command '${(msg as any).command}'`);
+                r.warn(`(${this.name}) Unimplemented command '${(msg as any).command}'`);
         }
     }
 
@@ -181,35 +183,32 @@ export class Game {
     }
 
     async registerActions(actions: v1.Action[]) {
-        log.info(`${this.actions.size} existing actions`);
+        r.debug(`${this.actions.size} existing actions`);
         for (const action of actions) {
             if (this.actions.has(action.name)) {
                 // duplicate action conflict resolution
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                 const isV1 = this.version == "v1";
-                const logMethod = isV1 ? log.warn : log.info;
-                logMethod(`${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`);
+                const logMethod = isV1 ? r.warn : r.info;
+                logMethod(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`);
                 if (isV1) continue;
             }
             this.actions.set(action.name, action);
         }
-        if (actions.length > 3) {
-            log.info(`Registered ${actions.length} actions`);
+        if (actions.length > 5) {
+            r.debug(`(${this.name}) Registered ${actions.length} actions`);
         } else {
-            log.info(`Registered actions: [${actions.map(a => a.name).join(", ")}]`);
+            r.debug(`(${this.name}) Registered actions: [${actions.map(a => a.name).join(", ")}]`);
         }
     }
 
     async unregisterActions(actions: string[]) {
         for (const action_name of actions) {
             const existed = this.actions.delete(action_name);
-            const logMethod = existed ? log.info : log.warn;
-            logMethod(`Unregistered ${existed ? '' : 'non-'}existing action ${action_name}`);
-            if (!existed) {
-                toast.warning(`Game ${this.name} unregistered non-existing action ${action_name}`);
-            }
+            const logMethod = existed ? r.debug : r.warn;
+            logMethod(`(${this.name}) Unregistered ${existed ? '' : 'non-'}existing action ${action_name}`);
         }
-        log.info(`Actions unregistered: [${actions}]`);
+        r.debug(`(${this.name}) Actions unregistered: [${actions}]`);
     }
 
     toString() {

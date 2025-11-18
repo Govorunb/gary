@@ -1,7 +1,6 @@
 import type { Session } from "./session.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
-import { toast } from "svelte-sonner";
-import * as log from "@tauri-apps/plugin-log";
+import r from "$lib/app/utils/reporting";
 import { zAct, zActData, type Action } from "$lib/api/v1/spec";
 import { EngineError, type Engine } from "./engines/index.svelte";
 import { err, ok } from "neverthrow";
@@ -54,7 +53,7 @@ export class Scheduler {
     async tryAct() {
         const ignores = this.checkIgnored();
         if (ignores.length) {
-            log.debug(`Scheduler.tryAct ignored - ${ignores.join("; ")}`);
+            r.debug(`Scheduler.tryAct ignored - ${ignores.join("; ")}`);
             return err({type: "ignored", ignores});
         }
 
@@ -70,17 +69,20 @@ export class Scheduler {
         }
         const act = actRes.value;
         if (!act) {
-            log.debug(`Scheduler.tryAct: engine chose not to act`);
+            r.debug(`Scheduler.tryAct: engine chose not to act`);
             return ok(null);
         }
         const game = this.registry.games.find(g => g.actions.has(act.name));
         if (game) {
-            log.info(`Engine acting: ${act.name}`);
+            r.info(`Engine acting: ${act.name}`);
             const actData = zActData.decode({...act});
             await game.conn.send(zAct.decode({data: actData}));
         } else {
-            toast.error("Engine selected unknown action", {
-                description: `Action: ${act.name}\nThis action was not registered by any game`,
+            r.error("Engine selected unknown action", {
+                toast: {
+                    description: `Action name: ${act.name}\nThis action was not registered by any game`,
+                },
+                ctx: {act}
             });
         }
     }
@@ -88,14 +90,14 @@ export class Scheduler {
     async forceAct(actions?: Action[]) {
         const ignores = this.checkIgnored();
         if (ignores.length) {
-            log.warn(`Scheduler.forceAct ignored - ${ignores.join("; ")}`);
+            r.warn(`Scheduler.forceAct ignored - ${ignores.join("; ")}`);
             return err({type: "ignored", ignores});
         }
         
         const actionsProvided = actions !== undefined;
         actions ??= this.registry.games.flatMap(g => Array.from(g.actions.values()));
         if (actions.length === 0) {
-            const logMethod = actionsProvided ? log.error : log.info;
+            const logMethod = actionsProvided ? r.error : r.info;
             logMethod(`Scheduler.forceAct: no actions ${actionsProvided ? "provided" : "registered"}`);
             return err({type: "noActions"});
         }
@@ -108,12 +110,15 @@ export class Scheduler {
         const act = actRes.value;
         const game = this.registry.games.find(g => g.actions.has(act.name));
         if (!game) {
-            toast.error("Engine selected unknown action", {
-                description: `Action: ${act.name}\nThis action was not registered by any game`,
+            r.error("Engine selected unknown action", {
+                toast: {
+                    description: `Action: ${act.name}\nThis action was not registered by any game`,
+                },
+                ctx: {act}
             });
             return err({type: "actionNotFound", action: act.name});
         }
-        log.info(`Engine acting (forced): ${act.name}`);
+        r.info(`Engine acting (forced): ${act.name}`);
         await game.conn.send(zAct.decode({data: act}));
         return ok(act);
     }
@@ -134,8 +139,13 @@ export class Scheduler {
     }
 
     private onError(err: EngineError) {
-        toast.error("Engine error: " + err.message, {
-            description: (err.cause as Error)?.message,
+        r.error({
+            message: `Engine error: ${err.message}`,
+            toast: {
+                title: "Engine error",
+                description: (err.cause as Error)?.message,
+            },
+            ctx: {err}
         });
         this.errored = true;
     }
