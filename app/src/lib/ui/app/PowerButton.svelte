@@ -14,6 +14,8 @@
 
     let powerBtnTooltip = $derived(running ? "Stop server" : "Start server");
     let optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options");
+    const haveTauri = '__TAURI_INTERNALS__' in window;
+    if (!haveTauri) powerBtnTooltip = "Tauri backend not available";
 
     // TODO: shutting off with connected games should be a hold action (~1s) with Shift+Click bypass
     async function togglePower() {
@@ -21,7 +23,9 @@
         if (res.isErr()) {
             let err_title = `Failed to ${running ? "stop" : "start"} server`;
             let err_msg = res.error;
-            if (err_msg.includes("in use")) {
+            if (typeof(err_msg) !== "string") {
+                err_msg = `Internal error: ${err_msg}`;
+            } else if (err_msg.includes("in use")) {
                 err_msg = `The port ${userPrefs.server.port} is already in use. Check for other instances of Gary, Tony, etc.`;
             }
             r.error({
@@ -34,6 +38,11 @@
             });
         }
     }
+
+    function getBtnStroke() {
+        if (!haveTauri) return "opacity-10";
+        return running ? "stroke-[#0f9d58]" : "stroke-[#d93025]";
+    }
 </script>
 
 <div class="flex flex-row items-center gap-3">
@@ -45,8 +54,9 @@
             onclick={togglePower}
             aria-label={powerBtnTooltip}
             title={powerBtnTooltip}
+            disabled={!haveTauri}
         >
-            <CirclePower size={40} class={["pointer-events-none", running ? "stroke-[#0f9d58]" : "stroke-[#d93025]"]} />
+            <CirclePower size={40} class={["pointer-events-none", getBtnStroke()]} />
         </button>
         <Popover>
             <Popover.Trigger>

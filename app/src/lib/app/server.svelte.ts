@@ -3,7 +3,6 @@ import r from "$lib/app/utils/reporting";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
 import { UserPrefs } from "./prefs.svelte";
-import { toast } from "svelte-sonner";
 import { safeInvoke } from "./utils";
 
 type ServerConnections = string[] | null;
@@ -23,7 +22,7 @@ export class ServerManager {
         this.registry = session.registry;
         this.userPrefs = userPrefs;
         // these can't(?) fail
-        if ('__TAURI__' in window) {
+        if ('__TAURI_INTERNALS__' in window) {
             listen<WSConnectionRequest>("ws-try-connect", (evt) => {
                 this.registry.tryConnect(evt.payload);
             }).then(unsub => this.subscriptions.push(unsub));
@@ -31,19 +30,21 @@ export class ServerManager {
                 this.connections = evt.payload;
                 void this.reconcileConnections();
             }).then(unsub => this.subscriptions.push(unsub));
+            void this.sync();
+        } else {
+            r.warn("Tauri backend not available", "Server will not work");
         }
-        void this.sync();
     }
 
     async start() {
         return safeInvoke("start_server", { port: this.userPrefs.server.port })
-            .orTee(e => r.error(`Failed to start server`, e))
+            // .orTee(e => r.error(`Failed to start server`, `${e}`))
             .finally(() => this.sync());
     }
 
     async stop() {
         return safeInvoke("stop_server")
-            .orTee(e => r.error(`Failed to stop server`, e))
+            // .orTee(e => r.error(`Failed to stop server`, `${e}`))
             .finally(() => this.sync());
     }
 
@@ -53,7 +54,7 @@ export class ServerManager {
 
     async sync() {
         this.connections = await safeInvoke<ServerConnections>("server_state")
-            .orTee(e => r.error(`Failed to sync server state`, e))
+            // .orTee(e => r.error(`Failed to sync server state`, `${e}`))
             .unwrapOr(null);
         await this.reconcileConnections();
     }

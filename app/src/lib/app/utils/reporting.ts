@@ -103,7 +103,7 @@ class DefaultReporter implements Reporter {
             [LogLevel.Fatal]: log.error,
         };
         // no tauri available (e.g. browser on dev vite server)
-        if (!('__TAURI__' in window)) {
+        if (!('__TAURI_INTERNALS__' in window)) {
             logFuncMap = {
                 [LogLevel.Verbose]: console.log,
                 [LogLevel.Debug]: console.debug,

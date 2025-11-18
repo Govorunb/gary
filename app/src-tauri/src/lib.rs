@@ -23,7 +23,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_log::Builder::new()
             .rotation_strategy(RotationStrategy::KeepSome(5))
-            .level(LevelFilter::Info)
+            .level(LevelFilter::Trace)
             .target(Target::new(TargetKind::LogDir { file_name: Some("ws".to_owned()) })
                 .filter(|md| md.target() == "ws"))
             .build())
