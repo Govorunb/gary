@@ -98,7 +98,7 @@ export class Scheduler {
         actions ??= this.registry.games.flatMap(g => Array.from(g.actions.values()));
         if (actions.length === 0) {
             const logMethod = actionsProvided ? r.error : r.info;
-            logMethod(`Scheduler.forceAct: no actions ${actionsProvided ? "provided" : "registered"}`);
+            logMethod.bind(r)(`Scheduler.forceAct: no actions ${actionsProvided ? "provided" : "registered"}`);
             return err({type: "noActions"});
         }
         const actRes = await this.activeEngine!.forceAct(this.session, actions);

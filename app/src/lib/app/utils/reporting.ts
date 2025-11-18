@@ -133,13 +133,12 @@ class DefaultReporter implements Reporter {
                 [LogLevel.Error]: toast.error,
                 [LogLevel.Fatal]: toast.error,
             };
-            const toastOptions: ToastOptions = typeof(options.toast) === "boolean"
-                ? this.defaultToastOptions
-                : {
-                    ...this.defaultToastOptions,
-                    description: options.details,
-                    ...options.toast,
-                };
+            const toastOptions: ToastOptions = {
+                ...this.defaultToastOptions,
+                description: options.details,
+                ...(typeof(options.toast) === "boolean" ? {} : options.toast),
+            };
+            // console.log(options, toastOptions);
             const toastFunc = toastFuncMap[toastOptions.level ?? level];
             toastFunc(toastOptions.title ?? options.message, toastOptions);
         }

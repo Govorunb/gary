@@ -23,13 +23,15 @@ export class ServerManager {
         this.registry = session.registry;
         this.userPrefs = userPrefs;
         // these can't(?) fail
-        listen<WSConnectionRequest>("ws-try-connect", (evt) => {
-            this.registry.tryConnect(evt.payload);
-        }).then(unsub => this.subscriptions.push(unsub));
-        listen<ServerConnections>("server-state", (evt) => {
-            this.connections = evt.payload;
-            void this.reconcileConnections();
-        }).then(unsub => this.subscriptions.push(unsub));
+        if ('__TAURI__' in window) {
+            listen<WSConnectionRequest>("ws-try-connect", (evt) => {
+                this.registry.tryConnect(evt.payload);
+            }).then(unsub => this.subscriptions.push(unsub));
+            listen<ServerConnections>("server-state", (evt) => {
+                this.connections = evt.payload;
+                void this.reconcileConnections();
+            }).then(unsub => this.subscriptions.push(unsub));
+        }
         void this.sync();
     }
 
@@ -75,21 +77,15 @@ export class ServerManager {
 
         for (const id of serverOnly) {
             r.warn(`Closing server-only connection ${id}`);
-            toast.warning(`Closing server-only connection`, {
-                description: `ID: ${id}`,
-            });
             await safeInvoke("ws_close", { id, code: 1000, reason: "UI out of sync, please reconnect" });
         }
 
         for (const id of regOnly) {
             const game = this.registry.games.find(g => g.conn.id === id);
             if (game === undefined) {
-                r.error(`Registry-only game at ${id} doesn't exist`);
+                r.error(`Registry-only connection ${id} doesn't exist`, "???");
             } else {
-                toast.warning(`Closing registry-only connection`, {
-                    description: `ID: ${id} (game ${game.name})`,
-                });
-                r.warn(`Closing registry-only connection ${id} (game ${game.name})`);
+                r.warn(`Closing registry-only connection`, `ID: ${id} (game ${game.name})`);
                 this.registry.games.splice(this.registry.games.indexOf(game), 1);
                 game.conn.dispose();
             }

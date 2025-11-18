@@ -190,7 +190,7 @@ export class Game {
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                 const isV1 = this.version == "v1";
                 const logMethod = isV1 ? r.warn : r.info;
-                logMethod(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`);
+                logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`);
                 if (isV1) continue;
             }
             this.actions.set(action.name, action);
@@ -206,7 +206,7 @@ export class Game {
         for (const action_name of actions) {
             const existed = this.actions.delete(action_name);
             const logMethod = existed ? r.debug : r.warn;
-            logMethod(`(${this.name}) Unregistered ${existed ? '' : 'non-'}existing action ${action_name}`);
+            logMethod.bind(r)(`(${this.name}) Unregistered ${existed ? '' : 'non-'}existing action ${action_name}`);
         }
         r.debug(`(${this.name}) Actions unregistered: [${actions}]`);
     }

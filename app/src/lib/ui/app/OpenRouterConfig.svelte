@@ -65,7 +65,7 @@
             <p class="note">
                 Visit 
                 <OutLink href="https://openrouter.ai/settings/keys">OpenRouter</OutLink>
-                to generate an API key.
+                to create an API key.
             </p>
         {/snippet}
         <StringField 

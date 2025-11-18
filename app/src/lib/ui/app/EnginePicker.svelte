@@ -5,7 +5,7 @@
     import { CirclePlus, Cog, ArrowLeft, Trash } from '@lucide/svelte';
     import EngineConfig from './EngineConfig.svelte';
     import { PressedKeys } from 'runed';
-    import { toast } from 'svelte-sonner';
+    import r from "$lib/app/utils/reporting";
     import { ENGINE_ID as RANDY_ID } from '$lib/app/engines/randy.svelte';
     import { ENGINE_ID as OPENROUTER_ID } from '$lib/app/engines/llm/openrouter.svelte';
     import { fade } from 'svelte/transition';
@@ -64,7 +64,7 @@
 
     function deleteEngine(id: string) {
         if (!canDelete(id)) {
-            toast.error("Cannot delete engine");
+            r.error(`Cannot delete engine ${id}`);
             return;
         }
         session.deleteEngine(id);

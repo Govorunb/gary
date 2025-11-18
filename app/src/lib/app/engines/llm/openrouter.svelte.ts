@@ -91,7 +91,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             return err(new EngineError("Invalid API key", res.error, false));
         }
 
-        return ok(undefined);
+        return ok();
     }
 
     static async testApiKey(apiKey: string): Promise<Result<void, EngineError>> {
@@ -105,7 +105,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             return err(new EngineError("Invalid API key", res.error, false));
         }
 
-        return ok(undefined);
+        return ok();
     }
 }
 
