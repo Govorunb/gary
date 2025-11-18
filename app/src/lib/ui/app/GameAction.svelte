@@ -53,19 +53,33 @@
     @reference "@skeletonlabs/skeleton-svelte";
 
     details.accordion {
-        @apply rounded-lg border border-neutral-200/70 bg-white/80 shadow-sm transition dark:border-neutral-700 dark:bg-neutral-900/60;
+        @apply rounded-lg;
+        @apply border border-neutral-200/70;
+        @apply bg-white/80 shadow-sm transition;
+        @apply dark:border-neutral-700 dark:bg-neutral-900/60;
         & > summary {
-            @apply flex cursor-pointer items-center justify-between gap-2 px-4 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:text-neutral-200 dark:hover:bg-neutral-800/70;
+            @apply flex cursor-pointer items-center justify-between gap-2;
+            @apply px-4 py-1.5 text-sm font-medium text-neutral-700 transition;
+            &:hover {
+                @apply bg-neutral-100/80;
+                @apply dark:bg-neutral-800/70;
+            }
+            @apply focus:outline-none;
+            &:focus-visible {
+                @apply ring-2 ring-sky-400;
+            }
+            @apply dark:text-neutral-200;
         }
     }
     .action-description {
-        @apply space-y-2 px-4 pb-4 pt-2
-            text-neutral-600 
-            dark:text-neutral-200;
+        @apply space-y-2 px-4 pb-4 pt-2;
+        @apply text-neutral-600 dark:text-neutral-200;
     }
 
     .schema {
-        @apply rounded-b-md bg-neutral-800 p-3 text-xs text-neutral-100 shadow-inner;
+        @apply rounded-b-md p-3 text-xs;
+        @apply shadow-inner;
+        @apply bg-neutral-800 text-neutral-100;
     }
 
 </style>

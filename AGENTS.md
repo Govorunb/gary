@@ -16,9 +16,9 @@ Additionally, since this is a frontend for an entirely client-side app, no serve
 
 #### Miscellaneous Frontend Tips
 
-Explore `app/src/lib/app/utils.svelte.ts` for commonly reused functionality.
+Explore `app/src/lib/app/utils/` for commonly reused functionality.
 
-Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`) and prefer explicit CSS classes with `@apply` directives; e.g.:
+Avoid Tailwind class soup (long class strings) and prefer explicit CSS classes with `@apply` directives:
 ```svelte
 <script lang="ts"></script>
 
@@ -32,10 +32,13 @@ Avoid Tailwind class soup (e.g. 30 classes + 15 more `dark:` + 15 more `hover:`)
     @reference "@skeletonlabs/skeleton/themes/cerberus";
 
     .my-component {
-        @apply flex items-center gap-2 px-4 py-2 rounded-md
-            border border-neutral-200 bg-neutral-100
-            dark:border-neutral-700 dark:bg-neutral-900/70;
+        /* group directives by layout, bg/text colors, border/shadow/ring, etc */
+        @apply flex items-center gap-2 px-4 py-2 rounded-md;
+        @apply border border-neutral-200 dark:border-neutral-700;
+        @apply bg-neutral-100 dark:bg-neutral-900/70;
+        /* instead of soup like `hover:a1 hover:b1 hover:dark:a2 hover:dark:b2`, use a nested CSS selector */
         &:hover {
+            /* no modifier inside */
             @apply bg-neutral-200 dark:bg-neutral-800/70;
         }
     }

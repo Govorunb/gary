@@ -76,22 +76,34 @@
     }
 
     .tab-container {
-        @apply flex items-end gap-2 border-b border-neutral-200 dark:border-neutral-700 overflow-x-scroll;
+        @apply flex items-end gap-2 overflow-x-scroll;
+        @apply border-b border-neutral-200 dark:border-neutral-700;
     }
 
     .tab-button {
-        @apply relative flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:focus-visible:ring-sky-500;
-    }
+        @apply relative flex items-center gap-2;
+        @apply rounded-t-lg border-b-2 px-4 py-2;
+        @apply text-sm font-medium transition;
 
-    .tab-button {
-        @apply relative flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:focus-visible:ring-sky-500;
+        &:focus-visible {
+            @apply outline-none ring-2 ring-sky-400 dark:ring-sky-500;
+        }
 
         &[data-active] {
-            @apply border-b-sky-500 text-neutral-900 dark:text-neutral-50;
+            @apply border-b-sky-500;
+            @apply text-neutral-900 dark:text-neutral-50;
         }
 
         &:not([data-active]) {
-            @apply border-b-transparent text-neutral-500 hover:border-b-sky-300 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200;
+            @apply border-b-transparent;
+            @apply text-neutral-500;
+            @apply dark:text-neutral-400;
+
+            &:hover {
+                @apply border-b-sky-300;
+                @apply text-neutral-800;
+                @apply dark:text-neutral-200;
+            }
         }
 
         &:not([data-connected]) {
@@ -104,6 +116,15 @@
     }
 
     .schema-test-button {
-        @apply rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900;
+        @apply rounded-lg;
+        @apply bg-sky-600 px-3 py-2;
+        @apply text-sm font-medium text-white shadow-sm transition;
+        @apply hover:bg-sky-500;
+        
+        &:focus-visible {
+            @apply outline-none;
+            @apply ring-2 ring-offset-2;
+            @apply ring-sky-400 ring-offset-white dark:ring-offset-neutral-900;
+        }
     }
 </style>

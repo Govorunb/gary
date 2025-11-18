@@ -22,22 +22,21 @@ Frontend:
 - [ ] Tony mode (manual action sending)
     - [ ] Code editor (`codemirror`)
     - [ ] Validation with shift-click override
-- [ ] Auto-generated action forms (from schema)
-    - [ ] Primitives
-    - [ ] Enums
-    - [ ] Arrays
-    - [ ] Objects (& nesting)
-    - [ ] Unions (maybe, they're not supported in sdk)
-    - [ ] Optional properties
+    - [ ] Auto-generated action forms (from schema)
+        - [ ] Primitives, Enums
+        - [ ] Arrays
+        - [ ] Objects (& nesting)
+        - [ ] Unions (maybe, they're not supported in sdk)
+        - [ ] Optional properties
 - [ ] Add functionality to context log
     - [ ] Click for details dialog
     - [ ] Corner indicators for source, silent/ephemeral
     - [ ] Buttons to copy message text, ID, etc
     - [ ] Editing the log - edit message text, remove message
-- [ ] Engine config
-    - [ ] API key (field or PKCE)
-    - [ ] Model field (+helper directing to OpRt website)
-    - [ ] Allow waiting/yapping
+- [x] Engine config
+    - [x] API key (field or PKCE)
+    - [x] Model field (+helper directing to OpRt website)
+    - [x] Allow waiting/yapping
     - [ ] `$env:MY_ENV_VAR` for prefs
 
 
@@ -65,7 +64,7 @@ The Tauri app will support OpenAI-compatible remote APIs - specifically, OpenRou
 
 #### Strict ("prod") diagnostics
 
-The live production implementation contains implementation details of its own - e.g. the client should send action result responses *as soon as possible*, since (I assume) it behaves like an LLM tool call, i.e. it waits for the result to insert it into Neuro's context directly after the action call to resume generation. Gary may in the future provide diagnostics to help game integrations conform to the prod environment rather than an idealized test one.
+The live production implementation contains implementation details of its own - e.g. the client should send action result responses *as soon as possible*, since (I assume) it behaves like an LLM tool call, i.e. generation halts and waits for the result to insert it into the context window. Gary may in the future provide diagnostics to help game integrations conform to the prod environment rather than an idealized test one.
 
 #### UI modes/auto checks
 
@@ -87,4 +86,4 @@ The first step would be a UI (probably using the advanced sidebar), then maybe s
 
 #### Anonymized session data
 
-I'm still undecided on whether to have automatically-gathered telemetry (very unlikely - I prefer the "data is poison" position) but if there's a manual copy-context-log-to-clipboard-as-JSON error report process, I'd like to make some toggles for redacting things from the log. Removing message text, timestamps, hiding individual messages, replacing IDs with monotonically increasing, etc.
+Data is poison, so there won't be any automatically gathered telemetry. If there's a manual copy-context-log-to-clipboard-as-JSON error report process, I'd like to make some toggles for redacting things from the log. Removing message text, timestamps, hiding individual messages, replacing IDs with monotonically increasing, etc.

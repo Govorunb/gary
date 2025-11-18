@@ -89,30 +89,40 @@
     @reference "@skeletonlabs/skeleton/themes/cerberus";
 
     .power-button-container {
-        @apply relative flex items-center gap-2 rounded-xl px-2 py-0.5
-        max-h-10
-        bg-neutral-200/80 dark:bg-neutral-800/80;
+        @apply relative flex items-center gap-2;
+        @apply rounded-xl px-2 py-0.5;
+        @apply max-h-10;
+        @apply bg-neutral-200/80 dark:bg-neutral-800/80;
     }
 
     .power-button {
-        @apply flex items-center justify-center rounded-full
-            bg-neutral-100 shadow-inner transition-all duration-150
-            size-13
-            hover:scale-101 active:scale-99
-            dark:bg-neutral-800;
+        @apply flex items-center justify-center rounded-full;
+        @apply size-13;
+        @apply shadow-inner transition-all duration-150;
+        @apply bg-neutral-100 dark:bg-neutral-800;
+        @apply hover:scale-101 active:scale-99;
     }
 
-
     .options-button {
-        @apply flex size-8 items-center justify-center rounded-full border border-transparent
-            bg-neutral-200/80 text-neutral-700 shadow-sm transition hover:bg-neutral-200
-            disabled:cursor-not-allowed disabled:opacity-60
-            dark:bg-neutral-800/70 dark:text-neutral-200 dark:hover:bg-neutral-800;
+        @apply flex size-8 items-center justify-center rounded-full;
+        @apply border border-transparent;
+        @apply bg-neutral-200/80 text-neutral-700 shadow-sm transition;
+        @apply dark:bg-neutral-800/70 dark:text-neutral-200;
+        &:hover {
+            @apply bg-neutral-200;
+            @apply dark:bg-neutral-800;
+        }
+        &:disabled {
+            @apply cursor-not-allowed opacity-60;
+        }
     }
 
     .popover-content {
-        @apply relative left-0 top-full z-10 flex min-w-fit flex-col gap-3 rounded-xl;
-        @apply bg-neutral-800 border border-neutral-700 p-5 text-sm text-neutral-50 shadow-xl ring-1 ring-neutral-800;
+        @apply relative left-0 top-full z-10;
+        @apply flex min-w-fit flex-col gap-3 rounded-xl;
+        @apply bg-neutral-800 border border-neutral-700;
+        @apply p-5 text-sm text-neutral-50;
+        @apply shadow-xl ring-1 ring-neutral-800;
     }
 
     .popover-header {

@@ -151,16 +151,17 @@
     .trigger {
         @apply text-3xl font-semibold;
         @apply bg-secondary-400 border-none rounded-md p-2;
-        @apply focus:ring-2 focus:ring-primary-500;
+        &:focus {
+            @apply ring-2 ring-primary-500;
+        }
     }
 
     .popover-content {
-        @apply grid;
+        @apply grid p-4 rounded-lg;
         & * { grid-area: 1 / 1; } /* list/config need to occupy the same space (otherwise they vertically stack on transition which looks awful) */
-        @apply bg-surface-200-800/85 p-4 max-h-[calc(100vh-8em)] overflow-x-hidden overflow-y-scroll;
-        @apply rounded-lg;
-        @apply border-2 min-w-100 border-neutral-900/30;
-        @apply min-w-200;
+        @apply min-w-200 max-h-[calc(100vh-8em)] overflow-x-hidden overflow-y-scroll;
+        @apply bg-surface-200-800/85;
+        @apply border-2 border-neutral-900/30;
         /* real smarty pants behavior
         https://github.com/tailwindlabs/tailwindcss/issues/13844
         https://github.com/tauri-apps/tauri/issues/14040
@@ -175,8 +176,10 @@
     .item {
         @apply text-xl font-semibold flex-1;
         @apply bg-primary-700 border-r border-neutral-900/20 rounded-l-md p-2;
-        @apply focus:ring-2 focus:ring-primary-500;
         @apply dark:bg-primary-200 dark:text-primary-900;
+        &:focus {
+            @apply ring-2 ring-primary-500;
+        }
         &:hover:not(:disabled) {
             @apply bg-primary-300;
             @apply dark:bg-primary-600;
@@ -227,7 +230,11 @@
     }
 
     .back-button {
-        @apply p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700;
+        @apply p-1 rounded;
+        &:hover {
+            @apply bg-neutral-200;
+            @apply dark:bg-neutral-700;
+        }
     }
 
     .config-content {

@@ -42,12 +42,19 @@
     @reference "@skeletonlabs/skeleton/themes/cerberus";
 
     .copy-button {
-        @apply p-1.5 rounded-md shrink-0
-            bg-neutral-200 text-neutral-700
-            hover:bg-neutral-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400
-            dark:bg-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-600;
-        
+        @apply p-1.5 rounded-md shrink-0;
+        @apply bg-neutral-200 text-neutral-700;
+        @apply dark:bg-neutral-700 dark:text-neutral-300;
         @apply transition-colors duration-150;
+        
+        &:hover {
+            @apply bg-neutral-300;
+            @apply dark:bg-neutral-600;
+        }
+        
+        &:focus-visible {
+            @apply outline-none ring-2 ring-sky-400;
+        }
     
         &[data-copied] {
             @apply bg-primary-200/50 dark:bg-primary-700/50 text-white;

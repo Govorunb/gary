@@ -73,13 +73,16 @@ radio-picker {
         dark:border-neutral-800/80 dark:bg-neutral-900 dark:text-neutral-200;
 
     & label {
-        @apply relative flex cursor-pointer select-none items-center gap-2 font-medium
-            px-2.5 py-1
-            hover:bg-neutral-200
-            size-full
-            first:rounded-l-full last:rounded-r-full
-            dark:hover:bg-neutral-700
-            dark:active:bg-neutral-800/80;
+        @apply relative flex cursor-pointer select-none items-center gap-2 font-medium;
+        @apply px-2.5 py-1;
+        @apply size-full;
+        @apply first:rounded-l-full last:rounded-r-full;
+        @apply dark:active:bg-neutral-800/80;
+        
+        &:hover {
+            @apply bg-neutral-200;
+            @apply dark:bg-neutral-700;
+        }
         &:has(input:focus-visible) {
             @apply outline-2 outline-tertiary-500 outline-offset-1;
         }

@@ -108,6 +108,16 @@
     }
 
     .peek-button {
-        @apply absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 focus:outline-none bg-transparent border-none cursor-pointer z-10;
+        @apply absolute right-2 top-1/2;
+        @apply transform -translate-y-1/2 p-1;
+        @apply text-neutral-500;
+        @apply dark:text-neutral-400;
+        @apply focus:outline-none;
+        @apply bg-transparent border-none cursor-pointer;
+        @apply z-10;
+        &:hover {
+            @apply text-neutral-700;
+            @apply dark:text-neutral-200;
+        }
     }
 </style>

@@ -87,36 +87,43 @@
         @apply flex flex-col-reverse;
     }
     .log {
-        @apply flex flex-col gap-2 p-4 rounded-xl text-sm shadow-sm
-            h-full max-h-[calc(100vh-11rem)] overflow-scroll
-            bg-neutral-50 ring-1 ring-primary-200/40
-            dark:bg-neutral-900/70 dark:ring-primary-800/40;
+        @apply flex flex-col gap-2 p-4 rounded-xl text-sm shadow-sm;
+        @apply h-full max-h-[calc(100vh-11rem)] overflow-scroll;
+        @apply bg-neutral-50 ring-1 ring-primary-200/40;
+        @apply dark:bg-neutral-900/70 dark:ring-primary-800/40;
     }
     .menu-trigger {
-        @apply p-2 rounded-md bg-neutral-50 text-neutral-700
-            dark:bg-neutral-900/30 dark:text-neutral-300
-            transition-colors;
+        @apply p-2 rounded-md;
+        @apply bg-neutral-50 text-neutral-700;
+        @apply dark:bg-neutral-900/30 dark:text-neutral-300;
+        @apply transition-colors;
         &:hover {
-            @apply bg-neutral-100 dark:bg-neutral-800/50;
+            @apply bg-neutral-100;
+            @apply dark:bg-neutral-800/50;
         }
     }
     .menu-content {
-        @apply bg-surface-200-800/85 p-2 rounded-lg border-2 border-neutral-900/30 min-w-48;
+        @apply bg-surface-200-800/85 p-2 rounded-lg;
+        @apply border-2 border-neutral-900/30;
+        @apply min-w-48;
     }
     .clear-button {
-        @apply w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md
-            border border-red-300 bg-red-50 text-red-700
-            dark:border-red-700 dark:bg-red-900/30 dark:text-red-300
-            transition-colors text-left;
+        @apply w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md;
+        @apply border border-red-300 bg-red-50 text-red-700;
+        @apply dark:border-red-700 dark:bg-red-900/30 dark:text-red-300;
+        @apply transition-colors text-left;
         &:hover {
-            @apply bg-red-100 dark:bg-red-900/50;
+            @apply bg-red-100;
+            @apply dark:bg-red-900/50;
         }
     }
     .message {
-        @apply grid grid-cols-[auto_auto_auto_1fr] gap-2 items-center rounded-lg border px-3 py-2 transition wrap-anywhere;
+        @apply grid grid-cols-[auto_auto_auto_1fr] gap-2 items-center;
+        @apply rounded-lg border px-3 py-2 transition wrap-anywhere;
         @apply border-red-400/40 border-dotted; /* invalid source fallback */
         &:hover {
-            @apply bg-neutral-100/70 dark:bg-neutral-800/60;
+            @apply bg-neutral-100/70;
+            @apply dark:bg-neutral-800/60;
         }
         &.system {
             @apply border-amber-400/40;
