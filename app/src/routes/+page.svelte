@@ -22,7 +22,7 @@
     <div class="justify-self-start">
         <PowerButton />
     </div>
-    <h1 class="justify-self-center flex flex-row items-center gap-3">
+    <h1 class="page-title">
         <EnginePicker />
         {#if session.activeEngine}
             <button onclick={() => poke(false)} class="act-btn" title="Poke (Try act)">
@@ -55,6 +55,10 @@
     main {
         @apply flex flex-1 overflow-hidden;
     }
+    .page-title {
+        @apply justify-self-center flex flex-row items-center gap-3;
+    }
+
     .act-btn {
         @apply ml-2 px-2 py-1 rounded-xl;
         @apply bg-neutral-200 dark:bg-neutral-800;

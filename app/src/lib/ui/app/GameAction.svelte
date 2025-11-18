@@ -36,7 +36,7 @@
 
 <details class="accordion">
     <summary>{action.name}</summary>
-    <div class="space-y-2 px-4 pb-4 pt-2 text-neutral-600 dark:text-neutral-200">
+    <div class="action-description">
         <p>{action.description}</p>
     </div>
     {#if actionJson}
@@ -58,6 +58,12 @@
             @apply flex cursor-pointer items-center justify-between gap-2 px-4 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:text-neutral-200 dark:hover:bg-neutral-800/70;
         }
     }
+    .action-description {
+        @apply space-y-2 px-4 pb-4 pt-2
+            text-neutral-600 
+            dark:text-neutral-200;
+    }
+
     .schema {
         @apply rounded-b-md bg-neutral-800 p-3 text-xs text-neutral-100 shadow-inner;
     }
