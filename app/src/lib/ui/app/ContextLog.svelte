@@ -28,7 +28,7 @@
     }
 </script>
 
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2 h-full">
     <div class="flex items-center gap-4">
         <Popover modal open={popoverOpen} onOpenChange={(d) => popoverOpen = d.open}>
             <Popover.Trigger class="menu-trigger"
@@ -82,7 +82,7 @@
         @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
     }
     .reverse-log {
-        @apply flex flex-col-reverse;
+        @apply flex flex-col-reverse h-full;
     }
     .log {
         @apply flex flex-col gap-2 p-4 rounded-xl text-sm shadow-sm;
