@@ -41,10 +41,13 @@
     }
 
     .checkbox-input {
-        @apply w-4 h-4 text-primary-600 border-neutral-300 rounded
-            focus:ring-primary-500 focus:ring-2
-            dark:border-neutral-600 dark:bg-neutral-800
-            disabled:opacity-50 disabled:cursor-not-allowed;
+        @apply w-4 h-4 text-primary-600 border-neutral-300 rounded;
+        @apply dark:border-neutral-600 dark:bg-neutral-800;
+        @apply disabled:opacity-50 disabled:cursor-not-allowed;
+        
+        &:focus {
+            @apply ring-2 ring-primary-500;
+        }
     }
 
     .checkbox-text {

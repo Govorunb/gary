@@ -13,9 +13,9 @@
     @reference "global.css";
 
     .version-badge {
-        @apply inline-flex items-center
-        rounded-lg px-2 py-0.5
-        text-sm font-semibold uppercase tracking-wide shadow-sm;
+        @apply inline-flex items-center;
+        @apply rounded-lg px-2 py-0.5;
+        @apply text-sm font-semibold uppercase tracking-wide shadow-sm;
     }
 
     .v1 {

@@ -80,17 +80,23 @@
     }
 
     .field-input {
-        @apply px-3 py-2 border border-neutral-300 rounded-md
-            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-            dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100
-            disabled:opacity-50 disabled:cursor-not-allowed;
+        @apply px-3 py-2 border border-neutral-300 rounded-md;
+        @apply dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100;
+        @apply disabled:opacity-50 disabled:cursor-not-allowed;
+        
+        &:focus {
+            @apply outline-none ring-2 ring-primary-500 border-transparent;
+        }
     }
 
     .field-slider {
-        @apply px-1 py-0 border-0 rounded-md w-full
-            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-            dark:bg-neutral-800 dark:text-neutral-100
-            disabled:opacity-50 disabled:cursor-not-allowed;
+        @apply px-1 py-0 border-0 rounded-md w-full;
+        @apply dark:bg-neutral-800 dark:text-neutral-100;
+        @apply disabled:opacity-50 disabled:cursor-not-allowed;
+        
+        &:focus {
+            @apply outline-none ring-2 ring-primary-500 border-transparent;
+        }
     }
 
     .field-description {
