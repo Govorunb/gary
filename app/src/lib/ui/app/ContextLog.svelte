@@ -5,7 +5,7 @@
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
 
     let session = getSession();
-    let popoverOpen = $state(false);
+    let ctxMenuOpen = $state(false);
 
     function getSourceIcon(source: MessageSource): string {
         switch (source.type) {
@@ -22,15 +22,40 @@
                 return "";
         }
     }
-    function clickClearContext() {
+    function closeMenu() {
+        ctxMenuOpen = false;
+    }
+    function clearContext() {
         session.context.clear();
-        popoverOpen = false;
+        closeMenu();
+    }
+    function copyContext() {
+        navigator.clipboard.writeText(JSON.stringify(session.context.userView));
+        closeMenu();
+    }
+    
+    let scrollElem: HTMLDivElement | null = $state(null);
+    let scrollOffset = $state(0);
+    const scrollThreshold = 100;
+
+    $inspect(scrollOffset);
+    
+    $effect(() => {
+        void session.context.userView.length;
+        if (scrollElem && scrollOffset < scrollThreshold) {
+            scrollElem.scrollTop = scrollElem.scrollHeight;
+        }
+    });
+
+    function logScroll(event: Event) {
+        const target = event.target as HTMLDivElement;
+        scrollOffset = target.scrollHeight - target.clientHeight - target.scrollTop;
     }
 </script>
 
 <div class="flex flex-col gap-2 h-full">
     <div class="flex items-center gap-4">
-        <Popover modal open={popoverOpen} onOpenChange={(d) => popoverOpen = d.open}>
+        <Popover modal open={ctxMenuOpen} onOpenChange={(d) => ctxMenuOpen = d.open}>
             <Popover.Trigger class="menu-trigger"
                     title="Menu" aria-label="Menu"
             >
@@ -40,11 +65,11 @@
                 <Popover.Positioner class="z-20!">
                     <Popover.Content>
                         <div class="menu-content">
-                            <button 
-                                class="clear-button"
-                                onclick={clickClearContext}
-                            >
-                                <Trash size="14" /> Clear Context
+                            <button class="btn preset-tonal-surface" onclick={copyContext}>
+                                Copy as JSON
+                            </button>
+                            <button class="btn preset-filled-error-500" onclick={clearContext}>
+                                Clear Context
                             </button>
                         </div>
                     </Popover.Content>
@@ -53,9 +78,8 @@
         </Popover>
         <h2>Context Log</h2>
     </div>
-    <!-- TODO: scrolling log component ($effect() to scroll to bottom unless manually scrolled up, etc.) -->
-    <div class="reverse-log"> <!-- instead of reversing the array -->
-        <div class="log">
+    <div class="reverse-log">
+        <div class="log" onscroll={logScroll} bind:this={scrollElem}>
             {#each session.context.userView as msg (msg.id)}
                 <div class="message {msg.source.type}">
                     <!-- TODO: put icon in corner (real estate) -->
@@ -82,11 +106,12 @@
         @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
     }
     .reverse-log {
+        /* flex-col-reverse instead of reversing the array */
         @apply flex flex-col-reverse h-full;
     }
     .log {
         @apply flex flex-col gap-2 p-4 rounded-xl text-sm shadow-sm;
-        @apply h-full max-h-[calc(100vh-11rem)] overflow-scroll;
+        @apply h-full max-h-[calc(100vh-9rem)] overflow-scroll;
         @apply bg-neutral-50 ring-1 ring-primary-200/40;
         @apply dark:bg-neutral-900/70 dark:ring-primary-800/40;
     }
@@ -101,12 +126,12 @@
         }
     }
     .menu-content {
-        @apply bg-surface-200-800/85 p-2 rounded-lg;
+        @apply flex flex-col gap-2 px-3 py-2;
+        @apply bg-surface-200-800 rounded-lg;
         @apply border-2 border-neutral-900/30;
-        @apply min-w-48;
     }
     .clear-button {
-        @apply w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md;
+        @apply w-full flex items-center gap-2 px-3 py-2 text-sm;
         @apply border border-red-300 bg-red-50 text-red-700;
         @apply dark:border-red-700 dark:bg-red-900/30 dark:text-red-300;
         @apply transition-colors text-left;
