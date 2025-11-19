@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getRegistry, getSession } from "$lib/app/utils/di";
+    import { getRegistry } from "$lib/app/utils/di";
     import GameActionList from "./GameActionList.svelte";
     import Tooltip from "../common/Tooltip.svelte";
     import { clamp, horizontalScroll } from "$lib/app/utils";
@@ -55,13 +55,15 @@
             <GameActionList {game} />
         {/if}
     {:else}
-        <p class="empty-state-text">No games connected.</p>
-        <button
-            class="schema-test-button"
-            onclick={startSchemaTest}
-        >
-            Schema Test
-        </button>
+        <div class="flex flex-col items-center justify-center w-full flex-1">
+            <p class="text-md p-4 text-center text-neutral-600 dark:text-neutral-300">No games connected.</p>
+            <button
+                class="schema-test-button"
+                onclick={startSchemaTest}
+            >
+                Schema Test
+            </button>
+        </div>
     {/if}
 </div>
 
@@ -109,11 +111,8 @@
         }
     }
 
-    .empty-state-text {
-        @apply text-sm text-neutral-600 dark:text-neutral-300;
-    }
-
     .schema-test-button {
+        @apply flex flex-row items-center gap-2;
         @apply rounded-lg;
         @apply bg-sky-600 px-3 py-2;
         @apply text-sm font-medium text-white shadow-sm transition;

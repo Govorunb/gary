@@ -40,14 +40,15 @@
     }
 
     function getBtnStroke() {
-        if (!haveTauri) return "opacity-10";
-        return running ? "stroke-[#0f9d58]" : "stroke-[#d93025]";
+        if (!haveTauri) return "stroke-surface-100 dark:stroke-surface-900";
+        return running
+            ? "stroke-green-400 dark:stroke-green-700"
+            : "stroke-red-400 dark:stroke-red-700";
     }
 </script>
 
 <div class="flex flex-row items-center gap-3">
     <div class="power-button-container">
-        <!-- TODO: see how theme colors look instead (surface/primary) -->
         <button
             class="power-button"
             data-running={boolAttr(running)}
@@ -56,6 +57,7 @@
             title={powerBtnTooltip}
             disabled={!haveTauri}
         >
+            <!-- class is a passdown prop, not actual css -->
             <CirclePower size={40} class={["pointer-events-none", getBtnStroke()]} />
         </button>
         <Popover>
@@ -76,7 +78,7 @@
                     <Popover.Content>
                         <div class="popover-content">
                             <ServerConfig />
-                            <Popover.Arrow class="global-popover-arrow">
+                            <Popover.Arrow>
                                 <Popover.ArrowTip />
                             </Popover.Arrow>
                         </div>
@@ -99,7 +101,7 @@
         @apply relative flex items-center gap-2;
         @apply rounded-xl px-2 py-0.5;
         @apply max-h-10;
-        @apply bg-neutral-200/80 dark:bg-neutral-800/80;
+        @apply bg-neutral-100 dark:bg-neutral-800/80;
     }
 
     .power-button {
@@ -107,29 +109,36 @@
         @apply size-13;
         @apply shadow-inner transition-all duration-150;
         @apply bg-neutral-100 dark:bg-neutral-800;
-        @apply hover:scale-101 active:scale-99;
+        @apply disabled:cursor-not-allowed;
+        &:not(:disabled) {
+            @apply hover:scale-101 active:scale-99;
+        }
     }
 
     .options-button {
         @apply flex size-8 items-center justify-center rounded-full;
         @apply border border-transparent;
-        @apply bg-neutral-200/80 text-neutral-700 shadow-sm transition;
-        @apply dark:bg-neutral-800/70 dark:text-neutral-200;
-        &:hover {
-            @apply bg-neutral-200;
-            @apply dark:bg-neutral-800;
+        @apply text-neutral-700 shadow-sm transition;
+        @apply disabled:cursor-not-allowed;
+        /* in light mode, distinguished by shadow; in dark - by ring */
+        @variant dark {
+            @apply bg-neutral-800 text-neutral-200;
+            @apply ring ring-primary-400/10;
         }
-        &:disabled {
-            @apply cursor-not-allowed opacity-60;
+        &:hover:not(:disabled) {
+            @apply bg-neutral-200/80 dark:bg-neutral-800/70;
+            @apply dark:ring-primary-400/40;
         }
     }
 
     .popover-content {
         @apply relative left-0 top-full z-10;
         @apply flex min-w-fit flex-col gap-3 rounded-xl;
-        @apply bg-neutral-800 border border-neutral-700;
-        @apply p-5 text-sm text-neutral-50;
-        @apply shadow-xl ring-1 ring-neutral-800;
+        @apply p-5 text-sm;
+        @apply bg-neutral-100 dark:bg-neutral-800;
+        @apply text-neutral-900 dark:text-neutral-50;
+        @apply shadow-xl ring-1 ring-neutral-200 dark:ring-neutral-800;
+        @apply dark:border dark:border-neutral-700;
     }
 
     .popover-header {
