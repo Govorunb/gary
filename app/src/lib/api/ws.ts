@@ -2,7 +2,7 @@ import { Channel } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import r from "$lib/app/utils/reporting";
 import type { NeuroMessage, GameMessage } from "./v1/spec";
-import { safeInvoke, type Awaitable } from "$lib/app/utils";
+import { listenSub, safeInvoke, type Awaitable } from "$lib/app/utils";
 import { err, ok, Ok, type Result } from "neverthrow";
 
 type OnMessageHandler = (msg: string) => Awaitable;
@@ -111,9 +111,7 @@ export class GameWSConnection extends BaseWSConnection {
         private readonly channel: Channel<ServerWSEvent>,
     ) {
         super(id, version);
-        listen<string>('ws-closed', (evt) => {
-            if (evt.payload === this.id) this.dispose();
-        }).then(unsub => this.subscriptions.push(unsub));
+        listenSub<string>('ws-closed', (evt) => evt.payload === this.id && this.dispose(), this.subscriptions);
         this.channel.onmessage = (e) => this.processServerEvt(e);
     }
 

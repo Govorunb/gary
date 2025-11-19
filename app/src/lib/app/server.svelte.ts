@@ -3,7 +3,8 @@ import r from "$lib/app/utils/reporting";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
 import { UserPrefs } from "./prefs.svelte";
-import { safeInvoke } from "./utils";
+import { listenSub, safeInvoke } from "./utils";
+import { settled } from "svelte";
 
 type ServerConnections = string[] | null;
 
@@ -21,18 +22,13 @@ export class ServerManager {
         void this.session.onDispose(() => this.dispose());
         this.registry = session.registry;
         this.userPrefs = userPrefs;
-        // these can't(?) fail
         if ('__TAURI_INTERNALS__' in window) {
-            listen<WSConnectionRequest>("ws-try-connect", (evt) => {
-                this.registry.tryConnect(evt.payload);
-            }).then(unsub => this.subscriptions.push(unsub));
-            listen<ServerConnections>("server-state", (evt) => {
-                this.connections = evt.payload;
-                void this.reconcileConnections();
-            }).then(unsub => this.subscriptions.push(unsub));
+            listenSub<WSConnectionRequest>("ws-try-connect", (evt) => this.registry.tryConnect(evt.payload), this.subscriptions);
+            listenSub<ServerConnections>("server-state", (evt) => this.doSync(evt.payload), this.subscriptions);
             void this.sync();
         } else {
-            r.warn("Tauri backend not available", "Server will not work");
+            // we're called before toasts init (so they can't show)
+            settled().then(() => r.warn("Tauri backend not available", "Server will not work"));
         }
     }
 
@@ -53,10 +49,15 @@ export class ServerManager {
     }
 
     async sync() {
-        this.connections = await safeInvoke<ServerConnections>("server_state")
+        const conns = await safeInvoke<ServerConnections>("server_state")
             // .orTee(e => r.error(`Failed to sync server state`, `${e}`))
             .unwrapOr(null);
-        await this.reconcileConnections();
+        this.doSync(conns);
+    }
+
+    private doSync(conns: ServerConnections) {
+        this.connections = conns;
+        void this.reconcileConnections();
     }
 
     private async reconcileConnections() {

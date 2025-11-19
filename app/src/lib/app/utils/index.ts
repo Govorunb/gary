@@ -3,6 +3,7 @@ import z from "zod";
 import { ok, err, type Result, ResultAsync } from "neverthrow";
 import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { on } from "svelte/events";
+import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
 
 export function pickRandom<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -121,3 +122,9 @@ export function toStepPrecision(value: number, step: number): string {
 }
 
 export type Awaitable<T = void> = T | Promise<T>;
+
+export async function listenSub<T>(evt: string, fn: EventCallback<T>, subscriptions: UnlistenFn[]): Promise<UnlistenFn> {
+    const unsub = await listen(evt, fn);
+    subscriptions.push(unsub);
+    return unsub;
+}
