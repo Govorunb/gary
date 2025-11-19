@@ -17,9 +17,7 @@
 </div>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
+    @reference "global.css";
 
     .action-list {
         @apply flex h-full flex-col gap-2 overflow-y-auto pr-1 text-sm mt-2;

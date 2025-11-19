@@ -56,9 +56,7 @@
 {/if}
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
+    @reference "global.css";
 
     .engine-config-wrapper {
         @apply w-full;

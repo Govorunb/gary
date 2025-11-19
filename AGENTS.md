@@ -25,11 +25,7 @@ Avoid Tailwind class soup (long class strings) and prefer explicit CSS classes w
 <div class="my-component" />
 
 <style lang="postcss">
-    /* references are required to recognize some directives */
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
-    @reference "@skeletonlabs/skeleton/themes/cerberus";
+    @reference "global.css";
 
     .my-component {
         /* group directives by layout, bg/text colors, border/shadow/ring, etc */

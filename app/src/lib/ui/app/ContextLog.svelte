@@ -76,9 +76,7 @@
 </div>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
+    @reference "global.css";
 
     h2 {
         @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;

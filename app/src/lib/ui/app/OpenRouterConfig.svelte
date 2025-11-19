@@ -132,9 +132,7 @@
 </div>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
+    @reference "global.css";
 
     .engine-config {
         @apply flex flex-col gap-4;

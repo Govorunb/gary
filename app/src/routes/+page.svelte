@@ -42,10 +42,7 @@
 </main>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
-    @reference "@skeletonlabs/skeleton/themes/cerberus";
+    @reference 'global.css';
 
     header {
         @apply grid grid-cols-[1fr_auto_1fr] items-center gap-1 px-4 py-3;
@@ -54,6 +51,7 @@
     }
     main {
         @apply flex flex-1 overflow-hidden;
+        @apply bg-surface-100 dark:bg-surface-900;
     }
     .page-title {
         @apply justify-self-center flex flex-row items-center gap-3;

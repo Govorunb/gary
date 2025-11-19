@@ -36,10 +36,7 @@
 </button>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
-    @reference "@skeletonlabs/skeleton/themes/cerberus";
+    @reference "global.css";
 
     .copy-button {
         @apply p-1.5 rounded-md shrink-0;

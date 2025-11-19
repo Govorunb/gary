@@ -143,10 +143,7 @@
 </Dialog>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
-    @reference "@skeletonlabs/skeleton/themes/cerberus";
+    @reference "global.css";
 
     .trigger {
         @apply text-3xl font-semibold;

@@ -53,10 +53,7 @@
 </RadioButtons>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
-    @reference "@skeletonlabs/skeleton/themes/cerberus";
+    @reference "global.css";
 
     .radio-item {
         @apply flex items-center size-full gap-2;

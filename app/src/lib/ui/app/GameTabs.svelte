@@ -66,9 +66,7 @@
 </div>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
+    @reference "global.css";
 
     h2 {
         @apply self-center;

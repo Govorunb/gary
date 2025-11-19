@@ -61,10 +61,7 @@
 </radio-picker>
 
 <style lang="postcss">
-@reference "tailwindcss";
-@reference "@skeletonlabs/skeleton";
-@reference "@skeletonlabs/skeleton-svelte";
-@reference "@skeletonlabs/skeleton/themes/cerberus";
+@reference "global.css";
 
 radio-picker {
 @apply inline-flex overflow-visible rounded-full

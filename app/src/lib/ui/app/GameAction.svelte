@@ -48,9 +48,7 @@
 </details>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
+    @reference "global.css";
 
     details.accordion {
         @apply rounded-lg;

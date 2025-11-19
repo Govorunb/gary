@@ -25,9 +25,7 @@
 </a>
 
 <style lang="postcss">
-    @reference "tailwindcss";
-    @reference "@skeletonlabs/skeleton";
-    @reference "@skeletonlabs/skeleton-svelte";
+    @reference "global.css";
     
     .link {
         @apply text-primary-400 hover:underline;
