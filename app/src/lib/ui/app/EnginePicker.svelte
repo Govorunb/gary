@@ -2,7 +2,7 @@
     import { getSession, getUserPrefs } from '$lib/app/utils/di';
     import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
     import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
-    import EngineConfig from './EngineConfig.svelte';
+    import { getEngineConfigComponent } from './EngineConfig.svelte';
     import { PressedKeys } from 'runed';
     import r from "$lib/app/utils/reporting";
     import { ENGINE_ID as RANDY_ID } from '$lib/app/engines/randy.svelte';
@@ -147,7 +147,8 @@
                             </div>
                             <div class="config-body">
                                 {#if configEngineId && session.engines[configEngineId]}
-                                    <EngineConfig engineId={configEngineId} onClose={closeConfig} />
+                                    {@const ConfigComponent = getEngineConfigComponent(configEngineId)}
+                                    <ConfigComponent engineId={configEngineId} close={closeConfig} />
                                 {:else}
                                     <p class="text-neutral-500 p-4">Internal error: Engine {configEngineId} not found</p>
                                 {/if}

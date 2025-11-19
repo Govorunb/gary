@@ -5,29 +5,13 @@
     import type { ConfigProps } from './EngineConfig.svelte';
     import { toast } from 'svelte-sonner';
     import OutLink from '../common/OutLink.svelte';
+    import EngineConfig from './EngineConfig.svelte';
 
-    let { config = $bindable(), onSave }: ConfigProps<typeof ENGINE_ID> = $props();
-
-    let dirtyConfig: OpenRouterPrefs = $state(structuredClone($state.snapshot(config)));
-    let validationErrors: string[] = $state([]);
-    let isValid: boolean = $derived(validationErrors.length === 0);
     let isTestingConnection: boolean = $state(false);
+    let { engineId, close }: ConfigProps<typeof ENGINE_ID> = $props();
+    const schema = zOpenRouterPrefs;
 
-    function validateConfig() {
-        const result = zOpenRouterPrefs.safeParse(dirtyConfig);
-        if (result.success) {
-            validationErrors = [];
-        } else {
-            validationErrors = result.error.issues.map(issue => issue.message);
-        }
-    }
-
-    function handleSave() {
-        if (!isValid) return;
-        onSave(dirtyConfig);
-    }
-
-    async function handleTestConnection() {
+    async function handleTestConnection(dirtyConfig: OpenRouterPrefs) {
         if (!dirtyConfig.apiKey) {
             toast.error("API key is required to test connection");
             return;
@@ -53,57 +37,53 @@
             isTestingConnection = false;
         }
     }
-
-    $effect(() => {
-        validateConfig();
-    });
 </script>
 
-<div class="engine-config">
-    <div class="config-form">
-        {#snippet apiKeyDesc()}
-            <p class="note">
-                Visit 
-                <OutLink href="https://openrouter.ai/settings/keys">OpenRouter</OutLink>
-                to create an API key.
-            </p>
-        {/snippet}
+<EngineConfig {engineId} {schema} {close}>
+    {#snippet configForm(dirtyConfig)}
         <StringField 
             bind:value={dirtyConfig.apiKey} 
             label="API Key"
-            password 
-            description={apiKeyDesc}
-        />
+            password
+        >
+            {#snippet description()}
+                <p class="note">
+                    Visit 
+                    <OutLink href="https://openrouter.ai/settings/keys">OpenRouter</OutLink>
+                    to create an API key.
+                </p>
+            {/snippet}
+        </StringField>
         {#if dirtyConfig.apiKey}
             <button 
-                class="test-connection-button" 
-                onclick={handleTestConnection}
+                class="btn btn-base preset-tonal-secondary rounded-md"
+                onclick={() => handleTestConnection(dirtyConfig)}
                 disabled={isTestingConnection}
             >
                 {isTestingConnection ? "Testing..." : "Test Connection"}
             </button>
         {/if}
-        {#snippet modelDesc()}
-            <div class="flex flex-col gap-1">
-                <p class="note">
-                    Visit 
-                    <OutLink href="https://openrouter.ai/models">OpenRouter</OutLink>
-                    to pick a model.
-                    <OutLink href="https://openrouter.ai/docs/features/presets">Presets</OutLink>
-                    and
-                    <OutLink href="https://openrouter.ai/docs/faq#what-are-model-variants">variants</OutLink>
-                    are supported.
-                    <br/>
-                    To configure preferred providers or fallback models, create a preset in your OpenRouter account.
-                </p>
-            </div>
-        {/snippet}
         <StringField 
             bind:value={dirtyConfig.model}
             label="Model"
             placeholder="openrouter/auto"
-            description={modelDesc}
-        />
+        >
+            {#snippet description()}
+                <div class="flex flex-col gap-1">
+                    <p class="note">
+                        Visit 
+                        <OutLink href="https://openrouter.ai/models">OpenRouter</OutLink>
+                        to pick a model.
+                        <OutLink href="https://openrouter.ai/docs/features/presets">Presets</OutLink>
+                        and
+                        <OutLink href="https://openrouter.ai/docs/faq#what-are-model-variants">variants</OutLink>
+                        are supported.
+                        <br/>
+                        To configure preferred providers or fallback models, create a preset in your OpenRouter account.
+                    </p>
+                </div>
+            {/snippet}
+        </StringField>
         <BooleanField 
             bind:value={dirtyConfig.allowDoNothing} 
             label="Allow Do Nothing" 
@@ -114,54 +94,5 @@
             label="Allow Yapping" 
             description="Let the model speak instead of acting"
         />
-    </div>
-
-    {#if validationErrors.length > 0}
-        <div class="validation-error">
-            {validationErrors.join("\n")}
-        </div>
-    {/if}
-
-    <div class="config-actions">
-        <button 
-            class="save-button" 
-            onclick={handleSave}
-            disabled={!isValid}
-        >
-            Save Configuration
-        </button>
-    </div>
-</div>
-
-<style lang="postcss">
-    @reference "global.css";
-
-    .engine-config {
-        @apply flex flex-col gap-4;
-    }
-
-    .config-form {
-        @apply flex flex-col gap-4;
-    }
-
-    .validation-error {
-        @apply p-3 bg-red-50 border border-red-200 text-red-700 rounded-md;
-        @apply dark:bg-red-900/20 dark:border-red-800 dark:text-red-300;
-    }
-
-    .config-actions {
-        @apply flex justify-end pt-4 border-t border-neutral-200 dark:border-neutral-700;
-    }
-
-    .test-connection-button {
-        @apply px-4 py-2 bg-secondary-600 text-white rounded-md;
-        @apply hover:bg-secondary-700 focus:outline-none focus:ring-2 focus:ring-secondary-500;
-        @apply disabled:opacity-50 disabled:cursor-not-allowed;
-    }
-
-    .save-button {
-        @apply px-4 py-2 bg-primary-600 text-white rounded-md;
-        @apply hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500;
-        @apply disabled:opacity-50 disabled:cursor-not-allowed;
-    }
-</style>
+    {/snippet}
+</EngineConfig>
