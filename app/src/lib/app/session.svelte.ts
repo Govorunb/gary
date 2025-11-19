@@ -51,7 +51,7 @@ export class Session {
 
     public deleteEngine(id: string) {
         if (id === RANDY_ID || id === OPENROUTER_ID) {
-            r.error(`Tried to delete system engine ${id}`);
+            r.error(`Cannot delete system engine ${id}`);
             return;
         }
         if (this.activeEngine.id === id) {
@@ -85,7 +85,7 @@ export class Session {
         if (!id) {
             id = uuidv4();
             this.userPrefs.engines[id] = zOpenAIPrefs.decode({
-                name: id.substring(0, 8),
+                name: "New engine",
             });
             r.success(`Created engine ${id.substring(0, 8)}`);
         }

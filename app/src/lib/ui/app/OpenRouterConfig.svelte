@@ -74,13 +74,15 @@
             password 
             description={apiKeyDesc}
         />
-        <button 
-            class="test-connection-button" 
-            onclick={handleTestConnection}
-            disabled={isTestingConnection || !dirtyConfig.apiKey}
-        >
-            {isTestingConnection ? "Testing..." : "Test Connection"}
-        </button>
+        {#if dirtyConfig.apiKey}
+            <button 
+                class="test-connection-button" 
+                onclick={handleTestConnection}
+                disabled={isTestingConnection}
+            >
+                {isTestingConnection ? "Testing..." : "Test Connection"}
+            </button>
+        {/if}
         {#snippet modelDesc()}
             <div class="flex flex-col gap-1">
                 <p class="note">
@@ -161,8 +163,5 @@
         @apply px-4 py-2 bg-primary-600 text-white rounded-md
             hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500
             disabled:opacity-50 disabled:cursor-not-allowed;
-    }
-    .note {
-        @apply text-xs text-neutral-500 dark:text-neutral-300;
     }
 </style>

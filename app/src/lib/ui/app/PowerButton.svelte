@@ -1,24 +1,31 @@
 <script lang="ts">
-    import { getUserPrefs, getServerManager } from "$lib/app/utils/di";
+    import { getUserPrefs, getServerManager, getRegistry } from "$lib/app/utils/di";
     import ServerConfig from "./ServerConfig.svelte";
     import { CirclePower, SlidersHorizontal } from "@lucide/svelte";
-    import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
+    import { Dialog, Popover, Portal } from "@skeletonlabs/skeleton-svelte";
     import { boolAttr } from "runed";
     import r from "$lib/app/utils/reporting";
 
-    let userPrefs = getUserPrefs();
-    let manager = getServerManager();
+    const userPrefs = getUserPrefs();
+    const registry = getRegistry();
+    const manager = getServerManager();
 
     let running = $derived(manager.running);
-    let configDisabled = $derived(running);
+    const configDisabled = $derived(running);
 
     let powerBtnTooltip = $derived(running ? "Stop server" : "Start server");
-    let optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options");
+    const optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options");
     const haveTauri = '__TAURI_INTERNALS__' in window;
     if (!haveTauri) powerBtnTooltip = "Tauri backend not available";
 
-    // TODO: shutting off with connected games should be a hold action (~1s) with Shift+Click bypass
-    async function togglePower() {
+    let confirmModalOpen = $state(false);
+
+    async function togglePower(confirm?: boolean) {
+        if (running && registry.games.length > 0 && !confirm) {
+            confirmModalOpen = true;
+            return;
+        }
+        confirmModalOpen = false;
         let res = await manager.toggle();
         if (res.isErr()) {
             let err_title = `Failed to ${running ? "stop" : "start"} server`;
@@ -39,6 +46,13 @@
         }
     }
 
+    $effect(() => {
+        if (confirmModalOpen && registry.games.length === 0) {
+            confirmModalOpen = false;
+            togglePower(true);
+        }
+    })
+
     function getBtnStroke() {
         if (!haveTauri) return "stroke-surface-100 dark:stroke-surface-900";
         return running
@@ -52,7 +66,7 @@
         <button
             class="power-button"
             data-running={boolAttr(running)}
-            onclick={togglePower}
+            onclick={(e) => togglePower(e.shiftKey)}
             aria-label={powerBtnTooltip}
             title={powerBtnTooltip}
             disabled={!haveTauri}
@@ -76,7 +90,7 @@
             <Portal>
                 <Popover.Positioner class="z-20!">
                     <Popover.Content>
-                        <div class="popover-content">
+                        <div class="options-content">
                             <ServerConfig />
                             <Popover.Arrow>
                                 <Popover.ArrowTip />
@@ -93,6 +107,24 @@
         <p class="text-sm">Server is not running</p>
     {/if}
 </div>
+<Dialog open={confirmModalOpen} onOpenChange={(d) => confirmModalOpen = d.open}>
+    <Portal>
+        <Dialog.Backdrop class="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity" />
+        <Dialog.Positioner class="fixed inset-0 flex justify-center items-center align-middle">
+            <Dialog.Content>
+                <div class="confirm-content preset-outlined-warning-300-700">
+                    <h2 class="text-lg font-bold">Confirm stopping server</h2>
+                    <p>Are you sure you want to stop the server? There are still open connections.</p>
+                    <p class="note">Shift-click to bypass this confirmation.</p>
+                    <div class="flex flex-row justify-end gap-2">
+                        <button class="btn preset-tonal-warning" onclick={() => togglePower(true)}>Disconnect all games</button>
+                        <button class="btn preset-tonal-surface" onclick={() => confirmModalOpen = false}>Cancel</button>
+                    </div>
+                </div>
+            </Dialog.Content>
+        </Dialog.Positioner>
+    </Portal>
+</Dialog>
 
 <style lang="postcss">
     @reference "global.css";
@@ -131,7 +163,7 @@
         }
     }
 
-    .popover-content {
+    .options-content {
         @apply relative left-0 top-full z-10;
         @apply flex min-w-fit flex-col gap-3 rounded-xl;
         @apply p-5 text-sm;
@@ -141,7 +173,12 @@
         @apply dark:border dark:border-neutral-700;
     }
 
-    .popover-header {
-        @apply flex items-center justify-between gap-3 text-base font-semibold;
+    .confirm-content {
+        @apply flex flex-col gap-2;
+        @apply min-w-[24rem] max-w-[90vw] overflow-hidden;
+        @apply bg-white dark:bg-surface-900;
+        @apply rounded-2xl shadow-2xl;
+        @apply p-5 text-sm;
+        @apply text-neutral-900 dark:text-neutral-50;
     }
 </style>

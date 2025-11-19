@@ -28,6 +28,6 @@
     @reference "global.css";
     
     .link {
-        @apply text-primary-400 hover:underline;
+        @apply text-primary-400 hover:underline text-nowrap;
     }
 </style>

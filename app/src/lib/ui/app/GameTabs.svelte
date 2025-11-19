@@ -26,7 +26,7 @@
 </script>
 
 <div class="flex h-full flex-col">
-    <h2>Games</h2>
+    <h2>Connections</h2>
     {#if registry.games.length > 0}
         <div class="tab-container"
             {@attach horizontalScroll}

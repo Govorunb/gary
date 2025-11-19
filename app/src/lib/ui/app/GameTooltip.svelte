@@ -9,19 +9,20 @@
 </script>
 
 <div class="game-tooltip">
-    <div class="tooltip-header">
-        <div class="header-row">
-            <VersionBadge version={game.conn.version} />
+    <div class="flex flex-col gap-2">
+        <!-- there's only one version currently (clueless) -->
+        <!-- <VersionBadge version={game.conn.version} /> -->
+        <div class="connection-info">
+            <p class="id-text">ID: <span class="id-value">{game.conn.id}</span></p>
+            <CopyButton data={game.conn.id} />
+        </div>
+        <div class="flex flex-row justify-end">
             <button
                 class="disconnect-button"
                 onclick={() => game.conn.disconnect()}
             >
                 <Unplug size={14} /> Disconnect
             </button>
-        </div>
-        <div class="connection-info">
-            <p class="id-text">ID: <span class="id-value">{game.conn.id}</span></p>
-            <CopyButton data={game.conn.id} />
         </div>
     </div>
 </div>
@@ -30,17 +31,10 @@
     @reference "global.css";
 
     .game-tooltip {
-        @apply relative flex flex-col gap-3 p-3 rounded-lg
-            bg-surface-100/95 shadow-lg ring-1 ring-neutral-200/80
-            dark:bg-surface-800/95 dark:ring-neutral-700/60;
-    }
-
-    .tooltip-header {
-        @apply flex flex-col gap-2;
-    }
-
-    .header-row {
-        @apply flex items-center justify-between;
+        @apply relative flex flex-col gap-3 p-3;
+        @apply rounded-lg shadow-lg;
+        @apply bg-surface-100/95 dark:bg-surface-800/95;
+        @apply ring-1 ring-neutral-200/80 dark:ring-neutral-700/60;
     }
 
     .connection-info {
@@ -56,10 +50,18 @@
     }
 
     .disconnect-button {
-        @apply p-1.5 rounded-md flex flex-row gap-1.5 items-center
-            bg-red-500 text-white
-            hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400
-            transition-colors duration-150;
+        @apply flex flex-row gap-1.5;
+        @apply p-1.5 rounded-md items-center;
+        @apply bg-error-500 dark:bg-error-600;
+        @apply text-white transition-colors duration-150;
+
+        &:hover {
+            @apply bg-error-600 dark:bg-error-500;
+        }
+
+        &:focus-visible {
+            @apply outline-none ring-2 ring-error-400;
+        }
     }
 
 </style>

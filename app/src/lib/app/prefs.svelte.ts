@@ -120,12 +120,12 @@ export const zUserPrefs = z.strictObject({
     // first-time defaults
     .prefault(() => ({
         ollama: zOpenAIPrefs.decode({
-            name: "Local server (Ollama)",
+            name: "Ollama (localhost)",
             serverUrl: "http://localhost:11434/v1",
             apiKey: "",
         }),
         lmstudio: zOpenAIPrefs.decode({
-            name: "Local server (LMStudio)",
+            name: "LMStudio (localhost)",
             serverUrl: "http://localhost:1234/v1",
             apiKey: "",
         }),
