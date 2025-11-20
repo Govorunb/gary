@@ -42,7 +42,7 @@ export class DefaultContextManager extends ContextManager {
     }
 
     actor(partialMsg: SourcelessMessageInput, manual: boolean = false) {
-        this.push({ source: zActorSource.decode({manual}), ...partialMsg });
+        this.push({ source: zActorSource.decode({manual}), silent: true, ...partialMsg });
     }
 }
 

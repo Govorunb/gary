@@ -110,8 +110,7 @@ export class Scheduler {
         const actData = zActData.decode({...act});
         // FIXME: xd
         this.session.context.actor({
-            text: JSON.stringify(actData),
-            silent: true,
+            text: `Act ${forced ? "(forced)" : ""}: ${JSON.stringify(actData)}`,
             visibilityOverrides: {
                 engine: false,
             }

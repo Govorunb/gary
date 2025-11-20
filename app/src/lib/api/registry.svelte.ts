@@ -159,7 +159,7 @@ export class Game {
                 this.unregisterActions(msg.data.action_names);
                 break;
             case "actions/force":
-                // TODO: see what happens when we're already busy generating (race conditions)
+                // TODO: queue if already busy generating
                 this.session.scheduler.forceAct();
                 break;
             case "action/result":
