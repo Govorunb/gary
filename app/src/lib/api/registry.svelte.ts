@@ -159,8 +159,16 @@ export class Game {
                 this.unregisterActions(msg.data.action_names);
                 break;
             case "actions/force":
-                // TODO: queue if already busy generating
-                this.session.scheduler.forceAct();
+                const actions = msg.data.action_names.map(name => this.actions.get(name)!).filter(Boolean);
+                if (actions.length < msg.data.action_names.length) {
+                    if (msg.data.action_names.length === 0) {
+                        r.error(`(${this.name}) Sent actions/force with no actions`, { ctx: {msg} });
+                    } else {
+                        r.warn(`(${this.name}) actions/force contained unregistered action names: ${msg.data.action_names.filter(name => !this.actions.has(name)).join(", ")}`);
+                    }
+                }
+                this.session.scheduler.forceQueue.push(actions);
+                await this.context(this.forcePrompt(actions, msg.data.query, msg.data.state), false);
                 break;
             case "action/result":
                 const silent = msg.data.success;
@@ -213,5 +221,12 @@ export class Game {
 
     toString() {
         return `Game { name: "${this.name}", version: "${this.version}"}`;
+    }
+
+    private forcePrompt(actions: v1.Action[], query?: string, state?: string) {
+        const queryStr = query ? `"query":"${query}",` : "";
+        const stateStr = state ? `"state":"${state}",` : "";
+        const prompt = `You must perform one of the following actions, given this information: {${queryStr}${stateStr}"available_actions":${JSON.stringify(actions)}}`;
+        return prompt;
     }
 }

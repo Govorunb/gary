@@ -87,7 +87,7 @@ You are goal-oriented and curious. You should aim to keep your actions varied an
 
 ## Name
 
-Assume your name is Gary unless the user refers to you otherwise. You may also expect to be called Neuro (Neuro-sama) or Evil (Evil Neuro) by games.`;
+Assume your name is Gary unless the user refers to you otherwise. You may also expect to be called "Neuro" ("Neuro-sama") or "Evil" ("Evil Neuro") by games.`;
         if (this.options.allowYapping) {
             prompt += `
 ## Communication
@@ -96,19 +96,6 @@ You may choose to speak, whether to communicate with the user running your softw
 Remember that your only means of interacting with the game is through actions. In-game characters cannot hear you speak unless there is a specific action for it.`;
         }
         r.verbose(`System prompt: ${prompt}`);
-        return prompt;
-    }
-
-    forcePrompt(query: string, state: string, available_actions: Action[]) {
-        let prompt = `\
-You must perform one of the following actions, given this information:
-\`\`\`json
-{
-    "query": "${query}",
-    "state": "${state}",
-    "available_actions": ${JSON.stringify(available_actions)}
-}
-\`\`\``;
         return prompt;
     }
 

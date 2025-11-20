@@ -66,6 +66,7 @@
                             <button class="btn preset-tonal-surface" onclick={copyContext}>
                                 Copy as JSON
                             </button>
+                            <!-- TODO: reset instead of clear (add sys prompt first) -->
                             <button class="btn preset-filled-error-500" onclick={clearContext}>
                                 Clear Context
                             </button>

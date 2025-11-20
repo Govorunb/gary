@@ -3,7 +3,7 @@ import type { Registry } from "$lib/api/registry.svelte";
 import r from "$lib/app/utils/reporting";
 import { zAct, zActData, type Action } from "$lib/api/v1/spec";
 import { EngineError, type Engine, type EngineAct } from "./engines/index.svelte";
-import { err, errAsync, ok, okAsync, Result, ResultAsync } from "neverthrow";
+import { err, errAsync, ok, Result, ResultAsync } from "neverthrow";
 
 export class Scheduler {
     /** Explicitly muted, e.g. through the app UI. */
@@ -26,6 +26,8 @@ export class Scheduler {
      * Note: the act may fail, or the actor may choose not to act; the pending signal is still consumed in either case.
      */
     public actPending = $state(false);
+    /** A queue of pending `ForceAction`s. */
+    public forceQueue: Action[][] = $state([]);
 
     constructor(private readonly session: Session) {
         this.registry = this.session.registry;
@@ -36,7 +38,10 @@ export class Scheduler {
             this.errored && "paused due to error",
         ].filter(Boolean) as string[]);
         $effect(() => {
-            if (this.canAct && this.actPending) {
+            if (!this.canAct) return;
+            if (this.forceQueue.length) {
+                this.forceAct(this.forceQueue.shift());
+            } else if (this.actPending) {
                 this.tryAct();
             }
         });
