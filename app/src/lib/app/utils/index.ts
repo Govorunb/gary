@@ -128,3 +128,10 @@ export async function listenSub<T>(evt: string, fn: EventCallback<T>, subscripti
     subscriptions.push(unsub);
     return unsub;
 }
+
+export function tooltip(text: string): Attachment<HTMLElement> {
+    return (el) => {
+        el.setAttribute("title", text);
+        el.setAttribute("aria-label", text);
+    }
+}

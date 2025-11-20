@@ -140,7 +140,6 @@ export class Scheduler {
         r.error({
             message: `Engine error: ${err.message}`,
             toast: {
-                title: "Engine error",
                 description: (err.cause as Error)?.message,
             },
             ctx: {err}
