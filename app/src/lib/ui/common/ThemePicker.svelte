@@ -44,7 +44,7 @@
 <RadioButtons items={themes} groupName="theme"
     bind:selectedIndex {getItemLabelProps}
 >
-    {#snippet renderItem(_, i: number)}
+    {#snippet renderItem(_, i)}
         {@const Icon = themeIcons[i]}
         <div class="radio-item">
             <Icon />

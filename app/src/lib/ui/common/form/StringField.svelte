@@ -110,11 +110,10 @@
 
     .peek-button {
         @apply absolute right-2 top-1/2;
-        @apply transform -translate-y-1/2 p-1;
-        @apply text-neutral-500;
-        @apply dark:text-neutral-400;
-        @apply focus:outline-none;
+        @apply transform -translate-y-1/2 p-1 rounded-md;
+        @apply text-neutral-500 dark:text-neutral-400;
         @apply bg-transparent border-none cursor-pointer;
+        @apply focus:outline-2 outline-primary-500;
         @apply z-10;
         
         &:hover {

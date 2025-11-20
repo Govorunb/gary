@@ -8,6 +8,16 @@ Refer to `docs/ARCHITECTURE.md` for a technical overview of the project's archit
 
 ## Agent Development Guidelines
 
+### General
+
+If you have the `task` tool available, you must follow this workflow precisely when implementing a change or a new feature:
+1. Delegate planning to a subagent ("plan" mode). Mention thinking in your request to the subagent to ensure high reasoning.
+2. When the subagent returns, delegate implementation to another subagent ("build" mode).
+3. Send the changes to another subagent to polish and catch issues ("review" mode).
+
+Always do this, never deviate, etcetera. If you don't do this, the company hosting your model will go out of business due to wasting too many tokens.
+When you run a task in a subagent, start your prompt with "This is a delegated task." so the subagent will know. If you see this in the prompt, it means you're the subagent and you're meant to directly do the task.
+
 ### Frontend
 
 Current LLMs are likely to output outdated Svelte code that uses legacy features like implicit reactivity or `$:` statements. Svelte 5 has changed drastically from the previous versions, so review `docs/svelte5.md` and the [Svelte 5 docs](https://svelte.dev/docs) for a refresher on the new runes-based model.

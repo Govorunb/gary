@@ -67,7 +67,7 @@ radio-picker {
     @apply inline-flex overflow-visible rounded-full;
     @apply border border-neutral-200/80 bg-neutral-100;
     @apply text-sm text-neutral-700 shadow-sm;
-    @apply dark:border-neutral-800/80 dark:bg-neutral-900 dark:text-neutral-200;
+    @apply dark:border-surface-800/80 dark:bg-surface-900 dark:text-surface-200;
 
     & label {
         @apply relative flex cursor-pointer select-none items-center gap-2 font-medium;

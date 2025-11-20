@@ -182,8 +182,8 @@
 
     .trigger {
         @apply flex items-center gap-2 px-3 py-1.5 rounded-lg;
-        @apply bg-surface-100 hover:bg-surface-200 active:bg-surface-300;
-        @apply dark:bg-surface-800 dark:hover:bg-surface-700 dark:active:bg-surface-600;
+        @apply bg-neutral-100 hover:bg-neutral-200 active:bg-neutral-300;
+        @apply dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:active:bg-neutral-600;
         @apply text-lg font-medium text-neutral-900 dark:text-neutral-100;
         @apply transition-all shadow-sm border border-neutral-200/50 dark:border-neutral-700/50;
 
@@ -193,7 +193,7 @@
     }
 
     .popover-content {
-        @apply w-[24rem] max-w-[90vw] overflow-hidden;
+        @apply w-md max-w-[90vw] overflow-hidden;
         @apply bg-white dark:bg-surface-900;
         @apply rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800;
         @apply grid; /* Stack children */
