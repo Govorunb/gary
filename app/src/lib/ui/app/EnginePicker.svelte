@@ -15,6 +15,7 @@
     // UI state machine - null shows engine list
     let configEngineId: string | null = $state(null);
     let open = $state(false);
+    const showingEngineList = $derived(open && !configEngineId);
     const engines = $derived(Object.entries(session.engines));
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has('Shift'));
@@ -28,9 +29,21 @@
             closeConfig();
         }
     })
-    // TODO: teach hotkey
     keys.onKeys(['Control', 'e'], () => open = !open);
-
+    // quick select
+    for (let i = 1; i <= 9; i++) {
+        keys.onKeys(i.toString(), () => {
+            if (!showingEngineList) return;
+            if (i > engines.length) return;
+            selectEngine(engines[i - 1][0]);
+            open = false;
+        });
+    }
+    keys.onKeys(['Alt', 'a'], () => {
+        if (!showingEngineList) return;
+        createOpenAICompatible();
+    });
+    
     function createOpenAICompatible() {
         const id = session.initEngine();
         selectEngine(id);
@@ -91,10 +104,11 @@
                         <div class="view-container" in:fly={{ x: -20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
                             <div class="header">
                                 <h3>Select Engine</h3>
+                                <p class="note">Ctrl+E</p>
                             </div>
                             
                             <div class="list">
-                                {#each engines as [id, engine] (id)}
+                                {#each engines as [id, engine], i (id)}
                                     {@const active = session.activeEngine.id === id}
                                     {@const del = shiftPressed && canDelete(id)}
                                     {@const Icon = del ? Trash2 : Settings2}
@@ -108,6 +122,8 @@
                                             <div class="status-indicator" class:active={active}>
                                                 {#if active}
                                                     <Check class="size-3 text-white" />
+                                                {:else if i + 1 < 10}
+                                                    {i + 1}
                                                 {/if}
                                             </div>
                                             <span class="name">{engine.name}</span>
@@ -132,7 +148,7 @@
                             <div class="footer">
                                 <button class="add-button" onclick={createOpenAICompatible}>
                                     <CirclePlus class="size-4" />
-                                    <span>Add OpenAI-compatible</span>
+                                    <span>Add OpenAI-compatible (Alt+A)</span>
                                 </button>
                             </div>
                         </div>

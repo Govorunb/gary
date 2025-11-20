@@ -38,8 +38,6 @@
     let scrollOffset = $state(0);
     const scrollThreshold = 100;
 
-    $inspect(scrollOffset);
-    
     $effect(() => {
         void session.context.userView.length;
         if (scrollElem && scrollOffset < scrollThreshold) {
