@@ -3,7 +3,7 @@
     import GameTabs from "./GameTabs.svelte";
 </script>
 
-<div class="grid flex-1 grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
+<div class="grid flex-1 grid-cols-[1fr_4fr]">
     <div class="section">
         <GameTabs />
     </div>

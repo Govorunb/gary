@@ -2,8 +2,8 @@ import type { Session } from "./session.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
 import r from "$lib/app/utils/reporting";
 import { zAct, zActData, type Action } from "$lib/api/v1/spec";
-import { EngineError, type Engine } from "./engines/index.svelte";
-import { err, ok } from "neverthrow";
+import { EngineError, type Engine, type EngineAct } from "./engines/index.svelte";
+import { err, errAsync, ok, okAsync, Result, ResultAsync } from "neverthrow";
 
 export class Scheduler {
     /** Explicitly muted, e.g. through the app UI. */
@@ -30,19 +30,11 @@ export class Scheduler {
     constructor(private readonly session: Session) {
         this.registry = this.session.registry;
         this.activeEngine = $derived(this.session.activeEngine);
-        this.activeMutes = $derived.by(() => {
-            const out = [];
-            if (this.muted) {
-                out.push('muted');
-            }
-            if (this.sleeping) {
-                out.push('sleeping');
-            }
-            if (this.errored) {
-                out.push('paused due to error');
-            }
-            return out;
-        });
+        this.activeMutes = $derived.by(() => [
+            this.muted && "muted",
+            this.sleeping && "sleeping",
+            this.errored && "paused due to error",
+        ].filter(Boolean) as string[]);
         $effect(() => {
             if (this.canAct && this.actPending) {
                 this.tryAct();
@@ -50,7 +42,7 @@ export class Scheduler {
         });
     }
 
-    async tryAct() {
+    async tryAct(): Promise<Result<EngineAct | null, ActError>> {
         const ignores = this.checkIgnored();
         if (ignores.length) {
             r.debug(`Scheduler.tryAct ignored - ${ignores.join("; ")}`);
@@ -72,22 +64,10 @@ export class Scheduler {
             r.debug(`Scheduler.tryAct: engine chose not to act`);
             return ok(null);
         }
-        const game = this.registry.games.find(g => g.actions.has(act.name));
-        if (game) {
-            r.info(`Engine acting: ${act.name}`);
-            const actData = zActData.decode({...act});
-            await game.conn.send(zAct.decode({data: actData}));
-        } else {
-            r.error("Engine selected unknown action", {
-                toast: {
-                    description: `Action name: ${act.name}\nThis action was not registered by any game`,
-                },
-                ctx: {act}
-            });
-        }
+        return this.doAct(act, false);
     }
 
-    async forceAct(actions?: Action[]) {
+    async forceAct(actions?: Action[]): Promise<Result<EngineAct, ActError>> {
         const ignores = this.checkIgnored();
         if (ignores.length) {
             r.warn(`Scheduler.forceAct ignored - ${ignores.join("; ")}`);
@@ -108,6 +88,10 @@ export class Scheduler {
             return err(actRes.error);
         }
         const act = actRes.value;
+        return this.doAct(act, true);
+    }
+
+    private doAct(act: EngineAct, forced: boolean): ResultAsync<EngineAct, ActError> {
         const game = this.registry.games.find(g => g.actions.has(act.name));
         if (!game) {
             r.error("Engine selected unknown action", {
@@ -116,11 +100,22 @@ export class Scheduler {
                 },
                 ctx: {act}
             });
-            return err({type: "actionNotFound", action: act.name});
+            return errAsync({type: "actionNotFound", action: act.name});
         }
-        r.info(`Engine acting (forced): ${act.name}`);
-        await game.conn.send(zAct.decode({data: act}));
-        return ok(act);
+        r.info(`Engine acting ${forced ? "(forced)" : ""}: ${act.name}`);
+        const actData = zActData.decode({...act});
+        // FIXME: xd
+        this.session.context.actor({
+            text: JSON.stringify(actData),
+            silent: true,
+            visibilityOverrides: {
+                engine: false,
+            }
+        }, false);
+        return ResultAsync.fromPromise(
+            game.conn.send(zAct.decode({data: actData})),
+            (e) => ({type: "connError", error: `Failed to send act: ${e}`} as const),
+        ).map(() => act);
     }
 
     private checkIgnored() {
@@ -156,7 +151,7 @@ export class Scheduler {
     }
 }
 
-export type ActError = Ignored | NoActions | ActionNotFound | EngineError;
+export type ActError = Ignored | NoActions | ActionNotFound | EngineError | ConnError;
 
 export type Ignored = {
     type: "ignored";
@@ -169,3 +164,7 @@ export type ActionNotFound = {
     type: "actionNotFound";
     action: string;
 };
+export type ConnError = {
+    type: "connError";
+    error: string;
+}
