@@ -9,10 +9,10 @@ export class Scheduler {
     /** Explicitly muted, e.g. through the app UI. */
     public muted = $state(false); // TODO: expose in UI (button next to poke/force)
     /** Simulating a busy state, e.g. pretending to wait for TTS. */
-    public sleeping = $state(false); // TODO: badge on engine picker
+    public busy = $state(false); // TODO: badge on engine picker
     /** Paused due to an engine error that requires user intervention. */
     public errored = $state(false); // TODO: surface in UI (replace mute button) (+ first time teaching tip)
-    public readonly canAct: boolean = $derived(!this.muted && !this.sleeping && !this.errored);
+    public readonly canAct: boolean = $derived(!this.muted && !this.busy && !this.errored);
 
     private readonly registry: Registry;
     private activeEngine: Engine<any> | null;
@@ -32,7 +32,7 @@ export class Scheduler {
         this.activeEngine = $derived(this.session.activeEngine);
         this.activeMutes = $derived.by(() => [
             this.muted && "muted",
-            this.sleeping && "sleeping",
+            this.busy && "busy",
             this.errored && "paused due to error",
         ].filter(Boolean) as string[]);
         $effect(() => {
@@ -53,7 +53,9 @@ export class Scheduler {
         if (actions.length === 0) {
             return err({type: "noActions"});
         }
+        this.busy = true;
         const actRes = await this.activeEngine!.tryAct(this.session, actions);
+        this.busy = false;
         this.actPending = false;
         if (actRes.isErr()) {
             this.onError(actRes.error);
@@ -81,7 +83,9 @@ export class Scheduler {
             logMethod.bind(r)(`Scheduler.forceAct: no actions ${actionsProvided ? "provided" : "registered"}`);
             return err({type: "noActions"});
         }
+        this.busy = true;
         const actRes = await this.activeEngine!.forceAct(this.session, actions);
+        this.busy = false;
         this.actPending = false;
         if (actRes.isErr()) {
             this.onError(actRes.error);

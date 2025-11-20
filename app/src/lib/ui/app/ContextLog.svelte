@@ -1,7 +1,7 @@
 <script lang="ts">
     import { getSession } from "$lib/app/utils/di";
     import type { MessageSource } from "$lib/app/context.svelte";
-    import { EllipsisVertical, Trash } from "@lucide/svelte";
+    import { EllipsisVertical } from "@lucide/svelte";
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
 
     let session = getSession();

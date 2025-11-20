@@ -18,8 +18,8 @@
     const showingEngineList = $derived(open && !configEngineId);
     const engines = $derived(Object.entries(session.engines));
     const keys = new PressedKeys();
-    const shiftPressed = $derived(keys.has('Shift'));
-    
+    const shiftPressed = $derived(keys.has('Shift')); // TODO: teach
+
     $effect(() => {
         // in traditional rx fashion, if you don't subscribe to a falling tree, it makes no sound
         // the consumer may not be rendered due to an {#if} (meaning it's not subscribed)
@@ -43,7 +43,7 @@
         if (!showingEngineList) return;
         createOpenAICompatible();
     });
-    
+
     function createOpenAICompatible() {
         const id = session.initEngine();
         selectEngine(id);
@@ -106,15 +106,15 @@
                                 <h3>Select Engine</h3>
                                 <p class="note">Ctrl+E</p>
                             </div>
-                            
+
                             <div class="list">
                                 {#each engines as [id, engine], i (id)}
                                     {@const active = session.activeEngine.id === id}
                                     {@const del = shiftPressed && canDelete(id)}
                                     {@const Icon = del ? Trash2 : Settings2}
-                                    
+
                                     <div class="engine-row group" title="ID: {id}">
-                                        <button 
+                                        <button
                                             class="engine-select"
                                             class:active={active}
                                             onclick={(e) => clickEngine(e, id)}
@@ -128,7 +128,7 @@
                                             </div>
                                             <span class="name">{engine.name}</span>
                                         </button>
-                                        
+
                                         <div class="actions">
                                             <button class={["action-btn", del ? "delete" : "config"]}
                                                 onclick={() => del ? deleteEngine(id) : openConfig(id)}
@@ -186,7 +186,7 @@
         @apply dark:bg-surface-800 dark:hover:bg-surface-700 dark:active:bg-surface-600;
         @apply text-lg font-medium text-neutral-900 dark:text-neutral-100;
         @apply transition-all shadow-sm border border-neutral-200/50 dark:border-neutral-700/50;
-        
+
         &:focus-visible {
             @apply ring-2 ring-primary-500 outline-none;
         }
@@ -197,7 +197,7 @@
         @apply bg-white dark:bg-surface-900;
         @apply rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800;
         @apply grid; /* Stack children */
-        
+
         & > * {
             grid-area: 1 / 1;
         }
@@ -209,11 +209,11 @@
 
     .header {
         @apply flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800;
-        
+
         & h3 {
             @apply text-base font-semibold text-neutral-900 dark:text-neutral-100;
         }
-        
+
         &.with-back {
             @apply gap-2;
         }
@@ -232,7 +232,7 @@
         @apply flex-1 flex items-center gap-3 px-2 py-1.5 rounded-md text-left;
         @apply text-sm font-medium text-neutral-700 dark:text-neutral-300;
         @apply outline-none;
-        
+
         &.active {
             @apply text-neutral-900 dark:text-white;
         }
@@ -249,7 +249,7 @@
     .status-indicator {
         @apply size-5 rounded-full flex items-center justify-center border border-neutral-300 dark:border-neutral-600;
         @apply transition-colors;
-        
+
         &.active {
             @apply bg-primary-500 border-primary-500 shadow-sm shadow-primary-500/30;
         }
@@ -262,7 +262,7 @@
     .action-btn {
         @apply p-1.5 rounded-md text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100;
         @apply hover:bg-neutral-200 dark:hover:bg-surface-700 transition-colors;
-        
+
         &.delete {
             @apply text-error-500 hover:text-error-600 hover:bg-error-50 dark:hover:bg-error-900/20;
         }

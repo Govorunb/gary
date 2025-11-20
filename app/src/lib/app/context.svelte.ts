@@ -52,7 +52,6 @@ export const zActorSource = z.strictObject({type: zConst("actor"), manual: z.boo
 export const zUserSource = z.strictObject({type: zConst("user")});
 
 export const zSource = z.discriminatedUnion("type", [
-    // 
     zSystemSource.required({type: true}),
     zClientSource.required({type: true}),
     zActorSource.required({type: true}),
