@@ -1,6 +1,6 @@
 <script lang="ts">
     import { zRandyPrefs, ENGINE_ID } from '$lib/app/engines/randy.svelte';
-    import NumberField from '../common/form/NumberField.svelte';
+    import { NumberField } from '$lib/ui/common/form';
     import type { ConfigProps } from './EngineConfig.svelte';
     import EngineConfig from './EngineConfig.svelte';
 

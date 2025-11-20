@@ -2,7 +2,7 @@
     import { getSession, getUserPrefs } from '$lib/app/utils/di';
     import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
     import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
-    import { getEngineConfigComponent } from './EngineConfig.svelte';
+    import { getEngineConfigComponent } from './engines/EngineConfig.svelte';
     import { PressedKeys } from 'runed';
     import r from "$lib/app/utils/reporting";
     import { ENGINE_ID as RANDY_ID } from '$lib/app/engines/randy.svelte';

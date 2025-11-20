@@ -1,8 +1,6 @@
 <script lang="ts">
     import { zOpenAIPrefs } from '$lib/app/engines/llm/openai.svelte';
-    import StringField from '../common/form/StringField.svelte';
-    import BooleanField from '../common/form/BooleanField.svelte';
-    import UrlField from '../common/form/UrlField.svelte';
+    import { StringField, BooleanField, UrlField } from '$lib/ui/common/form';
     import EngineConfig from './EngineConfig.svelte';
 
     let { engineId, close } = $props();

@@ -1,10 +1,9 @@
 <script lang="ts">
     import { zOpenRouterPrefs, type OpenRouterPrefs, ENGINE_ID, OpenRouter } from '$lib/app/engines/llm/openrouter.svelte';
-    import StringField from '../common/form/StringField.svelte';
-    import BooleanField from '../common/form/BooleanField.svelte';
+    import { StringField, BooleanField } from '$lib/ui/common/form';
     import type { ConfigProps } from './EngineConfig.svelte';
     import { toast } from 'svelte-sonner';
-    import OutLink from '../common/OutLink.svelte';
+    import OutLink from '$lib/ui/common/OutLink.svelte';
     import EngineConfig from './EngineConfig.svelte';
 
     let isTestingConnection: boolean = $state(false);
