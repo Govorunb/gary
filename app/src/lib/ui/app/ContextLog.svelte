@@ -1,10 +1,11 @@
 <script lang="ts">
-    import { getSession } from "$lib/app/utils/di";
+    import { getSession, getUIState } from "$lib/app/utils/di";
     import type { MessageSource } from "$lib/app/context.svelte";
     import { EllipsisVertical } from "@lucide/svelte";
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
 
     let session = getSession();
+    let uiState = getUIState();
     let ctxMenuOpen = $state(false);
 
     function getSourceIcon(source: MessageSource): string {
@@ -85,13 +86,15 @@
                     <!-- TODO: more icons (silent, ephemeral, etc) in one or more corners -->
                     <span class="message-timestamp">{msg.timestamp.toLocaleTimeString()}</span>
                     <span class="message-icon">{getSourceIcon(msg.source)}</span>
-                    <span class="message-text">
-                        <!-- TODO: click to focus that game's tab -->
-                        {#if msg.source.type === 'client'}
+                    {#if msg.source.type === 'client'}
+                        <button class=""
+                            onclick={() => uiState.selectGameTab((msg.source.type === 'client' && msg.source.id) as string)}
+                            title="ID: {msg.source.id}"
+                        >
                             <span class="client-name">{msg.source.name}:</span>
-                        {/if}
-                        {msg.text}
-                    </span>
+                        </button>
+                    {/if}
+                    <span class="message-text">{msg.text}</span>
                 </div>
             {/each}
         </div>

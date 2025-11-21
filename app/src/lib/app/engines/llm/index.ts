@@ -148,6 +148,7 @@ Remember that your only means of interacting with the game is through actions. I
     /** Generate a response adhering to the given schema. */
     protected abstract generate(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError>;
 
+    // TODO: just feed the thing json, noone'll miss a forest or two
     private convertMessage(msg: Message) {
         let text = msg.text;
         let role: OpenAIMessage['role'];

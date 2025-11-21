@@ -39,6 +39,18 @@ export class Session {
             this.initEngine(id);
         }
         this.activeEngine = $derived.by(() => this.getEngine(this.userPrefs.app.selectedEngine));
+        let topSeenMsg = $state(0);
+        $effect(() => {
+            const msgCount = this.context.actorView.length;
+            for (let i = topSeenMsg; i < msgCount; i++) {
+                const msg = this.context.actorView[i];
+                if (!msg.silent) {
+                    this.scheduler.actPending = true;
+                    break;
+                }
+            }
+            topSeenMsg = msgCount;
+        })
     }
 
     private getEngine(id: string): Engine<any> {

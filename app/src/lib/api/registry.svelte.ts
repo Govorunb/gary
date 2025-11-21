@@ -184,10 +184,7 @@ export class Game {
     }
 
     async context(text: string, silent: boolean) {
-        this.session.context.client(this.name, { text, silent });
-        if (!silent) {
-            this.session.scheduler.actPending = true;
-        }
+        this.session.context.client(this, { text, silent });
     }
 
     async registerActions(actions: v1.Action[]) {

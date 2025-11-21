@@ -2,6 +2,7 @@ import { v7 as uuid7 } from "uuid";
 import type { Session } from "./session.svelte";
 import { z } from "zod";
 import { zConst } from "$lib/app/utils";
+import type { Game } from "$lib/api/registry.svelte";
 
 export abstract class ContextManager {
     readonly allMessages: Message[] = $state([]);
@@ -33,8 +34,8 @@ export class DefaultContextManager extends ContextManager {
         this.push({ source: zSystemSource.decode({}), ...partialMsg });
     }
     
-    client(name: string, partialMsg: SourcelessMessageInput) {
-        this.push({ source: zClientSource.decode({name}), ...partialMsg });
+    client(game: Game, partialMsg: SourcelessMessageInput) {
+        this.push({ source: zClientSource.decode({name: game.name, id: game.conn.id}), ...partialMsg });
     }
 
     user(partialMsg: SourcelessMessageInput) {
@@ -47,7 +48,7 @@ export class DefaultContextManager extends ContextManager {
 }
 
 export const zSystemSource = z.strictObject({type: zConst("system")});
-export const zClientSource = z.strictObject({type: zConst("client"), name: z.string()});
+export const zClientSource = z.strictObject({type: zConst("client"), name: z.string(), id: z.string()});
 export const zActorSource = z.strictObject({type: zConst("actor"), manual: z.boolean().default(false)});
 export const zUserSource = z.strictObject({type: zConst("user")});
 

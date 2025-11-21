@@ -1,19 +1,16 @@
 <script lang="ts">
-    import { getRegistry } from "$lib/app/utils/di";
+    import { getRegistry, getUIState } from "$lib/app/utils/di";
     import GameActionList from "./GameActionList.svelte";
     import Tooltip from "../common/Tooltip.svelte";
-    import { clamp, horizontalScroll } from "$lib/app/utils";
+    import { horizontalScroll } from "$lib/app/utils";
     import GameTooltip from "./GameTooltip.svelte";
     import { InternalWSConnection, GameWSSender } from "$lib/api/ws";
     import { SchemaTestGame } from "$lib/app/schema-test";
     import { boolAttr } from "runed";
 
-    let registry = getRegistry();
-    let activeTab = $state(0);
-
-    $effect(() => {
-        activeTab = clamp(activeTab, 0, registry.games.length - 1);
-    });
+    const registry = getRegistry();
+    const uiState = getUIState();
+    const activeTab = $derived(uiState.activeGameTab);
 
     async function startSchemaTest() {
         const conn = new InternalWSConnection(`schema-test-${Date.now()}`, "v1");
@@ -41,7 +38,7 @@
                             data-active={boolAttr(activeTab === i)}
                             data-connected={boolAttr(!game.conn.closed)}
                             class="tab-button"
-                            onclick={() => activeTab = i}
+                            onclick={() => uiState.activeGameTab = i}
                         >
                             <span>{game.name}</span>
                         </button>
