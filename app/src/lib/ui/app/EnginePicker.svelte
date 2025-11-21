@@ -118,7 +118,7 @@
                                                     <p class="note"><Hotkey>1..9</Hotkey> to quick-select engine.</p>
                                                     <p class="note"><Hotkey>Alt-click</Hotkey> an engine to quickly open config.</p>
                                                     <p class="note"><Hotkey>Alt+A</Hotkey> to create a custom OpenAI-compatible engine.</p>
-                                                    <p class="note">Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (some engines excluded)</p>
+                                                    <p class="note">Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (OpenAI-compatible only)</p>
                                                 </div>
                                             </Tooltip.Content>
                                         </Tooltip.Positioner>
@@ -148,7 +148,7 @@
                                             <span class="name">{engine.name}</span>
                                         </button>
 
-                                        <div class="actions">
+                                        <div class="actions" data-shift={shiftPressed}>
                                             <button class={["action-btn", del ? "delete" : "config"]}
                                                 onclick={() => del ? deleteEngine(id) : openConfig(id)}
                                                 title={del ? "Delete" : "Configure"}
@@ -271,7 +271,9 @@
     }
 
     .actions {
-        @apply flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity px-1;
+        @apply flex items-center px-1 transition-opacity;
+        @apply opacity-0 group-hover:opacity-100 focus-within:opacity-100;
+        @apply data-[shift=true]:opacity-100;
     }
 
     .action-btn {
