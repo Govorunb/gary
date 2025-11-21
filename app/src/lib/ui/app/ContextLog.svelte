@@ -83,8 +83,8 @@
                 <div class="message {msg.source.type}">
                     <!-- TODO: put icon in corner (real estate) -->
                     <!-- TODO: more icons (silent, ephemeral, etc) in one or more corners -->
-                    <span class="message-icon">{getSourceIcon(msg.source)}</span>
                     <span class="message-timestamp">{msg.timestamp.toLocaleTimeString()}</span>
+                    <span class="message-icon">{getSourceIcon(msg.source)}</span>
                     <span class="message-text">
                         <!-- TODO: click to focus that game's tab -->
                         {#if msg.source.type === 'client'}
