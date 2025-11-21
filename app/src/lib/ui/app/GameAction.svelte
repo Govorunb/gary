@@ -10,15 +10,22 @@
 
     let { action }: Props = $props();
 
-    const actionJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
+    let open = $state(false);
+
+    const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
     let schemaEl = $state<HTMLDivElement>();
     let view: EditorView | null = null;
     $effect(() => {
-        if (actionJson) {
-            // TODO: CM recommends @lezer/highlight over a full editor
+        if (schemaEl && schemaJson) {
+            // CM recommends @lezer/highlight over a full editor; however,
+            // - line numbers
+            // - fold gutter
+            // - active line highlighting
+            // - active line gutter highlighting
+            // - selection match highlighting
             view ??= new EditorView({
                 parent: schemaEl,
-                doc: actionJson,
+                doc: schemaJson,
                 extensions: [
                     basicSetup,
                     json(),
@@ -34,12 +41,12 @@
     })
 </script>
 
-<details class="accordion">
+<details class="accordion" bind:open>
     <summary>{action.name}</summary>
     <div class="action-description">
         <p>{action.description}</p>
     </div>
-    {#if actionJson}
+    {#if open && schemaJson} <!-- (perf) defer loading editor until user actually opens the action -->
         <details class="accordion">
             <summary>Schema</summary>
             <div class="schema" bind:this={schemaEl}></div>
@@ -59,8 +66,7 @@
             @apply flex cursor-pointer items-center justify-between gap-2;
             @apply px-4 py-1.5 text-sm font-medium text-neutral-700 transition;
             &:hover {
-                @apply bg-neutral-100/80;
-                @apply dark:bg-neutral-800/70;
+                @apply bg-neutral-100/80 dark:bg-neutral-800/70;
             }
             @apply focus:outline-none;
             &:focus-visible {
