@@ -5,6 +5,7 @@
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
     import { PressedKeys } from "runed";
     import { clamp, tooltip } from "$lib/app/utils";
+    import { untrack } from "svelte";
 
     let session = getSession();
     let uiState = getUIState();
@@ -57,7 +58,7 @@
     $effect(() => {
         void session.context.userView.length;
         void textareaLines;
-        updateScroll();
+        untrack(updateScroll);
     });
     
     function updateScroll() {
@@ -72,8 +73,8 @@
     }
 </script>
 
-<div class="flex flex-col gap-2 h-full">
-    <div class="flex items-center gap-4">
+<div class="container">
+    <div class="flex flex-row gap-4">
         <Popover modal open={ctxMenuOpen} onOpenChange={(d) => ctxMenuOpen = d.open}>
             <Popover.Trigger class="menu-trigger"
                     title="Menu" aria-label="Menu"
@@ -138,7 +139,7 @@
             rows={textareaLines}
         ></textarea>
         <button 
-            class="send-button"
+            class="btn send-button"
             onclick={submit}
             disabled={!userInput}
             {@attach tooltip("Hold Shift to send a silent message")}
@@ -154,15 +155,19 @@
     h2 {
         @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
     }
+    .container {
+        @apply flex flex-col h-full gap-4;
+        @apply p-4 rounded-xl text-sm shadow-sm;
+        @apply bg-neutral-50 ring-1 ring-primary-200/40;
+        @apply dark:bg-neutral-900/70 dark:ring-primary-800/40;
+    }
     .reverse-log {
         /* flex-col-reverse instead of reversing the array */
         @apply flex flex-col-reverse flex-1 min-h-0;
     }
     .log {
-        @apply flex flex-col gap-2 p-4 rounded-xl text-sm shadow-sm;
+        @apply flex flex-col gap-2;
         @apply h-full overflow-scroll;
-        @apply bg-neutral-50 ring-1 ring-primary-200/40;
-        @apply dark:bg-neutral-900/70 dark:ring-primary-800/40;
     }
     .menu-trigger {
         @apply p-2 rounded-md;
@@ -192,7 +197,8 @@
     .message {
         @apply grid grid-cols-[auto_auto_auto_1fr] gap-2 items-center;
         @apply rounded-lg border px-3 py-2 wrap-anywhere;
-        @apply border-red-400/40 border-dotted; /* invalid source fallback */
+        @apply border-red-400/40; /* invalid source fallback */
+        @apply border-dotted hover:border-solid;
         @apply transition-all;
         &.system {
             @apply bg-amber-400/5;
@@ -210,12 +216,8 @@
             @apply bg-purple-400/5;
             @apply border-purple-400/70;
         }
-        &:hover {
-            @apply border-solid;
-            /* @apply ring ring-neutral-600/50 dark:ring-neutral-300/50; */
-        }
         &.silent {
-            @apply opacity-70 dark:opacity-60;
+            @apply opacity-70 dark:opacity-60 hover:opacity-100;
         }
     }
     .message-icon {
@@ -231,9 +233,9 @@
         @apply font-semibold text-neutral-700 dark:text-neutral-100;
     }
     .input-container {
-        @apply flex gap-2 p-2;
-        @apply bg-neutral-50 rounded-lg border;
-        @apply dark:bg-neutral-900/70 dark:border-neutral-700;
+        @apply flex gap-2 p-3 rounded-xl;
+        @apply bg-neutral-50 ring-1 ring-primary-200/40 shadow-sm;
+        @apply dark:bg-neutral-900/70 dark:ring-primary-800/40;
     }
     .user-input {
         @apply flex-1 resize-none rounded-md px-3 py-2 text-sm;
@@ -245,10 +247,7 @@
         }
     }
     .send-button {
-        @apply px-4 py-2 rounded-md text-sm font-medium;
-        @apply bg-primary-600 text-white;
-        @apply hover:bg-primary-700 disabled:bg-neutral-300 disabled:text-neutral-500;
-        @apply dark:disabled:bg-neutral-600 dark:disabled:text-neutral-400;
-        @apply transition-colors;
+        @apply bg-primary-500 dark:bg-primary-700;
+        @apply text-primary-contrast-500 dark:text-primary-contrast-700;
     }
 </style>
