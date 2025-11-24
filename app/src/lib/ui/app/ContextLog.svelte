@@ -1,15 +1,15 @@
 <script lang="ts">
-    import { getSession, getUIState } from "$lib/app/utils/di";
+    import { getSession, getUIState, getUserPrefs } from "$lib/app/utils/di";
     import type { MessageSource } from "$lib/app/context.svelte";
-    import { EllipsisVertical } from "@lucide/svelte";
+    import { EllipsisVertical, SendHorizontal, Volume2, VolumeOff } from "@lucide/svelte";
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
     import { PressedKeys } from "runed";
     import { clamp, tooltip } from "$lib/app/utils";
     import { untrack } from "svelte";
 
-    let session = getSession();
-    let uiState = getUIState();
-    let ctxMenuOpen = $state(false);
+    const session = getSession();
+    const userPrefs = getUserPrefs();
+    const uiState = getUIState();
 
     function getSourceIcon(source: MessageSource): string {
         switch (source.type) {
@@ -26,6 +26,8 @@
                 return "";
         }
     }
+
+    let ctxMenuOpen = $state(false);
     function closeMenu() {
         ctxMenuOpen = false;
     }
@@ -41,18 +43,26 @@
     let scrollElem: HTMLDivElement | null = $state(null);
     let scrollOffset = $state(0);
     const scrollThreshold = 100;
+    
+    const keys = new PressedKeys();
+    const shiftPressed = $derived(keys.has("Shift"));
+    keys.onKeys(["Control", "Enter"], submit);
 
     let userInput = $state("");
+    let silent = $derived(userPrefs.app.ctxInputSilent !== shiftPressed);
+    
     let textareaElem: HTMLTextAreaElement | null = $state(null);
+    // FIXME: long text with no line breaks doesn't expand
     const textareaLines = $derived(clamp(userInput.split("\n").length, 1, 5));
-
-    const keys = new PressedKeys();
-    keys.onKeys(["Control", "Enter"], submit);
     
     function submit() {
         if (!userInput) return;
-        session.context.user({text: userInput, silent: keys.has("Shift")});
+        session.context.user({text: userInput, silent});
         userInput = "";
+    }
+    
+    function toggleSilent() {
+        userPrefs.app.ctxInputSilent = !userPrefs.app.ctxInputSilent;
     }
 
     $effect(() => {
@@ -135,16 +145,27 @@
             bind:value={userInput}
             bind:this={textareaElem}
             placeholder="Add to context"
-            class="user-input"
+            class="input-field"
             rows={textareaLines}
         ></textarea>
+        <button
+            class="silent-btn"
+            {@attach tooltip("Toggle silent (hold Shift to invert)")}
+            onclick={toggleSilent}
+        >
+            {#if silent}
+                <VolumeOff />
+            {:else}
+                <Volume2 />
+            {/if}
+        </button>
         <button 
-            class="btn send-button"
+            class="send-button"
             onclick={submit}
             disabled={!userInput}
-            {@attach tooltip("Hold Shift to send a silent message")}
+            {@attach tooltip("Send (Ctrl+Enter)")}
         >
-            Send
+            <SendHorizontal />
         </button>
     </div>
 </div>
@@ -233,21 +254,34 @@
         @apply font-semibold text-neutral-700 dark:text-neutral-100;
     }
     .input-container {
-        @apply flex gap-2 p-3 rounded-xl;
+        @apply flex flex-row gap-1 p-3 rounded-xl;
         @apply bg-neutral-50 ring-1 ring-primary-200/40 shadow-sm;
         @apply dark:bg-neutral-900/70 dark:ring-primary-800/40;
+
+        & button {
+            @apply self-center px-4 py-2 rounded-md transition-all;
+        }
     }
-    .user-input {
+    .input-field {
         @apply flex-1 resize-none rounded-md px-3 py-2 text-sm;
         @apply bg-white border border-neutral-300;
         @apply dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100;
         @apply focus:outline-none focus:ring-2 focus:ring-primary-500;
-        &:placeholder {
-            @apply text-neutral-500 dark:text-neutral-400;
+    }
+    .silent-btn {
+        @apply rounded-md transition-colors;
+        @apply opacity-70;
+        &:hover {
+            @apply bg-neutral-200 dark:bg-surface-700;
+            @apply text-neutral-900 dark:text-neutral-100;
+            @apply opacity-100;
         }
     }
     .send-button {
         @apply bg-primary-500 dark:bg-primary-700;
         @apply text-primary-contrast-500 dark:text-primary-contrast-700;
+        &:hover:not(:disabled) {
+            @apply bg-primary-400 dark:bg-primary-800;
+        }
     }
 </style>

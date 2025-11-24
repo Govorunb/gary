@@ -97,6 +97,7 @@ export class UserPrefs {
 export const zAppPrefs = z.strictObject({
     theme: z.enum(["system", "light", "dark"]).default("system"),
     selectedEngine: z.string().default(RANDY_ID),
+    ctxInputSilent: z.boolean().default(false),
 });
 
 export const zServerPrefs = z.strictObject({
