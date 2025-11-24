@@ -11,9 +11,15 @@ importers:
       '@codemirror/lang-json':
         specifier: ^6.0.2
         version: 6.0.2
+      '@codemirror/language':
+        specifier: ^6.11.3
+        version: 6.11.3
       '@codemirror/state':
         specifier: ^6.5.2
         version: 6.5.2
+      '@codemirror/view':
+        specifier: ^6.38.8
+        version: 6.38.8
       '@lucide/svelte':
         specifier: ^0.548.0
         version: 0.548.0(svelte@5.43.14)

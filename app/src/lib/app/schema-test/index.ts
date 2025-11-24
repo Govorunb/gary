@@ -57,7 +57,7 @@ export class SchemaTestGame extends ClientGame {
 
         const validation = this.validateData(action.schema, data);
         if (!validation.valid) {
-            r.warn(`[schema-test] '${name}' failed validation: ${validation.error}\ndata: ${JSON.stringify(data)}`);
+            r.warn(`[schema-test] '${name}' failed validation`, `Error: ${validation.error}\nData: ${JSON.stringify(data)}`);
             return { success: false, message: `Invalid data: ${validation.error}` };
         }
         r.info(`[schema-test] [${name}] Success`);

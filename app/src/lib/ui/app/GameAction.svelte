@@ -3,11 +3,13 @@
     import { basicSetup, EditorView } from "codemirror";
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";
-    import { Dices } from "@lucide/svelte";
+    import { Dices, Send } from "@lucide/svelte";
     import { getSession } from "$lib/app/utils/di";
     import { JSONSchemaFaker } from "json-schema-faker";
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
+    import CopyButton from "../common/CopyButton.svelte";
+    import { preventDefault, tooltip } from "$lib/app/utils";
 
     type Props = {
         action: Action;
@@ -46,9 +48,15 @@
         }
     })
 
-    function sendRandomData() {
+    function send() {
+        r.warn('todo: manual send dialog');
+        // TODO: manual send dialog
+        // another codemirror editor (json w/ validation)
+    }
+
+    function sendRandom() {
         let generatedData: string | undefined;
-        if (typeof(action.schema) === "object") {
+        if (action.schema) {
             try {
                 const genObj = JSONSchemaFaker.generate(action.schema);
                 generatedData = JSON.stringify(genObj);
@@ -62,6 +70,7 @@
             data: generatedData,
         });
         
+        // TODO: we should know which game we're from
         const game = session.registry.games.find(g => g.actions.has(action.name));
         if (!game) {
             r.error(`Action ${action.name} not found in any game`);
@@ -87,8 +96,15 @@
         <div class="actions">
             <button 
                 class="action-btn" 
-                onclick={sendRandomData}
-                title="Send with random data"
+                onclick={preventDefault(send)}
+                {@attach tooltip("Send (manual)")}
+            >
+                <Send class="size-4" />
+            </button>
+            <button 
+                class="action-btn" 
+                onclick={preventDefault(sendRandom)}
+                {@attach tooltip("Send (random data)")}
             >
                 <Dices class="size-4" />
             </button>
@@ -99,8 +115,13 @@
     </div>
     {#if open && schemaJson} <!-- (perf) defer loading editor until user actually opens the action -->
         <details class="accordion">
-            <summary>Schema</summary>
-            <div class="schema" bind:this={schemaEl}></div>
+            <summary>
+                <span>Schema</span>
+                <div class="actions">
+                    <CopyButton data={schemaJson} desc="schema" />
+                </div>
+            </summary>
+            <div class="schema-code" bind:this={schemaEl}></div>
         </details>
     {/if}
 </details>
@@ -133,18 +154,20 @@
     }
 
     .action-btn {
-        @apply p-1.5 rounded-md text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100;
-        @apply hover:bg-neutral-200 dark:hover:bg-surface-700 transition-colors;
+        @apply p-1.5 rounded-md transition-colors;
+        &:hover {
+            @apply bg-neutral-200 dark:bg-surface-700;
+            @apply text-neutral-900 dark:text-neutral-100;
+        }
     }
     .action-description {
         @apply space-y-2 px-4 pb-4 pt-2;
         @apply text-neutral-600 dark:text-neutral-200;
     }
 
-    .schema {
+    .schema-code {
         @apply rounded-b-md p-3 text-xs;
         @apply shadow-inner;
         @apply bg-neutral-800 text-neutral-100;
     }
-
 </style>

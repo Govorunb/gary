@@ -10,6 +10,14 @@
             "request": "attach",
             "processId": "${command:pickProcess}",
             "justMyCode": false,
+        },
+        // seems to be serverside code only :(
+        {
+            "name": "Pnpm dev",
+            "command": "pnpm d",
+            "cwd": "${workspaceFolder}/app",
+            "request": "launch",
+            "type": "node-terminal"
         }
     ]
 }

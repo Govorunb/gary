@@ -14,7 +14,7 @@
         <!-- <VersionBadge version={game.conn.version} /> -->
         <div class="connection-info">
             <p class="id-text">ID: <span class="id-value">{game.conn.id}</span></p>
-            <CopyButton data={game.conn.id} />
+            <CopyButton data={game.conn.id} desc="ID" />
         </div>
         <div class="flex flex-row justify-end">
             <button
