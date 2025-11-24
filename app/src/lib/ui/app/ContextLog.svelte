@@ -3,6 +3,8 @@
     import type { MessageSource } from "$lib/app/context.svelte";
     import { EllipsisVertical } from "@lucide/svelte";
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
+    import { PressedKeys } from "runed";
+    import { clamp, tooltip } from "$lib/app/utils";
 
     let session = getSession();
     let uiState = getUIState();
@@ -39,12 +41,30 @@
     let scrollOffset = $state(0);
     const scrollThreshold = 100;
 
+    let userInput = $state("");
+    let textareaElem: HTMLTextAreaElement | null = $state(null);
+    const textareaLines = $derived(clamp(userInput.split("\n").length, 1, 5));
+
+    const keys = new PressedKeys();
+    keys.onKeys(["Control", "Enter"], submit);
+    
+    function submit() {
+        if (!userInput) return;
+        session.context.user({text: userInput, silent: keys.has("Shift")});
+        userInput = "";
+    }
+
     $effect(() => {
         void session.context.userView.length;
+        void textareaLines;
+        updateScroll();
+    });
+    
+    function updateScroll() {
         if (scrollElem && scrollOffset < scrollThreshold) {
             scrollElem.scrollTop = scrollElem.scrollHeight;
         }
-    });
+    }
 
     function logScroll(event: Event) {
         const target = event.target as HTMLDivElement;
@@ -81,11 +101,21 @@
     <div class="reverse-log">
         <div class="log" onscroll={logScroll} bind:this={scrollElem}>
             {#each session.context.userView as msg (msg.id)}
-                <div class="message {msg.source.type}">
+                <div class={["message", msg.source.type]}
+                    class:silent={msg.silent}
+                >
                     <!-- TODO: put icon in corner (real estate) -->
                     <!-- TODO: more icons (silent, ephemeral, etc) in one or more corners -->
-                    <span class="message-timestamp">{msg.timestamp.toLocaleTimeString()}</span>
-                    <span class="message-icon">{getSourceIcon(msg.source)}</span>
+                    <span class="message-timestamp"
+                        {@attach tooltip(msg.timestamp.toString())}
+                    >
+                        {msg.timestamp.toLocaleTimeString()}
+                    </span>
+                    <span class="message-icon"
+                        {@attach tooltip(msg.source.type)}
+                    >
+                        {getSourceIcon(msg.source)}
+                    </span>
                     {#if msg.source.type === 'client'}
                         <button class=""
                             onclick={() => uiState.selectGameTab((msg.source.type === 'client' && msg.source.id) as string)}
@@ -99,6 +129,23 @@
             {/each}
         </div>
     </div>
+    <div class="input-container">
+        <textarea 
+            bind:value={userInput}
+            bind:this={textareaElem}
+            placeholder="Add to context"
+            class="user-input"
+            rows={textareaLines}
+        ></textarea>
+        <button 
+            class="send-button"
+            onclick={submit}
+            disabled={!userInput}
+            {@attach tooltip("Hold Shift to send a silent message")}
+        >
+            Send
+        </button>
+    </div>
 </div>
 
 <style lang="postcss">
@@ -109,11 +156,11 @@
     }
     .reverse-log {
         /* flex-col-reverse instead of reversing the array */
-        @apply flex flex-col-reverse h-full;
+        @apply flex flex-col-reverse flex-1 min-h-0;
     }
     .log {
         @apply flex flex-col gap-2 p-4 rounded-xl text-sm shadow-sm;
-        @apply h-full max-h-[calc(100vh-9rem)] overflow-scroll;
+        @apply h-full overflow-scroll;
         @apply bg-neutral-50 ring-1 ring-primary-200/40;
         @apply dark:bg-neutral-900/70 dark:ring-primary-800/40;
     }
@@ -144,35 +191,64 @@
     }
     .message {
         @apply grid grid-cols-[auto_auto_auto_1fr] gap-2 items-center;
-        @apply rounded-lg border px-3 py-2 transition wrap-anywhere;
+        @apply rounded-lg border px-3 py-2 wrap-anywhere;
         @apply border-red-400/40 border-dotted; /* invalid source fallback */
-        &:hover {
-            @apply bg-neutral-100/70;
-            @apply dark:bg-neutral-800/60;
-        }
+        @apply transition-all;
         &.system {
-            @apply border-amber-400/40;
+            @apply bg-amber-400/5;
+            @apply border-amber-400/70;
         }
         &.client {
-            @apply border-sky-400/40;
+            @apply bg-sky-400/5;
+            @apply border-sky-400/70;
         }
         &.user {
-            @apply border-emerald-400/40;
+            @apply bg-emerald-400/5;
+            @apply border-emerald-400/70;
         }
         &.actor {
-            @apply border-purple-400/40;
+            @apply bg-purple-400/5;
+            @apply border-purple-400/70;
+        }
+        &:hover {
+            @apply border-solid;
+            /* @apply ring ring-neutral-600/50 dark:ring-neutral-300/50; */
+        }
+        &.silent {
+            @apply opacity-70 dark:opacity-60;
         }
     }
     .message-icon {
-        @apply text-lg;
+        @apply text-lg cursor-default;
     }
     .message-timestamp {
-        @apply text-xs text-neutral-500 dark:text-neutral-400;
+        @apply text-xs text-neutral-500 dark:text-neutral-400 cursor-default;
     }
     .message-text {
         @apply whitespace-pre-wrap text-neutral-700 dark:text-neutral-100;
     }
     .client-name {
         @apply font-semibold text-neutral-700 dark:text-neutral-100;
+    }
+    .input-container {
+        @apply flex gap-2 p-2;
+        @apply bg-neutral-50 rounded-lg border;
+        @apply dark:bg-neutral-900/70 dark:border-neutral-700;
+    }
+    .user-input {
+        @apply flex-1 resize-none rounded-md px-3 py-2 text-sm;
+        @apply bg-white border border-neutral-300;
+        @apply dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100;
+        @apply focus:outline-none focus:ring-2 focus:ring-primary-500;
+        &:placeholder {
+            @apply text-neutral-500 dark:text-neutral-400;
+        }
+    }
+    .send-button {
+        @apply px-4 py-2 rounded-md text-sm font-medium;
+        @apply bg-primary-600 text-white;
+        @apply hover:bg-primary-700 disabled:bg-neutral-300 disabled:text-neutral-500;
+        @apply dark:disabled:bg-neutral-600 dark:disabled:text-neutral-400;
+        @apply transition-colors;
     }
 </style>
