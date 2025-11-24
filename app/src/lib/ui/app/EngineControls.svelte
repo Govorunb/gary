@@ -2,7 +2,7 @@
     import EnginePicker from "./EnginePicker.svelte";
     import { getSession } from "$lib/app/utils/di";
     import { PressedKeys } from "runed";
-    import { HandFist, Pointer, MonitorPlay, MonitorPause, MonitorX } from "@lucide/svelte";
+    import { HandFist, Pointer, Pause, BugPlay, Play } from "@lucide/svelte";
     import { tooltip } from "$lib/app/utils";
 
     type State = "errored" | "muted" | "unmuted";
@@ -42,15 +42,15 @@
     const state = $derived(getState());
     const machine = {
         errored: {
-            icon: MonitorX,
+            icon: BugPlay,
             tooltip: "Clear error pause"
         },
         muted: {
-            icon: MonitorPause,
+            icon: Play,
             tooltip: "Unpause engine"
         },
         unmuted: {
-            icon: MonitorPlay,
+            icon: Pause,
             tooltip: "Pause engine"
         }
     }
