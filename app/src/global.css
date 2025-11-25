@@ -26,11 +26,16 @@
     .note {
         @apply text-xs text-neutral-500 dark:text-neutral-300;
     }
-    /* HACK: only hits lang-highlighted tokens through sheer luck */
-    .cm-editor span:not(.cm-selectionMatch) {
+    /* absolute hack */
+    .cm-editor {
         @variant dark {
-            /* classic lightness invert */
-            filter: invert(100%) hue-rotate(180deg);
+            /* selects syntax-highlighted tokens through sheer luck and perseverance */
+            span:not(.cm-selectionMatch):not(.cm-matchingBracket), 
+            .cm-cursor {
+                /* classic lightness invert */
+                filter: invert(100%) hue-rotate(180deg);
+                transition: none;
+            }
         }
     }
     .cm-gutters {

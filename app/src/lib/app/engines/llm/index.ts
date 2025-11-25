@@ -80,6 +80,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     // TODO: configurable prompts (editor?)
+    // TODO: move to ctx manager (so it's visible as a "message")
     systemPrompt() {
         let prompt = `\
 You are an expert gamer AI. Your main purpose is playing games. To do this, you will perform in-game actions via JSON function calls to a special software integration system.
@@ -177,6 +178,8 @@ Remember that your only means of interacting with the game is through actions. I
             content: text,
         }
     }
+    
+    // TODO: context trimming
     private convertContext(ctx: ContextManager): OpenAIContext {
         return ctx.actorView.map(msg => this.convertMessage(msg));
     }
