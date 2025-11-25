@@ -10,12 +10,14 @@
     import r from "$lib/app/utils/reporting";
     import CopyButton from "../common/CopyButton.svelte";
     import { preventDefault, tooltip } from "$lib/app/utils";
+    import type { Game } from "$lib/api/registry.svelte";
 
     type Props = {
         action: Action;
+        game: Game;
     };
 
-    let { action }: Props = $props();
+    let { action, game }: Props = $props();
     const session = getSession();
 
     let open = $state(false);
@@ -36,6 +38,8 @@
                 doc: schemaJson,
                 extensions: [
                     basicSetup,
+                    // FIXME: token colors in dark mode (boolean invisible until selected, integer invisible if selected, etc)
+                    // workaround in global.css but needs an actual fix https://codemirror.net/examples/styling/#highlighting
                     json(),
                     EditorState.readOnly.of(true),
                     EditorView.editable.of(false),
@@ -46,7 +50,7 @@
             view?.destroy();
             view = null;
         }
-    })
+    });
 
     function send() {
         r.warn('todo: manual send dialog');
@@ -70,13 +74,6 @@
             data: generatedData,
         });
         
-        // TODO: we should know which game we're from
-        const game = session.registry.games.find(g => g.actions.has(action.name));
-        if (!game) {
-            r.error(`Action ${action.name} not found in any game`);
-            return;
-        }
-
         game.conn.send(zAct.decode({ data: actData }))
             .then(() => {
                 const msg = `User act to ${game.name}: ${JSON.stringify(actData)}`;
@@ -110,7 +107,7 @@
     <div class="action-description">
         <p>{action.description}</p>
     </div>
-    {#if open && schemaJson} <!-- (perf) defer loading editor until user actually opens the action -->
+    {#if schemaJson}
         <details class="accordion">
             <summary>
                 <span>Schema</span>
@@ -118,7 +115,11 @@
                     <CopyButton data={schemaJson} desc="schema" />
                 </div>
             </summary>
-            <div class="schema-code" bind:this={schemaEl}></div>
+            <!-- (perf) defer loading editor until user actually opens the action
+                flickers if placed in the schemaJson conditional above (so don't) -->
+            {#if open}
+                <div class="schema-code" bind:this={schemaEl}></div>
+            {/if}
         </details>
     {/if}
 </details>
@@ -163,8 +164,8 @@
     }
 
     .schema-code {
-        @apply rounded-b-md p-3 text-xs;
-        @apply shadow-inner;
-        @apply bg-neutral-800 text-neutral-100;
+        @apply text-xs;
+        @apply bg-neutral-100 dark:bg-neutral-800;
+        @apply text-neutral-900 dark:text-neutral-100;
     }
 </style>

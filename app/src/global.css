@@ -26,6 +26,28 @@
     .note {
         @apply text-xs text-neutral-500 dark:text-neutral-300;
     }
+    /* HACK: only hits lang-highlighted tokens through sheer luck */
+    .cm-editor span:not(.cm-selectionMatch) {
+        @variant dark {
+            /* classic lightness invert */
+            filter: invert(100%) hue-rotate(180deg);
+        }
+    }
+    .cm-gutters {
+        @apply border-surface-200! dark:border-surface-700!;
+    }
+    .cm-gutter {
+        @apply bg-surface-100 dark:bg-surface-900;
+    }
+    .cm-activeLine {
+        @apply bg-secondary-100/30! dark:bg-secondary-700/10!;
+    }
+    .cm-activeLineGutter {
+        @apply bg-secondary-100/50! dark:bg-secondary-700/20!;
+    }
+    .cm-selectionBackground {
+        @apply bg-primary-100/50! dark:bg-primary-400/50!;
+    }
 }
 
 @layer theme {

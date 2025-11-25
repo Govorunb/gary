@@ -12,7 +12,7 @@
 
 <div class="action-list">
     {#each [...game.actions.values()] as action (action.name)}
-        <GameAction {action} />
+        <GameAction {action} {game} />
     {/each}
 </div>
 
