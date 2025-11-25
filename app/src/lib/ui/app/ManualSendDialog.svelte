@@ -6,7 +6,7 @@
     import { EditorState } from "@codemirror/state";
     import type { Extension } from "@codemirror/state";
     import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
-    import { X, Send } from "@lucide/svelte";
+    import { X, Send, ChevronLeft, ChevronRight } from "@lucide/svelte";
     import { getSession } from "$lib/app/utils/di";
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
@@ -24,11 +24,17 @@
     const ajv = new Ajv({ validateFormats: false });
 
     let editorEl = $state<HTMLDivElement>();
+    let schemaEl = $state<HTMLDivElement>();
     let view: EditorView | null = null;
+    let schemaView: EditorView | null = null;
     let jsonContent = $state('{}');
     let validationError = $state<string | null>(null);
     let isValid = $derived(!validationError);
     let editorInitialized = $state(false);
+    let schemaInitialized = $state(false);
+    let schemaCollapsed = $state(false);
+
+    const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
 
     // Initialize CodeMirror editor when dialog opens
     $effect(() => {
@@ -53,6 +59,28 @@
             view?.destroy();
             view = null;
             editorInitialized = false;
+        }
+    });
+
+    // Initialize schema viewer when dialog opens and not collapsed
+    $effect(() => {
+        if (schemaEl && open && schemaJson && !schemaCollapsed && !schemaInitialized) {
+            schemaView = new EditorView({
+                parent: schemaEl,
+                doc: schemaJson,
+                extensions: [
+                    basicSetup,
+                    json(),
+                    EditorView.lineWrapping,
+                    EditorState.readOnly.of(true),
+                    EditorView.editable.of(false),
+                ],
+            });
+            schemaInitialized = true;
+        } else if ((!open || schemaCollapsed) && schemaInitialized) {
+            schemaView?.destroy();
+            schemaView = null;
+            schemaInitialized = false;
         }
     });
 
@@ -142,14 +170,41 @@
                         </div>
                         
                         <div class="editor-section">
-                            <div class="editor-label">JSON Data:</div>
-                            <div class="editor-container" bind:this={editorEl}></div>
-                            {#if validationError}
-                                <div class="error-message">
-                                    <span class="text-xs font-medium">JSON Error:</span>
-                                    <span class="text-xs">{validationError}</span>
+                            {#if schemaJson}
+                                <div class="editor-header">
+                                    <div class="editor-label">JSON Data</div>
+                                    <button 
+                                        class="schema-toggle"
+                                        onclick={() => schemaCollapsed = !schemaCollapsed}
+                                        aria-label={schemaCollapsed ? "Show schema" : "Hide schema"}
+                                    >
+                                        <span class="text-lg font-medium">Schema</span>
+                                        {#if schemaCollapsed}
+                                            <ChevronRight class="size-4" />
+                                        {:else}
+                                            <ChevronLeft class="size-4" />
+                                        {/if}
+                                    </button>
                                 </div>
+                            {:else}
+                                <div class="editor-label">JSON Data</div>
                             {/if}
+                            <div class="editor-split" class:schema-collapsed={schemaCollapsed}>
+                                <div class="editor-panel">
+                                    <div class="editor-container" bind:this={editorEl}></div>
+                                    {#if validationError}
+                                        <div class="error-message">
+                                            <span class="text-xs font-medium">JSON Error:</span>
+                                            <span class="text-xs">{validationError}</span>
+                                        </div>
+                                    {/if}
+                                </div>
+                                {#if schemaJson}
+                                    <div class="editor-panel" class:hidden={schemaCollapsed}>
+                                        <div class="schema-container" bind:this={schemaEl}></div>
+                                    </div>
+                                {/if}
+                            </div>
                         </div>
                     </div>
                     
@@ -175,7 +230,7 @@
 
     .manual-send-content {
         @apply flex flex-col gap-4;
-        @apply min-w-[32rem] max-w-[90vw] max-h-[80vh] overflow-hidden;
+        @apply min-w-lg max-w-[95vw] max-h-[80vh] overflow-hidden;
         @apply bg-white dark:bg-surface-900;
         @apply rounded-2xl shadow-2xl;
         @apply p-5 text-sm;
@@ -210,15 +265,63 @@
         @apply flex-1 overflow-hidden;
     }
 
+    .editor-header {
+        @apply flex items-center justify-between;
+        @apply pb-2;
+    }
+
+    .editor-split {
+        @apply flex gap-3;
+        @apply flex-1 overflow-hidden;
+    }
+
+    .editor-split.schema-collapsed {
+        @apply gap-0;
+    }
+
+    .editor-panel {
+        @apply flex flex-col gap-2;
+        @apply flex-1 overflow-hidden;
+    }
+
+    .editor-split.schema-collapsed .editor-panel:first-child {
+        @apply flex-none w-full;
+    }
+
+    .editor-split.schema-collapsed .editor-panel:last-child {
+        @apply hidden;
+    }
+
+    .schema-toggle {
+        @apply flex items-center gap-1;
+        @apply px-2 py-1 rounded-md text-xs;
+        @apply bg-neutral-100 dark:bg-neutral-800;
+        @apply text-neutral-600 dark:text-neutral-400;
+        @apply border border-neutral-200 dark:border-neutral-700;
+        @apply transition-colors;
+        &:hover {
+            @apply bg-neutral-200 dark:bg-neutral-700;
+            @apply text-neutral-700 dark:text-neutral-300;
+        }
+    }
+
     .editor-label {
-        @apply text-sm font-medium;
+        @apply text-lg font-medium;
+        @apply self-end;
         @apply text-neutral-700 dark:text-neutral-300;
     }
 
     .editor-container {
-        @apply flex-1 min-h-[12rem] max-h-[24rem] overflow-auto;
+        @apply flex-1 min-w-md min-h-48 max-h-96 overflow-auto;
         @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
         @apply bg-neutral-50 dark:bg-neutral-900;
+    }
+
+    .schema-container {
+        @apply flex-1 min-w-md min-h-48 max-h-96 overflow-auto;
+        @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
+        @apply bg-neutral-100 dark:bg-neutral-800;
+        @apply text-neutral-700 dark:text-neutral-300;
     }
 
     .error-message {
