@@ -10,8 +10,8 @@ Refer to `docs/ARCHITECTURE.md` for a technical overview of the project's archit
 
 ### General
 
-If you have the `task` tool available, you must follow this workflow precisely when implementing a change or a new feature:
-1. Delegate planning to a subagent ("plan" mode). Mention thinking in your request to the subagent to ensure high reasoning.
+If you have the `task` tool available, follow this workflow when implementing a large change/feature:
+1. Delegate planning to a subagent ("plan" mode). Mention the phrase "think hard" in your request to the subagent to ensure high reasoning.
 2. When the subagent returns, delegate implementation to another subagent ("build" mode).
 3. Send the changes to another subagent to polish and catch issues ("review" mode).
 

@@ -9,6 +9,7 @@
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
     import CopyButton from "../common/CopyButton.svelte";
+    import ManualSendDialog from "./ManualSendDialog.svelte";
     import { preventDefault, tooltip } from "$lib/app/utils";
     import type { Game } from "$lib/api/registry.svelte";
 
@@ -21,6 +22,7 @@
     const session = getSession();
 
     let open = $state(false);
+    let manualSendOpen = $state(false);
 
     const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
     let schemaEl = $state<HTMLDivElement>();
@@ -53,9 +55,7 @@
     });
 
     function send() {
-        r.warn('todo: manual send dialog');
-        // TODO: manual send dialog
-        // another codemirror editor (json w/ validation)
+        manualSendOpen = true;
     }
 
     function sendRandom() {
@@ -123,6 +123,13 @@
         </details>
     {/if}
 </details>
+
+<ManualSendDialog 
+    {action} 
+    {game} 
+    open={manualSendOpen} 
+    onOpenChange={(open) => manualSendOpen = open} 
+/>
 
 <style lang="postcss">
     @reference "global.css";
