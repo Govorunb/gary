@@ -23,7 +23,7 @@ incremental = true
 lto = true
 opt-level = "z"
 panic = "abort"
-strip = true
+# strip = true
 trim-paths = "all"
 # rustflags = ["-Cdebuginfo=0"] # unstable
 
@@ -46,3 +46,6 @@ anyhow = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 log = { version = "0.4", features = ["kv_serde"] }
 axum = { version = "0.8", features = ["ws", "macros"] }
+tauri-plugin-updater = "2.9.0"
+tauri-plugin-dialog = "2.4.2"
+tauri-plugin-process = "2.3.1"
