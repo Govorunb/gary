@@ -5,7 +5,7 @@
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";
     import { Dialog, Portal, Tooltip } from "@skeletonlabs/skeleton-svelte";
-    import { X, Send, ChevronLeft, ChevronRight, CircleQuestionMark, Dice6 } from "@lucide/svelte";
+    import { Send, ChevronLeft, ChevronRight, CircleQuestionMark, Dice6 } from "@lucide/svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
     import { getSession } from "$lib/app/utils/di";
     import { zAct, zActData } from "$lib/api/v1/spec";
@@ -30,6 +30,7 @@
     const shiftPressed = $derived(keys.has("Shift"));
     keys.onKeys(["Control", "Enter"], sendAction);
     keys.onKeys(["Alt", "R"], reroll);
+    keys.onKeys(["Control", "E"], closeDialog); // HACK: close when opening engine picker
 
     let editorEl = $state<HTMLDivElement>();
     let schemaEl = $state<HTMLDivElement>();
@@ -37,7 +38,7 @@
     let schemaView = $state<EditorView | null>(null);
     let jsonContent = $state(genJson());
     let validationErrors = $state<string[] | null>(null);
-    let isValid = $derived(!validationErrors);
+    const isValid = $derived(!validationErrors);
     let schemaCollapsed = $state(false);
     
     const validate = $derived((action.schema && ajv.compile(action.schema)) as ValidateFunction);
@@ -48,7 +49,6 @@
         return JSON.stringify(JSONSchemaFaker.generate(action.schema), null, 2);
     }
 
-    // Initialize CodeMirror editor when dialog opens
     $effect(() => {
         if (editorEl && open && !view) {
             view = new EditorView({
@@ -73,8 +73,7 @@
         }
     });
     function reroll() {
-        if (!view) return;
-        view.dispatch({
+        view?.dispatch({
             changes: {
                 from: 0,
                 to: view.state.doc.length,
@@ -91,10 +90,9 @@
         })
     })
 
-    // Initialize schema viewer when dialog opens and not collapsed
     $effect(() => {
-        if (schemaEl && open && schemaJson && !schemaCollapsed && !schemaView) {
-            schemaView = new EditorView({
+        if (schemaEl && schemaJson) {
+            schemaView ??= new EditorView({
                 parent: schemaEl,
                 doc: schemaJson,
                 extensions: [
@@ -105,7 +103,7 @@
                     EditorView.editable.of(false),
                 ],
             });
-        } else if (!open) {
+        } else {
             schemaView?.destroy();
             schemaView = null;
         }
@@ -200,13 +198,13 @@
                         {#if schemaJson}
                             <div class="editor-section">
                                 <div class="editor-header">
-                                    <div class="editor-label">JSON Data</div>
+                                    <div class="editor-label">Action Data</div>
                                     <button 
                                         class="schema-toggle"
                                         onclick={() => schemaCollapsed = !schemaCollapsed}
                                         {@attach tooltip(schemaCollapsed ? "Show schema" : "Hide schema")}
                                     >
-                                        <span class="text-lg font-medium">Schema</span>
+                                        Schema
                                         {#if schemaCollapsed}
                                             <ChevronRight class="size-4" />
                                         {:else}
@@ -349,14 +347,14 @@
 
     .schema-toggle {
         @apply flex items-center gap-1;
-        @apply px-2 py-1 rounded-md text-xs;
+        @apply px-2 py-1 rounded-md text-lg font-medium;
         @apply bg-neutral-100 dark:bg-neutral-800;
-        @apply text-neutral-600 dark:text-neutral-400;
+        @apply text-neutral-700 dark:text-neutral-300;
         @apply border border-neutral-200 dark:border-neutral-700;
         @apply transition-colors;
         &:hover {
             @apply bg-neutral-200 dark:bg-neutral-700;
-            @apply text-neutral-700 dark:text-neutral-300;
+            @apply text-neutral-900 dark:text-neutral-100;
         }
     }
 
