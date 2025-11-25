@@ -3,6 +3,10 @@
     import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
     import PowerButton from "$lib/ui/app/PowerButton.svelte";
     import EngineControls from "$lib/ui/app/EngineControls.svelte";
+    import ManualSendDialog from "$lib/ui/app/ManualSendDialog.svelte";
+    import { getUIState } from "$lib/app/utils/di";
+    
+    const uiState = getUIState();
 </script>
 
 <header>
@@ -19,6 +23,14 @@
 <main>
     <GaryDashboard />
 </main>
+
+{#if uiState.manualSendDialog}
+    <ManualSendDialog 
+        {...uiState.manualSendDialog}
+        open={!!uiState.manualSendDialog}
+        onOpenChange={(open) => !open && uiState.closeManualSendDialog()}
+    />
+{/if}
 
 <style lang="postcss">
     @reference "global.css";

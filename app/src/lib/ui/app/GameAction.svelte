@@ -4,12 +4,11 @@
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";
     import { Dices, Send } from "@lucide/svelte";
-    import { getSession } from "$lib/app/utils/di";
+    import { getSession, getUIState } from "$lib/app/utils/di";
     import { JSONSchemaFaker } from "json-schema-faker";
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
     import CopyButton from "../common/CopyButton.svelte";
-    import ManualSendDialog from "./ManualSendDialog.svelte";
     import { preventDefault, tooltip } from "$lib/app/utils";
     import type { Game } from "$lib/api/registry.svelte";
 
@@ -20,9 +19,9 @@
 
     let { action, game }: Props = $props();
     const session = getSession();
+    const uiState = getUIState();
 
     let open = $state(false);
-    let manualSendOpen = $state(false);
 
     const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
     let schemaEl = $state<HTMLDivElement>();
@@ -55,7 +54,7 @@
     });
 
     function send() {
-        manualSendOpen = true;
+        uiState.openManualSendDialog(action, game);
     }
 
     function sendRandom() {
@@ -124,14 +123,7 @@
     {/if}
 </details>
 
-{#if manualSendOpen}
-    <ManualSendDialog 
-        {action} 
-        {game} 
-        open={manualSendOpen} 
-        onOpenChange={(open) => manualSendOpen = open} 
-    />
-{/if}
+
 
 <style lang="postcss">
     @reference "global.css";
