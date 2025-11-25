@@ -124,12 +124,14 @@
     {/if}
 </details>
 
-<ManualSendDialog 
-    {action} 
-    {game} 
-    open={manualSendOpen} 
-    onOpenChange={(open) => manualSendOpen = open} 
-/>
+{#if manualSendOpen}
+    <ManualSendDialog 
+        {action} 
+        {game} 
+        open={manualSendOpen} 
+        onOpenChange={(open) => manualSendOpen = open} 
+    />
+{/if}
 
 <style lang="postcss">
     @reference "global.css";

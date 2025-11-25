@@ -4,15 +4,17 @@
     import { basicSetup, EditorView } from "codemirror";
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";
-    import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
-    import { X, Send, ChevronLeft, ChevronRight } from "@lucide/svelte";
+    import { Dialog, Portal, Tooltip } from "@skeletonlabs/skeleton-svelte";
+    import { X, Send, ChevronLeft, ChevronRight, CircleQuestionMark, Dice6 } from "@lucide/svelte";
+    import Hotkey from "$lib/ui/common/Hotkey.svelte";
     import { getSession } from "$lib/app/utils/di";
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
-    import Ajv from "ajv";
+    import Ajv, { type ValidateFunction } from "ajv";
     import { tooltip } from "$lib/app/utils";
     import { JSONSchemaFaker } from "json-schema-faker";
     import { boolAttr, PressedKeys } from "runed";
+    import { on } from "svelte/events";
 
     type Props = {
         open: boolean;
@@ -23,30 +25,32 @@
 
     let { open = $bindable(), onOpenChange, action, game }: Props = $props();
     const session = getSession();
-    const ajv = new Ajv({ validateFormats: false });
+    const ajv = new Ajv({ validateFormats: false, allErrors: true });
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
-    keys.onKeys(["Control", "Enter"], () => sendAction());
+    keys.onKeys(["Control", "Enter"], sendAction);
+    keys.onKeys(["Alt", "R"], reroll);
 
     let editorEl = $state<HTMLDivElement>();
     let schemaEl = $state<HTMLDivElement>();
-    let view: EditorView | null = null;
-    let schemaView: EditorView | null = null;
-    let jsonContent = $derived.by(() => {
-        const prefill = JSONSchemaFaker.generate(action.schema);
-        return JSON.stringify(prefill, null, 2);
-    });
-    let validationError = $state<string | null>(null);
-    let isValid = $derived(!validationError);
-    let editorInitialized = $state(false);
-    let schemaInitialized = $state(false);
+    let view = $state<EditorView | null>(null);
+    let schemaView = $state<EditorView | null>(null);
+    let jsonContent = $state(genJson());
+    let validationErrors = $state<string[] | null>(null);
+    let isValid = $derived(!validationErrors);
     let schemaCollapsed = $state(false);
-
+    
+    const validate = $derived((action.schema && ajv.compile(action.schema)) as ValidateFunction);
     const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
+
+    function genJson() {
+        if (!action.schema) return "";
+        return JSON.stringify(JSONSchemaFaker.generate(action.schema), null, 2);
+    }
 
     // Initialize CodeMirror editor when dialog opens
     $effect(() => {
-        if (editorEl && open && !editorInitialized) {
+        if (editorEl && open && !view) {
             view = new EditorView({
                 parent: editorEl,
                 doc: jsonContent,
@@ -56,24 +60,40 @@
                     EditorView.lineWrapping,
                     EditorView.updateListener.of((update) => {
                         if (update.docChanged) {
-                            jsonContent = view?.state.doc.toString() || '{}';
+                            jsonContent = view!.state.doc.toString();
                             validateJSON();
                         }
                     }),
                 ],
             });
-            editorInitialized = true;
             validateJSON();
-        } else if (!open && editorInitialized) {
+        } else if (!open) {
             view?.destroy();
             view = null;
-            editorInitialized = false;
         }
     });
+    function reroll() {
+        if (!view) return;
+        view.dispatch({
+            changes: {
+                from: 0,
+                to: view.state.doc.length,
+                insert: genJson(),
+            },
+        });
+    }
+    $effect(() => {
+        return editorEl && on(editorEl, 'keydown', (e) => {
+            if (e.key === "Enter" && e.ctrlKey) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        })
+    })
 
     // Initialize schema viewer when dialog opens and not collapsed
     $effect(() => {
-        if (schemaEl && open && schemaJson && !schemaCollapsed && !schemaInitialized) {
+        if (schemaEl && open && schemaJson && !schemaCollapsed && !schemaView) {
             schemaView = new EditorView({
                 parent: schemaEl,
                 doc: schemaJson,
@@ -85,35 +105,36 @@
                     EditorView.editable.of(false),
                 ],
             });
-            schemaInitialized = true;
-        } else if ((!open || schemaCollapsed) && schemaInitialized) {
+        } else if (!open) {
             schemaView?.destroy();
             schemaView = null;
-            schemaInitialized = false;
         }
     });
+    $effect(() => {
+        validateJSON();
+    })
 
     function validateJSON() {
+        if (!action.schema) {
+            validationErrors = null;
+            return;
+        }
         try {
             const parsed = JSON.parse(jsonContent);
+
+            const valid = validate(parsed);
             
-            // Validate against action schema if available
-            if (action.schema) {
-                const validate = ajv.compile(action.schema);
-                const valid = validate(parsed);
-                
-                if (!valid && validate.errors) {
-                    const errorMessages = validate.errors.map(err => 
-                        `${err.instancePath || 'root'}: ${err.message}`
-                    ).join(', ');
-                    validationError = `Schema validation failed: ${errorMessages}`;
-                    return;
-                }
+            if (!valid && validate.errors) {
+                const errorMessages = validate.errors.map(err => 
+                    `${err.instancePath || '(root)'}: ${err.message}`
+                );
+                validationErrors = errorMessages;
+                return;
             }
             
-            validationError = null;
+            validationErrors = null;
         } catch (e) {
-            validationError = e instanceof Error ? e.message : 'Invalid JSON';
+            validationErrors = [e instanceof Error ? e.message : 'Invalid JSON'];
         }
     }
 
@@ -122,10 +143,7 @@
     }
 
     async function sendAction() {
-        if (!isValid && !shiftPressed) {
-            r.error('Cannot send invalid JSON', validationError || 'Unknown error');
-            return;
-        }
+        if (!isValid && !shiftPressed) return;
 
         const actData = zActData.decode({
             name: action.name,
@@ -137,9 +155,10 @@
             const msg = `User act to ${game.name}: ${JSON.stringify(actData)}`;
             session.context.actor({ text: msg }, true);
             r.debug(msg);
-            closeDialog();
         } catch (e) {
             r.error(`Failed to send action ${action.name}`, `${e}`);
+        } finally {
+            closeDialog();
         }
     }
 </script>
@@ -152,9 +171,26 @@
                 <div class="manual-send-content">
                     <div class="dialog-header">
                         <h2 class="text-lg font-bold">Manual Send ({action.name})</h2>
-                        <button class="close-btn" onclick={closeDialog} {@attach tooltip("Close dialog")}>
-                            <X class="size-4" />
-                        </button>
+                        <div class="header-actions">
+                            <Tooltip>
+                                <Tooltip.Trigger>
+                                    <div class="hotkeys-trigger">
+                                        <CircleQuestionMark />
+                                    </div>
+                                </Tooltip.Trigger>
+                                <Portal>
+                                    <Tooltip.Positioner>
+                                        <Tooltip.Content>
+                                            <div class="hotkeys-tooltip">
+                                                <p class="note"><Hotkey>Alt+R</Hotkey> to use random data. (May not always be valid)</p>
+                                                <p class="note"><Hotkey>Ctrl+Enter</Hotkey> to send action.</p>
+                                                <p class="note">Hold <Hotkey>Shift</Hotkey> to bypass validation.</p>
+                                            </div>
+                                        </Tooltip.Content>
+                                    </Tooltip.Positioner>
+                                </Portal>
+                            </Tooltip>
+                        </div>
                     </div>
                     
                     <div class="dialog-body">
@@ -181,10 +217,11 @@
                                 <div class="editor-split" class:schema-collapsed={schemaCollapsed}>
                                     <div class="editor-panel">
                                         <div class="editor-container" bind:this={editorEl}></div>
-                                        {#if validationError}
+                                        {#if validationErrors}
                                             <div class="error-message">
-                                                <span class="text-xs font-medium">JSON Error:</span>
-                                                <span class="text-xs">{validationError}</span>
+                                                {#each validationErrors as error}
+                                                    <span class="text-xs">{error}</span>
+                                                {/each}
                                             </div>
                                         {/if}
                                     </div>
@@ -197,17 +234,32 @@
                     </div>
                     
                     <div class="dialog-footer">
-                        <button class="btn preset-tonal-surface" onclick={closeDialog}>Cancel</button>
-                        <button
-                            class="btn preset-filled-primary"
-                            onclick={sendAction}
-                            disabled={!isValid && !shiftPressed}
-                            data-bypass={boolAttr(!isValid && shiftPressed)}
-                            {@attach tooltip(shiftPressed ? "Send invalid data?" : "Hold shift to bypass validation")}
-                        >
-                            <Send class="size-4" />
-                            Send
-                        </button>
+                        <div class="flex gap-2">
+                            {#if schemaJson}
+                                <button class="btn preset-tonal-surface"
+                                    onclick={reroll}
+                                    {@attach tooltip("Replace editor contents with random data (Alt+R)")}
+                                >
+                                    <Dice6 class="size-4" />
+                                    Reroll
+                                </button>
+                            {/if}
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn preset-tonal-surface" onclick={closeDialog}>Cancel</button>
+                            <button
+                                class="btn preset-filled-primary"
+                                onclick={sendAction}
+                                disabled={!isValid && !shiftPressed}
+                                data-bypass={boolAttr(!isValid && shiftPressed)}
+                                {@attach tooltip(isValid ? "Send (Ctrl+Enter)"
+                                    : shiftPressed ? "Send invalid data?"
+                                    : "Hold shift to bypass validation")}
+                            >
+                                <Send class="size-4" />
+                                Send
+                            </button>
+                        </div>
                     </div>
                 </div>
             </Dialog.Content>
@@ -232,11 +284,24 @@
         @apply pb-2 border-b border-neutral-200 dark:border-neutral-700;
     }
 
-    .close-btn {
-        @apply p-1 rounded-md transition-colors;
+    .header-actions {
+        @apply flex items-center gap-2;
+    }
+
+    .hotkeys-trigger {
+        @apply text-neutral-500 dark:text-neutral-400;
         &:hover {
-            @apply bg-neutral-200 dark:bg-neutral-700;
+            @apply text-neutral-700 dark:text-neutral-300;
         }
+    }
+
+    .hotkeys-tooltip {
+        @apply card flex flex-col gap-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
+    }
+
+    .note {
+        @apply text-xs;
+        @apply text-neutral-600 dark:text-neutral-400;
     }
 
     .dialog-body {
@@ -323,7 +388,7 @@
     }
 
     .dialog-footer {
-        @apply flex flex-row justify-end gap-2;
+        @apply flex flex-row justify-between items-center w-full;
         @apply pt-2 border-t border-neutral-200 dark:border-neutral-700;
     }
 
