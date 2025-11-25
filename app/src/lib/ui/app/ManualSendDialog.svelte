@@ -4,13 +4,15 @@
     import { basicSetup, EditorView } from "codemirror";
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";
-    import type { Extension } from "@codemirror/state";
     import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
     import { X, Send, ChevronLeft, ChevronRight } from "@lucide/svelte";
     import { getSession } from "$lib/app/utils/di";
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
     import Ajv from "ajv";
+    import { tooltip } from "$lib/app/utils";
+    import { JSONSchemaFaker } from "json-schema-faker";
+    import { boolAttr, PressedKeys } from "runed";
 
     type Props = {
         open: boolean;
@@ -22,12 +24,18 @@
     let { open = $bindable(), onOpenChange, action, game }: Props = $props();
     const session = getSession();
     const ajv = new Ajv({ validateFormats: false });
+    const keys = new PressedKeys();
+    const shiftPressed = $derived(keys.has("Shift"));
+    keys.onKeys(["Control", "Enter"], () => sendAction());
 
     let editorEl = $state<HTMLDivElement>();
     let schemaEl = $state<HTMLDivElement>();
     let view: EditorView | null = null;
     let schemaView: EditorView | null = null;
-    let jsonContent = $state('{}');
+    let jsonContent = $derived.by(() => {
+        const prefill = JSONSchemaFaker.generate(action.schema);
+        return JSON.stringify(prefill, null, 2);
+    });
     let validationError = $state<string | null>(null);
     let isValid = $derived(!validationError);
     let editorInitialized = $state(false);
@@ -55,6 +63,7 @@
                 ],
             });
             editorInitialized = true;
+            validateJSON();
         } else if (!open && editorInitialized) {
             view?.destroy();
             view = null;
@@ -113,7 +122,7 @@
     }
 
     async function sendAction() {
-        if (!isValid) {
+        if (!isValid && !shiftPressed) {
             r.error('Cannot send invalid JSON', validationError || 'Unknown error');
             return;
         }
@@ -133,22 +142,6 @@
             r.error(`Failed to send action ${action.name}`, `${e}`);
         }
     }
-
-    function handleKeydown(e: KeyboardEvent) {
-        if (e.key === 'Escape') {
-            closeDialog();
-        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            sendAction();
-        }
-    }
-
-    // Add keyboard event listener
-    $effect(() => {
-        if (open) {
-            document.addEventListener('keydown', handleKeydown);
-            return () => document.removeEventListener('keydown', handleKeydown);
-        }
-    });
 </script>
 
 <Dialog {open} onOpenChange={(d) => onOpenChange(d.open)}>
@@ -158,8 +151,8 @@
             <Dialog.Content>
                 <div class="manual-send-content">
                     <div class="dialog-header">
-                        <h2 class="text-lg font-bold">Manual Send: {action.name}</h2>
-                        <button class="close-btn" onclick={closeDialog} aria-label="Close dialog">
+                        <h2 class="text-lg font-bold">Manual Send ({action.name})</h2>
+                        <button class="close-btn" onclick={closeDialog} {@attach tooltip("Close dialog")}>
                             <X class="size-4" />
                         </button>
                     </div>
@@ -168,15 +161,14 @@
                         <div class="action-info">
                             <p class="text-sm text-neutral-600 dark:text-neutral-400">{action.description}</p>
                         </div>
-                        
-                        <div class="editor-section">
-                            {#if schemaJson}
+                        {#if schemaJson}
+                            <div class="editor-section">
                                 <div class="editor-header">
                                     <div class="editor-label">JSON Data</div>
                                     <button 
                                         class="schema-toggle"
                                         onclick={() => schemaCollapsed = !schemaCollapsed}
-                                        aria-label={schemaCollapsed ? "Show schema" : "Hide schema"}
+                                        {@attach tooltip(schemaCollapsed ? "Show schema" : "Hide schema")}
                                     >
                                         <span class="text-lg font-medium">Schema</span>
                                         {#if schemaCollapsed}
@@ -186,34 +178,32 @@
                                         {/if}
                                     </button>
                                 </div>
-                            {:else}
-                                <div class="editor-label">JSON Data</div>
-                            {/if}
-                            <div class="editor-split" class:schema-collapsed={schemaCollapsed}>
-                                <div class="editor-panel">
-                                    <div class="editor-container" bind:this={editorEl}></div>
-                                    {#if validationError}
-                                        <div class="error-message">
-                                            <span class="text-xs font-medium">JSON Error:</span>
-                                            <span class="text-xs">{validationError}</span>
-                                        </div>
-                                    {/if}
-                                </div>
-                                {#if schemaJson}
+                                <div class="editor-split" class:schema-collapsed={schemaCollapsed}>
+                                    <div class="editor-panel">
+                                        <div class="editor-container" bind:this={editorEl}></div>
+                                        {#if validationError}
+                                            <div class="error-message">
+                                                <span class="text-xs font-medium">JSON Error:</span>
+                                                <span class="text-xs">{validationError}</span>
+                                            </div>
+                                        {/if}
+                                    </div>
                                     <div class="editor-panel" class:hidden={schemaCollapsed}>
                                         <div class="schema-container" bind:this={schemaEl}></div>
                                     </div>
-                                {/if}
+                                </div>
                             </div>
-                        </div>
+                        {/if}
                     </div>
                     
                     <div class="dialog-footer">
                         <button class="btn preset-tonal-surface" onclick={closeDialog}>Cancel</button>
-                        <button 
-                            class="btn preset-filled-primary" 
+                        <button
+                            class="btn preset-filled-primary"
                             onclick={sendAction}
-                            disabled={!isValid}
+                            disabled={!isValid && !shiftPressed}
+                            data-bypass={boolAttr(!isValid && shiftPressed)}
+                            {@attach tooltip(shiftPressed ? "Send invalid data?" : "Hold shift to bypass validation")}
                         >
                             <Send class="size-4" />
                             Send
@@ -355,5 +345,6 @@
         @apply bg-sky-500 text-white;
         @apply hover:bg-sky-600;
         @apply disabled:opacity-50 disabled:cursor-not-allowed;
+        @apply data-bypass:bg-amber-600;
     }
 </style>
