@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Game } from "$lib/api/registry.svelte";
-    import VersionBadge from "./VersionBadge.svelte";
+    // import VersionChip from "./VersionChip.svelte";
     import { Unplug } from "@lucide/svelte";
     import CopyButton from "../common/CopyButton.svelte";
 
@@ -11,7 +11,7 @@
 <div class="game-tooltip">
     <div class="flex flex-col gap-2">
         <!-- there's only one version currently (clueless) -->
-        <!-- <VersionBadge version={game.conn.version} /> -->
+        <!-- <VersionChip version={game.conn.version} /> -->
         <div class="connection-info">
             <p class="id-text">ID: <span class="id-value">{game.conn.id}</span></p>
             <CopyButton data={game.conn.id} desc="ID" />
