@@ -1,6 +1,6 @@
 <script lang="ts">
     import { getSession, getUIState, getUserPrefs } from "$lib/app/utils/di";
-    import type { MessageSource } from "$lib/app/context.svelte";
+    import type { Message } from "$lib/app/context.svelte";
     import { EllipsisVertical, SendHorizontal, Volume2, VolumeOff } from "@lucide/svelte";
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
     import { PressedKeys } from "runed";
@@ -11,8 +11,8 @@
     const userPrefs = getUserPrefs();
     const uiState = getUIState();
 
-    function getSourceIcon(source: MessageSource): string {
-        switch (source.type) {
+    function getSourceIcon(msg: Message): string {
+        switch (msg.source.type) {
             case "system":
                 return "⚙️";
             case "client":
@@ -20,10 +20,9 @@
             case "user":
                 return "👤";
             case "actor":
-                // TODO: mark manual 'actor' acts (tony)
-                return "🤖";
+                return msg.source.manual ? "👤" : "🤖";
             default:
-                return "";
+                return "❓";
         }
     }
 
@@ -115,27 +114,29 @@
                 <div class={["message", msg.source.type]}
                     class:silent={msg.silent}
                 >
-                    <!-- TODO: put icon in corner (real estate) -->
-                    <!-- TODO: more icons (silent, ephemeral, etc) in one or more corners -->
-                    <span class="message-timestamp"
-                        {@attach tooltip(msg.timestamp.toString())}
-                    >
-                        {msg.timestamp.toLocaleTimeString()}
-                    </span>
                     <span class="message-icon"
                         {@attach tooltip(msg.source.type)}
                     >
-                        {getSourceIcon(msg.source)}
+                        {getSourceIcon(msg)}
                     </span>
-                    {#if msg.source.type === 'client'}
-                        <button class=""
-                            onclick={() => uiState.selectGameTab((msg.source.type === 'client' && msg.source.id) as string)}
-                            title="ID: {msg.source.id}"
-                        >
-                            <span class="client-name">{msg.source.name}:</span>
-                        </button>
-                    {/if}
-                    <span class="message-text">{msg.text}</span>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-timestamp"
+                                {@attach tooltip(msg.timestamp.toString())}
+                            >
+                                {msg.timestamp.toLocaleTimeString()}
+                            </span>
+                            {#if msg.source.type === 'client'}
+                                <button class=""
+                                    onclick={() => uiState.selectGameTab((msg.source.type === 'client' && msg.source.id) as string)}
+                                    title="ID: {msg.source.id}"
+                                >
+                                    <span class="client-name">{msg.source.name}:</span>
+                                </button>
+                            {/if}
+                        </div>
+                        <span class="message-text">{msg.text}</span>
+                    </div>
                 </div>
             {/each}
         </div>
@@ -216,8 +217,7 @@
         }
     }
     .message {
-        @apply grid grid-cols-[auto_auto_auto_1fr] gap-2 items-center;
-        @apply rounded-lg border px-3 py-2 wrap-anywhere;
+        @apply relative rounded-lg border px-3 py-2 wrap-anywhere;
         @apply border-red-400/40; /* invalid source fallback */
         @apply border-dotted hover:border-solid;
         @apply transition-all;
@@ -242,10 +242,31 @@
         }
     }
     .message-icon {
-        @apply text-lg cursor-default;
+        @apply absolute inset-0 size-6;
+        @apply flex items-center justify-center;
+        @apply rounded-br-lg rounded-tl-lg cursor-default;
+        @apply bg-neutral-100 dark:bg-neutral-800;
+    }
+    .message.system .message-icon {
+        @apply bg-amber-200 dark:bg-amber-800/50;
+    }
+    .message.client .message-icon {
+        @apply bg-sky-200 dark:bg-sky-800/50;
+    }
+    .message.user .message-icon {
+        @apply bg-emerald-200 dark:bg-emerald-800/50;
+    }
+    .message.actor .message-icon {
+        @apply bg-purple-200 dark:bg-purple-800/50;
     }
     .message-timestamp {
         @apply text-xs text-neutral-500 dark:text-neutral-400 cursor-default;
+    }
+    .message-content {
+        @apply flex flex-col gap-1 ml-6;
+    }
+    .message-header {
+        @apply flex items-center gap-2;
     }
     .message-text {
         @apply whitespace-pre-wrap text-neutral-700 dark:text-neutral-100;

@@ -19,16 +19,10 @@ App logic:
 - [x] Other OpenAI-compatible services (Local LLMs, OpenAI proper, etc)
 
 Frontend:
-- [ ] Tony mode (manual action sending)
-    - [ ] Code editor (`codemirror`)
-    - [ ] Validation with shift-click override
-    - [ ] Auto-generated action forms (from schema)
-        - [ ] Primitives, Enums
-        - [ ] Arrays
-        - [ ] Objects (& nesting)
-        - [ ] Unions (maybe, they're not supported in sdk)
-        - [ ] Optional properties
-- [ ] Add functionality to context log
+- [x] Tony mode (manual action sending)
+    - [x] Code editor (`codemirror`)
+    - [x] Validation with shift-click override
+- [ ] Extra context features
     - [ ] Click for details dialog
     - [ ] Corner indicators for source, silent/ephemeral
     - [ ] Buttons to copy message text, ID, etc
@@ -42,15 +36,7 @@ Frontend:
 
 ### Future plans
 
-After the port is complete, the Python app will be deprecated and removed. Then, some long-standing TODOs may finally be addressed:
-
-#### Engine hot-swapping
-
-Previously, the LLM engine was selected on startup and could not be changed. The user should be able to pick the engine at runtime and switch between them as needed (maybe per-context, or even per-game).
-
-#### Remote LLM Support
-
-The Tauri app will support OpenAI-compatible remote APIs - specifically, OpenRouter will get direct support, with a generic engine exposed for other services.
+After the Python app is deprecated and removed, some long-standing TODOs may finally be addressed:
 
 #### Miscellaneous task list
 - Actual config UI (I can't believe this wasn't done already)

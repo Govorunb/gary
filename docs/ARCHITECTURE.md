@@ -89,7 +89,7 @@ The Tauri application is in **early development** and represents the future dire
 
 #### Tauri (`app/src-tauri/`)
 - Rust backend for desktop application
-- Handles acting as the WebSocket server, relaying messages to the frontend
+- Hosts the WebSocket server, relaying messages to the frontend
 - Tauri plugins to allow the frontend to invoke common system calls:
   - File system access (`@tauri-apps/plugin-fs`)
   - HTTP client (`@tauri-apps/plugin-http`)
@@ -105,16 +105,14 @@ The Tauri application is in **early development** and represents the future dire
 - SvelteKit routed pages in `app/src/routes/`
 
 #### Frontend Stack
-- Svelte 5
-- SvelteKit
-- Vite
-- Skeleton UI
-- Tailwind CSS
-- Lucide Icons
+- Svelte 5 + SvelteKit + Vite
+- Tailwind CSS + Skeleton UI + Lucide Icons
 - Svelte Sonner (toasts)
   - Skeleton UI already provides toasts, but Zag (their dependency) has a bug that makes it so toasts never get disposed internally and you reach max toasts very quickly
+- Codemirror
 - neverthrow (`Result` type for error handling)
 - Zod (parsing & validation)
+- Ajv (action schema validation for "schema test" internal game)
 
 ## Development Workflow
 
