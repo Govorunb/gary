@@ -218,24 +218,31 @@
     }
     .message {
         @apply relative rounded-lg border px-3 py-2 wrap-anywhere;
-        @apply border-red-400/40; /* invalid source fallback */
         @apply border-dotted hover:border-solid;
         @apply transition-all;
         &.system {
-            @apply bg-amber-400/5;
-            @apply border-amber-400/70;
+            @apply bg-amber-400/5 border-amber-400/70;
+            & .message-icon {
+                @apply bg-amber-200 dark:bg-amber-800/50;
+            }
         }
         &.client {
-            @apply bg-sky-400/5;
-            @apply border-sky-400/70;
+            @apply bg-sky-400/5 border-sky-400/70;
+            & .message-icon {
+                @apply bg-sky-200 dark:bg-sky-800/50;
+            }
         }
         &.user {
-            @apply bg-emerald-400/5;
-            @apply border-emerald-400/70;
+            @apply bg-emerald-400/5 border-emerald-400/70;
+            & .message-icon {
+                @apply bg-emerald-200 dark:bg-emerald-800/50;
+            }
         }
         &.actor {
-            @apply bg-purple-400/5;
-            @apply border-purple-400/70;
+            @apply bg-purple-400/5 border-purple-400/70;
+            & .message-icon {
+                @apply bg-purple-200 dark:bg-purple-800/50;
+            }
         }
         &.silent {
             @apply opacity-70 dark:opacity-60 hover:opacity-100;
@@ -245,19 +252,6 @@
         @apply absolute inset-0 size-6;
         @apply flex items-center justify-center;
         @apply rounded-br-lg rounded-tl-lg cursor-default;
-        @apply bg-neutral-100 dark:bg-neutral-800;
-    }
-    .message.system .message-icon {
-        @apply bg-amber-200 dark:bg-amber-800/50;
-    }
-    .message.client .message-icon {
-        @apply bg-sky-200 dark:bg-sky-800/50;
-    }
-    .message.user .message-icon {
-        @apply bg-emerald-200 dark:bg-emerald-800/50;
-    }
-    .message.actor .message-icon {
-        @apply bg-purple-200 dark:bg-purple-800/50;
     }
     .message-timestamp {
         @apply text-xs text-neutral-500 dark:text-neutral-400 cursor-default;
