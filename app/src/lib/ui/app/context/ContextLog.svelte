@@ -68,7 +68,12 @@
             <Tooltip.Positioner>
                 <Tooltip.Content>
                     <div class="teachtip-content">
-                        <p class="note">Faded messages are <OutLink href="https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md#parameters-2">silent</OutLink>.</p>
+                        <p class="note">Faded messages are
+                            <OutLink href="https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md#parameters-2">
+                                silent
+                            </OutLink>
+                            .
+                        </p>
                         <p class="note">Click client names to jump to their game tab.</p>
                     </div>
                 </Tooltip.Content>
