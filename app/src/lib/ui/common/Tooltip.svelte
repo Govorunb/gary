@@ -10,6 +10,7 @@
         content?: SnippetOfHTML<'div'>,
         children?: Snippet,
     } & TooltipRootProps;
+
     let {
         trigger,
         content,
@@ -24,9 +25,6 @@
         <Tooltip.Positioner>
             <Tooltip.Content element={content}>
                 {@render children?.()}
-                <Tooltip.Arrow style="--arrow-size: calc(var(--spacing) * 2)">
-                    <Tooltip.ArrowTip />
-                </Tooltip.Arrow>
             </Tooltip.Content>
         </Tooltip.Positioner>
     </Portal>

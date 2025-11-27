@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Snippet } from "svelte";
     import { CircleQuestionMark } from "@lucide/svelte";
-    import { Tooltip, Portal } from "@skeletonlabs/skeleton-svelte";
+    import Tooltip from "./Tooltip.svelte";
 
     type Props = {
         interactive?: boolean;
@@ -15,22 +15,14 @@
 </script>
 
 <Tooltip closeOnClick={false} {interactive}>
-    <Tooltip.Trigger>
-        {#snippet element(props)}
-            <button {...props} class="teaching-tooltip-trigger">
-                <CircleQuestionMark />
-            </button>
-        {/snippet}
-    </Tooltip.Trigger>
-    <Portal>
-        <Tooltip.Positioner>
-            <Tooltip.Content>
-                <div class="teaching-tooltip-content">
-                    {@render children()}
-                </div>
-            </Tooltip.Content>
-        </Tooltip.Positioner>
-    </Portal>
+    {#snippet trigger(props)}
+        <button {...props} class="teaching-tooltip-trigger">
+            <CircleQuestionMark />
+        </button>
+    {/snippet}
+    <div class="teaching-tooltip-content">
+        {@render children()}
+    </div>
 </Tooltip>
 
 <style lang="postcss">

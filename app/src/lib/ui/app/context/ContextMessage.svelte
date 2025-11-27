@@ -42,11 +42,12 @@
                 {msg.timestamp.toLocaleTimeString()}
             </span>
             {#if msg.source.type === 'client'}
-                <button class=""
+                <button class="client-name"
+                    tabindex="-1"
                     onclick={() => uiState.selectGameTab((msg.source.type === 'client' && msg.source.id) as string)}
                     title="ID: {msg.source.id}"
                 >
-                    <span class="client-name">{msg.source.name}</span>
+                    {msg.source.name}
                 </button>
             {/if}
         </div>
