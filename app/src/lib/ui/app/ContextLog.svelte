@@ -131,7 +131,7 @@
                                     onclick={() => uiState.selectGameTab((msg.source.type === 'client' && msg.source.id) as string)}
                                     title="ID: {msg.source.id}"
                                 >
-                                    <span class="client-name">{msg.source.name}:</span>
+                                    <span class="client-name">{msg.source.name}</span>
                                 </button>
                             {/if}
                         </div>
@@ -269,9 +269,9 @@
         @apply font-semibold text-neutral-700 dark:text-neutral-100;
     }
     .input-container {
-        @apply flex flex-row gap-1 p-3 rounded-xl;
-        @apply bg-neutral-50 ring-1 ring-primary-200/40 shadow-sm;
-        @apply dark:bg-neutral-900/70 dark:ring-primary-800/40;
+        @apply flex flex-row gap-1 p-2 rounded-xl shadow-sm;
+        @apply bg-neutral-50 dark:bg-neutral-900/70;
+        @apply ring-1 ring-primary-200/40 dark:ring-primary-800/40;
 
         & button {
             @apply self-center px-4 py-2 rounded-md transition-all;

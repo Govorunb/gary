@@ -7,7 +7,7 @@
     import { Dialog, Portal, Tooltip } from "@skeletonlabs/skeleton-svelte";
     import { Send, ChevronLeft, ChevronRight, CircleQuestionMark, Dice6 } from "@lucide/svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
-    import { getSession } from "$lib/app/utils/di";
+    import { getSession, getUserPrefs } from "$lib/app/utils/di";
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
     import Ajv, { type ValidateFunction } from "ajv";
@@ -25,6 +25,7 @@
 
     let { open = $bindable(), onOpenChange, action, game }: Props = $props();
     const session = getSession();
+    const userPrefs = getUserPrefs();
     const ajv = new Ajv({ validateFormats: false, allErrors: true });
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
@@ -39,7 +40,11 @@
     let jsonContent = $state(genJson());
     let validationErrors = $state<string[] | null>(null);
     const isValid = $derived(!validationErrors);
-    let schemaCollapsed = $state(false);
+    const schemaCollapsed = $derived(userPrefs.app.manualSendSchemaCollapsed);
+
+    function toggleCollapsed() {
+        userPrefs.app.manualSendSchemaCollapsed = !userPrefs.app.manualSendSchemaCollapsed;
+    }
     
     const validate = $derived((action.schema && ajv.compile(action.schema)) as ValidateFunction);
     const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
@@ -201,7 +206,7 @@
                                     <div class="editor-label">Action Data</div>
                                     <button 
                                         class="schema-toggle"
-                                        onclick={() => schemaCollapsed = !schemaCollapsed}
+                                        onclick={toggleCollapsed}
                                         {@attach tooltip(schemaCollapsed ? "Show schema" : "Hide schema")}
                                     >
                                         Schema
@@ -368,6 +373,9 @@
         @apply flex-1 min-w-md min-h-48 max-h-96 overflow-auto;
         @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
         @apply bg-neutral-50 dark:bg-neutral-900;
+        & :global(.cm-editor) {
+            @apply h-full;
+        }
     }
 
     .schema-container {
