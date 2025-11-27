@@ -1,4 +1,4 @@
-import * as v1 from "$lib/api/v1/spec";
+import type * as v1 from "$lib/api/v1/spec";
 
 export const TEST_ACTIONS: v1.Action[] = [
     {

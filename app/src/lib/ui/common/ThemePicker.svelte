@@ -34,7 +34,7 @@
         document.documentElement.classList.remove("light", "dark");
         document.documentElement.classList.add(theme);
     }
-    function getItemLabelProps(item: string, i: number) {
+    function getItemLabelProps(_item: string, i: number) {
         return {
             title: themeTips[i],
         };

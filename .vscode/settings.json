@@ -6,5 +6,6 @@
     "files.associations": {
         "*.css": "tailwindcss"
     },
-    "files.eol": "\r\n"
+    "files.eol": "\r\n",
+    "biome.lsp.bin": "app/node_modules/.bin/biome",
 }

@@ -7,7 +7,7 @@ import type { JSONSchema } from "openai/lib/jsonschema";
 import z from "zod";
 import { jsonParse, zConst } from "$lib/app/utils";
 import type { Message as OpenAIMessage } from "@openrouter/sdk/models";
-import { err, ok, Result, ResultAsync } from "neverthrow";
+import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 
 export const zLLMOptions = z.strictObject({
@@ -28,7 +28,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         return new ResultAsync(this.actCore(session, actions, false));
     }
     forceAct(session: Session, actions?: Action[]): ResultAsync<EngineAct, EngineError> {
-        let res = new ResultAsync(this.actCore(session, actions, true));
+        const res = new ResultAsync(this.actCore(session, actions, true));
         return res.andThen(act => act ? ok(act) : err(new EngineError("Force act did not act")));
     }
 

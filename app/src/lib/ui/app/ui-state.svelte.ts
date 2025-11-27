@@ -17,7 +17,7 @@ export class UIState {
     }
 
     selectGameTab(gameId: string) {
-        let i = this.session.registry.games.findIndex((g) => g.conn.id === gameId);
+        const i = this.session.registry.games.findIndex((g) => g.conn.id === gameId);
         if (i === -1) return;
         this.activeGameTab = i;
     }

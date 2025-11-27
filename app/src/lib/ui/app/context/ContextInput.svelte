@@ -12,7 +12,7 @@
     keys.onKeys(["Control", "Enter"], submit);
 
     let value = $state("");
-    let silent = $derived(userPrefs.app.ctxInputSilent !== shiftPressed);
+    const silent = $derived(userPrefs.app.ctxInputSilent !== shiftPressed);
 
     let textareaElem = $state<HTMLTextAreaElement>();
     new TextareaAutosize({

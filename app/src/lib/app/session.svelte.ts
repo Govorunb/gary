@@ -21,8 +21,8 @@ export class Session {
     readonly registry: Registry;
     readonly scheduler: Scheduler;
     
-    engines: Record<string, Engine<any>> = $state({});
-    activeEngine: Engine<any>;
+    engines: Record<string, Engine<unknown>> = $state({});
+    activeEngine: Engine<unknown>;
 
     name: string;
     private ondispose: (() => void)[];
@@ -53,7 +53,7 @@ export class Session {
         })
     }
 
-    private getEngine(id: string): Engine<any> {
+    private getEngine(id: string): Engine<unknown> {
         if (!this.engines[id]) {
             r.error(`Tried to get engine ${id} but it doesn't exist, reverting to Randy`);
             id = RANDY_ID;

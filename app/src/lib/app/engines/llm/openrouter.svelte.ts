@@ -4,7 +4,7 @@ import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import r from "$lib/app/utils/reporting";
 import type { ChatGenerationParams } from "@openrouter/sdk/models";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
-import { type SDKOptions } from "@openrouter/sdk";
+import type { SDKOptions } from "@openrouter/sdk";
 import z from "zod";
 import { err, ok, ResultAsync, type Result } from "neverthrow";
 import { EngineError } from "../index.svelte";
@@ -21,7 +21,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 
     constructor(userPrefs: UserPrefs) {
         super(userPrefs, ENGINE_ID);
-        let clientOpts: SDKOptions = {
+        const clientOpts: SDKOptions = {
             apiKey: async () => this.options.apiKey,
         };
         this.client = new OpenRouterCore(clientOpts);
@@ -34,7 +34,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     async generateCore(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
         type NonStreamingChatParams = ChatGenerationParams & { stream?: false | undefined };
 
-        let params: NonStreamingChatParams = {
+        const params: NonStreamingChatParams = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
         };
@@ -57,7 +57,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 
         r.trace(`Raw OpenRouter response: ${JSON.stringify(res.value)}`);
         const resp = res.value.choices[0];
-        if (resp.finishReason != "stop" && resp.finishReason != "length") {
+        if (resp.finishReason !== "stop" && resp.finishReason !== "length") {
             return err(new EngineError(`Unexpected finishReason ${resp.finishReason}`, undefined, false))
         }
 

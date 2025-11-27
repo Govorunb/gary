@@ -1,6 +1,6 @@
 import { Channel } from "@tauri-apps/api/core";
 import r, { LogLevel } from "$lib/app/utils/reporting";
-import { GameWSConnection, type ServerWSEvent, type AcceptArgs, BaseWSConnection } from "./ws";
+import { GameWSConnection, type ServerWSEvent, type AcceptArgs, type BaseWSConnection } from "./ws";
 import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
 import { safeInvoke } from "$lib/app/utils";
@@ -29,11 +29,11 @@ export class Registry {
     async tryConnect(req: WSConnectionRequest) {
         const id = req.id;
         // approve/deny connection
-        if (req.version != "v1" && req.version != "v2") {
+        if (req.version !== "v1" && req.version !== "v2") {
             await safeInvoke('ws_deny', { id, reason: "Invalid version" });
             return;
         }
-        if (req.version != "v1" && !this.validateGameName(req.game)) {
+        if (req.version !== "v1" && !this.validateGameName(req.game)) {
             await safeInvoke('ws_deny', { id, reason: "Invalid game name" });
             return;
         }
@@ -43,11 +43,11 @@ export class Registry {
     async accept(req: WSConnectionRequest) {
         const channel = new Channel<ServerWSEvent>();
         const conn = new GameWSConnection(req.id, req.version, channel);
-        let gameName = req.version == "v1" ? `<Pending-${conn.id}>` : req.game;
+        const gameName = req.version === "v1" ? v1PendingGameName(conn.id) : req.game;
         r.debug(`Creating game '${gameName}' (${req.version})`);
         this.createGame(gameName, conn);
         await safeInvoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
-        if (conn.version == "v1") {
+        if (conn.version === "v1") {
             r.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
             await conn.send(v1.zReregisterAll.decode({}));
         }
@@ -65,7 +65,7 @@ export class Registry {
     }
 
     getGame(id: string) {
-        return this.games.find(g => g.conn.id == id || g.conn.shortId == id);
+        return this.games.find(g => g.conn.id === id || g.conn.shortId === id);
     }
 
     validateGameName(name: string): boolean {
@@ -135,10 +135,10 @@ export class Game {
 
     async handle(msg: v1.GameMessage) {
         r.verbose(`Handling ${msg.command}`);
-        if (this.conn.version == "v1") {
+        if (this.conn.version === "v1") {
             // technically vulnerable but i'd like to see a game out in the wild actually guess its own id
             // could also just replace the game name on every single message, it's UB in the v1 spec so we can do whatever
-            if (this.name === `<Pending-${this.conn.id}>`) {
+            if (this.name === v1PendingGameName(this.conn.id)) {
                 r.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
             } else if (this.name !== msg.game) {
                 r.warn(`${this.name} changed name to ${msg.game}`);
@@ -193,7 +193,7 @@ export class Game {
             if (this.actions.has(action.name)) {
                 // duplicate action conflict resolution
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
-                const isV1 = this.version == "v1";
+                const isV1 = this.version === "v1";
                 const logMethod = isV1 ? r.warn : r.info;
                 logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`);
                 if (isV1) continue;
@@ -226,4 +226,8 @@ export class Game {
         const prompt = `You must perform one of the following actions, given this information: {${queryStr}${stateStr}"available_actions":${JSON.stringify(actions)}}`;
         return prompt;
     }
+}
+
+function v1PendingGameName(id: string) {
+    return `<v1-Pending-${id}>`;
 }

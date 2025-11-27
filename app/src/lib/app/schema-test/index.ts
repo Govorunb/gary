@@ -1,8 +1,8 @@
 import r from "$lib/app/utils/reporting";
 import type { GameWSSender } from "$lib/api/ws";
 import { ClientGame } from "./client-game";
-import * as v1 from "$lib/api/v1/spec";
-import { type ActionResult } from './client-game';
+import type * as v1 from "$lib/api/v1/spec";
+import type { ActionResult } from './client-game';
 import { TEST_ACTIONS_MAP } from "./actions";
 
 

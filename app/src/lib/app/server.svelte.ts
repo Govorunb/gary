@@ -1,8 +1,8 @@
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { UnlistenFn } from "@tauri-apps/api/event";
 import r from "$lib/app/utils/reporting";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
-import { UserPrefs } from "./prefs.svelte";
+import type { UserPrefs } from "./prefs.svelte";
 import { listenSub, safeInvoke } from "./utils";
 import { settled } from "svelte";
 

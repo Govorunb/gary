@@ -52,6 +52,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.3.7",
     "@skeletonlabs/skeleton": "^4.5.0",
     "@skeletonlabs/skeleton-svelte": "^4.5.0",
     "@sveltejs/adapter-static": "^3.0.10",

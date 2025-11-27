@@ -145,7 +145,7 @@ class DefaultReporter implements Reporter {
     }
 
     private gatherOptsAndReport(level: LogLevel, args: any[]): Promise<void> {
-        if (args.length != 1 && args.length != 2) {
+        if (args.length !== 1 && args.length !== 2) {
             throw new Error("Invalid number of arguments", { cause: args });
         }
         let opts: ReportOptions = {} as ReportOptions;
@@ -153,7 +153,7 @@ class DefaultReporter implements Reporter {
             opts = typeof(args[0]) === "string"
                 ? { message: args[0] }
                 : args[0];
-            if (args.length == 2) {
+            if (args.length === 2) {
                 if (typeof(args[1]) === "string") {
                     opts.details = args[1];
                 } else {

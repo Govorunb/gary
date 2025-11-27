@@ -2,8 +2,8 @@ import type { Session } from "./session.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
 import r from "$lib/app/utils/reporting";
 import { zAct, zActData, type Action } from "$lib/api/v1/spec";
-import { EngineError, type Engine, type EngineAct } from "./engines/index.svelte";
-import { err, errAsync, ok, Result, ResultAsync } from "neverthrow";
+import type { EngineError, Engine, EngineAct } from "./engines/index.svelte";
+import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 
 export class Scheduler {
     /** Explicitly muted, e.g. through the app UI. */
@@ -15,7 +15,7 @@ export class Scheduler {
     public readonly canAct: boolean = $derived(!this.muted && !this.busy && !this.errored);
 
     private readonly registry: Registry;
-    private activeEngine: Engine<any> | null;
+    private activeEngine: Engine<unknown> | null;
     public readonly activeMutes: string[];
     /** A signal telling the scheduler to prompt the active engine to act as soon as possible.
      * This can be flipped true by:
@@ -127,7 +127,7 @@ export class Scheduler {
     }
 
     private checkIgnored() {
-        let out = [];
+        const out = [];
         // const mutes = Array.from(this.mutes.entries().filter(([_, v]) => v));
         // if (mutes.length) {
         //     out.push(`muted: ${mutes.map(([k]) => k).join(", ")}`);

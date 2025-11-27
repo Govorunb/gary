@@ -1,9 +1,8 @@
-import { Channel } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { Channel } from "@tauri-apps/api/core";
+import type { UnlistenFn } from "@tauri-apps/api/event";
 import r from "$lib/app/utils/reporting";
 import type { NeuroMessage, GameMessage } from "./v1/spec";
 import { listenSub, safeInvoke, type Awaitable } from "$lib/app/utils";
-import { err, ok, Ok, type Result } from "neverthrow";
 
 type OnMessageHandler = (msg: string) => Awaitable;
 type OnCloseHandler = (clientDisconnected?: CloseFrame) => Awaitable;
@@ -157,7 +156,7 @@ export class GameWSConnection extends BaseWSConnection {
 }
 
 export class InternalWSConnection extends BaseWSConnection {
-    protected readonly sendListeners: ((value: Result<string, any>) => void)[] = [];
+    protected readonly sendListeners: ((value: string | null) => void)[] = [];
 
     constructor(id: string, version: string = "v1") {
         super(id, version);
@@ -171,7 +170,7 @@ export class InternalWSConnection extends BaseWSConnection {
             r.warn(`${this.shortId} screaming into the void`);
         }
         for (const listener of this.sendListeners) {
-            listener(ok(text));
+            listener(text);
         }
     }
 
@@ -183,16 +182,16 @@ export class InternalWSConnection extends BaseWSConnection {
 
     public dispose() {
         for (const listener of this.sendListeners) {
-            listener(err(null));
+            listener(null);
         }
         super.dispose();
     }
 
     public async* listenSend(): AsyncGenerator<string> {
         while (!this.closed) {
-            const res = await new Promise<Result<string, any>>(resolve => this.sendListeners.push(resolve));
-            if (res.isErr()) break;
-            yield res.value;
+            const res = await new Promise<string | null>(resolve => this.sendListeners.push(resolve));
+            if (res === null) break;
+            yield res;
         }
     }
 }
