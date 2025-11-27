@@ -4,16 +4,12 @@
     import { EllipsisVertical } from "@lucide/svelte";
     import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
 
-    interface Props {
-        open: boolean;
-        onOpenChange: (open: boolean) => void;
-    }
-
-    const { open, onOpenChange }: Props = $props();
     const session = getSession();
 
+    let open = $state(false);
+
     function closeMenu() {
-        onOpenChange(false);
+        open = false;
     }
     function clearContext() {
         session.context.clear();
@@ -25,7 +21,7 @@
     }
 </script>
 
-<Popover modal open={open} onOpenChange={(d) => onOpenChange(d.open)}>
+<Popover modal {open} onOpenChange={(d) => open = d.open}>
     <Popover.Trigger>
         {#snippet element(props)}
             <button {...props} class="menu-trigger" {@attach tooltip("Menu")}>
@@ -34,7 +30,7 @@
         {/snippet}
     </Popover.Trigger>
     <Portal>
-        <Popover.Positioner class="z-20!">
+        <Popover.Positioner>
             <Popover.Content>
                 <div class="menu-content">
                     <button class="btn preset-tonal-surface" onclick={copyContext}>
