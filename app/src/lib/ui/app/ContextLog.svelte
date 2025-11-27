@@ -1,11 +1,12 @@
 <script lang="ts">
     import { getSession, getUIState, getUserPrefs } from "$lib/app/utils/di";
     import type { Message } from "$lib/app/context.svelte";
-    import { EllipsisVertical, SendHorizontal, Volume2, VolumeOff } from "@lucide/svelte";
-    import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
+    import { EllipsisVertical, SendHorizontal, Volume2, VolumeOff, CircleQuestionMark } from "@lucide/svelte";
+    import { Popover, Portal, Tooltip } from '@skeletonlabs/skeleton-svelte';
     import { PressedKeys } from "runed";
     import { clamp, tooltip } from "$lib/app/utils";
     import { untrack } from "svelte";
+    import OutLink from "../common/OutLink.svelte";
 
     const session = getSession();
     const userPrefs = getUserPrefs();
@@ -107,6 +108,21 @@
             </Portal>
         </Popover>
         <h2>Context Log</h2>
+        <Tooltip>
+            <Tooltip.Trigger>
+                <CircleQuestionMark class="teachtip-trigger" />
+            </Tooltip.Trigger>
+            <Portal>
+                <Tooltip.Positioner>
+                    <Tooltip.Content>
+                        <div class="teachtip-content">
+                            <p class="note">Faded messages are <OutLink href="https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md#parameters-2">silent</OutLink>.</p>
+                            <p class="note">Click client names to jump to their game tab.</p>
+                        </div>
+                    </Tooltip.Content>
+                </Tooltip.Positioner>
+            </Portal>
+        </Tooltip>
     </div>
     <div class="reverse-log">
         <div class="log" onscroll={logScroll} bind:this={scrollElem}>
@@ -298,5 +314,16 @@
         &:hover:not(:disabled) {
             @apply bg-primary-400 dark:bg-primary-800;
         }
+    }
+    
+    :global(.teachtip-trigger) {
+        @apply stroke-neutral-400;
+        &:hover {
+            @apply stroke-neutral-600 dark:stroke-neutral-200;
+        }
+    }
+    
+    .teachtip-content {
+        @apply card flex flex-col gap-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
     }
 </style>
