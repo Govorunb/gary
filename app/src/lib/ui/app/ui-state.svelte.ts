@@ -10,9 +10,8 @@ export class UIState {
     manualSendDialog: ManualSendDialogState = $state(null);
 
     constructor(private readonly session: Session) {
-        const games = $derived(session.registry.games);
         $effect(() => {
-            this.activeGameTab = clamp(this.activeGameTab, 0, games.length);
+            this.activeGameTab = clamp(this.activeGameTab, 0, session.registry.games.length - 1);
         });
     }
 
