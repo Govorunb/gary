@@ -1,5 +1,4 @@
 <script lang="ts">
-    import type { Action } from "$lib/api/v1/spec";
     import { basicSetup, EditorView } from "codemirror";
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";
@@ -11,15 +10,19 @@
     import CopyButton from "../../common/CopyButton.svelte";
     import { preventDefault, tooltip } from "$lib/app/utils";
     import type { Game } from "$lib/api/registry.svelte";
+    import type { GameAction } from "$lib/api/registry.svelte";
+    import { boolAttr } from "runed";
 
     type Props = {
-        action: Action;
+        action: GameAction;
         game: Game;
     };
 
     let { action, game }: Props = $props();
     const session = getSession();
     const uiState = getUIState();
+
+    const active = $derived(action.active);
 
     let open = $state(false);
 
@@ -83,7 +86,7 @@
     }
 </script>
 
-<details class="accordion group" bind:open>
+<details class="root accordion group" bind:open data-active={boolAttr(active)}>
     <summary>
         <span>{action.name}</span>
         <div class="actions">
@@ -168,5 +171,8 @@
         @apply text-xs;
         @apply bg-neutral-100 dark:bg-neutral-800;
         @apply text-neutral-900 dark:text-neutral-100;
+    }
+    .root:not([data-active]) {
+        @apply opacity-60;
     }
 </style>

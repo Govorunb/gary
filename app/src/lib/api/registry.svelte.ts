@@ -84,10 +84,11 @@ export class Registry {
     // tldr: each connection is a new game, keeping disconnected games in UI (for action list) is undecided
 }
 
+export type GameAction = v1.Action & { active: boolean };
+
 export class Game {
-    public readonly actions = $state(new SvelteMap<string, v1.Action>());
+    public readonly actions = $state(new SvelteMap<string, GameAction>());
     public name: string = $state(null!);
-    // private readonly seenActions = new Set<string>(); // log new actions
     constructor(
         private readonly session: Session,
         name: string,
@@ -173,7 +174,7 @@ export class Game {
             case "action/result":
                 const silent = msg.data.success;
                 let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
-                text += msg.data.message ? `: ${msg.data.message}` : " (no message)";
+                text += msg.data.message ? ` (${msg.data.message})` : " (no message)";
                 await this.context(text, silent);
                 break;
             case "shutdown/ready":
@@ -190,7 +191,8 @@ export class Game {
     async registerActions(actions: v1.Action[]) {
         r.debug(`${this.actions.size} existing actions`);
         for (const action of actions) {
-            if (this.actions.has(action.name)) {
+            const existing = this.actions.get(action.name);
+            if (existing?.active) {
                 // duplicate action conflict resolution
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                 const isV1 = this.version === "v1";
@@ -198,7 +200,8 @@ export class Game {
                 logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`);
                 if (isV1) continue;
             }
-            this.actions.set(action.name, action);
+            const storedAction = $state({ ...action, active: true });
+            this.actions.set(action.name, storedAction);
         }
         if (actions.length > 5) {
             r.debug(`(${this.name}) Registered ${actions.length} actions`);
@@ -209,9 +212,13 @@ export class Game {
 
     async unregisterActions(actions: string[]) {
         for (const action_name of actions) {
-            const existed = this.actions.delete(action_name);
-            const logMethod = existed ? r.debug : r.warn;
-            logMethod.bind(r)(`(${this.name}) Unregistered ${existed ? '' : 'non-'}existing action ${action_name}`);
+            const existing = this.actions.get(action_name);
+            if (existing?.active) {
+                existing.active = false;
+                r.debug(`(${this.name}) Unregistered action '${action_name}'`);
+            } else {
+                r.warn(`(${this.name}) Unregistered non-existing action '${action_name}'`);
+            }
         }
         r.debug(`(${this.name}) Actions unregistered: [${actions}]`);
     }

@@ -3,7 +3,6 @@ import r from "$lib/app/utils/reporting";
 import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
-import { ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 import { toast } from "svelte-sonner";
 
 export const USER_PREFS = "userPrefs";
@@ -66,7 +65,7 @@ export class UserPrefs {
             });
             return zUserPrefs.decode({});
         }
-        r.debug(`loaded prefs: ${JSON.stringify(parsed.data)}`);
+        r.debug("loaded prefs");
         // TODO: dedicated thing for fixups/migrations
         if (!Reflect.has(parsed.data.engines, parsed.data.app.selectedEngine)) {
             parsed.data.app.selectedEngine = RANDY_ID;
@@ -136,5 +135,3 @@ export const zUserPrefs = z.strictObject({
 
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
 export type AppPrefs = z.infer<typeof zAppPrefs>;
-
-export const KNOWN_ENGINE_IDS = [RANDY_ID, OPENROUTER_ID, 'ollama', 'lmstudio'];

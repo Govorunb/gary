@@ -53,6 +53,7 @@
         {
             "includes": ["**/*.svelte"],
             "linter": {
+                "enabled": false,
                 "rules": {
                     "style": {
                         "useConst": "off",

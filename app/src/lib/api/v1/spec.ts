@@ -14,7 +14,7 @@ export const zGameMessageBase = z.strictObject({
     game: z.string().nonempty(),
     // *technically* an error to include this in dataless messages, but we ball
     // (e.g. Abandoned Pub sends `startup` with `data: {}`)
-    data: z.object().optional(),
+    data: z.object().nullish(),
 });
 
 export const zStartup = z.strictObject({
