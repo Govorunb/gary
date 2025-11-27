@@ -8,7 +8,7 @@
     import { JSONSchemaFaker } from "json-schema-faker";
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
-    import CopyButton from "../common/CopyButton.svelte";
+    import CopyButton from "../../common/CopyButton.svelte";
     import { preventDefault, tooltip } from "$lib/app/utils";
     import type { Game } from "$lib/api/registry.svelte";
 

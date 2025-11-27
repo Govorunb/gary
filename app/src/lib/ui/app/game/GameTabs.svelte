@@ -1,7 +1,7 @@
 <script lang="ts">
     import { getRegistry, getUIState } from "$lib/app/utils/di";
     import GameActionList from "./GameActionList.svelte";
-    import Tooltip from "../common/Tooltip.svelte";
+    import Tooltip from "$lib/ui/common/Tooltip.svelte";
     import { horizontalScroll } from "$lib/app/utils";
     import GameTooltip from "./GameTooltip.svelte";
     import { InternalWSConnection, GameWSSender } from "$lib/api/ws";

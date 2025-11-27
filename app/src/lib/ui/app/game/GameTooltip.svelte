@@ -2,7 +2,7 @@
     import type { Game } from "$lib/api/registry.svelte";
     // import VersionChip from "./VersionChip.svelte";
     import { Unplug } from "@lucide/svelte";
-    import CopyButton from "../common/CopyButton.svelte";
+    import CopyButton from "$lib/ui/common/CopyButton.svelte";
 
     type Props = { game: Game };
     let { game }: Props = $props();
