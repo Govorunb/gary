@@ -6,19 +6,19 @@ import type { Game } from "$lib/api/registry.svelte";
 export type ManualSendDialogState = null | { action: Action, game: Game };
 
 export class UIState {
-    activeGameTab: number = $state(0);
+    selectedGameTab: number = $state(0);
     manualSendDialog: ManualSendDialogState = $state(null);
 
     constructor(private readonly session: Session) {
         $effect(() => {
-            this.activeGameTab = clamp(this.activeGameTab, 0, session.registry.games.length - 1);
+            this.selectedGameTab = clamp(this.selectedGameTab, 0, session.registry.games.length - 1);
         });
     }
 
     selectGameTab(gameId: string) {
         const i = this.session.registry.games.findIndex((g) => g.conn.id === gameId);
         if (i === -1) return;
-        this.activeGameTab = i;
+        this.selectedGameTab = i;
     }
 
     openManualSendDialog(action: Action, game: Game) {
