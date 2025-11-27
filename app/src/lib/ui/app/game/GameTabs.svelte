@@ -2,7 +2,7 @@
     import { getRegistry, getUIState } from "$lib/app/utils/di";
     import GameActionList from "./GameActionList.svelte";
     import { horizontalScroll, tooltip } from "$lib/app/utils";
-    import GameTooltip from "./GameTooltip.svelte";
+    import GameMenu from "./GameMenu.svelte";
     import { InternalWSConnection, GameWSSender } from "$lib/api/ws";
     import { SchemaTestGame } from "$lib/app/schema-test";
     import { boolAttr } from "runed";
@@ -63,7 +63,7 @@
                         <Portal>
                             <Popover.Positioner>
                                 <Popover.Content>
-                                    <GameTooltip {game} />
+                                    <GameMenu {game} />
                                 </Popover.Content>
                             </Popover.Positioner>
                         </Portal>
