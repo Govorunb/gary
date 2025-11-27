@@ -8,7 +8,7 @@
     import { ENGINE_ID as RANDY_ID } from '$lib/app/engines/randy.svelte';
     import { ENGINE_ID as OPENROUTER_ID } from '$lib/app/engines/llm/openrouter.svelte';
     import { fade, fly } from 'svelte/transition';
-    import { Tooltip } from '@skeletonlabs/skeleton-svelte';
+    import TeachingTooltip from '$lib/ui/common/TeachingTooltip.svelte';
     import Hotkey from '$lib/ui/common/Hotkey.svelte';
 
     const session = getSession();
@@ -106,24 +106,13 @@
                         <div class="view-container" in:fly={{ x: -20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
                             <div class="header">
                                 <h3>Select Engine</h3>
-                                <Tooltip>
-                                    <Tooltip.Trigger>
-                                        <CircleQuestionMark class="hotkeys-trigger" />
-                                    </Tooltip.Trigger>
-                                    <Portal>
-                                        <Tooltip.Positioner>
-                                            <Tooltip.Content>
-                                                <div class="hotkeys-tooltip">
-                                                    <p class="note"><Hotkey>Ctrl+E</Hotkey> to open/close engine picker.</p>
-                                                    <p class="note"><Hotkey>1..9</Hotkey> to quick-select engine.</p>
-                                                    <p class="note"><Hotkey>Alt-click</Hotkey> an engine to quickly open config.</p>
-                                                    <p class="note"><Hotkey>Alt+A</Hotkey> to create a custom OpenAI-compatible engine.</p>
-                                                    <p class="note">Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (OpenAI-compatible only)</p>
-                                                </div>
-                                            </Tooltip.Content>
-                                        </Tooltip.Positioner>
-                                    </Portal>
-                                </Tooltip>
+                                <TeachingTooltip>
+                                    <p><Hotkey>Ctrl+E</Hotkey> to open/close engine picker.</p>
+                                    <p><Hotkey>1..9</Hotkey> to quick-select engine.</p>
+                                    <p><Hotkey>Alt-click</Hotkey> an engine to quickly open config.</p>
+                                    <p><Hotkey>Alt+A</Hotkey> to create a custom OpenAI-compatible engine.</p>
+                                    <p>Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (OpenAI-compatible only)</p>
+                                </TeachingTooltip>
                             </div>
 
                             <div class="list">
@@ -311,16 +300,5 @@
 
     .config-body {
         @apply p-4 overflow-y-auto;
-    }
-    
-    :global(.hotkeys-trigger) {
-        @apply stroke-neutral-400;
-        &:hover {
-            @apply stroke-neutral-600 dark:stroke-neutral-200;
-        }
-    }
-    
-    .hotkeys-tooltip {
-        @apply card flex flex-col gap-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
     }
 </style>

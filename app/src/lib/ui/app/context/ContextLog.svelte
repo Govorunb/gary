@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { SendHorizontal, Volume2, VolumeOff, CircleQuestionMark } from "@lucide/svelte";
-    import { Tooltip } from '@skeletonlabs/skeleton-svelte';
+    import { SendHorizontal, Volume2, VolumeOff } from "@lucide/svelte";
     import { PressedKeys } from "runed";
     import { untrack } from "svelte";
     import { getSession, getUserPrefs } from "$lib/app/utils/di";
     import { clamp, tooltip } from "$lib/app/utils";
     import OutLink from "$lib/ui/common/OutLink.svelte";
+    import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import ContextMessage from "$lib/ui/app/context/ContextMessage.svelte";
     import ContextLogMenu from "$lib/ui/app/context/ContextLogMenu.svelte";
 
@@ -58,27 +58,18 @@
 </script>
 
 <div class="container">
-    <div class="flex flex-row gap-4">
+    <div class="flex flex-row gap-4 w-full">
         <ContextLogMenu open={ctxMenuOpen} onOpenChange={(open) => ctxMenuOpen = open} />
-        <h2>Context Log</h2>
-        <Tooltip>
-            <Tooltip.Trigger>
-                <CircleQuestionMark class="teachtip-trigger" />
-            </Tooltip.Trigger>
-            <Tooltip.Positioner>
-                <Tooltip.Content>
-                    <div class="teachtip-content">
-                        <p class="note">Faded messages are
-                            <OutLink href="https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md#parameters-2">
-                                silent
-                            </OutLink>
-                            .
-                        </p>
-                        <p class="note">Click client names to jump to their game tab.</p>
-                    </div>
-                </Tooltip.Content>
-            </Tooltip.Positioner>
-        </Tooltip>
+        <h2 class="flex-1">Context Log</h2>
+        <TeachingTooltip>
+            <p>Faded messages are
+                <OutLink href="https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md#parameters-2">
+                    silent
+                </OutLink>
+                .
+            </p>
+            <p>Click client names to jump to their game tab.</p>
+        </TeachingTooltip>
     </div>
     <div class="reverse-log">
         <div class="log" onscroll={logScroll} bind:this={scrollElem}>
@@ -167,16 +158,5 @@
         &:hover:not(:disabled) {
             @apply bg-primary-400 dark:bg-primary-800;
         }
-    }
-    
-    :global(.teachtip-trigger) {
-        @apply stroke-neutral-400;
-        &:hover {
-            @apply stroke-neutral-600 dark:stroke-neutral-200;
-        }
-    }
-    
-    .teachtip-content {
-        @apply card flex flex-col gap-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
     }
 </style>

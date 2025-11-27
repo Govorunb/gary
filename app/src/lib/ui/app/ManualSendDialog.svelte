@@ -4,8 +4,9 @@
     import { basicSetup, EditorView } from "codemirror";
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";
-    import { Dialog, Portal, Tooltip } from "@skeletonlabs/skeleton-svelte";
-    import { Send, ChevronLeft, ChevronRight, CircleQuestionMark, Dice6 } from "@lucide/svelte";
+    import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
+    import { Send, ChevronLeft, ChevronRight, Dice6 } from "@lucide/svelte";
+    import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
     import { getSession, getUserPrefs } from "$lib/app/utils/di";
     import { zAct, zActData } from "$lib/api/v1/spec";
@@ -175,24 +176,15 @@
                     <div class="dialog-header">
                         <h2 class="text-lg font-bold">Manual Send ({action.name})</h2>
                         <div class="header-actions">
-                            <Tooltip>
-                                <Tooltip.Trigger>
-                                    <div class="hotkeys-trigger">
-                                        <CircleQuestionMark />
-                                    </div>
-                                </Tooltip.Trigger>
-                                <Portal>
-                                    <Tooltip.Positioner>
-                                        <Tooltip.Content>
-                                            <div class="hotkeys-tooltip">
-                                                <p class="note"><Hotkey>Alt+R</Hotkey> to use random data. (May not always be valid)</p>
-                                                <p class="note"><Hotkey>Ctrl+Enter</Hotkey> to send action.</p>
-                                                <p class="note">Hold <Hotkey>Shift</Hotkey> to bypass validation.</p>
-                                            </div>
-                                        </Tooltip.Content>
-                                    </Tooltip.Positioner>
-                                </Portal>
-                            </Tooltip>
+                            <TeachingTooltip>
+                                {#if schemaJson}
+                                    <p><Hotkey>Alt+R</Hotkey> to use random data. (May not always be valid)</p>
+                                {/if}
+                                <p><Hotkey>Ctrl+Enter</Hotkey> to send action.</p>
+                                {#if schemaJson}
+                                    <p>Hold <Hotkey>Shift</Hotkey> to bypass validation.</p>
+                                {/if}
+                            </TeachingTooltip>
                         </div>
                     </div>
                     
@@ -229,7 +221,7 @@
                                         {/if}
                                     </div>
                                     <div class="editor-panel" class:hidden={schemaCollapsed}>
-                                        <div class="schema-container" bind:this={schemaEl}></div>
+                                        <div class="editor-container schema-container" bind:this={schemaEl}></div>
                                     </div>
                                 </div>
                             </div>
@@ -289,22 +281,6 @@
 
     .header-actions {
         @apply flex items-center gap-2;
-    }
-
-    .hotkeys-trigger {
-        @apply text-neutral-500 dark:text-neutral-400;
-        &:hover {
-            @apply text-neutral-700 dark:text-neutral-300;
-        }
-    }
-
-    .hotkeys-tooltip {
-        @apply card flex flex-col gap-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
-    }
-
-    .note {
-        @apply text-xs;
-        @apply text-neutral-600 dark:text-neutral-400;
     }
 
     .dialog-body {
@@ -379,8 +355,6 @@
     }
 
     .schema-container {
-        @apply flex-1 min-w-md min-h-48 max-h-96 overflow-auto;
-        @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
         @apply bg-neutral-100 dark:bg-neutral-800;
         @apply text-neutral-700 dark:text-neutral-300;
     }

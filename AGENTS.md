@@ -70,6 +70,39 @@ Zod use should follow these conventions:
 - For discriminated unions, use our `zConst` utility (that combines `z.literal` and `z.default`) to make object creation easy - e.g. with it, we can just use `zMyUnionMemberSubtype.decode({})` and omit the discriminator field entirely. Do note that `.decode({})` is not acceptable for validating values coming from outside.
 - When constructing objects in code from literals, prefer `zMyType.decode(input)` as it enables type checking whereas the `zMyType.parse(input)` parameter is typed as `unknown`. Use `parse` for outside input.
 
+#### Skeleton UI
+
+Svelte scopes CSS to the component - at compile time, a class like `.my-class` is transformed into e.g. `.random-id-unique-by-component.my-class`.
+On the other hand, props on components *are not HTML props* - `class` may eventually be applied to a real HTML element, but because of this CSS scoping the compiled selector **will not** apply to the nested component's elements. To get around this, you need to either "consume" the CSS class in the same component, or use the `:global` selector, e.g. `:global(.my-class)` (however, this pollutes the global styles, so prefer the first option).
+
+```svelte
+<!-- Incorrect -->
+<Tooltip.Trigger class="tooltip-trigger">
+    ...
+</Tooltip.Trigger>
+
+<!-- Do this instead -->
+<Tooltip.Trigger>
+    {#snippet element(props)}
+        <!-- Tooltip specifically requires a button, but this may be another element - check for other examples in the codebase -->
+        <button {...props} class="tooltip-trigger">
+            ...
+        </button>
+    {/snippet}
+</Tooltip.Trigger>
+
+<style lang="postcss">
+@reference "global.css";
+.tooltip-trigger {
+    ...
+}
+/* alternative way - worse, prefer not doing this */
+:global(.tooltip-trigger) {
+    ...
+}
+</style>
+```
+
 ### Backend
 
 The Rust side should handle as little as possible to keep the majority of app logic concentrated in just TypeScript (for maintainability). The only things that must be handed over to Rust are system calls and things that aren't possible to do on the frontend; for example, we can't host a WebSocket server from the system WebView, so we must use Rust for that. But, since the Rust side should stay out of app logic, it just forwards messages to the frontend and does not handle any of them.

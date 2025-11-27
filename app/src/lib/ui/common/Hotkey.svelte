@@ -15,7 +15,10 @@
     @reference "global.css";
 
     .hotkey {
-        @apply chip preset-outlined-surface-200-800 px-1.5 py-0.5;
+        @apply inline-flex flex-row gap-2 items-center justify-center;
+        @apply px-1.5 py-0.5 rounded;
+        @apply text-xs whitespace-nowrap;
+        @apply preset-outlined-surface-200-800;
         @apply text-neutral-800 dark:text-neutral-100;
         @apply bg-surface-100/60 dark:bg-surface-900/60;
     }
