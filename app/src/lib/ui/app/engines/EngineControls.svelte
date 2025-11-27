@@ -61,28 +61,26 @@
 
 <div class="engine-controls">
     <EnginePicker />
-    {#if session.activeEngine}
-        <button 
-            onclick={toggleMute}
-            class="act-btn mute-btn"
-            class:muted={scheduler.muted}
-            class:errored={scheduler.errored}
-            {@attach tooltip(muteTooltip)}
-        >
-            <MuteIcon />
-        </button>
-        <button 
-            onclick={() => poke(shiftPressed)} 
-            class="act-btn"
-            {@attach tooltip(shiftPressed ? "Force Act" : "Act (Shift for Force)")}
-        >
-            {#if shiftPressed}
-                <HandFist />
-            {:else}
-                <Pointer />
-            {/if}
-        </button>
-    {/if}
+    <button 
+        onclick={toggleMute}
+        class="act-btn mute-btn"
+        class:muted={scheduler.muted}
+        class:errored={scheduler.errored}
+        {@attach tooltip(muteTooltip)}
+    >
+        <MuteIcon />
+    </button>
+    <button 
+        onclick={() => poke(shiftPressed)} 
+        class="act-btn"
+        {@attach tooltip(shiftPressed ? "Force Act" : "Act (Shift for Force)")}
+    >
+        {#if shiftPressed}
+            <HandFist />
+        {:else}
+            <Pointer />
+        {/if}
+    </button>
 </div>
 
 <style lang="postcss">

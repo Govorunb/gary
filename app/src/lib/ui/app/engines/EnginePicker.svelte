@@ -1,8 +1,8 @@
 <script lang="ts">
     import { getSession, getUserPrefs } from '$lib/app/utils/di';
     import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
-    import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check, CircleQuestionMark } from '@lucide/svelte';
-    import { getEngineConfigComponent } from './engines/EngineConfig.svelte';
+    import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
+    import { getEngineConfigComponent } from './EngineConfig.svelte';
     import { PressedKeys } from 'runed';
     import r from "$lib/app/utils/reporting";
     import { ENGINE_ID as RANDY_ID } from '$lib/app/engines/randy.svelte';
@@ -20,7 +20,7 @@
     const showingEngineList = $derived(open && !configEngineId);
     const engines = $derived(Object.entries(session.engines));
     const keys = new PressedKeys();
-    const shiftPressed = $derived(keys.has('Shift')); // TODO: teach
+    const shiftPressed = $derived(keys.has('Shift'));
 
     $effect(() => {
         // in traditional rx fashion, if you don't subscribe to a falling tree, it makes no sound
