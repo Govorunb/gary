@@ -11,11 +11,12 @@
 
     const registry = getRegistry();
     const uiState = getUIState();
+    const selectedTab = $derived(uiState.selectedGameTab);
 
     async function startSchemaTest() {
         const conn = new InternalWSConnection(`${Date.now().toString().split("").reverse().join("")}-schema-test`, "v1");
         const schemaTestGame = new SchemaTestGame(new GameWSSender(conn));
-        
+
         registry.createGame("JSON Schema Test", conn);
         await tick();
 
@@ -24,7 +25,7 @@
 </script>
 
 <div class="flex h-full flex-col">
-    <div class="header flex items-center justify-between px-2">
+    <div class="header">
         <h2>Connections</h2>
         <Popover>
             {#snippet trigger(props)}
@@ -34,18 +35,21 @@
                 </button>
             {/snippet}
             <div class="card flex flex-col gap-2 p-2 bg-surface-200 dark:bg-surface-800 rounded-lg">
-                <button class="schema-test-button" onclick={startSchemaTest}>
+                <button class="btn preset-tonal-primary" onclick={startSchemaTest}>
                     Schema Test
                 </button>
             </div>
         </Popover>
     </div>
-    
+
     {#if registry.games.length > 0}
         <div class="games-container">
-            {#each registry.games as game (game.conn.id)}
-            <!-- {@const activeActions = [...game.actions.values()].filter(a => a.active)} -->
-                <details class="game-tab" name="games-accordion">
+            {#each registry.games as game, i (game.conn.id)}
+                {@const seenActions = [...game.actions.values()]}
+                {@const activeActions = seenActions.filter(a => a.active)}
+                <details class="game-tab" name="games-accordion"
+                    open={selectedTab === i}
+                >
                     <summary class="game-tab-header">
                         <div class="game-info">
                             <span class="game-name">{game.name}</span>
@@ -56,8 +60,12 @@
                                     {activeActions.length}
                                 </span>
                             {/if} -->
-                            <div class="connection-indicator" data-connected={boolAttr(!game.conn.closed)}>
-                                <div class="connection-dot"></div>
+                            <div class="status-indicator"
+                                data-connected={boolAttr(!game.conn.closed)}
+                                data-warn={boolAttr(false /* todo */)}
+                                data-error={boolAttr(false /* todo */)}
+                            >
+                                <div class="status-dot"></div>
                             </div>
                             <Popover>
                                 {#snippet trigger(props)}
@@ -69,13 +77,11 @@
                             </Popover>
                         </div>
                     </summary>
-                    
-                    <div class="game-content">
-                        <div class="action-list">
-                            {#each [...game.actions.values()] as action (action.name)}
-                                <GameAction {action} {game} />
-                            {/each}
-                        </div>
+
+                    <div class="game-content action-list">
+                        {#each activeActions as action (action.name)}
+                            <GameAction {action} {game} />
+                        {/each}
                     </div>
                 </details>
             {/each}
@@ -96,6 +102,11 @@
 <style lang="postcss">
     @reference "global.css";
 
+    .header {
+        @apply flex items-center justify-between;
+        @apply px-2;
+    }
+
     h2 {
         @apply self-center;
         @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
@@ -106,29 +117,35 @@
         @apply px-1 py-2;
     }
 
-    .game-tab {
-        @apply rounded-lg border border-neutral-200/70;
-        @apply bg-white/80 shadow-sm transition-all;
-        @apply dark:border-neutral-700 dark:bg-neutral-900/60;
-        
+    details.game-tab {
+        @apply flex flex-col overflow-y-hidden;
+        @apply rounded-lg shadow-sm transition-all;
+        @apply border border-neutral-200/70 dark:border-neutral-700;
+        @apply bg-white/80 dark:bg-neutral-900/60;
+
         &[open] {
             @apply border-sky-300 dark:border-sky-600;
             @apply shadow-md flex-1;
         }
-        
+
         &:not([open]):hover {
             @apply bg-neutral-50/80 dark:bg-neutral-800/70;
         }
-    }
 
-    .game-tab-header {
-        @apply flex cursor-pointer items-center justify-between gap-2;
-        @apply px-3 py-2 text-sm font-medium text-neutral-700 transition;
-        @apply focus:outline-none;
-        &:focus-visible {
-            @apply ring-2 ring-sky-400 ring-inset;
+        summary.game-tab-header {
+            @apply flex cursor-pointer items-center justify-between gap-2;
+            @apply px-3 py-2 text-sm font-medium text-neutral-700 transition;
+            @apply focus:outline-none;
+            &:focus-visible {
+                @apply ring-2 ring-sky-400 ring-inset;
+            }
+            @apply dark:text-neutral-200;
         }
-        @apply dark:text-neutral-200;
+
+        /* whoever decided not to make this pseudoelement a header in the docs - dishonor upon your family */
+        &::details-content {
+            @apply overflow-y-scroll;
+        }
     }
 
     .game-info {
@@ -136,26 +153,30 @@
     }
 
     .game-name {
-        @apply truncate;
+        @apply truncate max-w-[calc(100%-1rem)];
     }
 
     .game-controls {
         @apply flex items-center gap-2 shrink-0;
     }
 
-    .connection-indicator {
+    .status-indicator {
         @apply flex items-center justify-center;
-        
-        &[data-connected] .connection-dot {
+
+        &[data-connected] .status-dot {
             @apply bg-green-500;
         }
-        
-        &:not([data-connected]) .connection-dot {
+
+        &[data-warn] .status-dot {
+            @apply bg-warning-500;
+        }
+
+        &[data-error] .status-dot {
             @apply bg-red-500;
         }
     }
 
-    .connection-dot {
+    .status-dot {
         @apply w-2 h-2 rounded-full;
         @apply transition-colors;
     }
@@ -176,9 +197,7 @@
     }
 
     .action-list {
-        @apply flex flex-col gap-1;
-        @apply flex-1;
-        @apply p-2;
+        @apply flex flex-col gap-1 p-2;
     }
 
     .schema-test-button {
@@ -187,7 +206,7 @@
         @apply bg-sky-600 px-3 py-2;
         @apply text-sm font-medium text-white shadow-sm transition;
         @apply hover:bg-sky-500;
-        
+
         &:focus-visible {
             @apply outline-none;
             @apply ring-2 ring-offset-2;
