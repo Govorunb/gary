@@ -1,13 +1,16 @@
 <script lang="ts">
     import type { Message } from "$lib/app/context.svelte";
-    import { getUIState } from "$lib/app/utils/di";
+    import { getRegistry, getUIState } from "$lib/app/utils/di";
     import { tooltip } from "$lib/app/utils";
+    import { boolAttr } from "runed";
 
     interface Props {
         msg: Message;
     }
 
     const { msg }: Props = $props();
+    
+    const registry = getRegistry();
     const uiState = getUIState();
 
     function getSourceIcon(msg: Message): string {
@@ -44,6 +47,7 @@
             {#if msg.source.type === 'client'}
                 <button class="client-name"
                     tabindex="-1"
+                    data-gone={boolAttr(msg.source.type === 'client' && !registry.getGame(msg.source.id))}
                     onclick={() => uiState.selectGameTab((msg.source.type === 'client' && msg.source.id) as string)}
                     title="ID: {msg.source.id}"
                 >
@@ -109,5 +113,8 @@
     }
     .client-name {
         @apply font-semibold text-neutral-700 dark:text-neutral-100;
+        &[data-gone] {
+            @apply line-through opacity-60 cursor-default;
+        }
     }
 </style>
