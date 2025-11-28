@@ -2,7 +2,8 @@
     import { getUserPrefs, getServerManager, getRegistry } from "$lib/app/utils/di";
     import ServerConfig from "./ServerConfig.svelte";
     import { CirclePower, SlidersHorizontal } from "@lucide/svelte";
-    import { Dialog, Popover, Portal } from "@skeletonlabs/skeleton-svelte";
+    import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
+    import Popover from "$lib/ui/common/Popover.svelte";
     import { boolAttr } from "runed";
     import r from "$lib/app/utils/reporting";
 
@@ -74,31 +75,20 @@
             <!-- class is a passdown prop, not actual css -->
             <CirclePower size={40} class={["pointer-events-none", getBtnStroke()]} />
         </button>
-        <Popover>
-            <Popover.Trigger>
-                {#snippet element(props)}
-                    <button {...props}
-                        class="options-button"
-                        disabled={configDisabled}
-                        title={optionsBtnTooltip}
-                        aria-label={optionsBtnTooltip}
-                        >
-                        <SlidersHorizontal size=20 class="pointer-events-none" />
-                    </button>
-                {/snippet}
-            </Popover.Trigger>
-            <Portal>
-                <Popover.Positioner class="z-20!">
-                    <Popover.Content>
-                        <div class="options-content">
-                            <ServerConfig />
-                            <Popover.Arrow>
-                                <Popover.ArrowTip />
-                            </Popover.Arrow>
-                        </div>
-                    </Popover.Content>
-                </Popover.Positioner>
-            </Portal>
+        <Popover arrow>
+            {#snippet trigger(props)}
+                <button {...props}
+                    class="options-button"
+                    disabled={configDisabled}
+                    title={optionsBtnTooltip}
+                    aria-label={optionsBtnTooltip}
+                    >
+                    <SlidersHorizontal size=20 class="pointer-events-none" />
+                </button>
+            {/snippet}
+            <div class="options-content">
+                <ServerConfig />
+            </div>
         </Popover>
     </div>
     {#if running}

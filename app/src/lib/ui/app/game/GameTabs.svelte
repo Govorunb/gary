@@ -7,7 +7,7 @@
     import { SchemaTestGame } from "$lib/app/schema-test";
     import { boolAttr } from "runed";
     import { CirclePlus, EllipsisVertical } from "@lucide/svelte";
-    import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
+    import Popover from "$lib/ui/common/Popover.svelte";
     import { tick } from "svelte";
 
     const registry = getRegistry();
@@ -53,20 +53,12 @@
                         {game.name}
                     </button>
                     <Popover>
-                        <Popover.Trigger>
-                            {#snippet element(props)}
-                                <button {...props} class="menu-trigger">
-                                    <EllipsisVertical />
-                                </button>
-                            {/snippet}
-                        </Popover.Trigger>
-                        <Portal>
-                            <Popover.Positioner>
-                                <Popover.Content>
-                                    <GameMenu {game} />
-                                </Popover.Content>
-                            </Popover.Positioner>
-                        </Portal>
+                        {#snippet trigger(props)}
+                            <button {...props} class="menu-trigger">
+                                <EllipsisVertical />
+                            </button>
+                        {/snippet}
+                        <GameMenu {game} />
                     </Popover>
                 </div>
             {/each}

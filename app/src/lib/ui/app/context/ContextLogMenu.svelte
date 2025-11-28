@@ -2,7 +2,7 @@
     import { tooltip } from "$lib/app/utils";
     import { getSession } from "$lib/app/utils/di";
     import { EllipsisVertical } from "@lucide/svelte";
-    import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
+    import Popover from "$lib/ui/common/Popover.svelte";
 
     const session = getSession();
 
@@ -22,28 +22,20 @@
 </script>
 
 <Popover modal {open} onOpenChange={(d) => open = d.open}>
-    <Popover.Trigger>
-        {#snippet element(props)}
-            <button {...props} class="menu-trigger" {@attach tooltip("Menu")}>
-                <EllipsisVertical />
-            </button>
-        {/snippet}
-    </Popover.Trigger>
-    <Portal>
-        <Popover.Positioner>
-            <Popover.Content>
-                <div class="menu-content">
-                    <button class="btn preset-tonal-surface" onclick={copyContext}>
-                        Copy as JSON
-                    </button>
-                    <!-- TODO: reset instead of clear (add sys prompt first) -->
-                    <button class="btn preset-filled-error-500" onclick={clearContext}>
-                        Clear Context
-                    </button>
-                </div>
-            </Popover.Content>
-        </Popover.Positioner>
-    </Portal>
+    {#snippet trigger(props)}
+        <button {...props} class="menu-trigger" {@attach tooltip("Menu")}>
+            <EllipsisVertical />
+        </button>
+    {/snippet}
+    <div class="menu-content">
+        <button class="btn preset-tonal-surface" onclick={copyContext}>
+            Copy as JSON
+        </button>
+        <!-- TODO: reset instead of clear (add sys prompt first) -->
+        <button class="btn preset-filled-error-500" onclick={clearContext}>
+            Clear Context
+        </button>
+    </div>
 </Popover>
 
 <style lang="postcss">

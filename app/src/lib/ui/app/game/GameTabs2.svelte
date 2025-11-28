@@ -6,7 +6,7 @@
     import { SchemaTestGame } from "$lib/app/schema-test";
     import { boolAttr } from "runed";
     import { Plus, ChevronDown, EllipsisVertical } from "@lucide/svelte";
-    import { Popover, Portal } from '@skeletonlabs/skeleton-svelte';
+    import Popover from "$lib/ui/common/Popover.svelte";
     import { tick } from "svelte";
 
     const registry = getRegistry();
@@ -27,25 +27,17 @@
     <div class="header flex items-center justify-between px-2">
         <h2>Connections</h2>
         <Popover>
-            <Popover.Trigger>
-                {#snippet element(props)}
-                    <button {...props} class="flex flex-row gap-1 items-center">
-                        <Plus class="size-6 opacity-80" />
-                        <ChevronDown class="size-3 opacity-80" />
-                    </button>
-                {/snippet}
-            </Popover.Trigger>
-            <Portal>
-                <Popover.Positioner>
-                    <Popover.Content>
-                        <div class="card flex flex-col gap-2 p-2 bg-surface-200 dark:bg-surface-800 rounded-lg">
-                            <button class="schema-test-button" onclick={startSchemaTest}>
-                                Schema Test
-                            </button>
-                        </div>
-                    </Popover.Content>
-                </Popover.Positioner>
-            </Portal>
+            {#snippet trigger(props)}
+                <button {...props} class="flex flex-row gap-1 items-center">
+                    <Plus class="size-6 opacity-80" />
+                    <ChevronDown class="size-3 opacity-80" />
+                </button>
+            {/snippet}
+            <div class="card flex flex-col gap-2 p-2 bg-surface-200 dark:bg-surface-800 rounded-lg">
+                <button class="schema-test-button" onclick={startSchemaTest}>
+                    Schema Test
+                </button>
+            </div>
         </Popover>
     </div>
     
@@ -68,20 +60,12 @@
                                 <div class="connection-dot"></div>
                             </div>
                             <Popover>
-                                <Popover.Trigger>
-                                    {#snippet element(props)}
-                                        <button {...props} class="menu-trigger">
-                                            <EllipsisVertical />
-                                        </button>
-                                    {/snippet}
-                                </Popover.Trigger>
-                                <Portal>
-                                    <Popover.Positioner>
-                                        <Popover.Content>
-                                            <GameMenu {game} />
-                                        </Popover.Content>
-                                    </Popover.Positioner>
-                                </Portal>
+                                {#snippet trigger(props)}
+                                    <button {...props} class="menu-trigger">
+                                        <EllipsisVertical />
+                                    </button>
+                                {/snippet}
+                                <GameMenu {game} />
                             </Popover>
                         </div>
                     </summary>
