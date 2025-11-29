@@ -108,7 +108,7 @@ export const horizontalScroll: Attachment<HTMLElement> = (el) => {
  * - `(-567, 0.01)` -> `"-567.00"`
  */
 export function toStepPrecision(value: number, step: number): string {
-    if (!Number.isFinite(value) || step === 0 || step >= 1) {
+    if (!Number.isFinite(value) || !(step > 0 && step < 1)) {
         return String(value);
     }
 
@@ -134,4 +134,10 @@ export function tooltip(text: string): Attachment<HTMLElement> {
         el.setAttribute("title", text);
         el.setAttribute("aria-label", text);
     }
+}
+
+export const CHARS_PER_TOKEN = 4;
+
+export function estimateTokens(text: string) {
+    return text.length * CHARS_PER_TOKEN;
 }
