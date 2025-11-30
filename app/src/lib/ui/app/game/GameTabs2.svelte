@@ -34,8 +34,10 @@
                     <ChevronDown class="size-3 opacity-80" />
                 </button>
             {/snippet}
-            <div class="card flex flex-col gap-2 p-2 bg-surface-200 dark:bg-surface-800 rounded-lg">
-                <button class="btn preset-tonal-primary" onclick={startSchemaTest}>
+            <div class="menu-content">
+                <div class="menu-header">Connect Client</div>
+                <div class="menu-divider"></div>
+                <button class="menu-item" onclick={startSchemaTest}>
                     Schema Test
                 </button>
             </div>
@@ -110,6 +112,7 @@
     h2 {
         @apply self-center;
         @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
+        @apply select-none;
     }
 
     .games-container {
@@ -198,6 +201,47 @@
 
     .action-list {
         @apply flex flex-col gap-1 p-2;
+    }
+
+    .menu-content {
+        @apply flex flex-col gap-1 px-1 py-1;
+        @apply bg-surface-200-800 rounded-md;
+        @apply border border-neutral-900/30;
+        @apply min-w-48;
+    }
+
+    .menu-header {
+        @apply px-3 py-2;
+        @apply font-bold;
+        @apply text-neutral-900 dark:text-neutral-50;
+        @apply select-none;
+    }
+
+    .menu-divider {
+        @apply mx-2 h-px;
+        @apply bg-neutral-200 dark:bg-neutral-700;
+    }
+
+    .menu-item {
+        @apply flex flex-row gap-1.5 items-center;
+        @apply w-full px-3 py-2;
+        @apply rounded-sm;
+        @apply text-left text-sm;
+        @apply text-neutral-700 dark:text-neutral-300;
+        @apply transition-colors duration-150;
+        &:hover {
+            @apply bg-neutral-200/70 dark:bg-neutral-700/70;
+        }
+        &:focus-visible {
+            @apply outline-none ring-1 ring-neutral-400 dark:ring-neutral-600;
+        }
+    }
+
+    .menu-item-primary {
+        @apply text-primary-600 dark:text-primary-400;
+        &:hover {
+            @apply bg-primary-100/50 dark:bg-primary-900/30;
+        }
     }
 
     .schema-test-button {

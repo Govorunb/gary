@@ -28,11 +28,11 @@
         </button>
     {/snippet}
     <div class="menu-content">
-        <button class="btn preset-tonal-surface" onclick={copyContext}>
+        <button class="menu-item" onclick={copyContext}>
             Copy as JSON
         </button>
         <!-- TODO: reset instead of clear (add sys prompt first) -->
-        <button class="btn preset-filled-error-500" onclick={clearContext}>
+        <button class="menu-item menu-item-danger" onclick={clearContext}>
             Clear Context
         </button>
     </div>
@@ -52,8 +52,30 @@
         }
     }
     .menu-content {
-        @apply flex flex-col gap-2 px-3 py-2;
-        @apply bg-surface-200-800 rounded-lg;
-        @apply border-2 border-neutral-900/30;
+        @apply flex flex-col gap-1 px-1 py-1;
+        @apply bg-surface-200-800 rounded-md;
+        @apply border border-neutral-900/30;
+        @apply min-w-40;
+    }
+
+    .menu-item {
+        @apply w-full px-3 py-2;
+        @apply rounded-sm;
+        @apply text-left text-sm;
+        @apply text-neutral-700 dark:text-neutral-300;
+        @apply transition-colors duration-150;
+        &:hover {
+            @apply bg-neutral-200/70 dark:bg-neutral-700/70;
+        }
+        &:focus-visible {
+            @apply outline-none ring-1 ring-neutral-400 dark:ring-neutral-600;
+        }
+    }
+
+    .menu-item-danger {
+        @apply text-error-600 dark:text-error-400;
+        &:hover {
+            @apply bg-error-100/50 dark:bg-error-900/30;
+        }
     }
 </style>

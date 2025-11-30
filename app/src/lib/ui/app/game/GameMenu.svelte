@@ -18,7 +18,7 @@
         </div>
         <div class="flex flex-row justify-end">
             <button
-                class="disconnect-button"
+                class="menu-item menu-item-danger"
                 onclick={() => game.conn.disconnect()}
             >
                 <Unplug size={14} /> Disconnect
@@ -49,18 +49,24 @@
         @apply font-mono font-medium text-neutral-800 dark:text-neutral-200 truncate;
     }
 
-    .disconnect-button {
-        @apply flex flex-row gap-1.5;
-        @apply p-1.5 rounded-md items-center;
-        @apply bg-error-500 dark:bg-error-600;
-        @apply text-white transition-colors duration-150;
-
+    .menu-item {
+        @apply flex flex-row gap-1.5 items-center;
+        @apply w-full px-3 py-2;
+        @apply rounded-sm;
+        @apply text-left text-sm;
+        @apply transition-colors duration-150;
         &:hover {
-            @apply bg-error-600 dark:bg-error-500;
+            @apply bg-neutral-200/70 dark:bg-neutral-700/70;
         }
-
         &:focus-visible {
-            @apply outline-none ring-2 ring-error-400;
+            @apply outline-none ring-1 ring-neutral-400 dark:ring-neutral-600;
+        }
+    }
+
+    .menu-item-danger {
+        @apply text-error-600 dark:text-error-400;
+        &:hover {
+            @apply bg-error-100/50 dark:bg-error-900/30;
         }
     }
 

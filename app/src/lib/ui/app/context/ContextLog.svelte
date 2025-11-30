@@ -62,6 +62,7 @@
 
     h2 {
         @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
+        @apply select-none;
     }
     .container {
         @apply flex flex-col h-full gap-4;
