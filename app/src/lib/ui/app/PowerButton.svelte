@@ -6,7 +6,7 @@
     import Popover from "$lib/ui/common/Popover.svelte";
     import { boolAttr } from "runed";
     import r from "$lib/app/utils/reporting";
-    import { hasTauri } from "$lib/app/utils";
+    import { isTauri } from "@tauri-apps/api/core";
 
     const userPrefs = getUserPrefs();
     const registry = getRegistry();
@@ -17,7 +17,7 @@
 
     let powerBtnTooltip = $derived(running ? "Stop server" : "Start server");
     const optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options");
-    const haveTauri = hasTauri();
+    const haveTauri = isTauri();
     if (!haveTauri) powerBtnTooltip = "Tauri backend not available";
 
     let confirmModalOpen = $state(false);

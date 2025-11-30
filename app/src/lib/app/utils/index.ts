@@ -5,18 +5,14 @@ import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/cor
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
 import r from "./reporting";
+// import { isTauri } from "@tauri-apps/api/core";
 
 export function pickRandom<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// browser on dev vite server doesn't have the tauri ipc backend
-export function hasTauri() {
-    return '__TAURI_INTERNALS__' in window;
-}
-
 export function isWebkitGtk() {
-    return navigator.platform.includes("Linux"); // && hasTauri();
+    return navigator.platform.includes("Linux"); // && isTauri();
 }
 
 export const tauriWebkitScrollNum: Attachment<HTMLInputElement> = (el) => {
