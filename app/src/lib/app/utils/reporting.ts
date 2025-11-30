@@ -1,5 +1,6 @@
 import * as log from "@tauri-apps/plugin-log";
 import { toast, type ExternalToast } from "svelte-sonner";
+import { hasTauri } from ".";
 
 export interface Reporter {
     /** Minimum log level. */
@@ -102,8 +103,7 @@ class DefaultReporter implements Reporter {
             [LogLevel.Error]: log.error,
             [LogLevel.Fatal]: log.error,
         };
-        // no tauri available (e.g. browser on dev vite server)
-        if (!('__TAURI_INTERNALS__' in window)) {
+        if (!hasTauri()) {
             logFuncMap = {
                 [LogLevel.Verbose]: console.log,
                 [LogLevel.Debug]: console.debug,

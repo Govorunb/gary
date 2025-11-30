@@ -3,7 +3,7 @@ import r from "$lib/app/utils/reporting";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
 import type { UserPrefs } from "./prefs.svelte";
-import { listenSub, safeInvoke } from "./utils";
+import { hasTauri, listenSub, safeInvoke } from "./utils";
 import { settled } from "svelte";
 
 type ServerConnections = string[] | null;
@@ -22,7 +22,7 @@ export class ServerManager {
         void this.session.onDispose(() => this.dispose());
         this.registry = session.registry;
         this.userPrefs = userPrefs;
-        if ('__TAURI_INTERNALS__' in window) {
+        if (hasTauri()) {
             listenSub<WSConnectionRequest>("ws-try-connect", (evt) => this.registry.tryConnect(evt.payload), this.subscriptions);
             listenSub<ServerConnections>("server-state", (evt) => this.doSync(evt.payload), this.subscriptions);
             void this.sync();

@@ -4,22 +4,32 @@ import { ok, err, type Result, ResultAsync } from "neverthrow";
 import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
+import r from "./reporting";
 
 export function pickRandom<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export const webkitScrollNum: Attachment<HTMLInputElement> = (el) => {
+// browser on dev vite server doesn't have the tauri ipc backend
+export function hasTauri() {
+    return '__TAURI_INTERNALS__' in window;
+}
+
+export function isWebkitGtk() {
+    return navigator.platform.includes("Linux"); // && hasTauri();
+}
+
+export const tauriWebkitScrollNum: Attachment<HTMLInputElement> = (el) => {
     if (el.type !== "number") {
-        console.warn("webkitScrollNum should only be attached to inputs of type 'number'");
+        r.warn("webkitScrollNum should only be attached to inputs of type 'number'");
         return;
     }
     // on linux, tauri uses libwebkit2gtk, which is just kinda generally weird and offputting
-    if (!navigator.platform.includes("Linux")) return;
+    if (!isWebkitGtk()) return;
     
     const listener = (evt: WheelEvent) => {
         const target = evt.target as HTMLInputElement;
-        // increment/decrement on scroll (modern browsers do this by default btw)
+        // increment/decrement on scroll
         if (target.disabled) return;
         if (evt.deltaY === 0) return;
         evt.deltaY < 0 ? target.stepUp() : target.stepDown();
@@ -136,7 +146,7 @@ export function tooltip(text: string): Attachment<HTMLElement> {
     }
 }
 
-export const CHARS_PER_TOKEN = 4;
+export const CHARS_PER_TOKEN = 4; // TODO: may not actually hold with excessive json content
 
 export function estimateTokens(text: string) {
     return text.length * CHARS_PER_TOKEN;

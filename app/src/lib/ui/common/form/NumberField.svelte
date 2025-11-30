@@ -1,54 +1,46 @@
 <script lang="ts">
-    import { toStepPrecision, shortId } from '$lib/app/utils';
+    import { toStepPrecision, shortId, tauriWebkitScrollNum } from '$lib/app/utils';
+    import { type HTMLInputAttributes } from 'svelte/elements';
 
-    interface Props {
+    interface Props extends Omit<HTMLInputAttributes, 'type' | 'value' | 'id'> {
         value: number;
         label?: string;
         placeholder?: string;
         required?: boolean;
-        disabled?: boolean;
-        min?: number;
-        max?: number;
-        step?: number;
         description?: string;
         slider?: boolean;
-    }
+    };
 
     let { 
         value = $bindable(), 
-        label = "", 
-        placeholder = "", 
-        required = false, 
-        disabled = false,
-        min,
-        max,
-        step = 1,
+        label = "",
         description = "",
-        slider = false
+        slider = false,
+        ...props
     }: Props = $props();
 
     let inputId = $state(`input-${shortId()}`);
+    const step: number = $derived(Number(props.step));
 </script>
 
 <div class="field-container">
     {#if label}
         <label for={inputId} class="field-label">
             {label}
-            {#if required}
+            {#if props.required}
                 <span class="required">*</span>
             {/if}
         </label>
     {/if}
     {#snippet input()}
         <input
+            {...props}
             id={inputId}
             type={slider ? "range" : "number"}
-            {placeholder}
-            {required} {disabled}
-            {min} {max} {step}
             bind:value
             class="field-input"
             class:field-slider={slider}
+            {@attach tauriWebkitScrollNum}
         />
     {/snippet}
     {#if slider}
