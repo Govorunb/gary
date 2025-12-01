@@ -16,8 +16,8 @@ export function isWebkitGtk() {
 }
 
 export const tauriWebkitScrollNum: Attachment<HTMLInputElement> = (el) => {
-    if (el.type !== "number") {
-        r.warn("webkitScrollNum should only be attached to inputs of type 'number'");
+    if (el.type !== "number" && el.type !== "range") {
+        r.warn("webkitScrollNum should only be attached to inputs of type 'number' or 'range'");
         return;
     }
     // on linux, tauri uses libwebkit2gtk, which is just kinda generally weird and offputting

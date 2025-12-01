@@ -27,7 +27,7 @@ Examples of bad/useless items:
 
 ### Changelogs
 
-Changelogs should describe what the user can do in the new version that they couldn't do before.
+The purpose of a changelog is to tell the user what they can do in the new version that they couldn't do before.
 
 Bad:
 - Fixed an issue causing breakage in glorble component that led to the bibdie manager being unable to foobar
