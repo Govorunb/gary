@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zConst } from "$lib/app/utils";
 import type { Game } from "$lib/api/registry.svelte";
 
-export const SYSTEM_PROMPT = `\
+export const DEFAULT_SYSTEM_PROMPT = `\
 You are an expert gamer AI. Your main purpose is playing games. To do this, you will perform in-game actions via JSON function calls to a special software integration system.
 You are goal-oriented and curious. You should aim to keep your actions varied and entertaining.
 
@@ -49,7 +49,8 @@ export class DefaultContextManager extends ContextManager {
 
     reset() {
         super.reset();
-        this.system({ text: SYSTEM_PROMPT, silent: true });
+        const sys_prompt = this.session.userPrefs.app.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+        this.system({ text: sys_prompt, silent: true });
     }
 
     system(partialMsg: SourcelessMessageInput) {

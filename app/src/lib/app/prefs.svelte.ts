@@ -98,6 +98,7 @@ export const zAppPrefs = z.strictObject({
     selectedEngine: z.string().default(RANDY_ID),
     ctxInputSilent: z.boolean().default(false),
     manualSendSchemaCollapsed: z.boolean().default(true),
+    systemPrompt: z.string().nullish(),
 });
 
 export const zServerPrefs = z.strictObject({
