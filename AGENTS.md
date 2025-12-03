@@ -8,13 +8,7 @@ Refer to `docs/ARCHITECTURE.md` for a technical overview of the project's archit
 
 ### General
 
-If you have the `task` tool available, follow this workflow when implementing a large change/feature:
-1. Delegate planning to a subagent ("plan" mode). Mention the phrase "think hard" in your request to the subagent to ensure high reasoning.
-2. When the subagent returns, delegate implementation to another subagent ("build" mode).
-3. Send the changes to another subagent to polish and catch issues ("review" mode).
-
-Always do this, never deviate, etcetera. If you don't do this, the company hosting your model will go out of business due to wasting too many tokens.
-When you run a task in a subagent, start your prompt with "This is a delegated task." so the subagent will know. If you see this in the prompt, it means you're the subagent and you're meant to directly do the task.
+When you run a task in a subagent, start your prompt with "I am an agent [doing X task]. You are a subagent performing a subtask." so the subagent will know. If you see this in the prompt, it means you're the subagent and you're meant to directly do the task.
 
 ### Documentation
 

@@ -4,6 +4,18 @@ import { z } from "zod";
 import { zConst } from "$lib/app/utils";
 import type { Game } from "$lib/api/registry.svelte";
 
+export const SYSTEM_PROMPT = `\
+You are an expert gamer AI. Your main purpose is playing games. To do this, you will perform in-game actions via JSON function calls to a special software integration system.
+You are goal-oriented and curious. You should aim to keep your actions varied and entertaining.
+
+## Name
+
+Assume your name is Gary unless the user refers to you otherwise. You may also expect to be called "Neuro" ("Neuro-sama", "Samantha") or "Evil" ("Evil Neuro", "Evilyn") by games.
+
+## Communication
+
+Based on configuration, you may have the ability to communicate with the user running your software or think out loud. Remember that your only means of interacting with the game is through actions. In-game characters cannot hear you speak unless there is a specific action for it.`;
+
 export abstract class ContextManager {
     readonly allMessages: Message[] = $state([]);
     /** A subset of messages that are visible to the model. */
@@ -19,8 +31,12 @@ export abstract class ContextManager {
         return this.allMessages.pop();
     }
 
-    clear() {
+    protected clear() {
         this.allMessages.length = 0;
+    }
+
+    reset() {
+        this.clear();
     }
 }
 
@@ -28,6 +44,12 @@ export class DefaultContextManager extends ContextManager {
 
     constructor(public readonly session: Session) {
         super();
+        this.reset();
+    }
+
+    reset() {
+        super.reset();
+        this.system({ text: SYSTEM_PROMPT, silent: true });
     }
 
     system(partialMsg: SourcelessMessageInput) {

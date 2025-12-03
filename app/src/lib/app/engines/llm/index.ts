@@ -1,5 +1,4 @@
 import type { Action } from "$lib/api/v1/spec";
-import r from "$lib/app/utils/reporting";
 import { Engine, EngineError, zEngineAct, type EngineAct } from "../index.svelte";
 import type { Session } from "$lib/app/session.svelte";
 import type { ContextManager, Message } from "$lib/app/context.svelte";
@@ -77,27 +76,6 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return err(new EngineError(`Failed to parse action: ${act.error}`, act.error));
         }
         return ok(act.data);
-    }
-
-    // TODO: configurable prompts (editor?)
-    // TODO: move to ctx manager (so it's visible as a "message")
-    systemPrompt() {
-        let prompt = `\
-You are an expert gamer AI. Your main purpose is playing games. To do this, you will perform in-game actions via JSON function calls to a special software integration system.
-You are goal-oriented and curious. You should aim to keep your actions varied and entertaining.
-
-## Name
-
-Assume your name is Gary unless the user refers to you otherwise. You may also expect to be called "Neuro" ("Neuro-sama") or "Evil" ("Evil Neuro") by games.`;
-        if (this.options.allowYapping) {
-            prompt += `
-## Communication
-
-You may choose to speak, whether to communicate with the user running your software or just to think out loud.
-Remember that your only means of interacting with the game is through actions. In-game characters cannot hear you speak unless there is a specific action for it.`;
-        }
-        r.verbose(`System prompt: ${prompt}`);
-        return prompt;
     }
 
     protected structuredOutputSchemaForActions(actions: Action[], isForce: boolean = false): JSONSchema {

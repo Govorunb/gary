@@ -12,7 +12,7 @@
         open = false;
     }
     function clearContext() {
-        session.context.clear();
+        session.context.reset();
         closeMenu();
     }
     function copyContext() {
@@ -31,9 +31,8 @@
         <button class="menu-item" onclick={copyContext}>
             Copy as JSON
         </button>
-        <!-- TODO: reset instead of clear (add sys prompt first) -->
         <button class="menu-item menu-item-danger" onclick={clearContext}>
-            Clear Context
+            Reset Context
         </button>
     </div>
 </Popover>
