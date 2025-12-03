@@ -54,7 +54,7 @@ export class Scheduler {
             return err({type: "ignored", ignores});
         }
 
-        const actions = this.registry.games.flatMap(g => Array.from(g.actions.values()));
+        const actions = this.registry.games.flatMap(g => g.getActiveActions());
         if (actions.length === 0) {
             return err({type: "noActions"});
         }
@@ -82,7 +82,7 @@ export class Scheduler {
         }
         
         const actionsProvided = actions !== undefined;
-        actions ??= this.registry.games.flatMap(g => Array.from(g.actions.values()));
+        actions ??= this.registry.games.flatMap(g => g.getActiveActions());
         if (actions.length === 0) {
             const logMethod = actionsProvided ? r.error : r.info;
             logMethod.bind(r)(`Scheduler.forceAct: no actions ${actionsProvided ? "provided" : "registered"}`);
@@ -101,7 +101,7 @@ export class Scheduler {
     }
 
     private doAct(act: EngineAct, forced: boolean): ResultAsync<EngineAct, ActError> {
-        const game = this.registry.games.find(g => g.actions.has(act.name));
+        const game = this.registry.games.find(g => g.getAction(act.name));
         if (!game) {
             r.error("Engine selected unknown action", {
                 toast: {

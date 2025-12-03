@@ -24,7 +24,7 @@ export abstract class Engine<TOptions> {
         if (actions?.length) {
             return actions;
         }
-        return session.registry.games.flatMap((game) => Array.from(game.actions.values()));
+        return session.registry.games.flatMap(g => g.getActiveActions());
     }
 }
 

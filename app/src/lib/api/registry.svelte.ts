@@ -160,12 +160,12 @@ export class Game {
                 this.unregisterActions(msg.data.action_names);
                 break;
             case "actions/force":
-                const actions = msg.data.action_names.map(name => this.actions.get(name)!).filter(Boolean);
+                const actions = msg.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
                 if (actions.length < msg.data.action_names.length) {
                     if (msg.data.action_names.length === 0) {
                         r.error(`(${this.name}) Sent actions/force with no actions`, { ctx: {msg} });
                     } else {
-                        r.warn(`(${this.name}) actions/force contained unregistered action names: ${msg.data.action_names.filter(name => !this.actions.has(name)).join(", ")}`);
+                        r.warn(`(${this.name}) actions/force contained unknown/unregistered action names: ${msg.data.action_names.filter(name => !this.getAction(name)).join(", ")}`);
                     }
                 }
                 this.session.scheduler.forceQueue.push(actions);
@@ -188,8 +188,19 @@ export class Game {
         this.session.context.client(this, { text, silent });
     }
 
+    getAction(name: string, onlyActive: boolean = true) {
+        const action = this.actions.get(name);
+        if (onlyActive && !action?.active)
+            return undefined;
+        return action;
+    }
+
+    getActiveActions() {
+        return Array.from(this.actions.values().filter(a => a.active));
+    }
+
     async registerActions(actions: v1.Action[]) {
-        r.debug(`${this.actions.size} existing actions`);
+        r.debug(`${this.getActiveActions().length} registered actions`);
         for (const action of actions) {
             const existing = this.actions.get(action.name);
             if (existing?.active) {
@@ -212,12 +223,14 @@ export class Game {
 
     async unregisterActions(actions: string[]) {
         for (const action_name of actions) {
-            const existing = this.actions.get(action_name);
-            if (existing?.active) {
+            const existing = this.getAction(action_name, false);
+            if (!existing) {
+                r.warn(`(${this.name}) Unregistered unknown action '${action_name}'!`);
+            } else if (!existing.active) {
+                r.info(`(${this.name}) Action '${action_name}' already unregistered`);
+            } else {
                 existing.active = false;
                 r.debug(`(${this.name}) Unregistered action '${action_name}'`);
-            } else {
-                r.warn(`(${this.name}) Unregistered non-existing action '${action_name}'`);
             }
         }
         r.debug(`(${this.name}) Actions unregistered: [${actions}]`);

@@ -1,7 +1,6 @@
 import r from "$lib/app/utils/reporting";
 import type { GameWSSender } from "$lib/api/ws";
 import { ClientGame } from "./client-game";
-import type * as v1 from "$lib/api/v1/spec";
 import type { ActionResult } from './client-game';
 import { TEST_ACTIONS_MAP } from "./actions";
 
@@ -21,10 +20,6 @@ export class SchemaTestGame extends ClientGame {
             await this.handleMessage(msg);
         }
         this.dispose();
-    }
-
-    protected getActions(): v1.Action[] {
-        return Array.from(this.actions.values());
     }
 
     protected async processAction(name: string, data: any): Promise<ActionResult> {
