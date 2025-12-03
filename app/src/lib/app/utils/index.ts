@@ -1,5 +1,5 @@
 import type { Attachment } from "svelte/attachments";
-import z from "zod";
+import z, { type core, type ZodCatch, type ZodDefault } from "zod";
 import { ok, err, type Result, ResultAsync } from "neverthrow";
 import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { on } from "svelte/events";
@@ -49,6 +49,21 @@ export function clamp(value: number, min: number, max: number): number {
 /** This lets us omit the field when constructing from e.g. `zStartup.decode({})`. */
 export function zConst<T extends z.core.util.Literal>(value: NonNullable<T>) {
     return z.literal(value).default(value);
+}
+
+export type NoUndefined<T> = T extends undefined ? never : T;
+
+export function zFallback<T extends z.ZodType>(schema: T, value: NoUndefined<core.output<T>>): ZodCatch<ZodDefault<T>> {
+    return schema.default(value).catch(value);
+}
+
+declare module "zod" {
+    interface ZodType {
+        fallback(value: core.output<this>): ZodCatch<ZodDefault<this>>;
+    }
+}
+z.ZodType.prototype.fallback = function<T extends z.ZodType>(value: T) {
+    return zFallback(this, value);
 }
 
 export function shortId() {

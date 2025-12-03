@@ -94,15 +94,15 @@ export class UserPrefs {
 }
 
 export const zAppPrefs = z.strictObject({
-    theme: z.enum(["system", "light", "dark"]).default("system"),
-    selectedEngine: z.string().default(RANDY_ID),
-    ctxInputSilent: z.boolean().default(false),
-    manualSendSchemaCollapsed: z.boolean().default(true),
+    theme: z.enum(["system", "light", "dark"]).fallback("system"),
+    selectedEngine: z.string().fallback(RANDY_ID),
+    ctxInputSilent: z.boolean().fallback(false),
+    manualSendSchemaCollapsed: z.boolean().fallback(true),
     systemPrompt: z.string().nullish(),
 });
 
 export const zServerPrefs = z.strictObject({
-    port: z.coerce.number().int().min(1024).max(65535).default(8000),
+    port: z.coerce.number().int().min(1024).max(65535).fallback(8000),
     // TODO: server behavior toggles (e.g. conflict resolution)
 });
 

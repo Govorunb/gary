@@ -54,7 +54,7 @@ export const zRandyPrefs = z.strictObject({
      * 
      * Number between 0 and 1.
      * */
-    chanceDoNothing: z.number().min(0).max(1).default(0.2),
+    chanceDoNothing: z.number().min(0).max(1).fallback(0.2),
 });
 
 export type RandyPrefs = z.infer<typeof zRandyPrefs>;

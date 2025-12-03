@@ -11,9 +11,9 @@ import { sendNotification } from "@tauri-apps/plugin-notification";
 
 export const zLLMOptions = z.strictObject({
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
-    allowDoNothing: z.boolean().default(false),
+    allowDoNothing: z.boolean().fallback(false),
     /** Let the model trauma dump about its horrid life circumstances instead of doing something useful to society. Approximates realistic human behavior. */
-    allowYapping: z.boolean().default(false),
+    allowYapping: z.boolean().fallback(false),
 });
 
 export type CommonLLMOptions = z.infer<typeof zLLMOptions>;
