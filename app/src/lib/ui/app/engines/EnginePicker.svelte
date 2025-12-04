@@ -10,6 +10,7 @@
     import { fade, fly } from 'svelte/transition';
     import TeachingTooltip from '$lib/ui/common/TeachingTooltip.svelte';
     import Hotkey from '$lib/ui/common/Hotkey.svelte';
+    import { registerGlobalHotkey } from '$lib/app/utils/hotkeys.svelte';
 
     const session = getSession();
     const userPrefs = getUserPrefs();
@@ -31,7 +32,7 @@
             closeConfig();
         }
     })
-    keys.onKeys(['Control', 'e'], () => open = !open);
+    registerGlobalHotkey(['Control', 'E'], () => open = !open);
     // quick select
     for (let i = 1; i <= 9; i++) {
         keys.onKeys(i.toString(), () => {

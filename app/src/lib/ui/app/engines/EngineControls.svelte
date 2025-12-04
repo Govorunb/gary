@@ -1,16 +1,15 @@
 <script lang="ts">
     import EnginePicker from "./EnginePicker.svelte";
     import { getSession } from "$lib/app/utils/di";
-    import { PressedKeys } from "runed";
     import { HandFist, Pointer, Pause, BugPlay, Play } from "@lucide/svelte";
     import { tooltip } from "$lib/app/utils";
+    import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
 
     type State = "errored" | "muted" | "unmuted";
 
     const session = getSession();
     const scheduler = $derived(session.scheduler);
-    const keys = new PressedKeys();
-    const shiftPressed = $derived(keys.has('Shift'));
+    const shiftPressed = $derived(pressedKeys.has('Shift'));
 
     function userInteracted() {
         scheduler.clearError();
