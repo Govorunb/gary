@@ -38,6 +38,12 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         const params: NonStreamingChatParams = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
+            reasoning: { effort: "none" },
+            // @ts-expect-error
+            provider: {
+                require_parameters: true
+            },
+            transforms: ["middle-out"], // poor man's context trimming
         };
         if (outputSchema) {
             params.responseFormat = {
@@ -50,6 +56,8 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
                     strict: true,
                 },
             };
+            // @ts-expect-error
+            params.structured_outputs = true;
         }
 
         console.warn("Full request params:", params);
@@ -63,10 +71,23 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             })
             let respErr: Error = res.error;
             if (res.error instanceof ResponseValidationError) {
-                let errMsg = "Provider did not return a valid response. It's possible the provider doesn't support structured outputs.";
-                errMsg += `\nRaw response: ${JSON.stringify(res.error.rawValue)}`;
-                respErr = new Error(errMsg);
-                respErr.cause = res.error.rawValue;
+                const rawVal = res.error.rawValue as {
+                    error: {
+                        message: string;
+                        code: number;
+                        metadata: {
+                            provider_name: string;
+                        }
+                    },
+                    user_id: string;
+                };
+                let errMsg = `Provider ${rawVal?.error?.metadata?.provider_name} did not return a valid response. It's possible the provider doesn't support structured outputs.`;
+                
+                if (rawVal?.error?.code === 524) {
+                    errMsg = `Provider ${rawVal.error.metadata?.provider_name} timed out. If possible, try choosing a different provider.`;
+                }
+                errMsg += `\nRaw response: ${JSON.stringify(rawVal)}`;
+                respErr = new Error(errMsg, {cause: res.error});
             }
             return err(new EngineError("Failed to generate", respErr, false));
         }
@@ -85,15 +106,21 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
                 [this.id]: { res },
             },
         })
+        // getting the generation fails ("doesn't exist") if you request it immediately on response
+        // fuck me. my brother in christ you gave me the id
+        setTimeout(() => {
         void generationsGetGeneration(this.client, { id: res.value.id })
             .then(res => {
                 if (res.ok) {
                     msg.customData[this.id].gen = res.value;
                 } else {
                     const errMsg = `Failed to fetch OpenRouter generation info for request ${msg.id}`;
-                    r.error(errMsg, String(res.error));
+                        r.error(errMsg, {
+                            ctx: {err: res.error}
+                        });
                 }
             });
+        }, 5000);
         return ok(msg);
     }
 

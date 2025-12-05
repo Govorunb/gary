@@ -111,7 +111,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             description: "Perform an action.",
             anyOf: actsAnyOf,
         }];
-        const main: JSONSchema = {
+        const root: JSONSchema = {
             type: "object",
             description: "Choose a command to execute.",
             properties: {
@@ -126,7 +126,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         if (!isForce && this.options.allowYapping) {
             cmdAnyOf.push(z.toJSONSchema(zSay) as any);
         }
-        return main;
+        return root;
     }
 
     /** Generate a response adhering to the given schema. */
@@ -138,8 +138,13 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         let role: OpenAIMessage['role'];
         switch (msg.source.type) {
             case "system":
+                // FIXME: christ (temporary)
+                if (msg.text.startsWith("You are")) {
+                    role = "system";
+                } else {
                 role = "developer";
                 text = `System: ${text}`;
+                }
                 break;
             case "client":
                 role = "user";
