@@ -8,6 +8,7 @@
 
     let { data, children }: LayoutProps = $props();
     
+    // svelte-ignore state_referenced_locally
     initDI(data.userPrefsData);
     const session = getSession();
     const userPrefs = getUserPrefs();

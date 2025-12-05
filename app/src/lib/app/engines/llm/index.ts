@@ -8,6 +8,7 @@ import { jsonParse, zConst } from "$lib/app/utils";
 import type { Message as OpenAIMessage } from "@openrouter/sdk/models";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { sendNotification } from "@tauri-apps/plugin-notification";
+import r from "$lib/app/utils/reporting";
 
 export const zLLMOptions = z.strictObject({
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
@@ -61,6 +62,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             }
             session.context.actor({ text: say.data.say });
             if (say.data.notify) {
+                r.info("Gary wants attention", {
+                    details: say.data.say,
+                    toast: true
+                });
                 sendNotification({
                     title: "Gary wants attention",
                     body: say.data.say,

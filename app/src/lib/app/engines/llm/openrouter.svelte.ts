@@ -12,6 +12,7 @@ import { chatSend } from "@openrouter/sdk/funcs/chatSend";
 import { generationsGetGeneration } from "@openrouter/sdk/funcs/generationsGetGeneration";
 import { apiKeysGetCurrentKeyMetadata } from "@openrouter/sdk/funcs/apiKeysGetCurrentKeyMetadata";
 import { OpenRouterCore } from "@openrouter/sdk/core.js";
+import { ResponseValidationError } from "@openrouter/sdk/models/errors";
 
 export const ENGINE_ID = "openRouter";
 
@@ -42,20 +43,35 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             params.responseFormat = {
                 type: "json_schema",
                 jsonSchema: {
-                    // TODO: name/description (pass down?)
-                    name: "",
-                    description: "",
-                    schema: outputSchema as any,
+                    // FIXME: should ideally pass down from somewhere (figure out where)
+                    name: "response",
+                    description: "Response schema.",
+                    schema: outputSchema,
                     strict: true,
                 },
             };
         }
+
+        console.warn("Full request params:", params);
         const res = await chatSend(this.client, params satisfies NonStreamingChatParams);
+        console.log("Response:", res);
         if (!res.ok) {
-            return err(new EngineError("Failed to generate", res.error, false));
+            console.error(res.error);
+            r.error("chatSend failed", {
+                toast: false,
+                ctx: {err: res.error}
+            })
+            let respErr: Error = res.error;
+            if (res.error instanceof ResponseValidationError) {
+                let errMsg = "Provider did not return a valid response. It's possible the provider doesn't support structured outputs.";
+                errMsg += `\nRaw response: ${JSON.stringify(res.error.rawValue)}`;
+                respErr = new Error(errMsg);
+                respErr.cause = res.error.rawValue;
+            }
+            return err(new EngineError("Failed to generate", respErr, false));
         }
 
-        r.trace(`Raw OpenRouter response: ${JSON.stringify(res.value)}`);
+        r.verbose(`Raw OpenRouter response: ${JSON.stringify(res.value)}`);
         const resp = res.value.choices[0];
         if (resp.finishReason !== "stop" && resp.finishReason !== "length") {
             return err(new EngineError(`Unexpected finishReason ${resp.finishReason}`, undefined, false))
@@ -79,19 +95,6 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
                 }
             });
         return ok(msg);
-    }
-
-    async testConnection(): Promise<Result<void, EngineError>> {
-        if (!this.options.apiKey) {
-            return err(new EngineError("API key is required", undefined, false));
-        }
-
-        const res = await apiKeysGetCurrentKeyMetadata(this.client);
-        if (!res.ok) {
-            return err(new EngineError("Invalid API key", res.error, false));
-        }
-
-        return ok();
     }
 
     static async testApiKey(apiKey: string): Promise<Result<void, EngineError>> {

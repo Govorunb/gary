@@ -28,8 +28,8 @@ export class ServerManager {
             listenSub<ServerConnections>("server-state", (evt) => this.doSync(evt.payload), this.subscriptions);
             void this.sync();
         } else {
-            // we're called before toasts init (so they can't show)
-            settled().then(() => r.warn("Tauri backend not available", "Server will not work"));
+            // we're called before toasts init (so they can't show until settled)
+            settled().then(() => r.warn("Tauri backend unavailable", "WS server disabled"));
         }
     }
 
