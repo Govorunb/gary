@@ -15,6 +15,8 @@ export const zLLMOptions = z.strictObject({
     allowDoNothing: z.boolean().fallback(false),
     /** Let the model trauma dump about its horrid life circumstances instead of doing something useful to society. Approximates realistic human behavior. */
     allowYapping: z.boolean().fallback(false),
+    /** TODO: maybe tool calling can work for OR and some OAI endpoints even if local providers suck at it */
+    promptingStrategy: z.enum(["structuredOutput", "tools"]).fallback("structuredOutput"),
 });
 
 export type CommonLLMOptions = z.infer<typeof zLLMOptions>;
@@ -39,7 +41,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         }
         const ctx = this.convertContext(session.context);
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
-        const gen = await this.generate(ctx, schema);
+        const gen = await this.generateStructuredOutput(ctx, schema);
         const commandRes = gen
             .andThen(gen => jsonParse(gen.text)
                 .map(p => p.command)
@@ -130,7 +132,8 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     /** Generate a response adhering to the given schema. */
-    protected abstract generate(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError>;
+    protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError>;
+    protected abstract generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError>;
 
     // TODO: just feed the thing json, noone'll miss a forest or two
     private convertMessage(msg: Message) {
@@ -142,8 +145,8 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 if (msg.text.startsWith("You are")) {
                     role = "system";
                 } else {
-                role = "developer";
-                text = `System: ${text}`;
+                    role = "developer";
+                    text = `System: ${text}`;
                 }
                 break;
             case "client":

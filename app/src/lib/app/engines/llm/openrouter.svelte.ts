@@ -6,13 +6,14 @@ import type { ChatGenerationParams } from "@openrouter/sdk/models";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import type { SDKOptions } from "@openrouter/sdk";
 import z from "zod";
-import { err, ok, ResultAsync, type Result } from "neverthrow";
-import { EngineError } from "../index.svelte";
+import { err, errAsync, ok, ResultAsync, type Result } from "neverthrow";
+import { EngineError, type EngineAct } from "../index.svelte";
 import { chatSend } from "@openrouter/sdk/funcs/chatSend";
 import { generationsGetGeneration } from "@openrouter/sdk/funcs/generationsGetGeneration";
 import { apiKeysGetCurrentKeyMetadata } from "@openrouter/sdk/funcs/apiKeysGetCurrentKeyMetadata";
 import { OpenRouterCore } from "@openrouter/sdk/core.js";
 import { ResponseValidationError } from "@openrouter/sdk/models/errors";
+import type { Action } from "$lib/api/v1/spec";
 
 export const ENGINE_ID = "openRouter";
 
@@ -28,11 +29,14 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         this.client = new OpenRouterCore(clientOpts);
     }
 
-    generate(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError> {
-        return new ResultAsync(this.generateCore(context, outputSchema));
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError> {
+        return new ResultAsync(this.genJson(context, outputSchema));
+    }
+    generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
+        return errAsync(new EngineError("Tool calling not implemented", undefined, false));
     }
 
-    async generateCore(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
+    async genJson(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
         type NonStreamingChatParams = ChatGenerationParams & { stream?: false | undefined };
 
         const params: NonStreamingChatParams = {
@@ -109,17 +113,17 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         // getting the generation fails ("doesn't exist") if you request it immediately on response
         // fuck me. my brother in christ you gave me the id
         setTimeout(() => {
-        void generationsGetGeneration(this.client, { id: res.value.id })
-            .then(res => {
-                if (res.ok) {
-                    msg.customData[this.id].gen = res.value;
-                } else {
-                    const errMsg = `Failed to fetch OpenRouter generation info for request ${msg.id}`;
+            void generationsGetGeneration(this.client, { id: res.value.id })
+                .then(res => {
+                    if (res.ok) {
+                        msg.customData[this.id].gen = res.value;
+                    } else {
+                        const errMsg = `Failed to fetch OpenRouter generation info for request ${msg.id}`;
                         r.error(errMsg, {
                             ctx: {err: res.error}
                         });
-                }
-            });
+                    }
+                });
         }, 5000);
         return ok(msg);
     }

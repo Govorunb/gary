@@ -6,8 +6,9 @@ import OpenAI from "openai";
 import type { ClientOptions } from "openai";
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import z from "zod";
-import { err, ok, type Result, ResultAsync } from "neverthrow";
-import { EngineError } from "../index.svelte";
+import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
+import { EngineError, type EngineAct } from "../index.svelte";
+import type { Action } from "$lib/api/v1/spec";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
@@ -36,11 +37,15 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         return context as ChatCompletionMessageParam[];
     }
 
-    generate(context: OpenAIContext, outputSchema?: JSONSchema) : ResultAsync<Message, EngineError> {
-        return new ResultAsync(this.generateCore(context, outputSchema));
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema) : ResultAsync<Message, EngineError> {
+        return new ResultAsync(this.genJson(context, outputSchema));
     }
 
-    async generateCore(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
+    generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
+        return errAsync(new EngineError("Tool calling not implemented", undefined, false));
+    }
+
+    async genJson(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
         const model = this.options.modelId;
         if (!model) {
             return err(new ConfigError("OpenAI engine is missing a model ID"));

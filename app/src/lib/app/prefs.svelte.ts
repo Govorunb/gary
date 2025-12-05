@@ -115,7 +115,7 @@ export const zUserPrefs = z.strictObject({
     server: zServerPrefs.prefault({}),
     engines: z.object({
         randy: zRandyPrefs.prefault({}),
-        openRouter: zOpenRouterPrefs.prefault({})
+        // openRouter: zOpenRouterPrefs.prefault({}) // ts pmtfo
     })
     // all others are OpenAI-compatible
     .catchall(zOpenAIPrefs)
