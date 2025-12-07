@@ -20,17 +20,21 @@ Don't output any other text.
 
 ## Communication
 
-Based on configuration, you may have the ability to communicate with the user running your software or think out loud. 
+Based on configuration, you may have the ability to communicate with the user running your software or think out loud.
 Example speech output: \`{"command":{"say":"Hello!","notify":false}}\`
 Remember that your only means of interacting with the game is through actions. In-game characters cannot hear you speak unless there is a specific action for it.\
 `;
 
-export abstract class ContextManager {
+export class ContextManager {
     readonly allMessages: Message[] = $state([]);
     /** A subset of messages that are visible to the model. */
     readonly actorView: Message[] = $derived(this.allMessages.filter(m => m.visibilityOverrides?.engine ?? true));
     /** A subset of messages that are visible to the user. */
     readonly userView: Message[] = $derived(this.allMessages.filter(m => m.visibilityOverrides?.user ?? true));
+
+    constructor(public readonly session: Session) {
+        this.reset();
+    }
 
     push(msg: z.input<typeof zMessage>) {
         this.allMessages.push(zMessage.decode(msg));
@@ -46,26 +50,14 @@ export abstract class ContextManager {
 
     reset() {
         this.clear();
-    }
-}
-
-export class DefaultContextManager extends ContextManager {
-
-    constructor(public readonly session: Session) {
-        super();
-        this.reset();
-    }
-
-    reset() {
-        super.reset();
         const sys_prompt = this.session.userPrefs.app.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
-        this.system({ text: sys_prompt, silent: true });
+        this.system({ text: sys_prompt, silent: true, customData: {} });
     }
 
     system(partialMsg: SourcelessMessageInput) {
         this.push({ source: zSystemSource.decode({}), ...partialMsg });
     }
-    
+
     client(game: Game, partialMsg: SourcelessMessageInput) {
         this.push({ source: zClientSource.decode({name: game.name, id: game.conn.id}), ...partialMsg });
     }

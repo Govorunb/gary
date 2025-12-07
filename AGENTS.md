@@ -72,7 +72,7 @@ Zod use should follow these conventions:
 
 #### Skeleton UI
 
-Svelte scopes CSS to the component - at compile time, a class like `.my-class` is transformed into e.g. `.random-id-unique-by-component.my-class`.
+Svelte scopes CSS to the component - at compile time, a class like `.my-class` is transformed into e.g. `.random-id-unique-by-component.my-class` in the generated HTML and CSS rules.
 On the other hand, props on components *are not HTML props* - `class` may eventually be applied to a real HTML element, but because of this CSS scoping the compiled selector **will not** apply to the nested component's elements. To get around this, you need to either "consume" the CSS class in the same component, or use the `:global` selector, e.g. `:global(.my-class)` (however, this pollutes the global styles, so prefer the first option).
 
 ```svelte

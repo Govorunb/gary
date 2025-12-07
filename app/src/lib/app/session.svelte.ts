@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { DefaultContextManager } from "./context.svelte";
+import { ContextManager } from "./context.svelte";
 import { Scheduler } from "./scheduler.svelte";
 import type { Engine } from "./engines/index.svelte";
 import { Registry } from "$lib/api/registry.svelte";
@@ -17,7 +17,7 @@ import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter
  */
 export class Session {
     readonly id: string;
-    readonly context: DefaultContextManager;
+    readonly context: ContextManager;
     readonly registry: Registry;
     readonly scheduler: Scheduler;
     
@@ -31,7 +31,7 @@ export class Session {
         this.id = uuidv4();
         this.name = $state(name);
         this.ondispose = [];
-        this.context = new DefaultContextManager(this);
+        this.context = new ContextManager(this);
         this.registry = new Registry(this);
         this.scheduler = new Scheduler(this);
         r.debug(`Created session ${name} (${this.id})`);
