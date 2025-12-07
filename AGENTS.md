@@ -2,7 +2,7 @@
 
 Gary is a project that allows LLMs to interface with controllable client apps ("game integrations"). It implements a backend for the [Neuro-sama SDK](https://github.com/vedalai/neuro-sdk) to allow developers of game integrations to test them on a system approximating the production one.
 
-Refer to `docs/ARCHITECTURE.md` for a technical overview of the project's architecture.
+You may refer to `docs/ARCHITECTURE.md` for a technical overview of the project's architecture if needed.
 
 ## Agent Development Guidelines
 
@@ -14,7 +14,7 @@ Always look for examples of how a component is used in the codebase before you w
 
 ### Documentation
 
-Refer to `docs/llm-ref/writing.md` for writing plans or docs.
+Always refer to `docs/llm-ref/writing.md` when writing or reviewing plans, docs, or other kinds of prose content.
 
 ### Frontend
 
