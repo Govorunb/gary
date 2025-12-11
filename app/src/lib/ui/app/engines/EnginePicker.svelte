@@ -230,7 +230,7 @@
     }
 
     .engine-row {
-        @apply flex items-center gap-1 p-1 rounded-lg transition-colors;
+        @apply flex items-center p-1 rounded-lg transition-colors;
         @apply hover:bg-neutral-50 dark:hover:bg-surface-800;
     }
 
@@ -262,13 +262,13 @@
     }
 
     .actions {
-        @apply flex items-center px-1 transition-opacity;
+        @apply flex items-center transition-opacity;
         @apply opacity-0 group-hover:opacity-100 focus-within:opacity-100;
         @apply data-[shift=true]:opacity-100;
     }
 
     .action-btn {
-        @apply p-1.5 rounded-md text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100;
+        @apply p-2 rounded-md text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100;
         @apply hover:bg-neutral-200 dark:hover:bg-surface-700 transition-colors;
 
         &.delete {
