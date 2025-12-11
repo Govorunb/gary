@@ -15,7 +15,7 @@ App logic:
 - [x] Get Randy running and responding to actions
     - [x] Scheduler with manual poke/force
     - [ ] Timer for poke/force (both timers reset when an action is performed; poke resets on attempt)
-- [x] OpenRouter
+- [.] OpenRouter (broken)
 - [x] Other OpenAI-compatible services (Local LLMs, OpenAI proper, etc)
 
 Frontend:
@@ -28,7 +28,7 @@ Frontend:
     - [ ] Buttons to copy message text, ID, etc
     - [ ] Editing the log - edit message text, remove message
 - [x] Engine config
-    - [x] API key (field or PKCE)
+    - [x] API key (input field or [PKCE flow](https://openrouter.ai/docs/guides/overview/auth/oauth))
     - [x] Model field (+helper directing to OpRt website)
     - [x] Allow waiting/yapping
     - [ ] `$env:MY_ENV_VAR` for prefs

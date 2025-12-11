@@ -7,7 +7,7 @@ Principles of efficient communication:
 2. Trim down to maximize insight. First-order thinking is cheap and easily inferred/rediscovered, and is thus the least valuable. Again, respect the reader's intelligence.
 3. Plans dictate **direction** - where to steer. Keep it high level. Implementation details like code blocks rot easily and waste the reader's time.
 4. Conversely, documentation describes **state** - how things are. When code changes, documentation must change with it - otherwise, you are wasting the reader's time.
-5. Marketing words and bullshit-speak do not belong. Write a technical spec, not a sales pitch.
+5. Marketing words and bullshit-speak do not belong. Write a technical spec; sales pitches automatically go in the bin.
 
 ## Style Guidelines
 
