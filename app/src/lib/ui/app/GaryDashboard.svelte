@@ -1,6 +1,6 @@
 <script lang="ts">
     import ContextLog from "$lib/ui/app/context/ContextLog.svelte";
-    import GameTabs from "$lib/ui/app/game/GameTabs2.svelte";
+    import GameTabs from "$lib/ui/app/game/GameTabs.svelte";
 </script>
 
 <div class="grid flex-1 grid-cols-[1.1fr_4fr]">
