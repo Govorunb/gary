@@ -1,6 +1,6 @@
 import z from "zod";
 import r from "$lib/app/utils/reporting";
-import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
+// import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
@@ -98,6 +98,7 @@ export const zAppPrefs = z.strictObject({
     selectedEngine: z.string().fallback(RANDY_ID),
     ctxInputSilent: z.boolean().fallback(false),
     manualSendSchemaCollapsed: z.boolean().fallback(true),
+    rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
     systemPrompt: z.string().nullish(),
 });
 

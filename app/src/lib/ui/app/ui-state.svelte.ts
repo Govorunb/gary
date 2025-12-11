@@ -4,10 +4,12 @@ import type { Action } from "$lib/api/v1/spec";
 import type { Game } from "$lib/api/registry.svelte";
 
 export type ManualSendDialogState = null | { action: Action, game: Game };
+export type RawMessageDialogState = null | { game: Game };
 
 export class UIState {
     selectedGameTab: number = $state(0);
     manualSendDialog: ManualSendDialogState = $state(null);
+    rawMessageDialog: RawMessageDialogState = $state(null);
 
     constructor(private readonly session: Session) {
         $effect(() => {
@@ -27,5 +29,13 @@ export class UIState {
 
     closeManualSendDialog() {
         this.manualSendDialog = null;
+    }
+
+    openRawMessageDialog(game: Game) {
+        this.rawMessageDialog = { game };
+    }
+
+    closeRawMessageDialog() {
+        this.rawMessageDialog = null;
     }
 }

@@ -1,11 +1,13 @@
 <script lang="ts">
     import type { Game } from "$lib/api/registry.svelte";
     // import VersionChip from "./VersionChip.svelte";
-    import { Unplug } from "@lucide/svelte";
+    import { Unplug, Braces } from "@lucide/svelte";
     import CopyButton from "$lib/ui/common/CopyButton.svelte";
+    import { getUIState } from "$lib/app/utils/di";
 
     type Props = { game: Game };
     let { game }: Props = $props();
+    const uiState = getUIState();
 </script>
 
 <div class="game-tooltip">
@@ -16,7 +18,13 @@
             <p class="id-text">ID: <span class="id-value">{game.conn.id}</span></p>
             <CopyButton data={game.conn.id} desc="ID" />
         </div>
-        <div class="flex flex-row justify-end">
+        <div class="flex flex-col gap-2">
+            <button
+                class="menu-item"
+                onclick={() => uiState.openRawMessageDialog(game)}
+            >
+                <Braces size={14} /> Send Raw Message
+            </button>
             <button
                 class="menu-item menu-item-danger"
                 onclick={() => game.conn.disconnect()}

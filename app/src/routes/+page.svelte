@@ -4,6 +4,7 @@
     import PowerButton from "$lib/ui/app/PowerButton.svelte";
     import EngineControls from "$lib/ui/app/engines/EngineControls.svelte";
     import ManualSendDialog from "$lib/ui/app/ManualSendDialog.svelte";
+    import RawMessageDialog from "$lib/ui/app/RawMessageDialog.svelte";
     import { getUIState } from "$lib/app/utils/di";
     
     const uiState = getUIState();
@@ -29,6 +30,14 @@
         {...uiState.manualSendDialog}
         open={!!uiState.manualSendDialog}
         onOpenChange={(open) => !open && uiState.closeManualSendDialog()}
+    />
+{/if}
+
+{#if uiState.rawMessageDialog}
+    <RawMessageDialog 
+        {...uiState.rawMessageDialog}
+        open={!!uiState.rawMessageDialog}
+        onOpenChange={(open) => !open && uiState.closeRawMessageDialog()}
     />
 {/if}
 

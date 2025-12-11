@@ -28,14 +28,14 @@ interface IResult<T, E> {
   isErr(): this is Err<T, E>; // can access .error if this returns true
 
   /** Return the value from an `Ok` variant, or the given default value. */
-  unwrapOr<A>(v: A): T | A;
+  unwrapOr<V>(v: V): T | V;
   /** Handle both variants at once. */
   match<A, B = A>(ok: (t: T) => A, err: (e: E) => B): A | B;
   /**
    * Transform the contained value in an `Ok` variant, leaving an `Err` variant untouched.
    * If the transformation can fail, use `andThen` instead.
    */
-  map<A>(f: (t: T) => A): Result<A, E>;
+  map<U>(f: (t: T) => U): Result<U, E>;
   /**
    * Transform the contained error in an `Err` variant, leaving an `Ok` variant untouched.
    * Can be used to enrich errors while passing successful results through.
@@ -43,9 +43,9 @@ interface IResult<T, E> {
    */
   mapErr<U>(f: (e: E) => U): Result<T, U>;
   /** Transform the `Ok` value like `map`, but for fallible operations. */
-  andThen<U, F>(f: (t: T) => Result<U, F>): Result<U, E | F>;
+  andThen<U, E>(f: (t: T) => Result<U, F>): Result<U, E | F>;
   /** Map an `Err` value to a new Result. Useful for fallible error recovery. */
-  orElse<U, A>(f: (e: E) => Result<U, A>): Result<T | U, A>;
+  orElse<U, F>(f: (e: E) => Result<U, F>): Result<T | U, F>;
   /** Run a side effect on the `Ok` value. An `Err` variant will not call the callback. */
   andTee(f: (t: T) => unknown): Result<T, E>;
   /** Run a side effect on the `Err` value. An `Ok` variant will not call the callback. */
