@@ -1,18 +1,15 @@
 <script lang="ts">
     import { getRegistry, getUIState } from "$lib/app/utils/di";
-    import GameAction from "./GameAction.svelte";
-    import GameMenu from "./GameMenu.svelte";
+    import GameTab from "./GameTab.svelte";
     import { InternalWSConnection, GameWSSender } from "$lib/api/ws";
     import { SchemaTestGame } from "$lib/app/schema-test";
-    import { boolAttr } from "runed";
-    import { Plus, ChevronDown, EllipsisVertical } from "@lucide/svelte";
+    import { Plus, ChevronDown } from "@lucide/svelte";
     import Popover from "$lib/ui/common/Popover.svelte";
     import { tick } from "svelte";
 
     const registry = getRegistry();
     const uiState = getUIState();
     const selectedTab = $derived(uiState.selectedGameTab);
-    let gameMenuOpen = $state(false);
 
     async function startSchemaTest() {
         const conn = new InternalWSConnection(`${Date.now().toString().split("").reverse().join("")}-schema-test`, "v1");
@@ -28,7 +25,7 @@
 <div class="flex h-full flex-col">
     <div class="header">
         <h2>Connections</h2>
-        <Popover onFocusOutside={(_) => gameMenuOpen = false}>
+        <Popover>
             {#snippet trigger(props)}
                 <button {...props} class="flex flex-row gap-1 items-center">
                     <Plus class="size-6 opacity-80" />
@@ -48,45 +45,7 @@
     {#if registry.games.length > 0}
         <div class="games-container">
             {#each registry.games as game, i (game.conn.id)}
-                {@const seenActions = [...game.actions.values()]}
-                {@const activeActions = seenActions.filter(a => a.active)}
-                <details class="game-tab" name="games-accordion"
-                    open={selectedTab === i}
-                >
-                    <summary class="game-tab-header">
-                        <div class="game-info">
-                            <span class="game-name">{game.name}</span>
-                        </div>
-                        <div class="game-controls">
-                            <!-- {#if activeActions.length > 0}
-                                <span class="note" title="{activeActions.length} active actions">
-                                    {activeActions.length}
-                                </span>
-                            {/if} -->
-                            <div class="status-indicator"
-                                data-connected={boolAttr(!game.conn.closed)}
-                                data-warn={boolAttr(false /* todo */)}
-                                data-error={boolAttr(false /* todo */)}
-                            >
-                                <div class="status-dot"></div>
-                            </div>
-                            <Popover open={gameMenuOpen} onOpenChange={(d) => gameMenuOpen = d.open}>
-                                {#snippet trigger(props)}
-                                    <button {...props} class="menu-trigger">
-                                        <EllipsisVertical />
-                                    </button>
-                                {/snippet}
-                                <GameMenu {game} />
-                            </Popover>
-                        </div>
-                    </summary>
-
-                    <div class="game-content action-list">
-                        {#each activeActions as action (action.name)}
-                            <GameAction {action} {game} />
-                        {/each}
-                    </div>
-                </details>
+                <GameTab {game} isSelected={selectedTab === i} />
             {/each}
         </div>
     {:else}
@@ -121,92 +80,7 @@
         @apply px-1 py-2;
     }
 
-    details.game-tab {
-        @apply flex flex-col overflow-y-hidden;
-        @apply rounded-lg shadow-sm transition-all;
-        @apply border border-neutral-200/70 dark:border-neutral-700;
-        @apply bg-white/80 dark:bg-neutral-900/60;
 
-        &[open] {
-            @apply border-sky-300 dark:border-sky-600;
-            @apply shadow-md flex-1;
-        }
-
-        &:not([open]):hover {
-            @apply bg-neutral-50/80 dark:bg-neutral-800/70;
-        }
-
-        summary.game-tab-header {
-            @apply flex cursor-pointer items-center justify-between gap-2;
-            @apply px-3 py-2 text-sm font-medium text-neutral-700 transition;
-            @apply focus:outline-none;
-            &:focus-visible {
-                @apply ring-2 ring-sky-400 ring-inset;
-            }
-            @apply dark:text-neutral-200;
-        }
-
-        /* whoever decided not to make this pseudoelement a header in the docs - dishonor upon your family */
-        &::details-content {
-            @apply overflow-y-scroll;
-        }
-    }
-
-    .game-info {
-        @apply flex items-center gap-2 flex-1 min-w-0 text-lg font-medium;
-    }
-
-    .game-name {
-        @apply truncate max-w-[calc(100%-1rem)];
-    }
-
-    .game-controls {
-        @apply flex items-center gap-2 shrink-0;
-    }
-
-    .status-indicator {
-        @apply flex items-center justify-center;
-
-        .status-dot {
-            @apply bg-neutral-400;
-        }
-
-        &[data-connected] .status-dot {
-            @apply bg-green-500;
-        }
-
-        &[data-warn] .status-dot {
-            @apply bg-warning-500;
-        }
-
-        &[data-error] .status-dot {
-            @apply bg-red-500;
-        }
-    }
-
-    .status-dot {
-        @apply w-2 h-2 rounded-full;
-        @apply transition-colors;
-    }
-
-    .menu-trigger {
-        @apply p-1 rounded-md;
-        @apply text-neutral-500;
-        @apply transition-colors;
-        &:hover {
-            @apply bg-neutral-100;
-            @apply dark:bg-neutral-800/50;
-            @apply text-neutral-700 dark:text-neutral-300;
-        }
-    }
-
-    .game-content {
-        @apply border-t border-neutral-200/50 dark:border-neutral-700/50;
-    }
-
-    .action-list {
-        @apply flex flex-col gap-1 p-2;
-    }
 
     .menu-content {
         @apply flex flex-col gap-1 px-1 py-1;
