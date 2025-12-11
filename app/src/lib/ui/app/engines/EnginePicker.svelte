@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getSession, getUserPrefs } from '$lib/app/utils/di';
+    import { getSession, getUserPrefs, getUIState } from '$lib/app/utils/di';
     import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
     import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
     import { getEngineConfigComponent } from './EngineConfig.svelte';
@@ -14,10 +14,11 @@
 
     const session = getSession();
     const userPrefs = getUserPrefs();
+    const uiState = getUIState();
 
     // UI state machine - null shows engine list
     let configEngineId: string | null = $state(null);
-    let open = $state(false);
+    let open = $derived.by(() => uiState.enginePickerOpen);
     const showingEngineList = $derived(open && !configEngineId);
     const engines = $derived(Object.entries(session.engines));
     const keys = new PressedKeys();
@@ -32,7 +33,7 @@
             closeConfig();
         }
     })
-    registerGlobalHotkey(['Control', 'E'], () => open = !open);
+    registerGlobalHotkey(['Control', 'E'], () => open ? uiState.closeEnginePicker() : uiState.openEnginePicker());
     // quick select
     for (let i = 1; i <= 9; i++) {
         keys.onKeys(i.toString(), () => {
@@ -89,7 +90,7 @@
     }
 </script>
 
-<Dialog {open} onOpenChange={(d) => open = d.open}>
+<Dialog {open} onOpenChange={(d) => d.open ? uiState.openEnginePicker() : uiState.closeEnginePicker()}>
     <Dialog.Trigger>
         {#snippet element(props)}
             <button {...props} class="trigger">

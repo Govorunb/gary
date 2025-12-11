@@ -32,7 +32,6 @@
     const shiftPressed = $derived(keys.has("Shift"));
     keys.onKeys(["Control", "Enter"], sendAction);
     keys.onKeys(["Alt", "R"], reroll);
-    keys.onKeys(["Control", "E"], closeDialog); // HACK: close when opening engine picker
 
     let editorEl = $state<HTMLDivElement>();
     let schemaEl = $state<HTMLDivElement>();

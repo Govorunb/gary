@@ -10,6 +10,8 @@ export class UIState {
     selectedGameTab: number = $state(0);
     manualSendDialog: ManualSendDialogState = $state(null);
     rawMessageDialog: RawMessageDialogState = $state(null);
+    enginePickerOpen: boolean = $state(false);
+    anyDialogOpen = $derived(this.enginePickerOpen || this.manualSendDialog || this.rawMessageDialog);
 
     constructor(private readonly session: Session) {
         $effect(() => {
@@ -23,7 +25,14 @@ export class UIState {
         this.selectedGameTab = i;
     }
 
+    closeAllDialogs() {
+        this.manualSendDialog = null;
+        this.rawMessageDialog = null;
+        this.enginePickerOpen = false;
+    }
+
     openManualSendDialog(action: Action, game: Game) {
+        this.closeAllDialogs();
         this.manualSendDialog = { action, game };
     }
 
@@ -32,10 +41,20 @@ export class UIState {
     }
 
     openRawMessageDialog(game: Game) {
+        this.closeAllDialogs();
         this.rawMessageDialog = { game };
     }
 
     closeRawMessageDialog() {
         this.rawMessageDialog = null;
+    }
+
+    openEnginePicker() {
+        this.closeAllDialogs();
+        this.enginePickerOpen = true;
+    }
+
+    closeEnginePicker() {
+        this.enginePickerOpen = false;
     }
 }

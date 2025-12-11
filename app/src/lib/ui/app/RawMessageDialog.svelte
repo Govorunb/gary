@@ -23,7 +23,6 @@
     const userPrefs = getUserPrefs();
     const keys = new PressedKeys();
     keys.onKeys(["Control", "Enter"], sendMessage);
-    keys.onKeys(["Control", "E"], closeDialog); // FIXME: engine picker hotkey workaround thing
 
     let editorEl = $state<HTMLDivElement>();
     let view = $state<EditorView | null>(null);

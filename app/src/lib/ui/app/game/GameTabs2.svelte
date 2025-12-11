@@ -12,6 +12,7 @@
     const registry = getRegistry();
     const uiState = getUIState();
     const selectedTab = $derived(uiState.selectedGameTab);
+    let gameMenuOpen = $state(false);
 
     async function startSchemaTest() {
         const conn = new InternalWSConnection(`${Date.now().toString().split("").reverse().join("")}-schema-test`, "v1");
@@ -27,7 +28,7 @@
 <div class="flex h-full flex-col">
     <div class="header">
         <h2>Connections</h2>
-        <Popover>
+        <Popover onFocusOutside={(_) => gameMenuOpen = false}>
             {#snippet trigger(props)}
                 <button {...props} class="flex flex-row gap-1 items-center">
                     <Plus class="size-6 opacity-80" />
@@ -69,7 +70,7 @@
                             >
                                 <div class="status-dot"></div>
                             </div>
-                            <Popover>
+                            <Popover open={gameMenuOpen} onOpenChange={(d) => gameMenuOpen = d.open}>
                                 {#snippet trigger(props)}
                                     <button {...props} class="menu-trigger">
                                         <EllipsisVertical />
@@ -165,6 +166,10 @@
 
     .status-indicator {
         @apply flex items-center justify-center;
+
+        .status-dot {
+            @apply bg-neutral-400;
+        }
 
         &[data-connected] .status-dot {
             @apply bg-green-500;
