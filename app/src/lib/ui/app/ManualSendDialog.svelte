@@ -4,7 +4,7 @@
     import { basicSetup, EditorView } from "codemirror";
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";
-    import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
+    import Dialog from '$lib/ui/common/Dialog.svelte';
     import { Send, ChevronLeft, ChevronRight, Dice6 } from "@lucide/svelte";
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
@@ -19,12 +19,11 @@
 
     type Props = {
         open: boolean;
-        onOpenChange: (open: boolean) => void;
         action: Action;
         game: Game;
     };
 
-    let { open = $bindable(), onOpenChange, action, game }: Props = $props();
+    let { open = $bindable(), action, game }: Props = $props();
     const session = getSession();
     const userPrefs = getUserPrefs();
     const ajv = new Ajv({ validateFormats: false, allErrors: true });
@@ -142,7 +141,7 @@
     }
 
     function closeDialog() {
-        onOpenChange(false);
+        open = false;
     }
 
     async function sendAction() {
@@ -166,12 +165,9 @@
     }
 </script>
 
-<Dialog {open} onOpenChange={(d) => onOpenChange(d.open)}>
-    <Portal>
-        <Dialog.Backdrop class="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity" />
-        <Dialog.Positioner class="fixed inset-0 flex justify-center items-center align-middle">
-            <Dialog.Content>
-                <div class="manual-send-content">
+<Dialog bind:open>
+    {#snippet content(props)}
+        <div {...props} class="manual-send-content">
                     <div class="dialog-header">
                         <h2 class="text-lg font-bold">Manual Send ({action.name})</h2>
                         <div class="header-actions">
@@ -255,10 +251,8 @@
                             </button>
                         </div>
                     </div>
-                </div>
-            </Dialog.Content>
-        </Dialog.Positioner>
-    </Portal>
+        </div>
+    {/snippet}
 </Dialog>
 
 <style lang="postcss">

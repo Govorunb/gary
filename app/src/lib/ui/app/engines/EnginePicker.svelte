@@ -1,6 +1,6 @@
 <script lang="ts">
     import { getSession, getUserPrefs, getUIState } from '$lib/app/utils/di';
-    import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
+    import Dialog from '$lib/ui/common/Dialog.svelte';
     import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
     import { getEngineConfigComponent } from './EngineConfig.svelte';
     import { PressedKeys } from 'runed';
@@ -18,11 +18,24 @@
 
     // UI state machine - null shows engine list
     let configEngineId: string | null = $state(null);
-    let open = $derived.by(() => uiState.enginePickerOpen);
+    let open = $state(false);
     const showingEngineList = $derived(open && !configEngineId);
     const engines = $derived(Object.entries(session.engines));
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has('Shift'));
+
+    $effect(() => {
+        if (uiState.dialogs.enginePickerOpen) {
+            open = true;
+        }
+    });
+    $effect(() => {
+        if (open) {
+            uiState.dialogs.openEnginePicker();
+        } else {
+            uiState.dialogs.closeEnginePicker();
+        }
+    });
 
     $effect(() => {
         // in traditional rx fashion, if you don't subscribe to a falling tree, it makes no sound
@@ -32,8 +45,8 @@
         if (!open) {
             closeConfig();
         }
-    })
-    registerGlobalHotkey(['Control', 'E'], () => open ? uiState.closeEnginePicker() : uiState.openEnginePicker());
+    });
+    registerGlobalHotkey(['Control', 'E'], () => open = !open);
     // quick select
     for (let i = 1; i <= 9; i++) {
         keys.onKeys(i.toString(), () => {
@@ -90,97 +103,90 @@
     }
 </script>
 
-<Dialog {open} onOpenChange={(d) => d.open ? uiState.openEnginePicker() : uiState.closeEnginePicker()}>
-    <Dialog.Trigger>
-        {#snippet element(props)}
-            <button {...props} class="trigger">
-                <span class="truncate max-w-96">{session.activeEngine.name}</span>
-                <ChevronDown class="size-4 opacity-50" />
-            </button>
-        {/snippet}
-    </Dialog.Trigger>
-    <Portal>
-        <Dialog.Backdrop class="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity" />
-        <Dialog.Positioner class="fixed inset-0 flex justify-center items-start pt-[15vh]">
-            <Dialog.Content>
-                <div class="popover-content" in:fly={{ y: 10, duration: 200 }} out:fade={{ duration: 150 }}>
-                    {#if !configEngineId}
-                        <div class="view-container" in:fly={{ x: -20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
-                            <div class="header">
-                                <h3>Select Engine</h3>
-                                <TeachingTooltip>
-                                    <p><Hotkey>Ctrl+E</Hotkey> to open/close engine picker.</p>
-                                    <p><Hotkey>1..9</Hotkey> to quick-select engine.</p>
-                                    <p><Hotkey>Alt-click</Hotkey> an engine to quickly open config.</p>
-                                    <p><Hotkey>Alt+A</Hotkey> to create a custom OpenAI-compatible engine.</p>
-                                    <p>Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (OpenAI-compatible only)</p>
-                                </TeachingTooltip>
-                            </div>
+<Dialog bind:open position="top-start">
+    {#snippet trigger(props)}
+        <button {...props} class="trigger">
+            <span class="truncate max-w-96">{session.activeEngine.name}</span>
+            <ChevronDown class="size-4 opacity-50" />
+        </button>
+    {/snippet}
+    {#snippet content(props)}
+        <div {...props} class="popover-content" in:fly={{ y: 10, duration: 200 }} out:fade={{ duration: 150 }}>
+            {#if !configEngineId}
+                <div class="view-container" in:fly={{ x: -20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
+                    <div class="header">
+                        <h3>Select Engine</h3>
+                        <TeachingTooltip>
+                            <p><Hotkey>Ctrl+E</Hotkey> to open/close engine picker.</p>
+                            <p><Hotkey>1..9</Hotkey> to quick-select engine.</p>
+                            <p><Hotkey>Alt-click</Hotkey> an engine to quickly open config.</p>
+                            <p><Hotkey>Alt+A</Hotkey> to create a custom OpenAI-compatible engine.</p>
+                            <p>Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (OpenAI-compatible only)</p>
+                        </TeachingTooltip>
+                    </div>
 
-                            <div class="list">
-                                {#each engines as [id, engine], i (id)}
-                                    {@const active = session.activeEngine.id === id}
-                                    {@const del = shiftPressed && canDelete(id)}
-                                    {@const Icon = del ? Trash2 : Settings2}
+                    <div class="list">
+                        {#each engines as [id, engine], i (id)}
+                            {@const active = session.activeEngine.id === id}
+                            {@const del = shiftPressed && canDelete(id)}
+                            {@const Icon = del ? Trash2 : Settings2}
 
-                                    <div class="engine-row group" title="ID: {id}">
-                                        <button
-                                            class="engine-select"
-                                            class:active={active}
-                                            onclick={(e) => clickEngine(e, id)}
-                                        >
-                                            <div class="status-indicator" class:active={active}>
-                                                {#if active}
-                                                    <Check class="size-3 text-white" />
-                                                {:else if i + 1 < 10}
-                                                    {i + 1}
-                                                {/if}
-                                            </div>
-                                            <span class="name">{engine.name}</span>
-                                        </button>
-
-                                        <div class="actions" data-shift={shiftPressed}>
-                                            <button class={["action-btn", del ? "delete" : "config"]}
-                                                onclick={() => del ? deleteEngine(id) : openConfig(id)}
-                                                title={del ? "Delete" : "Configure"}
-                                            >
-                                                <Icon class="size-4" />
-                                            </button>
-                                        </div>
+                            <div class="engine-row group" title="ID: {id}">
+                                <button
+                                    class="engine-select"
+                                    class:active={active}
+                                    onclick={(e) => clickEngine(e, id)}
+                                >
+                                    <div class="status-indicator" class:active={active}>
+                                        {#if active}
+                                            <Check class="size-3 text-white" />
+                                        {:else if i + 1 < 10}
+                                            {i + 1}
+                                        {/if}
                                     </div>
-                                {/each}
-                            </div>
+                                    <span class="name">{engine.name}</span>
+                                </button>
 
-                            <div class="footer">
-                                <button class="add-button" onclick={createOpenAICompatible}>
-                                    <CirclePlus class="size-4" />
-                                    <span>Add OpenAI-compatible</span>
-                                </button>
+                                <div class="actions" data-shift={shiftPressed}>
+                                    <button class={["action-btn", del ? "delete" : "config"]}
+                                        onclick={() => del ? deleteEngine(id) : openConfig(id)}
+                                        title={del ? "Delete" : "Configure"}
+                                    >
+                                        <Icon class="size-4" />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    {:else}
-                        <div class="view-container" in:fly={{ x: 20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
-                            <div class="header with-back">
-                                <button class="back-btn" onclick={closeConfig}>
-                                    <ArrowLeft class="size-5" />
-                                </button>
-                                <h3>{session.engines[configEngineId].name}</h3>
-                                <div class="w-8"><!-- spacer --></div>
-                            </div>
-                            <div class="config-body">
-                                {#if configEngineId && session.engines[configEngineId]}
-                                    {@const ConfigComponent = getEngineConfigComponent(configEngineId)}
-                                    <ConfigComponent engineId={configEngineId} close={closeConfig} />
-                                {:else}
-                                    <p class="text-neutral-500 p-4">Internal error: Engine {configEngineId} not found</p>
-                                {/if}
-                            </div>
-                        </div>
-                    {/if}
+                        {/each}
+                    </div>
+
+                    <div class="footer">
+                        <button class="add-button" onclick={createOpenAICompatible}>
+                            <CirclePlus class="size-4" />
+                            <span>Add OpenAI-compatible</span>
+                        </button>
+                    </div>
                 </div>
-            </Dialog.Content>
-        </Dialog.Positioner>
-    </Portal>
+            {:else}
+                <div class="view-container" in:fly={{ x: 20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
+                    <div class="header with-back">
+                        <button class="back-btn" onclick={closeConfig}>
+                            <ArrowLeft class="size-5" />
+                        </button>
+                        <h3>{session.engines[configEngineId].name}</h3>
+                        <div class="w-8"><!-- spacer --></div>
+                    </div>
+                    <div class="config-body">
+                        {#if configEngineId && session.engines[configEngineId]}
+                            {@const ConfigComponent = getEngineConfigComponent(configEngineId)}
+                            <ConfigComponent engineId={configEngineId} close={closeConfig} />
+                        {:else}
+                            <p class="text-neutral-500 p-4">Internal error: Engine {configEngineId} not found</p>
+                        {/if}
+                    </div>
+                </div>
+            {/if}
+        </div>
+    {/snippet}
 </Dialog>
 
 <style lang="postcss">

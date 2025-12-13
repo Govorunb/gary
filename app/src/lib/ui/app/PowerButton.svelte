@@ -2,7 +2,7 @@
     import { getUserPrefs, getServerManager, getRegistry } from "$lib/app/utils/di";
     import ServerConfig from "./ServerConfig.svelte";
     import { CirclePower, SlidersHorizontal } from "@lucide/svelte";
-    import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
+    import Dialog from '$lib/ui/common/Dialog.svelte';
     import Popover from "$lib/ui/common/Popover.svelte";
     import { boolAttr } from "runed";
     import r from "$lib/app/utils/reporting";
@@ -99,11 +99,8 @@
     {/if}
 </div>
 <Dialog open={confirmModalOpen} onOpenChange={(d) => confirmModalOpen = d.open}>
-    <Portal>
-        <Dialog.Backdrop class="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity" />
-        <Dialog.Positioner class="fixed inset-0 flex justify-center items-center align-middle">
-            <Dialog.Content>
-                <div class="confirm-content preset-outlined-warning-300-700">
+    {#snippet content(props)}
+        <div {...props} class="confirm-content preset-outlined-warning-300-700">
                     <h2 class="text-lg font-bold">Confirm stopping server</h2>
                     <p>Are you sure you want to stop the server? There are still open connections.</p>
                     <p class="note">Shift-click to bypass this confirmation.</p>
@@ -111,10 +108,8 @@
                         <button class="btn preset-tonal-warning" onclick={() => togglePower(true)}>Disconnect all games</button>
                         <button class="btn preset-tonal-surface" onclick={() => confirmModalOpen = false}>Cancel</button>
                     </div>
-                </div>
-            </Dialog.Content>
-        </Dialog.Positioner>
-    </Portal>
+        </div>
+    {/snippet}
 </Dialog>
 
 <style lang="postcss">

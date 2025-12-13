@@ -57,7 +57,7 @@
     });
 
     function send() {
-        uiState.openManualSendDialog(action, game);
+        uiState.dialogs.openManualSendDialog(action, game);
     }
 
     function sendRandom() {

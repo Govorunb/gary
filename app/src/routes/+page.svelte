@@ -8,6 +8,19 @@
     import { getUIState } from "$lib/app/utils/di";
     
     const uiState = getUIState();
+    const dialogs = uiState.dialogs;
+
+    let manualSendOpen = $derived(!!dialogs.manualSendDialog);
+    let rawMsgOpen = $derived(!!dialogs.rawMessageDialog);
+    $effect(() => {
+        if (!manualSendOpen) {
+            dialogs.closeManualSendDialog();
+        }
+        if (!rawMsgOpen) {
+            dialogs.closeRawMessageDialog();
+        }
+    })
+    $inspect(manualSendOpen);
 </script>
 
 <header>
@@ -25,19 +38,17 @@
     <GaryDashboard />
 </main>
 
-{#if uiState.manualSendDialog}
-    <ManualSendDialog 
-        {...uiState.manualSendDialog}
-        open={!!uiState.manualSendDialog}
-        onOpenChange={(open) => !open && uiState.closeManualSendDialog()}
+{#if dialogs.manualSendDialog}
+    <ManualSendDialog
+        {...dialogs.manualSendDialog}
+        bind:open={manualSendOpen}
     />
 {/if}
 
-{#if uiState.rawMessageDialog}
+{#if dialogs.rawMessageDialog}
     <RawMessageDialog 
-        {...uiState.rawMessageDialog}
-        open={!!uiState.rawMessageDialog}
-        onOpenChange={(open) => !open && uiState.closeRawMessageDialog()}
+        {...dialogs.rawMessageDialog}
+        bind:open={rawMsgOpen}
     />
 {/if}
 
