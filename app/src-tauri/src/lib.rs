@@ -10,6 +10,7 @@ mod app;
 use app::state::App;
 use app::commands::{is_server_running, server_state, start_server, stop_server};
 use api::server::{ws_accept, ws_deny, ws_send, ws_close};
+use crate::app::log::log;
 
 use crate::app::state::AppStateMutex;
 
@@ -24,8 +25,8 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::new()
             .rotation_strategy(RotationStrategy::KeepSome(5))
             .level(LevelFilter::Trace)
-            .target(Target::new(TargetKind::LogDir { file_name: Some("ws".to_owned()) })
-                .filter(|md| md.target() == "ws"))
+            .target(Target::new(TargetKind::LogDir { file_name: Some("tauri-ws".to_owned()) })
+                .filter(|md| md.target() == "tauri-ws"))
             .build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_websocket::init())
@@ -35,6 +36,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             is_server_running, server_state, start_server, stop_server,
             ws_accept, ws_deny, ws_send, ws_close,
+            log,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

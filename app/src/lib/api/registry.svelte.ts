@@ -68,7 +68,7 @@ export class Registry {
         return this.games.find(g => g.conn.id === id || g.conn.shortId === id);
     }
 
-    validateGameName(name: string): boolean {
+    validateGameName(_name: string): boolean {
         // TODO
         return true;
     }

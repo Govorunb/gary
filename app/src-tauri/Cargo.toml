@@ -49,3 +49,4 @@ axum = { version = "0.8", features = ["ws", "macros"] }
 tauri-plugin-updater = "2.9.0"
 tauri-plugin-dialog = "2.4.2"
 tauri-plugin-process = "2.3.1"
+serde_repr = "0.1.20"

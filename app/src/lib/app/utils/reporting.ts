@@ -1,6 +1,6 @@
-import * as log from "@tauri-apps/plugin-log";
 import { toast, type ExternalToast } from "svelte-sonner";
 import { isTauri } from "@tauri-apps/api/core";
+import { safeInvoke } from ".";
 
 export interface Reporter {
     /** Minimum log level. */
@@ -14,7 +14,7 @@ export interface Reporter {
     verbose: ReportFunc;
     debug: ReportFunc;
     info: ReportFunc;
-    success: ReportFunc; // success toast
+    success: ReportFunc;
     warn: ReportFunc;
     error: ReportFunc;
     fatal: ReportFunc; // TODO: modal for fatal
@@ -31,17 +31,17 @@ export enum LogLevel {
     Verbose,
     Debug,
     Info,
-    Success,
+    Success, // behaves like info log level (but toasts have a 'success' type)
     Warning,
     Error,
-    Fatal
+    Fatal // behaves like 'error' (but ideally there should be a modal for a GH issue flow and such)
 }
 
 export type ReportOptions = {
     message: string;
     details?: string;
     toast?: boolean | ToastOptions;
-    target?: string; // TODO
+    target?: string;
     ctx?: Record<string, any>;
 };
 
@@ -94,17 +94,17 @@ class DefaultReporter implements Reporter {
         if (level < this.level) {
             return;
         }
-        let logFuncMap: Record<LogLevel, (message: string) => void> = {
-            [LogLevel.Verbose]: log.trace,
-            [LogLevel.Debug]: log.debug,
-            [LogLevel.Info]: log.info,
-            [LogLevel.Success]: log.info,
-            [LogLevel.Warning]: log.warn,
-            [LogLevel.Error]: log.error,
-            [LogLevel.Fatal]: log.error,
-        };
+        let msg = options.message;
+        if (options.details) {
+            msg += `\nDetails: ${options.details}`;
+        }
+        if (options.ctx) {
+            msg += `\nContext: ${JSON.stringify(options.ctx)}`;
+        }
+
+        let logFunc: (message: string) => void;
         if (!isTauri()) {
-            logFuncMap = {
+            const logFuncMap: Record<LogLevel, (message: string) => void> = {
                 [LogLevel.Verbose]: console.log,
                 [LogLevel.Debug]: console.debug,
                 [LogLevel.Info]: console.info,
@@ -112,15 +112,26 @@ class DefaultReporter implements Reporter {
                 [LogLevel.Warning]: console.warn,
                 [LogLevel.Error]: console.error,
                 [LogLevel.Fatal]: console.error,
-            }
-        }
-        const logFunc = logFuncMap[level];
-        let msg = options.message;
-        if (options.details) {
-            msg += `\nDetails: ${options.details}`;
-        }
-        if (options.ctx) {
-            msg += `\nContext: ${JSON.stringify(options.ctx)}`;
+            };
+            // dev only
+            const loc = getCallerLocation(4);
+            msg = `[${LogLevel[level]}] ${msg}\nTarget: [${options.target ?? "webview"}:${loc}]`;
+            logFunc = logFuncMap[level];
+        } else {
+            logFunc = (message: string) => safeInvoke("log", {
+                level,
+                message,
+                target: options.target,
+                // stack depth:
+                //      0 @getCallerLocation
+                //      1 @<closure>
+                //      2 @report
+                //      3 @gatherOptsAndReport
+                //      4 @trace
+                //      5 @actual_caller
+                // jfc
+                location: getCallerLocation(5),
+            });
         }
         logFunc(msg);
         if (options.toast) {
@@ -178,3 +189,61 @@ class DefaultReporter implements Reporter {
 const defaultReporter = new DefaultReporter(LogLevel.Verbose);
 
 export default defaultReporter as Reporter;
+
+// adapted from https://github.com/tauri-apps/plugins-workspace/blob/ce6835d50ff7800dcfb8508a98e9ee83771fb283/plugins/log/guest-js/index.ts#L47
+function getCallerLocation(targetStackDepth: number = 5): string | undefined {
+    const stack = new Error().stack;
+    if (!stack) return "(no stack)";
+
+    if (stack.startsWith('Error')) {
+        // Assume it's Chromium V8
+        //
+        // Error
+        //     at baz (filename.js:10:15)
+        //     at bar (filename.js:6:3)
+        //     at foo (filename.js:2:3)
+        //     at filename.js:13:1
+
+        const lines = stack.split('\n');
+        const callerLine = lines[targetStackDepth+1]?.trim();
+        if (!callerLine) return;
+
+        const regex = /at\s+(?<functionName>.*?)\s+\((?<fileName>.*?):(?<lineNumber>\d+):(?<columnNumber>\d+)\)/;
+        const match = callerLine.match(regex);
+
+        if (match) {
+            const { functionName, fileName, lineNumber, columnNumber } = match.groups as {
+                functionName: string
+                fileName: string
+                lineNumber: string
+                columnNumber: string
+            };
+            return `${functionName}@${fileName}:${lineNumber}:${columnNumber}`;
+        } else {
+            // Handle cases where the regex does not match (e.g., last line without function name)
+            const regexNoFunction = /at\s+(?<fileName>.*?):(?<lineNumber>\d+):(?<columnNumber>\d+)/;
+            const matchNoFunction = callerLine.match(regexNoFunction);
+            if (matchNoFunction) {
+                const { fileName, lineNumber, columnNumber } = matchNoFunction.groups as {
+                    fileName: string
+                    lineNumber: string
+                    columnNumber: string
+                };
+                return `<anonymous>@${fileName}:${lineNumber}:${columnNumber}`;
+            }
+        }
+    } else {
+        // Assume it's Webkit JavaScriptCore, example:
+        //
+        // baz@filename.js:10:24
+        // bar@filename.js:6:6
+        // foo@filename.js:2:6
+        // global code@filename.js:13:4
+
+        const traces = stack.split('\n').map((line) => line.split('@'));
+        const filtered = traces.filter(([name, location]) => {
+            return name.length > 0 && location !== '[native code]';
+        })
+        return filtered[targetStackDepth]?.filter((v) => v.length > 0).join('@');
+    }
+}

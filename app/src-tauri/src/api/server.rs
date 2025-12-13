@@ -46,7 +46,7 @@ impl WSServer {
         if let Some(existing) = self.pending_connections.insert(id, tx) {
             existing.send(WSConnectResponse::Deny(Some("UUID collision; discarding existing (sorry)".to_owned())))
                 .ok().expect("double send on oneshot in add_pending (UUID collision)");
-            error!(target: "ws", "UUID collision on {id} for pending_connections, discarded existing");
+            error!(target: "tauri-ws", "UUID collision on {id} for pending_connections, discarded existing");
         }
     }
 
@@ -77,7 +77,7 @@ impl WSServer {
 
     pub async fn insert(&mut self, id: Uuid, tx: SplitSink<WebSocket, Message>) {
         if let Some(existing) = self.connections.insert(id, tx) {
-            warn!(target: "ws", "UUID collision @ {id}, dropping existing");
+            warn!(target: "tauri-ws", "UUID collision @ {id}, dropping existing");
             let _ = Self::close_tx(existing,
                 Some(CloseCode::Protocol.into()),
                 Some("New incoming connection rolled the same UUID as yours... Sorry".into())
