@@ -70,10 +70,12 @@ Zod use should follow these conventions:
 - Prefer `strictObject` over `object` unless extra fields are explicitly meant to be allowed
 - When constructing objects in code from literals, prefer `zMyType.decode(input)` as it enables type checking whereas the `zMyType.parse(input)` parameter is typed as `unknown`. Use `parse` for outside input.
 
-#### Skeleton UI
+#### Svelte + Skeleton UI
 
 Svelte scopes CSS to the component - at compile time, a class like `.my-class` is transformed into e.g. `.random-id-unique-by-component.my-class` in the generated HTML and CSS rules.
-On the other hand, props on components *are not HTML props* - `class` may eventually be applied to a real HTML element, but because of this CSS scoping the compiled selector **will not** apply to the nested component's elements. To get around this, you need to either "consume" the CSS class in the same component, or use the `:global` selector, e.g. `:global(.my-class)` (however, this pollutes the global styles, so prefer the first option).
+On the other hand, props on components *are not HTML props* - `class` may eventually be applied to a real HTML element, but because of this CSS scoping the compiled selector **will not** apply to the nested component's elements. To get around this, you need to:
+1. "Consume" the CSS class in the same component by passing in a `{#snippet}` if the child component accepts one;
+2. Or, use the `:global` selector, e.g. `:global(.my-class)` (however, this pollutes the global styles, so prefer the first option).
 
 ```svelte
 <!-- Incorrect -->
