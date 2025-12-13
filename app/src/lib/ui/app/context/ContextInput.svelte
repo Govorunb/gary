@@ -10,6 +10,7 @@
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
     keys.onKeys(["Control", "Enter"], submit);
+    keys.onKeys(["Alt", "C"], () => textareaElem?.focus());
 
     let value = $state("");
     const silent = $derived(userPrefs.app.ctxInputSilent !== shiftPressed);

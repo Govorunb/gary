@@ -7,6 +7,7 @@
     import ContextLogMenu from "$lib/ui/app/context/ContextLogMenu.svelte";
     import ContextInput from "./ContextInput.svelte";
     import { ElementSize } from "runed";
+    import Hotkey from "$lib/ui/common/Hotkey.svelte";
 
     const session = getSession();
 
@@ -45,6 +46,7 @@
                 .
             </p>
             <p>Click client names to jump to their game tab.</p>
+            <p><Hotkey>Alt+C</Hotkey> to focus the input box.</p>
         </TeachingTooltip>
     </div>
     <div class="reverse-log">
