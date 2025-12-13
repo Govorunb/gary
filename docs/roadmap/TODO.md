@@ -12,41 +12,33 @@ The project is currently undergoing a renovation, porting functionality and UI f
 ### Task list
 
 App logic:
-- [x] Get Randy running and responding to actions
-    - [x] Scheduler with manual poke/force
+- [.] Scheduler stuff
     - [ ] Timer for poke/force (both timers reset when an action is performed; poke resets on attempt)
+    - [ ] Non-silent message (from user) with no connected games still primes the scheduler (`shouldAct`)
 - [.] OpenRouter (broken)
-- [x] Other OpenAI-compatible services (Local LLMs, OpenAI proper, etc)
+- [ ] Prefs
+    - [ ] File backing storage (so it's user editable)
+    - [ ] `$env:MY_ENV_VAR` syntax (for API keys etc)
+    - [ ] Actual config UI
+    - [ ] Reimplement presets/profiles again
+- [.] [Context](./context.md)
 
 Frontend:
-- [x] Tony mode (manual action sending)
-    - [x] Code editor (`codemirror`)
-    - [x] Validation with shift-click override
 - [ ] Extra context features
-    - [ ] Click for details dialog
-    - [ ] Corner indicators for source, silent/ephemeral
-    - [ ] Buttons to copy message text, ID, etc
+    - [ ] Menu (buttons to copy message text, ID, etc)
     - [ ] Editing the log - edit message text, remove message
-- [x] Engine config
-    - [x] API key (input field or [PKCE flow](https://openrouter.ai/docs/guides/overview/auth/oauth))
-    - [x] Model field (+helper directing to OpRt website)
-    - [x] Allow waiting/yapping
-    - [ ] `$env:MY_ENV_VAR` for prefs
+- [ ] Performance (because WebKit is ass)
+    - [ ] Virtualize context log https://tanstack.com/virtual/latest/docs/introduction
+    - [ ] Keep a CodeMirror instance loaded offscreen and Portal it into dialogs (deranged)
+    - [ ] Streaming reactive ctx message conversion (entirely reimplement rx it'll be funny)
+- [ ] Launch game processes (+ proposed shutdown API)
+- [ ] App logs should show in UI somewhere
 
+### Miscellaneous task list
 
-### Future plans
-
-After the Python app is deprecated and removed, some long-standing TODOs may finally be addressed:
-
-#### Miscellaneous task list
-- Actual config UI (I can't believe this wasn't done already)
-    - Editable config file (currently using `localStorage`)
-    - Reimplement presets/profiles again
-- Launching game processes (enabling use of the proposed Shutdown API)
-- App logs should also show up in UI (accessible as scroll log/toast notifications)
-- Multi-game action collisions
-  With single-context (and single-engine) two games may register actions with the same name.
-  A possible solution is renaming the colliding actions to `action(game)` or something, only when passing the list of actions to the engine.
+#### Multi-game action collisions
+With single-context (and single-engine) two games may register actions with the same name.
+A possible solution is renaming the colliding actions to `action(game)` or something, only when passing the list of actions to the engine.
 
 #### Strict ("prod") diagnostics
 
