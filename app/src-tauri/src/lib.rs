@@ -19,6 +19,7 @@ pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             app.manage(AppStateMutex::new(App::new(app.handle().clone())));
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap();
             Ok(())
         })
         .plugin(tauri_plugin_notification::init())
@@ -33,6 +34,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             is_server_running, server_state, start_server, stop_server,
             ws_accept, ws_deny, ws_send, ws_close,

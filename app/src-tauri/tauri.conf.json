@@ -35,9 +35,6 @@
   },
   "plugins": {
     "updater": {
-      "windows": {
-        "installMode": "passive"
-      },
       "endpoints": [
         "https://github.com/Govorunb/gary/releases/latest/download/latest.json"
       ],

@@ -69,7 +69,7 @@ export class Registry {
     }
 
     validateGameName(_name: string): boolean {
-        // TODO
+        // TODO: v2 spec
         return true;
     }
 

@@ -6,6 +6,9 @@
     import ManualSendDialog from "$lib/ui/app/ManualSendDialog.svelte";
     import RawMessageDialog from "$lib/ui/app/RawMessageDialog.svelte";
     import { getUIState } from "$lib/app/utils/di";
+    import { checkForAppUpdates, promptForUpdate, updateData } from "$lib/app/updater.svelte";
+    import { isTauri } from "@tauri-apps/api/core";
+    import { onMount } from "svelte";
     
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
@@ -20,7 +23,14 @@
             dialogs.closeRawMessageDialog();
         }
     })
-    $inspect(manualSendOpen);
+    onMount(async () => {
+        if (isTauri()) {
+            await checkForAppUpdates();
+        }
+    });
+    async function update() {
+        await promptForUpdate();
+    }
 </script>
 
 <header>
@@ -30,7 +40,10 @@
     <div class="justify-self-center">
         <EngineControls />
     </div>
-    <div class="justify-self-end">
+    <div class="justify-self-end flex flex-row gap-4">
+        {#if updateData.update}
+            <button class="btn preset-outlined-primary-200-800 align-top" onclick={update}>Update to {updateData.update.version}</button>
+        {/if}
         <ThemePicker />
     </div>
 </header>
