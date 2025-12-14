@@ -46,8 +46,10 @@ export async function promptForUpdate() {
     const update = updateData.update;
     if (!update) return;
 
+    // TODO: ditch native dialog, we can do better
+    // need a 4th "Release Notes" button (update.body is empty by default)
     const answer = await message(
-        `Update from ${update.currentVersion} to ${update.version}?\n\nRelease notes: ${update.body}`,
+        `Update from ${update.currentVersion} to ${update.version}?`,
         {
             title: "Update Available",
             kind: "info",
