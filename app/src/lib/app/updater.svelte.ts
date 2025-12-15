@@ -3,20 +3,56 @@ import { message as tauriDialog } from "@tauri-apps/plugin-dialog";
 import { relaunch as tauriRelaunchProcess } from "@tauri-apps/plugin-process";
 import r, { LogLevel } from "$lib/app/utils/reporting";
 import { ResultAsync } from "neverthrow";
+import dayjs from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
 
 export class Updater {
     public update?: Update | null = $state();
     public skipVersion?: string | null;
     public hasPendingUpdate: boolean;
+    public checkingForUpdates = $state(false);
+    private readonly prefs;
     
     constructor(private readonly userPrefs: UserPrefs) {
-        this.skipVersion = $derived(this.userPrefs.app.skipUpdateVersion);
+        this.prefs = $derived(userPrefs.app.updates);
+        this.skipVersion = $derived(this.prefs.skipUpdateVersion);
         this.hasPendingUpdate = $derived(!!this.update && this.skipVersion !== this.update.version);
+        if (this.shouldAutoCheck()) {
+            void this.checkForUpdates(false);
+        }
     }
 
-    async checkForAppUpdates(isCheckManual = false) {
+    private shouldAutoCheck(): boolean {
+        const checkFreq = this.prefs.autoCheckInterval;
+        
+        if (checkFreq === "everyLaunch") return true;
+        if (checkFreq === "off") return false;
+        // from here, autocheck interval is periodic (daily/weekly/monthly)
+        
+        const lastCheckedAt = this.prefs.lastCheckedAt;
+        if (!lastCheckedAt) return true; // never checked
+        
+        const now = dayjs();
+        const lastChecked = dayjs(lastCheckedAt);
+        
+        switch (checkFreq) {
+            case "daily":
+                return now.diff(lastChecked, 'day') >= 1;
+            case "weekly":
+                return now.diff(lastChecked, 'day') >= 7;
+            case "monthly":
+                return now.diff(lastChecked, 'month') >= 1;
+            default:
+                r.error(`Unknown value for prefs.app.updates.autoCheckInterval: ${checkFreq}`);
+                return false;
+        }
+    }
+
+    async checkForUpdates(isCheckManual = false) {
+        this.prefs.lastCheckedAt = new Date().toISOString();
+        this.checkingForUpdates = true;
         const updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
+        this.checkingForUpdates = false;
         if (updateRes.isErr()) {
             r.error("Could not check for updates", {
                 details: `${updateRes.error}`,
@@ -66,12 +102,12 @@ export class Updater {
         );
         switch (answer) {
             case 'Yes':
-                this.userPrefs.app.skipUpdateVersion = undefined;
+                this.userPrefs.app.updates.skipUpdateVersion = undefined;
                 await update.downloadAndInstall();
                 await tauriRelaunchProcess();
                 return;
             case 'No':
-                this.userPrefs.app.skipUpdateVersion = update.version;
+                this.userPrefs.app.updates.skipUpdateVersion = update.version;
                 this.update = null;
                 return;
             case 'Cancel': return;

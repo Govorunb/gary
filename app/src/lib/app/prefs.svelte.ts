@@ -100,7 +100,14 @@ export const zAppPrefs = z.strictObject({
     manualSendSchemaCollapsed: z.boolean().fallback(true),
     rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
     systemPrompt: z.string().nullish(),
-    skipUpdateVersion: z.string().nullish(),
+    updates: z.strictObject({
+        skipUpdateVersion: z.string().nullish(),
+        autoCheckInterval: z.enum([
+            // all automatic update checks are on launch
+            "everyLaunch", "daily", "weekly", "monthly", "off"
+        ]).fallback("daily"),
+        lastCheckedAt: z.iso.date().nullish(),
+    }).prefault({}),
 });
 
 export const zServerPrefs = z.strictObject({
