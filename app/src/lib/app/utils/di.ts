@@ -6,6 +6,7 @@ import type { Scheduler } from "../scheduler.svelte";
 import { ServerManager } from "../server.svelte";
 import { UIState } from "$lib/ui/app/ui-state.svelte";
 import { Updater } from "../updater.svelte";
+import { ThemeManager } from "../theme.svelte";
 
 const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
 const [ getSession, setSession ] = createContext<Session>();
@@ -14,6 +15,7 @@ const [ getScheduler, setScheduler ] = createContext<Scheduler>();
 const [ getServerManager, setServerManager ] = createContext<ServerManager>();
 const [ getUIState, setUIState ] = createContext<UIState>();
 const [ getUpdater, setUpdater ] = createContext<Updater>();
+const [ getThemeManager, setThemeManager ] = createContext<ThemeManager>();
 
 export {
     getUserPrefs,
@@ -23,6 +25,7 @@ export {
     getServerManager,
     getUIState,
     getUpdater,
+    getThemeManager,
 }
 
 export function initDI(userPrefsData: UserPrefsData) {
@@ -33,6 +36,7 @@ export function initDI(userPrefsData: UserPrefsData) {
     const serverManager = new ServerManager(session, userPrefs);
     const uiState = new UIState(session);
     const updater = new Updater(userPrefs, uiState);
+    const themeManager = new ThemeManager(userPrefs);
 
     setUserPrefs(userPrefs);
     setSession(session);
@@ -41,4 +45,5 @@ export function initDI(userPrefsData: UserPrefsData) {
     setServerManager(serverManager);
     setUIState(uiState);
     setUpdater(updater);
+    setThemeManager(themeManager);
 }

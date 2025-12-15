@@ -226,7 +226,7 @@
                     <div class="dialog-footer">
                         <div class="flex gap-2">
                             {#if schemaJson}
-                                <button class="btn preset-tonal-surface"
+                                <button class="btn subtle-btn"
                                     onclick={reroll}
                                     {@attach tooltip("Replace editor contents with random data (Alt+R)")}
                                 >
@@ -236,9 +236,9 @@
                             {/if}
                         </div>
                         <div class="flex gap-2">
-                            <button class="btn preset-tonal-surface" onclick={closeDialog}>Cancel</button>
+                            <button class="btn subtle-btn" onclick={closeDialog}>Cancel</button>
                             <button
-                                class="btn preset-filled-primary"
+                                class="btn send-btn"
                                 onclick={sendAction}
                                 disabled={!isValid && !shiftPressed}
                                 data-bypass={boolAttr(!isValid && shiftPressed)}
@@ -368,21 +368,21 @@
     .btn {
         @apply inline-flex items-center gap-2;
         @apply px-3 py-1.5 rounded-md text-sm font-medium;
-        @apply transition-colors;
-        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
+        @apply transition-all;
     }
 
-    .preset-tonal-surface {
-        @apply bg-neutral-100 text-neutral-700;
-        @apply hover:bg-neutral-200;
-        @apply dark:bg-neutral-800 dark:text-neutral-300;
-        @apply dark:hover:bg-neutral-700;
+    .subtle-btn {
+        @apply bg-neutral-100 dark:bg-neutral-800;
+        @apply text-neutral-700 dark:text-neutral-300;
+        &:hover {
+            @apply bg-neutral-200 dark:bg-neutral-700;
+        }
     }
 
-    .preset-filled-primary {
+    .send-btn {
         @apply bg-sky-500 text-white;
         @apply hover:bg-sky-600;
         @apply disabled:opacity-50 disabled:cursor-not-allowed;
-        @apply data-bypass:bg-amber-600;
+        @apply data-bypass:bg-amber-600/60;
     }
 </style>

@@ -55,7 +55,7 @@
 
                     <div class="theme-field">
                         <p class="field-label">Theme</p>
-                        <ThemePicker />
+                        <ThemePicker bind:currentTheme={userPrefs.app.theme} />
                     </div>
                 </div>
                 <div class="settings-section">
