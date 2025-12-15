@@ -49,7 +49,7 @@ export class Updater {
     }
 
     async checkForUpdates(isCheckManual = false) {
-        this.prefs.lastCheckedAt = new Date().toISOString();
+        this.prefs.lastCheckedAt = dayjs().toISOString();
         this.checkingForUpdates = true;
         const updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
         this.checkingForUpdates = false;

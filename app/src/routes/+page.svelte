@@ -1,11 +1,15 @@
 <script lang="ts">
     import GaryDashboard from "$lib/ui/app/GaryDashboard.svelte";
-    import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
     import PowerButton from "$lib/ui/app/PowerButton.svelte";
     import EngineControls from "$lib/ui/app/engines/EngineControls.svelte";
     import ManualSendDialog from "$lib/ui/app/ManualSendDialog.svelte";
     import RawMessageDialog from "$lib/ui/app/RawMessageDialog.svelte";
+    import SettingsDialog from "$lib/ui/app/SettingsDialog.svelte";
+    import { Settings2 } from "@lucide/svelte";
     import { getUIState, getUpdater } from "$lib/app/utils/di";
+    import { registerGlobalHotkey as registerAppHotkey } from "$lib/app/utils/hotkeys.svelte";
+    import { onMount } from "svelte";
+    import type { Update } from "@tauri-apps/plugin-updater";
     
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
@@ -13,12 +17,36 @@
 
     let manualSendOpen = $derived(!!dialogs.manualSendDialog);
     let rawMsgOpen = $derived(!!dialogs.rawMessageDialog);
+    let settingsOpen = $derived(dialogs.settingsDialogOpen);
+
+    const simUpdate: Update = {
+        available: true,
+        currentVersion: '0.0.0',
+        version: '1.0.0',
+        body: 'Did stuff.'
+    } as any as Update;
+    
+    onMount(() => {
+        const settingsHotkey = registerAppHotkey(["Control", ","], () => dialogs.openSettingsDialog());
+        const devSimUpdateHotkey = registerAppHotkey(["Control", "U"], () => {
+            updater.update = updater.update ? null : simUpdate;
+        })
+
+        return () => {
+            settingsHotkey();
+            devSimUpdateHotkey();
+        }
+    });
+    
     $effect(() => {
         if (!manualSendOpen) {
             dialogs.closeManualSendDialog();
         }
         if (!rawMsgOpen) {
             dialogs.closeRawMessageDialog();
+        }
+        if (!settingsOpen) {
+            dialogs.closeSettingsDialog();
         }
     })
     async function update() {
@@ -39,7 +67,13 @@
                 Update to {updater.update?.version ?? "latest version"}
             </button>
         {/if}
-        <ThemePicker />
+        <button 
+            class="btn preset-ghost hover:bg-neutral-200 dark:hover:bg-neutral-700 p-2" 
+            onclick={() => dialogs.openSettingsDialog()}
+            title="Settings"
+        >
+            <Settings2 class="size-5" />
+        </button>
     </div>
 </header>
 <main>
@@ -58,6 +92,10 @@
         {...dialogs.rawMessageDialog}
         bind:open={rawMsgOpen}
     />
+{/if}
+
+{#if dialogs.settingsDialogOpen}
+    <SettingsDialog bind:open={settingsOpen} />
 {/if}
 
 <style lang="postcss">
