@@ -5,13 +5,13 @@
     import EngineControls from "$lib/ui/app/engines/EngineControls.svelte";
     import ManualSendDialog from "$lib/ui/app/ManualSendDialog.svelte";
     import RawMessageDialog from "$lib/ui/app/RawMessageDialog.svelte";
-    import { getUIState } from "$lib/app/utils/di";
-    import { checkForAppUpdates, promptForUpdate, updateData } from "$lib/app/updater.svelte";
+    import { getUIState, getUpdater } from "$lib/app/utils/di";
     import { isTauri } from "@tauri-apps/api/core";
     import { onMount } from "svelte";
     
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
+    const updater = getUpdater();
 
     let manualSendOpen = $derived(!!dialogs.manualSendDialog);
     let rawMsgOpen = $derived(!!dialogs.rawMessageDialog);
@@ -23,13 +23,13 @@
             dialogs.closeRawMessageDialog();
         }
     })
-    onMount(async () => {
-        if (isTauri()) {
-            await checkForAppUpdates();
-        }
-    });
+    if (isTauri()) {
+        onMount(async () => {
+            await updater.checkForAppUpdates();
+        });
+    }
     async function update() {
-        await promptForUpdate();
+        await updater.promptForUpdate();
     }
 </script>
 
@@ -41,8 +41,8 @@
         <EngineControls />
     </div>
     <div class="justify-self-end flex flex-row gap-4">
-        {#if updateData.update}
-            <button class="btn preset-outlined-primary-200-800 align-top" onclick={update}>Update to {updateData.update.version}</button>
+        {#if updater.hasPendingUpdate}
+            <button class="btn preset-outlined-primary-200-800 align-top" onclick={update}>Update to {updater.update?.version}</button>
         {/if}
         <ThemePicker />
     </div>

@@ -100,6 +100,7 @@ export const zAppPrefs = z.strictObject({
     manualSendSchemaCollapsed: z.boolean().fallback(true),
     rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
     systemPrompt: z.string().nullish(),
+    skipUpdateVersion: z.string().nullish(),
 });
 
 export const zServerPrefs = z.strictObject({

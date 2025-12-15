@@ -47,7 +47,7 @@ export type ReportOptions = {
 
 export type ToastOptions = ExternalToast & {
     title?: string; // override for toast title
-    level?: LogLevel;
+    level?: LogLevel; // override for toast type (use it to e.g. show warning toasts on info/success events)
 }
 
 export type ReportFunc = {
