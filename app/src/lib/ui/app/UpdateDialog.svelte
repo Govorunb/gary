@@ -25,15 +25,24 @@
         if (updating) return;
         updating = true;
         
-        if (!isTauri()) {
-            r.success("Updated :)", {
-                toast: { description: "cool" }
-            });
-            return;
-        } else {
+        if (isTauri()) {
             await update.downloadAndInstall();
-            await tauriRelaunchProcess();
         }
+        r.success("Update successful", {
+            toast: {
+                description: "Restart the app at your convenience to finish the update.",
+                action: {
+                    label: "Restart now",
+                    async onClick() {
+                        if (isTauri()) {
+                            await tauriRelaunchProcess();
+                        } else {
+                            location.reload(); // pretend to relaunch (the app never updates on dev web server obviously)
+                        }
+                    }
+                }
+            }
+        });
         
         updating = false;
         open = false;
@@ -41,7 +50,6 @@
 
     function skip() {
         userPrefs.app.updates.skipUpdateVersion = update.version;
-        updater.update = null;
         open = false;
     }
 
@@ -68,14 +76,17 @@
                         <p class="release-notes-content">{update.body}</p>
                     </div>
                 {/if}
+                <p>
+                    Restart the app at your convenience to finish the update.
+                </p>
             </div>
 
             <div class="dialog-footer">
-                <button class="btn secondary" onclick={skip}>
+                <button class="btn skip-btn" onclick={skip}>
                     Skip this version
                 </button>
                 <div class="flex-1 self-stretch"></div>
-                <button class="btn secondary" onclick={cancel}>
+                <button class="btn cancel-btn" onclick={cancel}>
                     Cancel
                 </button>
                 <button class="btn preset-filled-primary-400-600" onclick={doUpdate} disabled={updating}>
@@ -143,15 +154,10 @@
         @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
     }
 
-    .btn.secondary {
+    .skip-btn, .cancel-btn {
         @apply bg-neutral-100 text-neutral-700;
         @apply hover:bg-neutral-200;
         @apply dark:bg-neutral-800 dark:text-neutral-300;
         @apply dark:hover:bg-neutral-700;
-    }
-
-    .btn.primary {
-        @apply bg-sky-500 text-white;
-        @apply hover:bg-sky-600;
     }
 </style>

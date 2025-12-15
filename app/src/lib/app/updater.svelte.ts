@@ -1,5 +1,5 @@
 import { check as tauriCheckUpdate, type Update } from "@tauri-apps/plugin-updater";
-import r, { LogLevel } from "$lib/app/utils/reporting";
+import r from "$lib/app/utils/reporting";
 import { ok, type Result, ResultAsync } from "neverthrow";
 import dayjs from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
@@ -19,7 +19,7 @@ export class Updater {
     public hasPendingUpdate: boolean;
     public checkingForUpdates = $state(false);
     private readonly prefs;
-    
+
     constructor(private readonly userPrefs: UserPrefs, private readonly uiState: UIState) {
         this.prefs = $derived(this.userPrefs.app.updates);
         this.skipVersion = $derived(this.prefs.skipUpdateVersion);
@@ -31,17 +31,17 @@ export class Updater {
 
     private shouldAutoCheck(): boolean {
         const checkFreq = this.prefs.autoCheckInterval;
-        
+
         if (checkFreq === "everyLaunch") return true;
         if (checkFreq === "off") return false;
         // from here, autocheck interval is periodic (daily/weekly/monthly)
-        
+
         const lastCheckedAt = this.prefs.lastCheckedAt;
         if (!lastCheckedAt) return true; // never checked
-        
+
         const now = dayjs();
         const lastChecked = dayjs(lastCheckedAt);
-        
+
         switch (checkFreq) {
             case "daily":
                 return now.diff(lastChecked, 'day') >= 1;
@@ -73,19 +73,26 @@ export class Updater {
             });
             return;
         }
-        const update = updateRes.value;
-        this.update = update;
-        if (!update) {
+        this.update = updateRes.value;
+        if (!this.update) {
             r.info("No update available", { toast: isCheckManual });
             return;
         }
-        const skipped = this.skipVersion === update.version;
-        if (skipped && !isCheckManual) return;
-        
+        const skipped = this.skipVersion === this.update.version;
+        if (skipped) {
+            r.info("Update skipped", `You previously skipped updating to ${this.update.version}`)
+        } else {
+            await this.notifyUpdateAvailable();
+        }
+    }
+
+    async notifyUpdateAvailable() {
+        if (!this.update) return;
+        if (this.skipVersion === this.update.version) return;
+
         r.success("Update available!", {
-            details: `Version ${update.version} is available${skipped ? " (you have skipped this version)" : ""}`,
+            details: `Version ${this.update.version} is available}`,
             toast: {
-                level: skipped ? LogLevel.Warning : undefined,
                 closeButton: true,
                 action: {
                     label: "Update",

@@ -140,7 +140,10 @@
                                 </button>
 
                                 <div class="actions" data-shift={shiftPressed}>
-                                    <button class={["action-btn", del ? "delete" : "config"]}
+                                    <button 
+                                        class="action-btn"
+                                        class:delete={del}
+                                        class:config={!del}
                                         onclick={() => del ? deleteEngine(id) : openConfig(id)}
                                         title={del ? "Delete" : "Configure"}
                                     >
@@ -186,10 +189,14 @@
 
     .trigger {
         @apply flex items-center gap-2 px-3 py-1.5 rounded-lg;
-        @apply bg-neutral-100 hover:bg-neutral-200 active:bg-neutral-300;
-        @apply dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:active:bg-neutral-600;
         @apply text-lg font-medium text-neutral-900 dark:text-neutral-100;
         @apply transition-all shadow-sm border border-neutral-200/50 dark:border-neutral-700/50;
+        @apply bg-neutral-100 active:bg-neutral-300;
+        @apply dark:bg-neutral-800 dark:active:bg-neutral-600;
+
+        &:hover {
+            @apply bg-neutral-200 dark:bg-neutral-700;
+        }
 
         &:focus-visible {
             @apply ring-2 ring-primary-500 outline-none;
@@ -234,8 +241,7 @@
 
     .engine-select {
         @apply flex-1 flex items-center gap-3 px-2 py-1.5 rounded-md text-left;
-        @apply text-sm font-medium text-neutral-700 dark:text-neutral-300;
-        @apply outline-none;
+        @apply text-sm font-medium text-neutral-700 dark:text-neutral-300 outline-none;
 
         &.active {
             @apply text-neutral-900 dark:text-white;
@@ -251,7 +257,8 @@
     }
 
     .status-indicator {
-        @apply size-5 rounded-full flex items-center justify-center border border-neutral-300 dark:border-neutral-600;
+        @apply size-5 rounded-full flex items-center justify-center;
+        @apply border border-neutral-300 dark:border-neutral-600;
         @apply transition-colors;
 
         &.active {
@@ -266,11 +273,19 @@
     }
 
     .action-btn {
-        @apply p-2 rounded-md text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100;
-        @apply hover:bg-neutral-200 dark:hover:bg-surface-700 transition-colors;
+        @apply p-2 rounded-md text-neutral-400 transition-colors;
+        
+        &:hover {
+            @apply text-neutral-900 dark:text-neutral-100;
+            @apply bg-neutral-200 dark:bg-surface-700;
+        }
 
         &.delete {
-            @apply text-error-500 hover:text-error-600 hover:bg-error-50 dark:hover:bg-error-900/20;
+            @apply text-error-500;
+            
+            &:hover {
+                @apply text-error-600 bg-error-50 dark:bg-error-900/20;
+            }
         }
     }
 
@@ -283,6 +298,7 @@
         @apply border border-dashed border-neutral-300 dark:border-neutral-700;
         @apply text-sm font-medium text-neutral-500 dark:text-neutral-400;
         @apply transition-all;
+        
         &:hover {
             @apply bg-white dark:bg-surface-800;
             @apply text-primary-500 dark:text-primary-400;
@@ -292,6 +308,7 @@
 
     .back-btn {
         @apply p-1 -ml-1 rounded-md text-neutral-500 transition-colors;
+        
         &:hover {
             @apply bg-neutral-100 dark:bg-surface-800;
             @apply text-neutral-900 dark:text-neutral-100;

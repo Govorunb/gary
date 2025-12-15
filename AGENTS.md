@@ -105,6 +105,8 @@ On the other hand, props on components *are not HTML props* - `class` may eventu
 </style>
 ```
 
+Additionally, Skeleton UI brings several built-in CSS classes like `btn` or `preset-tonal-surface`, so you may see them be used without a matching definition in the component's `<style>` tag. You do not need to define them separately. If in doubt, ask the user. Note: they are *not Tailwind directives*, and do not work with `@apply`. They must be placed inside the `class` property.
+
 ### Backend
 
 The Rust side should handle as little as possible to keep the majority of app logic concentrated in just TypeScript (for maintainability). The only things that must be handed over to Rust are system calls and things that aren't possible to do on the frontend; for example, we can't host a WebSocket server from the system WebView, so we must use Rust for that. But, since the Rust side should stay out of app logic, it just forwards messages to the frontend and does not handle any of them.

@@ -64,9 +64,9 @@
                         </p>
                     </div>
 
-                    <div class="flex flex-col gap-1">
+                    <div class="update-settings">
                         <p class="font-light">Automatically check for updates on app launch:</p>
-                        <select class="select" bind:value={userPrefs.app.updates.autoCheckInterval}>
+                        <select class="update-select" bind:value={userPrefs.app.updates.autoCheckInterval}>
                             <option value="everyLaunch">Every launch</option>
                             <option value="daily">Daily</option>
                             <option value="weekly">Weekly</option>
@@ -74,8 +74,8 @@
                             <option value="off">Never</option>
                         </select>
                     </div>
-                    <div class="flex flex-row gap-2 items-center">
-                        <button class="btn preset-outlined-surface-300-700"
+                    <div class="update-actions">
+                        <button class="btn preset-outlined-surface-300-700 check-updates-btn"
                             onclick={checkForUpdates}
                             disabled={updater.checkingForUpdates}
                         >
@@ -147,13 +147,25 @@
         @apply text-sm font-medium select-none;
         @apply text-neutral-700 dark:text-neutral-300;
     }
-    
-    select {
+    .update-settings {
+        @apply flex flex-col gap-1;
+    }
+
+    .update-actions {
+        @apply flex flex-row gap-2 items-center;
+    }
+
+    .update-select {
         @apply w-full px-3 py-2 pr-8 appearance-none;
         @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
         @apply bg-white dark:bg-neutral-800;
         @apply text-neutral-900 dark:text-neutral-100;
         @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
+        
+        &:hover {
+            @apply border-neutral-400 dark:border-neutral-500;
+        }
+        
         &::content, &::slotted {
             @apply rounded-lg;
         }
