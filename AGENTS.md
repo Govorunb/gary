@@ -24,7 +24,7 @@ Additionally, since this is a frontend for an entirely client-side app, no serve
 
 #### Miscellaneous Frontend Tips
 
-Explore `app/src/lib/app/utils/` for commonly reused functionality.
+Explore `src/lib/app/utils/` for commonly reused functionality.
 
 Avoid Tailwind class soup (long class strings) and prefer explicit CSS classes with `@apply` directives:
 ```svelte

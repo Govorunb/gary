@@ -43,7 +43,7 @@
     "files": {
         "ignoreUnknown": true,
         "includes": [
-            "app/src/**",
+            "src/**",
             "!!**/node_modules",
             "!!**/generated",
             "!!**/build"

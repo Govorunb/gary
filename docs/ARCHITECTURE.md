@@ -9,10 +9,7 @@ Gary consists of two main components:
 - **Backend Server** - WebSocket server that acts as the backend layer for game integrations, following a [custom protocol](#websocket-protocol)
 - **Management Web UI** - Web interface for game management, manual action sending, and context window control
 
-The project is currently undergoing a renovation, porting functionality and UI from Python to Tauri:
-
-1. **Python** (`src/gary/`) - Current stable version with FastAPI/Panel web interface
-2. **Tauri** (`app/`) - Modern desktop application in active development using Svelte 5 for the frontend
+The project recently underwent a renovation, porting functionality and UI from Python to a modern desktop application, built on Tauri and using Svelte 5 for the frontend.
 
 ### WebSocket Protocol
 
@@ -44,38 +41,8 @@ There's also Tony, which is not an actual engine; 'Tony mode' is a term for when
 A session **scheduler** is responsible for processing an **event queue** of WebSocket messages coming from games. When an event (or timer) calls for it, the scheduler prompts an engine to act.
 The engine may choose not to act if not forced. This use of the term "force" is similar in purpose to the WebSocket protocol, but is not the same thing - a scheduler may force an action without an incoming `actions/force`, e.g. if no actions were taken for a certain amount of time.
 
-## Stable - Python Application (`src/gary/`)
 
-### Application Components
-
-- Entry point (`src/gary/__main__.py`) - loads config (from `src/util/config.py`) and starts a Uvicorn server, which loads the core application
-- Core application (`src/gary/app.py`) - hosts a FastAPI application, accepting WebSocket connections on the root path (`/`), and starts the web UI
-- Web interface (`src/gary/web/`) - Panel-based web interface for game management, manual action sending, and context window control
-- Game registry (`src/gary/registry.py`) - tracks and manages game connections
-- LLM integration (`src/gary/llm/`) - includes a scheduler that pokes the LLM to generate actions
-- Utilities (`src/gary/util/`) - miscellaneous code like config and logging
-
-### Additional Technologies
-
-Some more tech used but not mentioned above:
-- [`guidance`](https://github.com/guidance-ai/guidance) - Fast constrained LLM generation
-- `llama-cpp`/`transformers` - Load language models to GPU
-- `pydantic` - Data models and validation for WebSocket spec and config
-- `uv` - Package manager & app runner
-- `loguru` + `colorlog` - Logging
-- `orjson` for faster JSON serialization, `jsonschema` for validation against action schemas, and `jsf` for generating random actions (Randy)
-
-### Configuration
-- YAML-based configuration system (`config.yaml` for an example config)
-  - Main design - presets (base presets with overrides)
-  - Preset to load is selected with CLI option or environment variable (`.env` is imported too)
-- Config format is documented mainly through schema (`config.schema.yaml`)
-  - Granular, per-subsystem logging
-  - Server behaviour (implementation details and off-spec deviations)
-  - LLM parameters
-
-
-## Development - Tauri Application (`app/`)
+## Tauri Application
 
 ### Architecture Overview
 
@@ -83,13 +50,13 @@ The Tauri application is in **active development** and represents the future dir
 
 ### App Components
 
-#### Build System (`app/package.json`, `app/src-tauri/Cargo.toml`)
+#### Build System (`package.json`, `src-tauri/Cargo.toml`)
 - `pnpm` and `cargo` - Package management
 - Svelte 5 - Reactive web framework
 - SvelteKit - Full-stack web framework for Svelte
 - Vite - Build tool and dev server
 
-#### Tauri (`app/src-tauri/`)
+#### Tauri (`src-tauri/`)
 - Rust backend for desktop application
 - Hosts the WebSocket server, relaying messages to the frontend
 - Tauri plugins to allow the frontend to invoke common system calls:
@@ -99,12 +66,12 @@ The Tauri application is in **active development** and represents the future dir
   - Notifications (`@tauri-apps/plugin-notification`)
   - Store API (`@tauri-apps/plugin-store`)
 
-#### Frontend Structure (`app/src/`)
-- Application code in `app/src/lib/`
-    - Neuro SDK protocol/WebSocket-related code in `app/src/lib/api/`
-    - App logic (engines, config) in `app/src/lib/app/`
-    - Svelte 5 UI components and utilities in `app/src/lib/ui/`
-- SvelteKit routed pages in `app/src/routes/`
+#### Frontend Structure (`src/`)
+- Application code in `src/lib/`
+    - Neuro SDK protocol/WebSocket-related code in `src/lib/api/`
+    - App logic (engines, config) in `src/lib/`
+    - Svelte 5 UI components and utilities in `src/lib/ui/`
+- SvelteKit routed pages in `src/routes/`
 
 #### Frontend Stack
 - Svelte 5 + SvelteKit + Vite
@@ -119,22 +86,14 @@ The Tauri application is in **active development** and represents the future dir
 ## Development Workflow
 
 ### Current Development Focus
-- Python app (`src/gary/`) is legacy and manually maintained by the repo owner. Agent contributors should treat it as read-only.
-- The Tauri app's Svelte frontend (`app/src/`) is the focus for development work going forward.
-- The Tauri app's Rust backend (`app/src-tauri`) should be treated as read-only unless explicitly instructed to work on it.
+- The Tauri app's Svelte frontend (`src/`) is the focus for development work going forward.
+- The Tauri app's Rust backend (`src-tauri`) should be treated as read-only unless explicitly instructed to work on it.
 
 
 ## Essential Paths for Project Navigation
 
-### Python App
-- `src/gary/app.py` - Main FastAPI application and WebSocket handler
-- `src/gary/web/ui.py` - Panel web interface
-- `src/gary/registry.py` - Game connection/instance management
-- `src/gary/llm/` - Language model integration
-
-### Tauri App
-- `app/src/lib/api/` - WebSocket API code (game integration)
-- `app/src/lib/app/` - Application logic
-- `app/src/lib/ui/` - Svelte components and utilities
-- `app/src/routes/` - Application pages and routing
-- `app/src-tauri/` - Rust backend and Tauri configuration
+- `src/lib/api/` - WebSocket API code (game integration)
+- `src/lib/` - Application logic
+- `src/lib/ui/` - Svelte components and utilities
+- `src/routes/` - Application pages and routing
+- `src-tauri/` - Rust backend and Tauri configuration

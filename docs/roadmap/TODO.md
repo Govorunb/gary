@@ -2,12 +2,10 @@
 
 ## Current development
 
-The project is currently undergoing a renovation, porting functionality and UI from Python to Tauri:
+The project recently underwent a renovation, porting functionality and UI from Python to Tauri. It is currently somewhere around a "late alpha", adding functionality and freely changing internals.
 
-- `src/gary/` - Stable Python app. Agents **must not** modify this project.
-- `app/` - In-dev Tauri port of the application.
-    - `app/src` - Svelte 5 frontend and application logic. Nearly all development will happen here.
-    - `app/src-tauri` - Rust backend. Only edit if explicitly asked to.
+- `src/` - Svelte 5 frontend and application logic. Nearly all development will happen here.
+- `src-tauri/` - Rust backend. Only edit if explicitly asked to.
 
 ### Task list
 
