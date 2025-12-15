@@ -29,6 +29,9 @@
 
     function resetSkipVersion() {
         userPrefs.app.updates.skipUpdateVersion = undefined;
+        if (updater.update) {
+            updater.notifyUpdateAvailable();
+        }
     }
 </script>
 

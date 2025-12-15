@@ -91,7 +91,7 @@ export class Updater {
         if (this.skipVersion === this.update.version) return;
 
         r.success("Update available!", {
-            details: `Version ${this.update.version} is available}`,
+            details: `Version ${this.update.version} is available`,
             toast: {
                 closeButton: true,
                 action: {
