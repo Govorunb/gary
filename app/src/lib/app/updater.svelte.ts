@@ -55,7 +55,7 @@ export class Updater {
         }
     }
 
-    async checkForUpdates(isCheckManual = false) {
+    async checkForUpdates(isCheckManual = false): Promise<boolean> {
         this.prefs.lastCheckedAt = Date.now();
         this.checkingForUpdates = true;
         let updateRes: Result<Update | null, string>;
@@ -71,19 +71,23 @@ export class Updater {
                 target: "updater",
                 toast: isCheckManual,
             });
-            return;
+            return false;
         }
         this.update = updateRes.value;
         if (!this.update) {
             r.info("No update available", { toast: isCheckManual });
-            return;
+            return false;
         }
         const skipped = this.skipVersion === this.update.version;
         if (skipped) {
-            r.info("Update skipped", `You previously skipped updating to ${this.update.version}`)
-        } else {
+            r.info("Update skipped", {
+                details: `You previously skipped updating to ${this.update.version}`,
+                toast: true,
+            })
+        } else if (!isCheckManual) { // manual checks will show ui in settings
             await this.notifyUpdateAvailable();
         }
+        return true;
     }
 
     async notifyUpdateAvailable() {

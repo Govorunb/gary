@@ -19,6 +19,21 @@
     let rawMsgOpen = $derived(!!dialogs.rawMessageDialog);
     let updateOpen = $derived(dialogs.updateDialogOpen);
     let settingsOpen = $derived(dialogs.settingsDialogOpen);
+
+    $effect(() => {
+        if (!manualSendOpen) {
+            dialogs.closeManualSendDialog();
+        }
+        if (!rawMsgOpen) {
+            dialogs.closeRawMessageDialog();
+        }
+        if (!updateOpen) {
+            dialogs.closeUpdateDialog();
+        }
+        if (!settingsOpen) {
+            dialogs.closeSettingsDialog();
+        }
+    })
     
     onMount(() => {
         const settingsHotkey = registerAppHotkey(["Control", ","], () => {
@@ -32,9 +47,6 @@
             settingsHotkey();
         }
     });
-    async function update() {
-        await updater.promptForUpdate();
-    }
 </script>
 
 <header>
@@ -46,12 +58,12 @@
     </div>
     <div class="justify-self-end flex flex-row gap-4">
         {#if updater.hasPendingUpdate}
-            <button class="btn preset-outlined-primary-200-800 align-top" onclick={update}>
+            <button class="btn preset-outlined-primary-200-800 align-top" onclick={() => updater.promptForUpdate()}>
                 Update to {updater.update?.version ?? "latest version"}
             </button>
         {/if}
          <button 
-             class="btn settings-btn" 
+             class="btn p-2 hover:bg-surface-500/20"
              onclick={() => dialogs.openSettingsDialog()}
              title="Settings"
          >
@@ -97,13 +109,5 @@
     main {
         @apply flex flex-1 overflow-hidden;
         @apply bg-surface-100 dark:bg-surface-900;
-    }
-
-    .settings-btn {
-        @apply p-2;
-        
-        &:hover {
-            @apply bg-neutral-200 dark:bg-neutral-700;
-        }
     }
 </style>

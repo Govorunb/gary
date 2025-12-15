@@ -16,22 +16,28 @@
     const userPrefs = getUserPrefs();
     const updater = getUpdater();
 
-    function checkForUpdates() {
-        void updater.checkForUpdates(true);
+    let checking = $state(false);
+
+    async function checkForUpdates() {
+        if (checking) return;
+        checking = true;
+        await updater.checkForUpdates(true);
+        checking = false;
+        if (updater.hasPendingUpdate) {
+            void updater.promptForUpdate();
+        }
     }
 
     const lastCheckedAt = $derived.by(() => {
         const str = userPrefs.app.updates.lastCheckedAt;
         if (!str) return "never";
         let date = dayjs(str);
-        return `${date.fromNow()} (${date.format("YYYY-MM-DD")})`
+        return `${date.fromNow()} (${date.format("YYYY-MM-DD")})`;
     });
 
     function resetSkipVersion() {
         userPrefs.app.updates.skipUpdateVersion = undefined;
-        if (updater.update) {
-            updater.notifyUpdateAvailable();
-        }
+        void checkForUpdates();
     }
 </script>
 
@@ -86,6 +92,7 @@
                         </button>
                         <p class="note">Last checked: {lastCheckedAt}</p>
                     </div>
+                    <!-- TODO: autoclear (where it makes sense) -->
                     {#if updater.skipVersion}
                         <p class="note">
                             You skipped updating to version {updater.skipVersion}
