@@ -32,7 +32,7 @@ export function initDI(userPrefsData: UserPrefsData) {
     const scheduler = session.scheduler;
     const serverManager = new ServerManager(session, userPrefs);
     const uiState = new UIState(session);
-    const updater = new Updater(userPrefs);
+    const updater = new Updater(userPrefs, uiState);
 
     setUserPrefs(userPrefs);
     setSession(session);

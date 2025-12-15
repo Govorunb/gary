@@ -2,8 +2,10 @@
     import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
     import Dialog from "$lib/ui/common/Dialog.svelte";
     import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
+    import { X } from "@lucide/svelte";
     import Hotkey from "../common/Hotkey.svelte";
     import dayjs from "dayjs";
+    import { app } from "@tauri-apps/api";
 
     type Props = {
         open: boolean;
@@ -14,9 +16,6 @@
     const userPrefs = getUserPrefs();
     const updater = getUpdater();
 
-    function closeDialog() {
-        open = false;
-    }
     function checkForUpdates() {
         void updater.checkForUpdates(true);
     }
@@ -24,9 +23,13 @@
     const lastCheckedAt = $derived.by(() => {
         const str = userPrefs.app.updates.lastCheckedAt;
         if (!str) return "never";
-        let date = dayjs(str).startOf('day');
-        return date.toDate().toLocaleDateString()
+        let date = dayjs(str);
+        return `${date.fromNow()} (${date.format("YYYY-MM-DD")})`
     });
+
+    function resetSkipVersion() {
+        userPrefs.app.updates.skipUpdateVersion = undefined;
+    }
 </script>
 
 <Dialog bind:open position="center">
@@ -49,8 +52,20 @@
                 <div class="settings-section">
                     <p class="section-title">Updates</p>
 
+                    <div class="flex gap-2">
+                        <p>Current version:
+                        {#await app.getVersion()}
+                            ...
+                        {:then v}
+                            {v}
+                        {:catch}
+                            Big Dingus The 4rd
+                        {/await}
+                        </p>
+                    </div>
+
                     <div class="flex flex-col gap-1">
-                        <p class="font-light">Updates are automatically checked on app launch:</p>
+                        <p class="font-light">Automatically check for updates on app launch:</p>
                         <select class="select" bind:value={userPrefs.app.updates.autoCheckInterval}>
                             <option value="everyLaunch">Every launch</option>
                             <option value="daily">Daily</option>
@@ -61,21 +76,19 @@
                     </div>
                     <div class="flex flex-row gap-2 items-center">
                         <button class="btn preset-outlined-surface-300-700"
-                            onclick={checkForUpdates} disabled={updater.checkingForUpdates}
-                            >
+                            onclick={checkForUpdates}
+                            disabled={updater.checkingForUpdates}
+                        >
                             Check now
                         </button>
                         <p class="note">Last checked: {lastCheckedAt}</p>
                     </div>
-                </div>
-            </div>
-
-            <div class="dialog-footer">
-                <div class="flex-1"></div>
-                <div class="flex gap-2">
-                    <button class="btn preset-tonal-surface" onclick={closeDialog}>
-                        Close
-                    </button>
+                    {#if updater.skipVersion}
+                        <p class="note">
+                            You skipped updating to version {updater.skipVersion}
+                            <button onclick={resetSkipVersion}><X size="12" /></button>
+                        </p>
+                    {/if}
                 </div>
             </div>
         </div>

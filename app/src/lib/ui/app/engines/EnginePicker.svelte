@@ -10,7 +10,7 @@
     import { fade, fly } from 'svelte/transition';
     import TeachingTooltip from '$lib/ui/common/TeachingTooltip.svelte';
     import Hotkey from '$lib/ui/common/Hotkey.svelte';
-    import { registerGlobalHotkey } from '$lib/app/utils/hotkeys.svelte';
+    import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
 
     const session = getSession();
     const userPrefs = getUserPrefs();
@@ -18,24 +18,11 @@
 
     // UI state machine - null shows engine list
     let configEngineId: string | null = $state(null);
-    let open = $state(false);
+    let open = $derived(uiState.dialogs.enginePickerOpen);
     const showingEngineList = $derived(open && !configEngineId);
     const engines = $derived(Object.entries(session.engines));
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has('Shift'));
-
-    $effect(() => {
-        if (uiState.dialogs.enginePickerOpen) {
-            open = true;
-        }
-    });
-    $effect(() => {
-        if (open) {
-            uiState.dialogs.openEnginePicker();
-        } else {
-            uiState.dialogs.closeEnginePicker();
-        }
-    });
 
     $effect(() => {
         // in traditional rx fashion, if you don't subscribe to a falling tree, it makes no sound
@@ -46,7 +33,7 @@
             closeConfig();
         }
     });
-    registerGlobalHotkey(['Control', 'E'], () => open = !open);
+    registerAppHotkey(['Control', 'E'], () => toggleOpen());
     // quick select
     for (let i = 1; i <= 9; i++) {
         keys.onKeys(i.toString(), () => {
@@ -69,6 +56,11 @@
 
     function selectEngine(id: string) {
         userPrefs.app.selectedEngine = id;
+    }
+
+    function toggleOpen() {
+        if (open) uiState.dialogs.closeEnginePicker();
+        else uiState.dialogs.openEnginePicker();
     }
 
     function openConfig(engineId: string) {

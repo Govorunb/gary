@@ -1,54 +1,39 @@
 <script lang="ts">
-    import GaryDashboard from "$lib/ui/app/GaryDashboard.svelte";
-    import PowerButton from "$lib/ui/app/PowerButton.svelte";
-    import EngineControls from "$lib/ui/app/engines/EngineControls.svelte";
-    import ManualSendDialog from "$lib/ui/app/ManualSendDialog.svelte";
-    import RawMessageDialog from "$lib/ui/app/RawMessageDialog.svelte";
-    import SettingsDialog from "$lib/ui/app/SettingsDialog.svelte";
+import GaryDashboard from "$lib/ui/app/GaryDashboard.svelte";
+import PowerButton from "$lib/ui/app/PowerButton.svelte";
+import EngineControls from "$lib/ui/app/engines/EngineControls.svelte";
+import ManualSendDialog from "$lib/ui/app/ManualSendDialog.svelte";
+import RawMessageDialog from "$lib/ui/app/RawMessageDialog.svelte";
+import UpdateDialog from "$lib/ui/app/UpdateDialog.svelte";
+import SettingsDialog from "$lib/ui/app/SettingsDialog.svelte";
     import { Settings2 } from "@lucide/svelte";
-    import { getUIState, getUpdater } from "$lib/app/utils/di";
-    import { registerGlobalHotkey as registerAppHotkey } from "$lib/app/utils/hotkeys.svelte";
+    import { getUIState, getUpdater, getUserPrefs } from "$lib/app/utils/di";
+    import { registerAppHotkey } from "$lib/app/utils/hotkeys.svelte";
     import { onMount } from "svelte";
     import type { Update } from "@tauri-apps/plugin-updater";
     
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
     const updater = getUpdater();
+    const userPrefs = getUserPrefs();
 
     let manualSendOpen = $derived(!!dialogs.manualSendDialog);
     let rawMsgOpen = $derived(!!dialogs.rawMessageDialog);
+    let updateOpen = $derived(dialogs.updateDialogOpen);
     let settingsOpen = $derived(dialogs.settingsDialogOpen);
-
-    const simUpdate: Update = {
-        available: true,
-        currentVersion: '0.0.0',
-        version: '1.0.0',
-        body: 'Did stuff.'
-    } as any as Update;
     
     onMount(() => {
-        const settingsHotkey = registerAppHotkey(["Control", ","], () => dialogs.openSettingsDialog());
-        const devSimUpdateHotkey = registerAppHotkey(["Control", "U"], () => {
-            updater.update = updater.update ? null : simUpdate;
-        })
+        const settingsHotkey = registerAppHotkey(["Control", ","], () => {
+            if (!dialogs.settingsDialogOpen)
+                dialogs.openSettingsDialog();
+            else
+                dialogs.closeSettingsDialog();
+        });
 
         return () => {
             settingsHotkey();
-            devSimUpdateHotkey();
         }
     });
-    
-    $effect(() => {
-        if (!manualSendOpen) {
-            dialogs.closeManualSendDialog();
-        }
-        if (!rawMsgOpen) {
-            dialogs.closeRawMessageDialog();
-        }
-        if (!settingsOpen) {
-            dialogs.closeSettingsDialog();
-        }
-    })
     async function update() {
         await updater.promptForUpdate();
     }
@@ -92,6 +77,10 @@
         {...dialogs.rawMessageDialog}
         bind:open={rawMsgOpen}
     />
+{/if}
+
+{#if dialogs.updateDialogOpen && updater.update}
+    <UpdateDialog bind:open={updateOpen} />
 {/if}
 
 {#if dialogs.settingsDialogOpen}

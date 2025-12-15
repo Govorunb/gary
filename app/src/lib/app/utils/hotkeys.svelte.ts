@@ -3,7 +3,7 @@ import { on } from "svelte/events";
 
 export const pressedKeys = new PressedKeys();
 
-export function registerGlobalHotkey(targetKeys: string[], callback: () => void) {
+export function registerAppHotkey(targetKeys: string[], callback: () => void) {
     targetKeys = targetKeys.map(k => k.toLowerCase());
     pressedKeys.onKeys(targetKeys, callback);
 

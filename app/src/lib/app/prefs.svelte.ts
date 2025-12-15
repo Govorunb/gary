@@ -106,7 +106,7 @@ export const zAppPrefs = z.strictObject({
             // all automatic update checks are on launch
             "everyLaunch", "daily", "weekly", "monthly", "off"
         ]).fallback("daily"),
-        lastCheckedAt: z.iso.date().nullish(),
+        lastCheckedAt: z.number().nullish(),
     }).prefault({}),
 });
 

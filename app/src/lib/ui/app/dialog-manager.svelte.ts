@@ -7,10 +7,11 @@ export type RawMessageDialogState = null | { game: Game };
 export class DialogManager {
     manualSendDialog: ManualSendDialogState = $state(null);
     rawMessageDialog: RawMessageDialogState = $state(null);
+    updateDialogOpen: boolean = $state(false);
     enginePickerOpen: boolean = $state(false);
     settingsDialogOpen: boolean = $state(false);
 
-    anyDialogOpen = $derived(!!(this.manualSendDialog || this.rawMessageDialog || this.enginePickerOpen || this.settingsDialogOpen));
+    anyDialogOpen = $derived(!!(this.manualSendDialog || this.rawMessageDialog || this.updateDialogOpen || this.enginePickerOpen || this.settingsDialogOpen));
 
     openManualSendDialog(action: Action, game: Game) {
         this.closeAllDialogs();
@@ -28,6 +29,15 @@ export class DialogManager {
 
     closeRawMessageDialog() {
         this.rawMessageDialog = null;
+    }
+
+    openUpdateDialog() {
+        this.closeAllDialogs();
+        this.updateDialogOpen = true;
+    }
+
+    closeUpdateDialog() {
+        this.updateDialogOpen = false;
     }
 
     openEnginePicker() {
@@ -51,6 +61,7 @@ export class DialogManager {
     closeAllDialogs() {
         this.manualSendDialog = null;
         this.rawMessageDialog = null;
+        this.updateDialogOpen = false;
         this.enginePickerOpen = false;
         this.settingsDialogOpen = false;
     }

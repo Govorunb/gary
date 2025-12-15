@@ -1,10 +1,17 @@
 import { check as tauriCheckUpdate, type Update } from "@tauri-apps/plugin-updater";
-import { message as tauriDialog } from "@tauri-apps/plugin-dialog";
-import { relaunch as tauriRelaunchProcess } from "@tauri-apps/plugin-process";
 import r, { LogLevel } from "$lib/app/utils/reporting";
-import { ResultAsync } from "neverthrow";
+import { ok, type Result, ResultAsync } from "neverthrow";
 import dayjs from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
+import type { UIState } from "$lib/ui/app/ui-state.svelte";
+import { isTauri } from "@tauri-apps/api/core";
+
+const simUpdate: Update = {
+    available: true,
+    currentVersion: '0.0.0',
+    version: '1.0.0',
+    body: 'Did stuff.'
+} as any as Update;
 
 export class Updater {
     public update?: Update | null = $state();
@@ -13,8 +20,8 @@ export class Updater {
     public checkingForUpdates = $state(false);
     private readonly prefs;
     
-    constructor(private readonly userPrefs: UserPrefs) {
-        this.prefs = $derived(userPrefs.app.updates);
+    constructor(private readonly userPrefs: UserPrefs, private readonly uiState: UIState) {
+        this.prefs = $derived(this.userPrefs.app.updates);
         this.skipVersion = $derived(this.prefs.skipUpdateVersion);
         this.hasPendingUpdate = $derived(!!this.update && this.skipVersion !== this.update.version);
         if (this.shouldAutoCheck()) {
@@ -49,9 +56,14 @@ export class Updater {
     }
 
     async checkForUpdates(isCheckManual = false) {
-        this.prefs.lastCheckedAt = dayjs().toISOString();
+        this.prefs.lastCheckedAt = Date.now();
         this.checkingForUpdates = true;
-        const updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
+        let updateRes: Result<Update | null, string>;
+        if (isTauri()) {
+            updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
+        } else {
+            updateRes = ok(simUpdate);
+        }
         this.checkingForUpdates = false;
         if (updateRes.isErr()) {
             r.error("Could not check for updates", {
@@ -64,10 +76,7 @@ export class Updater {
         const update = updateRes.value;
         this.update = update;
         if (!update) {
-            r.info("No update available");
-            if (isCheckManual) {
-                await tauriDialog("You are using the latest version.", "No update available");
-            }
+            r.info("No update available", { toast: isCheckManual });
             return;
         }
         const skipped = this.skipVersion === update.version;
@@ -87,35 +96,8 @@ export class Updater {
     }
 
     async promptForUpdate() {
-        const update = this.update;
-        if (!update) return;
+        if (!this.update) return;
 
-        // TODO: ditch native dialog, we can do better
-        // need a 4th "Release Notes" button (update.body is empty by default)
-        const answer = await tauriDialog(
-            `Update from ${update.currentVersion} to ${update.version}?`,
-            {
-                title: "Update Available",
-                kind: "info",
-                buttons: { yes: "Update", no: "Skip this version", cancel: "Cancel" },
-            },
-        );
-        switch (answer) {
-            case 'Yes':
-                this.userPrefs.app.updates.skipUpdateVersion = undefined;
-                await update.downloadAndInstall();
-                await tauriRelaunchProcess();
-                return;
-            case 'No':
-                this.userPrefs.app.updates.skipUpdateVersion = update.version;
-                this.update = null;
-                return;
-            case 'Cancel': return;
-            default:
-                await tauriDialog(
-                    "Consider wrapping your computer in 15cm thick lead foil (or moving out from Radiationopolis)",
-                    "Cosmic bit flip detected"
-                );
-        }
+        this.uiState.dialogs.openUpdateDialog();
     }
 }
