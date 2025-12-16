@@ -25,7 +25,7 @@ Frontend:
 - [ ] Extra context features
     - [ ] Menu (buttons to copy message text, ID, etc)
     - [ ] Editing the log - edit message text, remove message
-- [ ] Performance (because WebKit is ass)
+- [ ] Performance (because WebKit is ngmi)
     - [ ] Virtualize context log https://tanstack.com/virtual/latest/docs/introduction
     - [ ] Keep a CodeMirror instance loaded offscreen and Portal it into dialogs (deranged)
     - [ ] Streaming reactive ctx message conversion (entirely reimplement rx it'll be funny)
