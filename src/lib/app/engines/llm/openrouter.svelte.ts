@@ -43,10 +43,10 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
             reasoning: { effort: "none" },
-            // @ts-expect-error
             provider: {
-                require_parameters: true
+                requireParameters: true
             },
+            // @ts-expect-error
             transforms: ["middle-out"], // poor man's context trimming
         };
         if (outputSchema) {
@@ -61,7 +61,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
                 },
             };
             // @ts-expect-error
-            params.structured_outputs = true;
+            params.structuredOutputs = true;
         }
 
         console.warn("Full request params:", params);

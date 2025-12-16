@@ -12,7 +12,7 @@ Encode failure into your program with a `Result<T, E>` type that represents eith
   - If the variant doesn't match (e.g. `map` on `Err`), the callback never runs and the original result is passed through unchanged
 - Transforms with fallible operations - `andThen`/`orElse` (callback returns `Result`)
   - If the callbacks are async: `asyncAndThen`/`asyncOrElse` (callback returns `ResultAsync`)
-- Handle both variants at once - `match` (`T -> A, E -> A`)
+- Handle both variants at once - `match` (`T -> A, E -> B`)
 - Side effects - `andTee`/`orTee` (`T -> any`/`E -> any`) (original result passes through unchanged)
   - If errors inside the side effect callback matter, use `andThrough` instead of `andTee`
 
