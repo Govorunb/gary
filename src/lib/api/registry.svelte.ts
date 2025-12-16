@@ -95,7 +95,12 @@ export class Game {
         public readonly conn: BaseWSConnection,
     ) {
         this.name = name;
-        conn.onconnect(() => r.info(`${this.name} connected`, { toast: true }));
+        if (conn.version !== "v1") {
+            conn.onconnect(() => this.connected());
+        }
+        conn.onclose(() => {
+            void this.context(`${this.name} disconnected`, true);
+        })
         conn.onmessage((txt) => this.recv(txt));
         conn.onwserror((err) => {
             r.warn(`${this.name} broke its websocket`, {
@@ -107,6 +112,11 @@ export class Game {
 
     public get version() {
         return this.conn.version
+    }
+
+    private connected() {
+        void this.context(`${this.name} connected`, true);
+        r.info(`${this.name} connected`, { toast: true });
     }
 
     async recv(txt: string) {
@@ -141,6 +151,7 @@ export class Game {
             // could also just replace the game name on every single message, it's UB in the v1 spec so we can do whatever
             if (this.name === v1PendingGameName(this.conn.id)) {
                 r.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
+                this.connected();
             } else if (this.name !== msg.game) {
                 r.warn(`${this.name} changed name to ${msg.game}`);
             }
