@@ -6,10 +6,8 @@ Gary is a project that allows LLMs to interface with controllable client apps ("
 
 Gary consists of two main components:
 
-- **Backend Server** - WebSocket server that acts as the backend layer for game integrations, following a [custom protocol](#websocket-protocol)
+- **Backend Server** - WebSocket server that acts as the backend layer for game integrations, following a custom protocol (see below)
 - **Management Web UI** - Web interface for game management, manual action sending, and context window control
-
-The project recently underwent a renovation, porting functionality and UI from Python to a modern desktop application, built on Tauri and using Svelte 5 for the frontend.
 
 ### WebSocket Protocol
 

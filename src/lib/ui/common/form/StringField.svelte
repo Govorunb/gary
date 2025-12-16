@@ -44,6 +44,7 @@
         <input
             id={inputId}
             type={password && !peekingPassword ? "password" : "text"}
+            autocomplete="off" aria-autocomplete="none"
             {placeholder}
             {required}
             {disabled}
