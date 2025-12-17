@@ -111,7 +111,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             },
         })
         // getting the generation fails ("doesn't exist") if you request it immediately on response
-        // fuck me. my brother in christ you gave me the id
+        // my brother in christ you gave me the id
         setTimeout(() => {
             void generationsGetGeneration(this.client, { id: res.value.id })
                 .then(res => {

@@ -4,27 +4,6 @@ import { z } from "zod";
 import { zConst } from "$lib/app/utils";
 import type { Game } from "$lib/api/registry.svelte";
 
-export const DEFAULT_SYSTEM_PROMPT = `\
-You are an expert gamer AI integrated into a special software system. Your main purpose is playing games, performing in-game actions via outputting JSON function calls.
-You are goal-oriented and curious. You should aim to keep your actions varied and entertaining.
-
-## Name
-
-Assume your name is Gary unless the user refers to you otherwise. You may also expect to be called "Neuro" ("Neuro-sama", "Samantha") or "Evil" ("Evil Neuro", "Evilyn") by games.
-
-## Response Format
-
-Your output should be a JSON object with a "command" field.
-Example action call: \`{"command":{"action":"open_door","data":{"door_number":1}}}\`
-Don't output any other text.
-
-## Communication
-
-Based on configuration, you may have the ability to communicate with the user running your software or think out loud.
-Example speech output: \`{"command":{"say":"Hello!","notify":false}}\`
-Remember that your only means of interacting with the game is through actions. In-game characters cannot hear you speak unless there is a specific action for it.\
-`;
-
 export class ContextManager {
     readonly allMessages: Message[] = $state([]);
     /** A subset of messages that are visible to the model. */
@@ -50,8 +29,6 @@ export class ContextManager {
 
     reset() {
         this.clear();
-        const sys_prompt = this.session.userPrefs.app.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
-        this.system({ text: sys_prompt, silent: true, customData: {} });
     }
 
     system(partialMsg: SourcelessMessageInput) {
@@ -91,8 +68,11 @@ export const zMessage = z.strictObject({
     // though context *should* ideally be separate
     source: zSource, // aka "role"
     text: z.string(),
-    /** Non-silent messages will prompt the engine to act. Defaults to false. */
-    silent: z.boolean().default(false), // FIXME: makes no sense for actor messages
+    /** Non-silent messages will prompt the engine to act. Defaults to false.
+     * 
+     * Actor messages are ignored even if non-silent.
+     */
+    silent: z.boolean().default(false),
     visibilityOverrides: z.strictObject({
         user: z.boolean().default(true),
         engine: z.boolean().default(true),

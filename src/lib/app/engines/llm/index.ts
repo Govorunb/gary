@@ -16,8 +16,60 @@ export const zLLMOptions = z.strictObject({
     /** Let the model trauma dump about its horrid life circumstances instead of doing something useful to society. Approximates realistic human behavior. */
     allowYapping: z.boolean().fallback(false),
     /** TODO: maybe tool calling can work for OR and some OAI endpoints even if local providers suck at it */
-    promptingStrategy: z.enum(["structuredOutput", "tools"]).fallback("structuredOutput"),
+    promptingStrategy: z.enum(["json", "tools"]).fallback("json"),
 });
+
+export const DEFAULT_SYSTEM_PROMPT = `\
+You are an expert gamer AI integrated into a special software system that lets you interact with connected applications ("clients").
+Your main purpose is playing games, but you may be connected to other types of applications too.
+
+## Protocol
+
+The **client** (game integration) connects to the **server** (this software). Then, the following happens until either side disconnects (e.g. the game ends):
+
+1. Client registers **actions** as available to be performed.
+  - Actions have a name, description, and an **action schema** (JSON schema) for the action's parameters ("action data").
+2. As things happen in the game, the client sends **context** to the server to inform the **actor**.
+  - For example, a chess integration may send "Your opponent played 2. Ke2?"
+3. At some point in time, the **actor** indicates it wants to perform an action and generates action data for it.
+  - In time-sensitive situations, the client may send a **force action** message with a set of acceptable actions and additional information (namely, \`query\` detailing context for the choice and \`state\` to help inform the choice).
+4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action in-game.
+5. The client responds with the **action result**, which is also inserted into context as feedback to the actor.
+  - Because actions may take a long time, some actions will execute *asynchronously*;
+  - This means they will return a positive result immediately based purely on JSON validation (and not any real in-game result) and may follow up later with a context message.
+6. The client may **unregister** actions if they are no longer available (e.g. a non-repeatable action was executed).
+
+You perform the role of the **actor**, meaning your goal is to *execute actions*.
+There is also a human **user** running your software and overseeing your activity who may communicate with you. Pay attention to them and follow their instructions.
+
+## Identity
+
+You are goal-oriented and curious. You should aim to keep your actions varied and entertaining.
+Assume your name is Gary unless the user refers to you otherwise. You may also expect to be called "Neuro" ("Neuro-sama", "Samantha") or "Evil" ("Evil Neuro", "Evilyn") by games.\
+`;
+
+export const SYS_PROMPT_JSON = `\
+## Response Format
+
+Your output should be a JSON object with a "command" field. Your available commands may vary, but most of the time you should *execute actions*.
+Example action call: \`{"command":{"action":"open_door","data":{"door_number":1}}}\`
+Don't output any other text.
+
+## Optional commands
+
+Based on configuration, you may have the ability to skip your turn, communicate with the user running your software, or think out loud.
+Example speech output: \`{"command":{"say":"Hello!","notify":false}}\`
+Remember that your only means of interacting with the game is through actions. In-game characters cannot hear you speak unless there is a specific action for it.\
+`;
+
+export const SYS_PROMPT_TOOLS = `\
+## Response Format
+
+Your output should consist of tool calls corresponding to registered actions.
+Based on configuration, you may also have access to the following system-level tools:
+- **\`_gary_wait\`**: Skips your turn instead of executing any actions.
+- **\`_gary_say\`**: Communicate with the user running your software through text. This text is not sent to any clients.\
+`;
 
 export type CommonLLMOptions = z.infer<typeof zLLMOptions>;
 
@@ -40,6 +92,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return err(new EngineError("Tried to force act with no available actions"));
         }
         const ctx = this.convertContext(session.context);
+        ctx.push(this.closerMessage());
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
         const gen = await this.generateStructuredOutput(ctx, schema);
         const commandRes = gen
@@ -135,44 +188,63 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError>;
     protected abstract generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError>;
 
-    // TODO: just feed the thing json, noone'll miss a forest or two
-    private convertMessage(msg: Message) {
-        let text = msg.text;
-        let role: OpenAIMessage['role'];
-        switch (msg.source.type) {
-            case "system":
-                // FIXME: christ (temporary)
-                if (msg.text.startsWith("You are")) {
-                    role = "system";
-                } else {
-                    role = "developer";
-                    text = `System: ${text}`;
-                }
-                break;
-            case "client":
-                role = "user";
-                text = `Game (${msg.source.name}): ${text}`; // TODO: escape
-                break;
-            case "user":
-                role = "user";
-                text = `User: ${text}`;
-                break;
-            case "actor":
-                role = "assistant";
-                break;
+    private convertMessage(msg: Message): OpenAIMessage {
+        if (msg.source.type === "actor") {
+            return {
+                role: "assistant",
+                content: msg.text,
+                // TODO: tool calls
+            } satisfies OpenAIMessage;
         }
-        if (!role) {
-            throw new Error("Invalid message source");
-        }
+
         return {
-            role,
-            content: text,
-        }
+            role: "user",
+            content: JSON.stringify({
+                type: "message",
+                timestamp: msg.timestamp,
+                source: msg.source,
+                text: msg.text,
+            }),
+        } satisfies OpenAIMessage;
     }
     
     // TODO: context trimming
     private convertContext(ctx: ContextManager): OpenAIContext {
-        return ctx.actorView.map(msg => this.convertMessage(msg));
+        const systemPrompt = ctx.session.userPrefs.app.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+        const msgs = ctx.actorView.map(msg => this.convertMessage(msg));
+        msgs.unshift({
+            role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
+            content: systemPrompt,
+        });
+        return msgs;
+    }
+
+    protected shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(): "system" | "developer" {
+        return "system";
+    }
+
+    /** A reminder message at the end of context to improve model performance. */
+    protected closerMessage(): OpenAIMessage {
+        const finalMsg = {
+            role: "user",
+            content: "It is your turn to act.\n"
+        } satisfies OpenAIMessage;
+        const tools = this.options.promptingStrategy === "tools";
+        finalMsg.content += tools
+            ? "Your output should consist of tool calls that correspond to registered actions."
+            : `Your output should be a command in JSON syntax. Example: \`{"command":{"action":"open_door","data":{"door_number":1}}\``;
+        if (this.options.allowDoNothing) {
+            finalMsg.content += tools
+                ? "The `_gary_wait` command is available. You may use it to skip acting this turn."
+                : "The `wait` command is available. You may output `{\"command\":\"wait\"}` to skip this turn.\n";
+        }
+        if (this.options.allowYapping) {
+            finalMsg.content += (tools
+                ? "The `_gary_say` command is available. You may use it"
+                : "The `say` command is available. You may output `{\"command\":{\"say\":(string),\"notify\":(boolean)}}`")
+                + " to Send a message to the human user running your software. The message will not be sent to any clients - meaning, nobody in-game will hear you.";
+        }
+        return finalMsg;
     }
 }
 

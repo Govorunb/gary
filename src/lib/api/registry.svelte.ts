@@ -251,6 +251,7 @@ export class Game {
         return `Game { name: "${this.name}", version: "${this.version}"}`;
     }
 
+    // FIXME: why tf is this here
     private forcePrompt(actions: v1.Action[], query?: string, state?: string) {
         const queryStr = query ? `"query":"${query}",` : "";
         const stateStr = state ? `"state":"${state}",` : "";

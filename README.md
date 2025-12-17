@@ -22,7 +22,7 @@ Compared to the previous Python app:
 - Lighter and easier install (with auto-update)
 - Finally supports remote providers
 - Supports switching engines at runtime without having to restart
-- Much more powerful, intuitive, and more stable UI (erm... except if you're [on Linux](#miscellaneous-jank) at the moment)
+- Much more powerful, intuitive, and more stable UI <sub><sup>(erm... except if you're [on Linux](#miscellaneous-jank) at the moment)</sup></sub>
 
 That said...
 > [!Note]
@@ -48,7 +48,7 @@ The app will check for updates via [GitHub Releases](https://github.com/Govorunb
 
 If you're coming in from the old Python app, you may have just `git pull`ed in an update that removed your whole app - uhhh, sorry. You can run `git switch python-app` to return to the old branch. Otherwise, if you want to update to the new Tauri app, just download and install from Releases.
 
-### FAQ (nobody asked any of these so it's neither F nor A)
+### FAQ <sub><sup>(nobody asked any of these so it's neither F nor A)</sup></sub>
 
 <details>
 <summary><b>I used the old Python app with my downloaded GGUFs, how do I use local models now?</b></summary>
@@ -85,7 +85,7 @@ Note: Often, providers offer their services for free/cheap by gathering and reta
 #### Models
 Smaller models are generally less intelligent than larger ones. Models under 8B parameters may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
 
-For local models, success will depend on your model/hardware. Gary might turn out to be dumber than a rock when it comes to strategy and decisionmaking (which is ironic because it's made of rock) - maybe even *worse than Randy*.
+For local models, success will depend on your model/hardware. Gary might turn out to be dumber than a rock when it comes to strategy and decisionmaking <sub><sup>(which is ironic because it's made of rock)</sup></sub> - maybe even *worse than Randy*.
 If so, you'd be better off using a remote OpenAI-compatible provider (or [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity)) instead.
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
@@ -130,7 +130,7 @@ Not all JSON schema keywords are supported by all providers. Unfortunately, I ca
 > 
 > It's very important that the game validates the backend's responses and sends back meaningful and interpretable error messages.
 
-Following [the Neuro API spec](https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md#action) is generally safe. If you find an action schema is getting complex or full of obscure keywords, consider logically restructuring it or breaking it up into multiple actions.
+Following [the Neuro API spec](https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md#action) is generally safe. If you find an action schema is getting complex or full of obscure keywords, consider simplifying it or breaking it up into multiple actions.
 
 #### Miscellaneous jank
 

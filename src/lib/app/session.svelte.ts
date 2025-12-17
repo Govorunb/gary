@@ -39,12 +39,13 @@ export class Session {
             this.initEngine(id);
         }
         this.activeEngine = $derived.by(() => this.getEngine(this.userPrefs.app.selectedEngine));
+        // FIXME: why tf is this here
         let topSeenMsg = $state(0);
         $effect(() => {
             const msgCount = this.context.actorView.length;
             for (let i = topSeenMsg; i < msgCount; i++) {
                 const msg = this.context.actorView[i];
-                if (!msg.silent) {
+                if (!msg.silent && msg.source.type !== "actor") {
                     this.scheduler.actPending = true;
                     break;
                 }
