@@ -118,20 +118,20 @@ class DefaultReporter implements Reporter {
             msg = `[${LogLevel[level]}] ${msg}\nTarget: [${options.target ?? "webview"}:${loc}]`;
             logFunc = logFuncMap[level];
         } else {
-            logFunc = (message: string) => safeInvoke("log", {
+            logFunc = (message: string) => safeInvoke("gary_log", {
                 level,
                 message,
                 target: options.target,
                 // stack depth:
-                //      0 @getCallerLocation
-                //      1 @<closure>
-                //      2 @report
-                //      3 @gatherOptsAndReport
-                //      4 @trace
-                //      5 @actual_caller
+                //      0 getCallerLocation
+                //      1 <closure>
+                //      2 report
+                //      3 gatherOptsAndReport
+                //      4 trace
+                //      5 actual_caller
                 // jfc
                 location: getCallerLocation(5),
-            });
+            }).orTee(err => toast.error("Failed to log!", { description: err }));
         }
         logFunc(msg);
         if (options.toast) {
@@ -195,6 +195,7 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
     const stack = new Error().stack;
     if (!stack) return "(no stack)";
 
+    const filePathStart = window.location.origin.length;
     if (stack.startsWith('Error')) {
         // Assume it's Chromium V8
         //
@@ -208,28 +209,32 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
         const callerLine = lines[targetStackDepth+1]?.trim();
         if (!callerLine) return;
 
-        const regex = /at\s+(?<functionName>.*?)\s+\((?<fileName>.*?):(?<lineNumber>\d+):(?<columnNumber>\d+)\)/;
+        const regex = /at\s+(?<functionName>.*?)\s+\((?<filePath>.*?):(?<lineNumber>\d+):(?<columnNumber>\d+)\)/;
         const match = callerLine.match(regex);
 
         if (match) {
-            const { functionName, fileName, lineNumber, columnNumber } = match.groups as {
+            // TODO: line numbers seem to be from *after* svelte compiles the file (i.e. they're inaccurate)
+            // no clue if it's because of HMR or if i haven't enabled some setting but :shrug:
+            const { functionName, filePath, /* lineNumber, columnNumber */ } = match.groups as {
                 functionName: string
-                fileName: string
+                filePath: string
                 lineNumber: string
                 columnNumber: string
             };
-            return `${functionName}@${fileName}:${lineNumber}:${columnNumber}`;
+            return `${functionName}@${filePath.substring(filePathStart)}`;
+            // return `${functionName}@${filePath}:${lineNumber}:${columnNumber}`;
         } else {
             // Handle cases where the regex does not match (e.g., last line without function name)
-            const regexNoFunction = /at\s+(?<fileName>.*?):(?<lineNumber>\d+):(?<columnNumber>\d+)/;
+            const regexNoFunction = /at\s+(?<filePath>.*?):(?<lineNumber>\d+):(?<columnNumber>\d+)/;
             const matchNoFunction = callerLine.match(regexNoFunction);
             if (matchNoFunction) {
-                const { fileName, lineNumber, columnNumber } = matchNoFunction.groups as {
-                    fileName: string
+                // here, we leave line numbers in because, well... better than nothing
+                const { filePath, lineNumber, columnNumber } = matchNoFunction.groups as {
+                    filePath: string
                     lineNumber: string
                     columnNumber: string
                 };
-                return `<anonymous>@${fileName}:${lineNumber}:${columnNumber}`;
+                return `<anonymous>@${filePath.substring(filePathStart)}:${lineNumber}:${columnNumber}`;
             }
         }
     } else {
@@ -241,9 +246,12 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
         // global code@filename.js:13:4
 
         const traces = stack.split('\n').map((line) => line.split('@'));
-        const filtered = traces.filter(([name, location]) => {
-            return name.length > 0 && location !== '[native code]';
-        })
+        const filtered = traces
+            .filter(([name, location]) => name.length > 0 && location !== '[native code]')
+            // before: initDI@http://localhost:1420/src/lib/app/session.svelte.ts:44:19
+            // after: initDI@src/lib/app/session.svelte.ts
+            // seems to use the containing fn for closures, thank god (webkit 1, chromium 999)
+            .map(([name, loc]) => [name, loc.substring(filePathStart).replaceAll(/(:\d+)*$/g, "")]);
         return filtered[targetStackDepth]?.filter((v) => v.length > 0).join('@');
     }
 }

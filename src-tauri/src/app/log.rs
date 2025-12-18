@@ -44,7 +44,7 @@ impl From<log::Level> for LogLevel {
 }
 
 #[tauri::command]
-pub fn log(
+pub fn gary_log(
     level: LogLevel,
     message: String,
     target: Option<&str>,
