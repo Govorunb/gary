@@ -1,4 +1,3 @@
-cargo-features = ["trim-paths"]
 [package]
 name = "gary"
 version = "1.0.0-alpha.1"
@@ -24,7 +23,6 @@ lto = true
 opt-level = 3 # "s" for size ("z" for absolute minimum), 3 for maximum speed
 panic = "abort"
 # strip = true # tauri patches the binary to include the bundle target
-trim-paths = "all"
 # rustflags = ["-Cdebuginfo=0"] # unstable
 
 [dependencies]
