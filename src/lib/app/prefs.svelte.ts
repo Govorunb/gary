@@ -5,6 +5,7 @@ import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
 import { Debounced } from "runed";
+import { APP_VERSION } from "./utils";
 
 export const USER_PREFS = "userPrefs";
 
@@ -104,7 +105,7 @@ export const zAppPrefs = z.strictObject({
     updates: z.strictObject({
         skipUpdateVersion: z.string().nullish(),
         autoCheckInterval: z.enum([
-            // all automatic update checks are on launch
+            // all automatic update checks are done once on launch
             "everyLaunch", "daily", "weekly", "monthly", "off"
         ]).fallback("daily"),
         lastCheckedAt: z.number().nullish(),
@@ -121,6 +122,7 @@ export const zServerPrefs = z.strictObject({
 // {env:MY_ENV_VAR}
 
 export const zUserPrefs = z.strictObject({
+    version: z.string().prefault(APP_VERSION),
     app: zAppPrefs.prefault({}),
     server: zServerPrefs.prefault({}),
     engines: z.object({
