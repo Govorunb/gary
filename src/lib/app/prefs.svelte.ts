@@ -4,6 +4,7 @@ import r from "$lib/app/utils/reporting";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
+import { Debounced } from "runed";
 
 export const USER_PREFS = "userPrefs";
 
@@ -14,13 +15,12 @@ export class UserPrefs {
 
     constructor(data: UserPrefsData) {
         this.#data = $state(zUserPrefs.parse(data));
+        const save = new Debounced(() => this.save(), 500);
         $effect(() => {
-            // normally $effect only tracks what's referenced inside the function
-            // (which is the objects themselves and not their properties)
-            // this somehow tracks everything though, fancy that
-            this.save();
-        })
+            void save.current; // crouching proxy, hidden method call
+        });
         // TODO: proxy w/ setters that parse through zod
+        // (not sure it's possible with Svelte's own proxies)
     }
     get app() {
         return this.#data.app;
@@ -88,6 +88,7 @@ export class UserPrefs {
     }
 
     async save() {
+        // TODO: validation here (fatal if fails)
         localStorage.setItem(USER_PREFS, JSON.stringify(this.#data));
         r.debug("saved prefs");
     }

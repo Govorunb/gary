@@ -21,9 +21,9 @@ incremental = true
 # https://v2.tauri.app/concept/size/
 [profile.release]
 lto = true
-opt-level = "z"
+opt-level = 3 # "s" for size ("z" for absolute minimum), 3 for maximum speed
 panic = "abort"
-# strip = true
+# strip = true # tauri patches the binary to include the bundle target
 trim-paths = "all"
 # rustflags = ["-Cdebuginfo=0"] # unstable
 

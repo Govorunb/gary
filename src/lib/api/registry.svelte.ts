@@ -58,6 +58,8 @@ export class Registry {
         this.games.push(game);
         conn.onclose(() => {
             r.info(`${game.name} disconnected`, { toast: true });
+            // each connection is a new game
+            // TODO: keeping disconnected games in UI (for action list/diagnostics) is undecided
             const i = this.games.indexOf(game);
             this.games.splice(i, 1);
         });
@@ -79,9 +81,6 @@ export class Registry {
         }
         this.games.length = 0;
     }
-
-    // TODO: v1 conn (new game) then v2 conn for same game
-    // tldr: each connection is a new game, keeping disconnected games in UI (for action list) is undecided
 }
 
 export type GameAction = v1.Action & { active: boolean };
@@ -148,7 +147,6 @@ export class Game {
         r.verbose(`Handling ${msg.command}`);
         if (this.conn.version === "v1") {
             // technically vulnerable but i'd like to see a game out in the wild actually guess its own id
-            // could also just replace the game name on every single message, it's UB in the v1 spec so we can do whatever
             if (this.name === v1PendingGameName(this.conn.id)) {
                 r.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
                 this.connected();

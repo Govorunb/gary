@@ -5,6 +5,7 @@ import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/cor
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
 import r from "./reporting";
+import { version } from "$app/environment";
 // import { isTauri } from "@tauri-apps/api/core";
 
 export function pickRandom<T>(arr: T[]) {
@@ -18,6 +19,7 @@ export function isWebkitGtk() {
 export const tauriWebkitScrollNum: Attachment<HTMLInputElement> = (el) => {
     if (el.type !== "number" && el.type !== "range") {
         r.warn("webkitScrollNum should only be attached to inputs of type 'number' or 'range'");
+        el.style.border = "1px red dotted";
         return;
     }
     // on linux, tauri uses libwebkit2gtk, which is just kinda generally weird and offputting
@@ -161,4 +163,14 @@ export const CHARS_PER_TOKEN = 4; // TODO: may not actually hold with excessive 
 
 export function estimateTokens(text: string) {
     return text.length * CHARS_PER_TOKEN;
+}
+
+export const APP_VERSION = version;
+
+export function clearLocalStorage() {
+    const warning = "Proceeding will DELETE your saved preferences, resetting the app.\n\nThere will be no going back.";
+    if (!confirm(warning)) return;
+
+    localStorage.clear();
+    location.reload();
 }

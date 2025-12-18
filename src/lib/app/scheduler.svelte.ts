@@ -7,12 +7,12 @@ import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { OpenRouterError } from "@openrouter/sdk/models/errors";
 
 export class Scheduler {
-    /** Explicitly muted, e.g. through the app UI. */
-    public muted = $state(false); // TODO: expose in UI (button next to poke/force)
-    /** Simulating a busy state, e.g. pretending to wait for TTS. */
-    public busy = $state(false); // TODO: badge on engine picker
+    /** Explicitly muted by the user through the app UI. */
+    public muted = $state(false);
+    /** Busy (or simulating a busy state), e.g. waiting for LLM generation or pretending to wait for TTS. */
+    public busy = $state(false); // TODO: show in UI (badge/status bar)
     /** Paused due to an engine error that requires user intervention. */
-    public errored = $state(false); // TODO: surface in UI (replace mute button) (+ first time teaching tip)
+    public errored = $state(false); // TODO: first time teaching tip
     public readonly canAct: boolean = $derived(!this.muted && !this.busy && !this.errored);
 
     private readonly registry: Registry;
@@ -116,7 +116,7 @@ export class Scheduler {
         const actData = zActData.decode({...act});
         // FIXME: xd
         this.session.context.actor({
-            text: `Act ${forced ? "(forced)" : ""}: ${JSON.stringify(actData)}`,
+            text: `Act${forced ? " (forced)" : ""}: ${JSON.stringify(actData)}`,
             visibilityOverrides: {
                 engine: false,
             }

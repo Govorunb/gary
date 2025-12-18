@@ -6,8 +6,7 @@
     import Hotkey from "../common/Hotkey.svelte";
     import dayjs from "dayjs";
     import { app } from "@tauri-apps/api";
-    import OutLink from "../common/OutLink.svelte";
-    import { safeInvoke } from "$lib/app/utils";
+    import { APP_VERSION, clearLocalStorage, safeInvoke } from "$lib/app/utils";
 
     type Props = {
         open: boolean;
@@ -59,14 +58,6 @@
                         <p class="field-label">Theme</p>
                         <ThemePicker bind:currentTheme={userPrefs.app.theme} />
                     </div>
-
-                    <div class="theme-field">
-                        <button class="btn preset-outlined-surface-300-700"
-                            onclick={() => safeInvoke("open_logs_folder", {})}
-                        >
-                            Open logs folder <ExternalLink size=20 />
-                        </button>
-                    </div>
                 </div>
                 <div class="settings-section">
                     <p class="section-title">Updates</p>
@@ -74,11 +65,11 @@
                     <div class="flex gap-2">
                         <p>Current version:
                         {#await app.getVersion()}
-                            ...
+                            {APP_VERSION}
                         {:then v}
                             {v}
                         {:catch}
-                            Big Dingus The 4rd
+                            Big Dingus The {APP_VERSION}rd
                         {/await}
                         </p>
                     </div>
@@ -109,6 +100,22 @@
                             <button onclick={resetSkipVersion}><X size="12" /></button>
                         </p>
                     {/if}
+                </div>
+                <div class="settings-section">
+                    <p class="section-title">Troubleshooting</p>
+    
+                    <div class="flex flex-row gap-2">
+                        <button class="btn preset-outlined-surface-300-700"
+                            onclick={() => safeInvoke("open_logs_folder", {})}
+                        >
+                            Open logs folder <ExternalLink size=20 />
+                        </button>
+                        <button class="btn preset-tonal-error"
+                            onclick={clearLocalStorage}
+                        >
+                            Reset app preferences
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

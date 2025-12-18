@@ -7,30 +7,29 @@
     import dayjs from 'dayjs';
     import relativeTime from "dayjs/plugin/relativeTime";
     import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
-    
+    import { clearLocalStorage } from '$lib/app/utils';
+
     dayjs.extend(relativeTime);
+
     let { data, children }: LayoutProps = $props();
-    
+
     // svelte-ignore state_referenced_locally
     initDI(data.userPrefsData);
     const session = getSession();
-    const userPrefs = getUserPrefs();
-    onDestroy(() => {
-        session.dispose();
-    });
+    onDestroy(() => session.dispose());
     // debugging
     (window as any).SESSION = session;
-    (window as any).USER_PREFS = userPrefs;
-    
+    (window as any).CONTEXT = session.context;
+    (window as any).SCHEDULER = session.scheduler;
+    (window as any).REGISTRY = session.registry;
+    (window as any).USER_PREFS = session.userPrefs;
+
     // delete localstorage (dev hotkey)
-    registerAppHotkey(['Shift', 'L', 'Backspace', 'Delete'], () => {
-        localStorage.clear();
-        location.reload();
-    })
+    registerAppHotkey(['Backspace', 'Delete', 'Shift', 'L'], clearLocalStorage);
 </script>
 
 <div class="flex flex-col h-screen" role="application">
     {@render children()}
 </div>
 
-<Toaster closeButton richColors position="bottom-right" theme={userPrefs.app.theme} duration={10000} />
+<Toaster closeButton richColors position="bottom-right" theme={session.userPrefs.app.theme} duration={10000} />

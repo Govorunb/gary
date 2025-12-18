@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
-// @ts-ignore
+// @ts-expect-error
 import { resolve } from 'path';
 
 // @ts-expect-error process is a nodejs global
@@ -37,7 +37,7 @@ export default defineConfig(async () => ({
   },
   resolve: {
     alias: {
-      // @ts-ignore
+      // @ts-expect-error
       'global.css': resolve(__dirname, 'src/global.css'),
     }
   }

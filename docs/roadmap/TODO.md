@@ -12,12 +12,12 @@ The project recently underwent a renovation, porting functionality and UI from P
 App logic:
 - [.] Scheduler stuff
     - [ ] Timer for poke/force (both timers reset when an action is performed; poke resets on attempt)
-    - [ ] Non-silent message (from user) with no connected games still primes the scheduler (`shouldAct`)
+    - [ ] Non-silent message (from user) with no connected games still primes the scheduler
 - [.] OpenRouter (broken)
 - [ ] Prefs
     - [ ] File backing storage (so it's user editable)
     - [ ] `$env:MY_ENV_VAR` syntax (for API keys etc)
-    - [ ] Actual config UI
+    - [x] Actual config UI
     - [ ] Reimplement presets/profiles again
 - [.] [Context](./context.md)
 
@@ -30,7 +30,8 @@ Frontend:
     - [ ] Keep a CodeMirror instance loaded offscreen and Portal it into dialogs (deranged)
     - [ ] Streaming reactive ctx message conversion (entirely reimplement rx it'll be funny)
 - [ ] Launch game processes (+ proposed shutdown API)
-- [ ] App logs should show in UI somewhere
+- [x] App logs should show in UI somewhere
+- [ ] Collapse left sidebar to hamburger on small widths
 
 ### Miscellaneous task list
 
@@ -58,7 +59,7 @@ I want to see Randy speed through the schema test in 0.1 seconds
 
 v2 of the API has been in proposals for a while now. If the spec turns out to land into an "evolving v1" state, old and new integrations will have the same version but completely different expectations - e.g. some would expect a `actions/reregister_all` on connect before registering actions, some would do it automatically (and, worst case, error out and disconnect if sent a `reregister_all`). This will require per-game behaviour tweaks for compatibility.
 
-The first step would be a UI (probably using the advanced sidebar), then maybe some automation (e.g. if after connect the game doesn't send actions in the first 2s, try sending a reregister; if the game then errors/disconnects because of a strict message handler, don't do it again and remember in user prefs).
+The first step would be a UI (dialog opened from game menu?), then maybe some automation (e.g. if after connect the game doesn't send actions in the first 2s, try sending a reregister; if the game then errors/disconnects because of a strict message handler, don't do it again and remember in user prefs).
 
 #### Anonymized session data
 

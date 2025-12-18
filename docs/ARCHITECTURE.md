@@ -17,7 +17,7 @@ The **client** (game integration) connects to the **server** (backend).
 
 Then, the following happens until either side disconnects (e.g. the game ends):
 1. Client registers **actions** as available to be performed.
-  - Actions contain an **action schema** (JSON schema) for **action data**.
+    - Actions contain an **action schema** (JSON schema) for **action data**.
 2. As things happen in the game, the client sends **context** to the server to inform the **actor**.
 3. At some point in time, the **actor** indicates it wants to perform an action and generates action data for it.
 4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action.
@@ -45,7 +45,7 @@ The engine may choose not to act if not forced; or, alternatively speaking - the
 
 ### Architecture Overview
 
-The Tauri application is in **active development** and represents the future direction of the project. Tauri is a cross-platform desktop application framework that renders a web-based frontend in the system WebView while passing IPC messages to invoke calls on the Rust backend.
+The Tauri application is in active development and represents the future direction of the project. Tauri is a cross-platform desktop application framework that renders a web-based frontend in the system WebView while passing IPC messages to invoke calls on the Rust backend.
 
 ### App Components
 
@@ -55,16 +55,19 @@ The Tauri application is in **active development** and represents the future dir
 - SvelteKit - Full-stack web framework for Svelte
 - Vite - Build tool and dev server
 
-#### Tauri (`src-tauri/`)
-- Rust backend for desktop application
-- Hosts the WebSocket server, relaying messages to the frontend
-- Tauri plugins to allow the frontend to invoke common system calls:
-  - File system access (`@tauri-apps/plugin-fs`)
-  - HTTP client (`@tauri-apps/plugin-http`)
-  - Logging (`@tauri-apps/plugin-log`)
-  - Notifications (`@tauri-apps/plugin-notification`)
-  - Store API (`@tauri-apps/plugin-store`)
-  - Self-updating (`@tauri-apps/plugin-updater`)
+#### [Tauri](https://tauri.app/concept/architecture/) (`src-tauri/`)
+
+The Rust backend for the application. Essentially, it's the layer connecting the frontend to the OS. Since the frontend is basically just a website, when it needs to do desktop things, it passes system calls to the backend through an IPC channel.
+
+There are Tauri plugins to extend the frontend with some common operations:
+- File system access (`@tauri-apps/plugin-fs`)
+- HTTP client (`@tauri-apps/plugin-http`)
+- Logging (`@tauri-apps/plugin-log`)
+- Notifications (`@tauri-apps/plugin-notification`)
+- Store API (`@tauri-apps/plugin-store`)
+- Self-updating (`@tauri-apps/plugin-updater`)
+
+For Gary specifically, it hosts the WebSocket server, relaying messages to the frontend. Rust use in general is preferably kept to a minimum (for various reasons).
 
 #### Frontend Structure (`src/`)
 - Application code in `src/lib/`
@@ -78,7 +81,7 @@ The Tauri application is in **active development** and represents the future dir
 - Tailwind CSS + Skeleton UI + Lucide Icons
 - Svelte Sonner (toasts)
   - Skeleton UI already provides toasts, but Zag (their dependency) has a bug that makes it so toasts never get disposed internally and you reach max toasts very quickly
-- Codemirror
+- CodeMirror code editor
 - neverthrow (`Result` type for error handling)
 - Zod (parsing & validation)
 - Ajv (action schema validation for "schema test" internal game)
@@ -86,8 +89,8 @@ The Tauri application is in **active development** and represents the future dir
 ## Development Workflow
 
 ### Current Development Focus
-- The Tauri app's Svelte frontend (`src/`) is the focus for development work going forward.
-- The Tauri app's Rust backend (`src-tauri`) should be treated as read-only unless explicitly instructed to work on it.
+- The Svelte frontend (`src/`) is the focus for development work going forward.
+- The Rust backend (`src-tauri`) should be treated as read-only unless explicitly instructed to work on it.
 
 
 ## Essential Paths for Project Navigation
