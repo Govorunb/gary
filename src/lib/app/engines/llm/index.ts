@@ -32,7 +32,7 @@ The **client** (game integration) connects to the **server** (this software). Th
 2. As things happen in the game, the client sends **context** to the server to inform the **actor**.
   - For example, a chess integration may send "Your opponent played 2. Ke2?"
 3. At some point in time, the **actor** indicates it wants to perform an action and generates action data for it.
-  - In time-sensitive situations, the client may send a **force action** message with a set of acceptable actions and additional information (namely, \`query\` detailing context for the choice and \`state\` to help inform the choice).
+  - In time-sensitive situations, the client may send a **force action** message with a subset of acceptable actions and additional information (namely, \`query\` detailing context for the choice and \`state\` to help inform the choice).
 4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action in-game.
 5. The client responds with the **action result**, which is also inserted into context as feedback to the actor.
   - Because actions may take a long time, some actions will execute *asynchronously*;
@@ -209,6 +209,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
     
     // TODO: context trimming
+    // TODO: realistically the turns should be user-assistant-user-assistant not user-user-user-user-...
     private convertContext(ctx: ContextManager): OpenAIContext {
         const systemPrompt = ctx.session.userPrefs.app.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
         const msgs = ctx.actorView.map(msg => this.convertMessage(msg));
@@ -242,7 +243,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             finalMsg.content += (tools
                 ? "The `_gary_say` command is available. You may use it"
                 : "The `say` command is available. You may output `{\"command\":{\"say\":(string),\"notify\":(boolean)}}`")
-                + " to Send a message to the human user running your software. The message will not be sent to any clients - meaning, nobody in-game will hear you.";
+                + " to send a message to the human user running your software. The message will not be sent to any clients - meaning, nobody in-game will hear you.";
         }
         return finalMsg;
     }

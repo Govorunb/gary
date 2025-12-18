@@ -17,13 +17,16 @@ The **client** (game integration) connects to the **server** (backend).
 
 Then, the following happens until either side disconnects (e.g. the game ends):
 1. Client registers **actions** as available to be performed.
-    - Actions contain an **action schema** (JSON schema) for **action data**.
+    - Actions have a name, description, and an **action schema** (JSON schema) for the action's parameters ("action data").
 2. As things happen in the game, the client sends **context** to the server to inform the **actor**.
+    - For example, a chess integration may send "Your opponent played 2. Ke2?. It is now your turn."
 3. At some point in time, the **actor** indicates it wants to perform an action and generates action data for it.
-4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action.
+  - In time-sensitive situations, the client may send a **force action** message with a subset of acceptable actions and additional information (namely, `query` detailing context for the choice and `state` to help inform the choice).
+4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action in-game.
 5. The client responds with the **action result**, which is also inserted into context as feedback to the actor.
+  - Because actions may take a long time, some actions will execute *asynchronously*;
+  - This means they will return a positive result immediately based purely on JSON validation (and not any real in-game result) and may follow up later with a context message.
 6. The client may **unregister** actions if they are no longer available (e.g. a non-repeatable action was executed).
-7. At any point, the client may send a **force action** message with a set of acceptable actions and additional information (namely, `query` detailing context for the choice and `state` to help inform the choice). A 'force' message implies time sensitivity and requires the server to perform one of the given actions *as soon as possible*.
 
 If the connection drops, on reconnect, the server *may* send a message prompting the client to re-register all currently available actions in order to synchronize state. The client may ignore it if no actions are available; alternatively, the client can send an empty 'register' message. Courteous clients *should* sync state on (re)connect regardless of whether the server sends that message.
 
@@ -36,7 +39,7 @@ In this application, the actor's role may be fulfilled by different **engines**,
 
 There's also Tony, which is not an actual engine; 'Tony mode' is a term for when the user manually sends actions through the UI, superseding the active engine.
 
-A session **scheduler** is responsible for processing streams of WebSocket messages coming from games. When an event (e.g. a non-silent message, or an internal timer) calls for it, the scheduler prompts an engine to act.
+A session **scheduler** is responsible for prompting engines to act, when an event (e.g. a non-silent message, or an internal timer) calls for it.
 
 The engine may choose not to act if not forced; or, alternatively speaking - the engine *must* act if forced. This use of the term "force" is similar in purpose to the WebSocket protocol, but is not the same thing - a scheduler may force an action without an incoming `actions/force` message, e.g. if no actions were taken for a certain amount of time.
 
