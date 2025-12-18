@@ -55,6 +55,7 @@ export const zForceAction = z.strictObject({
         query: z.string(),
         ephemeral_context: z.boolean().default(false),
         action_names: z.array(z.string()),
+        priority: z.enum(["low", "medium", "high", "critical"]).fallback("low"), // TODO: interrupt llm gen (when we start doing streaming responses)
     }),
 });
 
