@@ -139,12 +139,12 @@ Apologies to Linux users (if any) for [webkit2gtk's terrible performance](https:
 ### Implementation-specific behaviour
 There may be cases where other backends (including Neuro) may behave differently.
 
-Differences marked with 🚧 will be resolved or obsoleted by the [v2 of the API](https://github.com/VedalAI/neuro-sdk/discussions/58).
 - Gary will always be different from Neuro in some aspects, specifically:
 	- Processing other sources of information like vision/audio/chat (for obvious reasons)
 	- Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
 	- Myriad other things like response timings, text filters, allowed JSON schema keywords, long-term memories, etc
-- 🚧 Gary sends `actions/reregister_all` on every connect (instead of just **re**connects, as in the spec)
+- Gary sends `actions/reregister_all` on every connect (instead of just **re**connects, as in the spec)
+	- Reminder: this command is still non-standard. Your game/SDK implementation should ideally proactively register actions on connect instead of relying on a prompt from the server (which may not ever come).
 
 #### Acknowledgements
 Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:
