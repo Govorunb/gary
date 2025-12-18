@@ -8,7 +8,7 @@ use tauri_plugin_log::{log::LevelFilter, RotationStrategy, Target, TargetKind};
 mod api;
 mod app;
 use app::state::App;
-use app::commands::{is_server_running, server_state, start_server, stop_server};
+use app::commands::{is_server_running, server_state, start_server, stop_server, open_logs_folder};
 use api::server::{ws_accept, ws_deny, ws_send, ws_close};
 use crate::app::log::gary_log;
 
@@ -38,7 +38,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             is_server_running, server_state, start_server, stop_server,
             ws_accept, ws_deny, ws_send, ws_close,
-            gary_log,
+            gary_log, open_logs_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

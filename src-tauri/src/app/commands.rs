@@ -1,7 +1,10 @@
+use std::path::PathBuf;
+
 use log::{debug, info};
 use tauri::{AppHandle, Emitter, Manager, State};
 use anyhow::Result;
 use uuid::Uuid;
+use tauri_plugin_opener::OpenerExt;
 
 use crate::app::state::{AppStateMutex};
 
@@ -50,4 +53,13 @@ pub async fn stop_server(app: AppHandle) -> Result<(), String> {
     } else {
         Err("Server not running".to_string())
     }
+}
+
+#[tauri::command]
+pub fn open_logs_folder(app: AppHandle) -> Result<(), String> {
+    let path: PathBuf = app.path().app_log_dir()
+        .map_err(|e| e.to_string())?;
+    app.opener()
+        .open_path(path.to_str().unwrap(), None::<&str>)
+        .map_err(|e| e.to_string())
 }

@@ -2,10 +2,12 @@
     import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
     import Dialog from "$lib/ui/common/Dialog.svelte";
     import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
-    import { X } from "@lucide/svelte";
+    import { ExternalLink, X } from "@lucide/svelte";
     import Hotkey from "../common/Hotkey.svelte";
     import dayjs from "dayjs";
     import { app } from "@tauri-apps/api";
+    import OutLink from "../common/OutLink.svelte";
+    import { safeInvoke } from "$lib/app/utils";
 
     type Props = {
         open: boolean;
@@ -57,6 +59,14 @@
                         <p class="field-label">Theme</p>
                         <ThemePicker bind:currentTheme={userPrefs.app.theme} />
                     </div>
+
+                    <div class="theme-field">
+                        <button class="btn preset-outlined-surface-300-700"
+                            onclick={() => safeInvoke("open_logs_folder", {})}
+                        >
+                            Open logs folder <ExternalLink size=20 />
+                        </button>
+                    </div>
                 </div>
                 <div class="settings-section">
                     <p class="section-title">Updates</p>
@@ -84,7 +94,7 @@
                         </select>
                     </div>
                     <div class="update-actions">
-                        <button class="btn preset-outlined-surface-300-700 check-updates-btn"
+                        <button class="btn preset-outlined-surface-300-700"
                             onclick={checkForUpdates}
                             disabled={updater.checkingForUpdates}
                         >
