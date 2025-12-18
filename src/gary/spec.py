@@ -71,7 +71,7 @@ class ForceAction(GameMessage):
         query: str
         ephemeral_context: bool | None = None
         action_names: list[str]
-        main_thread: bool = True # undocumented
+        priority: "low" | "medium" | "high" | "critical" = "low"
 
     command: Literal["actions/force"] = "actions/force"
     data: Data
