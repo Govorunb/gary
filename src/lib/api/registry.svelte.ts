@@ -211,9 +211,12 @@ export class Game {
     }
 
     async registerActions(actions: v1.Action[]) {
-        r.debug(`${this.getActiveActions().length} registered actions`);
+        r.debug(`${this.getActiveActions().length} currently registered actions`);
+        let new_actions = 0;
         for (const action of actions) {
             const existing = this.actions.get(action.name);
+            if (!existing) { new_actions++; }
+
             if (existing?.active) {
                 // duplicate action conflict resolution
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
@@ -226,7 +229,7 @@ export class Game {
             this.actions.set(action.name, storedAction);
         }
         if (actions.length > 5) {
-            r.debug(`(${this.name}) Registered ${actions.length} actions`);
+            r.debug(`(${this.name}) Registered ${actions.length} actions (${new_actions} new)`);
         } else {
             r.debug(`(${this.name}) Registered actions: [${actions.map(a => a.name).join(", ")}]`);
         }
