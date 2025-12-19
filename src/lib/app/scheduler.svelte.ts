@@ -12,7 +12,7 @@ export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
     public muted = $state(false);
     /** Busy (or simulating a busy state), e.g. waiting for LLM generation or pretending to wait for TTS. */
-    public busy = $state(false); // TODO: show in UI (badge/status bar)
+    public busy = $state(false);
     /** Paused due to an engine error that requires user intervention. */
     public errored = $state(false); // TODO: first time teaching tip
     public readonly canAct: boolean = $derived(!this.muted && !this.busy && !this.errored);
@@ -23,14 +23,14 @@ export class Scheduler {
     /** A signal telling the scheduler to prompt the active engine to act as soon as possible.
      * This can be flipped true by:
      * - Non-silent context messages
-     * - Idle timers (TODO)
+     * - Idle timers
      * - Manual user actions
      * And it is flipped false when attempting to act.
      * Note: the act may fail, or the actor may choose not to act; the pending signal is still consumed in either case.
      */
     public actPending = $state(false);
     /** A queue of pending `ForceAction`s. */
-    public forceQueue: Action[][] = $state([]);
+    public forceQueue: Array<Action[] | null> = $state([]);
     public autoAct = $state(false);
     public tryInterval = $state(5000);
     public forceInterval = $state(30000);
@@ -55,11 +55,14 @@ export class Scheduler {
         });
         this.tryTimer = useDebounce(() => {
             r.info("Engine idle, poking");
-            void this.tryAct().finally(() => void this.tryTimer());
+            this.actPending = true;
+            void this.tryTimer();
         }, () => this.tryInterval);
         this.forceTimer = useDebounce(() => {
             r.info("Engine idle for a long time, force acting");
-            void this.forceAct().finally(() => void this.forceTimer());
+            if (this.forceQueue.length === 0) {
+                this.forceQueue.push(null);
+            }
         }, () => this.forceInterval);
         // HMR
         session.onDispose(() => {
@@ -88,6 +91,7 @@ export class Scheduler {
     }
 
     async tryAct(): Promise<Result<EngineAct | null, ActError>> {
+        this.actPending = false;
         const ignores = this.checkIgnored();
         if (ignores.length) {
             r.debug(`Scheduler.tryAct ignored - ${ignores.join("; ")}`);
@@ -101,7 +105,6 @@ export class Scheduler {
         this.busy = true;
         const actRes = await this.activeEngine!.tryAct(this.session, actions);
         this.busy = false;
-        this.actPending = false;
         if (actRes.isErr()) {
             this.onError(actRes.error);
             return err(actRes.error);
@@ -114,7 +117,8 @@ export class Scheduler {
         return this.doAct(act, false);
     }
 
-    async forceAct(actions?: Action[]): Promise<Result<EngineAct, ActError>> {
+    async forceAct(actions?: Action[] | null): Promise<Result<EngineAct, ActError>> {
+        this.actPending = false;
         const ignores = this.checkIgnored();
         if (ignores.length) {
             r.warn(`Scheduler.forceAct ignored - ${ignores.join("; ")}`);
@@ -131,7 +135,6 @@ export class Scheduler {
         this.busy = true;
         const actRes = await this.activeEngine!.forceAct(this.session, actions);
         this.busy = false;
-        this.actPending = false;
         if (actRes.isErr()) {
             this.onError(actRes.error);
             return err(actRes.error);
