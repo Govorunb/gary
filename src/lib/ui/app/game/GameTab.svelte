@@ -33,12 +33,13 @@
             <span class="game-name">{game.name}</span>
         </div>
         <div class="game-controls">
+            <!-- WIP: keep track of and show diagnostics (broken WS messages, dupe action registers, action/result l*tency) -->
             <div class="status-indicator"
                 data-connected={boolAttr(!game.conn.closed)}
                 data-warn={boolAttr(false /* todo */)}
                 data-error={boolAttr(false /* todo */)}
             >
-                <div class="status-dot"></div>
+                <div class="status-dot" title="WIP: this will show diagnostics for your game (e.g. WebSocket protocol violations)"></div>
             </div>
             <Popover open={gameMenuOpen} onOpenChange={(d) => gameMenuOpen = d.open}
                 onFocusOutside={(_) => gameMenuOpen = false}
