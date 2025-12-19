@@ -1,8 +1,8 @@
 [package]
 name = "gary"
-version = "1.0.0-alpha.1"
-description = "A Tauri App"
-authors = ["you"]
+version = "1.0.0-alpha.2"
+description = "Backend implementation for the Neuro-sama SDK."
+authors = ["Govorunb"]
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
