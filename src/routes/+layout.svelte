@@ -3,7 +3,7 @@
     import { onDestroy } from 'svelte';
     import type { LayoutProps } from './$types.js';
     import { Toaster } from "svelte-sonner";
-    import { getSession, getUserPrefs, initDI } from '$lib/app/utils/di';
+    import { getSession, initDI } from '$lib/app/utils/di';
     import dayjs from 'dayjs';
     import relativeTime from "dayjs/plugin/relativeTime";
     import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
@@ -18,11 +18,12 @@
     const session = getSession();
     onDestroy(() => session.dispose());
     // debugging
-    (window as any).SESSION = session;
-    (window as any).CONTEXT = session.context;
-    (window as any).SCHEDULER = session.scheduler;
-    (window as any).REGISTRY = session.registry;
-    (window as any).USER_PREFS = session.userPrefs;
+    const __global = window as any;
+    __global.SESSION = session;
+    __global.CONTEXT = session.context;
+    __global.SCHEDULER = session.scheduler;
+    __global.REGISTRY = session.registry;
+    __global.USER_PREFS = session.userPrefs;
 
     // delete localstorage (dev hotkey)
     registerAppHotkey(['Backspace', 'Delete', 'Shift', 'L'], clearLocalStorage);

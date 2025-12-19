@@ -5,7 +5,6 @@ import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/cor
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
 import r from "./reporting";
-import { version } from "$app/environment";
 // import { isTauri } from "@tauri-apps/api/core";
 
 export function pickRandom<T>(arr: T[]) {
@@ -165,7 +164,8 @@ export function estimateTokens(text: string) {
     return text.length * CHARS_PER_TOKEN;
 }
 
-export const APP_VERSION = version;
+// @ts-expect-error
+export const APP_VERSION: string = __APP_VERSION__;
 
 export function clearLocalStorage() {
     const warning = "Proceeding will DELETE your saved preferences, resetting the app.\n\nThere will be no going back.";

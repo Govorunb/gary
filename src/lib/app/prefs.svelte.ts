@@ -4,8 +4,9 @@ import r from "$lib/app/utils/reporting";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
-import { Debounced } from "runed";
 import { APP_VERSION } from "./utils";
+// import { useDebounce } from "runed";
+// import { untrack } from "svelte";
 
 export const USER_PREFS = "userPrefs";
 
@@ -16,9 +17,15 @@ export class UserPrefs {
 
     constructor(data: UserPrefsData) {
         this.#data = $state(zUserPrefs.parse(data));
-        const save = new Debounced(() => this.save(), 500);
+        // FIXME
+        // const save = useDebounce(() => void this.save(), 500);
         $effect(() => {
-            void save.current; // crouching proxy, hidden method call
+            // void this.app;
+            // void this.server;
+            // void this.engines;
+            // untrack(() => void save());
+
+            this.save();
         });
         // TODO: proxy w/ setters that parse through zod
         // (not sure it's possible with Svelte's own proxies)

@@ -5,6 +5,8 @@ import { zAct, zActData, type Action } from "$lib/api/v1/spec";
 import type { EngineError, Engine, EngineAct } from "./engines/index.svelte";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { OpenRouterError } from "@openrouter/sdk/models/errors";
+import { useDebounce } from "runed";
+import { untrack } from "svelte";
 
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
@@ -29,6 +31,11 @@ export class Scheduler {
     public actPending = $state(false);
     /** A queue of pending `ForceAction`s. */
     public forceQueue: Action[][] = $state([]);
+    public autoAct = $state(false);
+    public tryInterval = $state(5000);
+    public forceInterval = $state(30000);
+    public readonly tryTimer: ReturnType<typeof useDebounce<[], void>>;
+    public readonly forceTimer: ReturnType<typeof useDebounce<[], void>>;
 
     constructor(private readonly session: Session) {
         this.registry = this.session.registry;
@@ -46,6 +53,38 @@ export class Scheduler {
                 this.tryAct();
             }
         });
+        this.tryTimer = useDebounce(() => {
+            r.info("Engine idle, poking");
+            void this.tryAct().finally(() => void this.tryTimer());
+        }, () => this.tryInterval);
+        this.forceTimer = useDebounce(() => {
+            r.info("Engine idle for a long time, force acting");
+            void this.forceAct().finally(() => void this.forceTimer());
+        }, () => this.forceInterval);
+        // HMR
+        session.onDispose(() => {
+            this.tryTimer.cancel();
+            this.forceTimer.cancel();
+            // @ts-expect-error
+            this.tryTimer = null as any;
+            // @ts-expect-error
+            this.forceTimer = null as any;
+        });
+        $effect(() => {
+            if (!this.autoAct) {
+                untrack(() => this.forceTimer.cancel());
+                untrack(() => this.tryTimer.cancel());
+            } else {
+                untrack(() => void this.tryTimer());
+                untrack(() => void this.forceTimer());
+
+                if (this.canAct && !this.actPending && !this.forceQueue.length) {
+                    untrack(() => void this.tryTimer());
+                } else {
+                    untrack(() => this.tryTimer.cancel());
+                }
+            }
+        })
     }
 
     async tryAct(): Promise<Result<EngineAct | null, ActError>> {
@@ -102,6 +141,7 @@ export class Scheduler {
     }
 
     private doAct(act: EngineAct, forced: boolean): ResultAsync<EngineAct, ActError> {
+        this.forceTimer();
         const game = this.registry.games.find(g => g.getAction(act.name));
         if (!game) {
             r.error("Engine selected unknown action", {

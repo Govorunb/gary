@@ -5,6 +5,8 @@ import type { UserPrefs } from "../prefs.svelte";
 import type { ResultAsync } from "neverthrow";
 
 export const zEngineAct = zActData.omit({ id: true });
+// FIXME: should be something like EngineActResult
+// ResultAsync<EnginePerformAction | EngineSkip | EngineYap, EngineError>
 export type EngineAct = z.infer<typeof zEngineAct>;
 
 export abstract class Engine<TOptions> {

@@ -40,5 +40,9 @@ export default defineConfig(async () => ({
       // @ts-expect-error
       'global.css': resolve(__dirname, 'src/global.css'),
     }
+  },
+  define: {
+    // @ts-expect-error
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
   }
 }));

@@ -1,9 +1,10 @@
 <script lang="ts">
     import EnginePicker from "./EnginePicker.svelte";
     import { getSession } from "$lib/app/utils/di";
-    import { HandFist, Pointer, Pause, BugPlay, Play } from "@lucide/svelte";
+    import { HandFist, Pointer, Pause, BugPlay, Play, Hourglass, Infinity } from "@lucide/svelte";
     import { tooltip } from "$lib/app/utils";
     import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
+    import { boolAttr } from "runed";
 
     type State = "errored" | "muted" | "unmuted";
 
@@ -17,6 +18,7 @@
 
     function poke(force: boolean) {
         userInteracted();
+        if (scheduler.busy) return;
         if (force) {
             scheduler.forceAct();
         } else {
@@ -63,8 +65,8 @@
     <button 
         onclick={toggleMute}
         class="act-btn mute-btn"
-        class:muted={scheduler.muted}
-        class:errored={scheduler.errored}
+        data-muted={boolAttr(scheduler.muted)}
+        data-errored={boolAttr(scheduler.errored)}
         {@attach tooltip(muteTooltip)}
     >
         <MuteIcon />
@@ -72,13 +74,26 @@
     <button 
         onclick={() => poke(shiftPressed)} 
         class="act-btn"
-        {@attach tooltip(shiftPressed ? "Force Act" : "Act (Shift for Force)")}
+        disabled={scheduler.busy}
+        {@attach tooltip(scheduler.busy ? "Engine busy" : shiftPressed ? "Force Act" : "Act (Shift for Force)")}
     >
-        {#if shiftPressed}
-            <HandFist />
+        {#if scheduler.busy}
+            <Hourglass />
         {:else}
-            <Pointer />
+            {#if shiftPressed}
+                <HandFist />
+            {:else}
+                <Pointer />
+            {/if}
         {/if}
+    </button>
+    <button
+        onclick={() => scheduler.autoAct = !scheduler.autoAct}
+        class="act-btn autoact-btn"
+        {@attach tooltip("Act automatically")}
+        data-checked={boolAttr(scheduler.autoAct)}
+    >
+        <Infinity />
     </button>
 </div>
 
@@ -91,24 +106,33 @@
 
     .act-btn {
         @apply p-2 rounded-lg transition-all;
-        @apply bg-neutral-100 hover:bg-neutral-200 active:bg-neutral-300;
-        @apply dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:active:bg-neutral-600;
+        @apply bg-neutral-100 dark:bg-neutral-800;
         @apply border border-neutral-200/50 dark:border-neutral-700/50;
         @apply shadow-sm;
+
+        &:hover:not(:disabled) {
+            @apply bg-neutral-200 dark:bg-neutral-700;
+        }
+        &:active:not(:disabled) {
+            @apply bg-neutral-300 dark:bg-neutral-600;
+        }
+        &:disabled {
+            @apply opacity-60;
+        }
         
         &:focus-visible {
             @apply ring-2 ring-primary-500 outline-none;
         }
     }
 
-    .mute-btn.muted {
+    .mute-btn[data-muted] {
         @apply text-warning-600 dark:text-warning-400;
         
         &:hover {
             @apply text-warning-700 dark:text-warning-300;
         }
     }
-    .mute-btn.errored {
+    .mute-btn[data-errored] {
         @apply text-error-600 dark:text-error-400;
         @apply ring-2 ring-error-200 dark:ring-error-800;
         
@@ -117,4 +141,16 @@
             @apply ring-error-400 dark:ring-error-600;
         }
     }
+
+    .autoact-btn {
+        @apply transition-all;
+        &[data-checked] {
+            @apply ring-3 ring-inset ring-primary-200 dark:ring-primary-500;
+            @apply text-secondary-700 dark:text-secondary-200;
+        }
+        &:active {
+            @apply ring-2 ring-inset ring-primary-300 dark:ring-primary-700;
+        }
+    }
+
 </style>
