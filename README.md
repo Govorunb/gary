@@ -62,7 +62,7 @@ You can use a local inference provider like LMStudio/Ollama (my recommendation i
 Look for a model that fits on your GPU. For example, if you have 8GB VRAM (which is [pretty common](https://store.steampowered.com/hwsurvey) these days), look for a model around 8B (billion) parameters. [Ministral 3](https://lmstudio.ai/models/mistralai/ministral-3-8b) is a good starting point.
 
 To reduce the VRAM requirement (or if the model runs too slow), you can choose a [smaller quantization](https://simon-frey.com/blog/what-is-llm-quantization-simply-explained/) of the same model or try your luck with a [smaller model](https://lmstudio.ai/models/mistralai/ministral-3-3b).
-You can also fiddle with settings in LMStudio to squeeze more of the model onto the GPU by reducing context window size, or enabling quantized attention - optimization is out of scope here, but just mess around.
+You can also fiddle with settings in LMStudio to squeeze more of the model onto the GPU by reducing context window size (keep at least 8192 or it might get miserable) or enabling KV cache quantization - optimization is out of scope here, but just mess around.
 
 On the other hand, if you have more VRAM or don't mind slower responses, you can look for a larger model - 13B/14B is the next step.
 
