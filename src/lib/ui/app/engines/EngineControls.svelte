@@ -88,10 +88,10 @@
         {/if}
     </button>
     <button
-        onclick={() => scheduler.autoAct = !scheduler.autoAct}
+        onclick={() => scheduler.autoPoker.autoAct = !scheduler.autoPoker.autoAct}
         class="act-btn autoact-btn"
         {@attach tooltip("Act automatically")}
-        data-checked={boolAttr(scheduler.autoAct)}
+        data-checked={boolAttr(scheduler.autoPoker.autoAct)}
     >
         <Infinity />
     </button>

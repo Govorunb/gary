@@ -31,11 +31,7 @@ export class Scheduler {
     public actPending = $state(false);
     /** A queue of pending `ForceAction`s. */
     public forceQueue: Array<Action[] | null> = $state([]);
-    public autoAct = $state(false);
-    public tryInterval = $state(5000);
-    public forceInterval = $state(30000);
-    public readonly tryTimer: ReturnType<typeof useDebounce<[], void>>;
-    public readonly forceTimer: ReturnType<typeof useDebounce<[], void>>;
+    public readonly autoPoker: AutoPoker;
 
     constructor(private readonly session: Session) {
         this.registry = this.session.registry;
@@ -53,41 +49,7 @@ export class Scheduler {
                 this.tryAct();
             }
         });
-        this.tryTimer = useDebounce(() => {
-            r.info("Engine idle, poking");
-            this.actPending = true;
-            void this.tryTimer();
-        }, () => this.tryInterval);
-        this.forceTimer = useDebounce(() => {
-            r.info("Engine idle for a long time, force acting");
-            if (this.forceQueue.length === 0) {
-                this.forceQueue.push(null);
-            }
-        }, () => this.forceInterval);
-        // HMR
-        session.onDispose(() => {
-            this.tryTimer.cancel();
-            this.forceTimer.cancel();
-            // @ts-expect-error
-            this.tryTimer = null as any;
-            // @ts-expect-error
-            this.forceTimer = null as any;
-        });
-        $effect(() => {
-            if (!this.autoAct) {
-                untrack(() => this.forceTimer.cancel());
-                untrack(() => this.tryTimer.cancel());
-            } else {
-                untrack(() => void this.tryTimer());
-                untrack(() => void this.forceTimer());
-
-                if (this.canAct && !this.actPending && !this.forceQueue.length) {
-                    untrack(() => void this.tryTimer());
-                } else {
-                    untrack(() => this.tryTimer.cancel());
-                }
-            }
-        })
+        this.autoPoker = new AutoPoker(session);
     }
 
     async tryAct(): Promise<Result<EngineAct | null, ActError>> {
@@ -144,7 +106,7 @@ export class Scheduler {
     }
 
     private doAct(act: EngineAct, forced: boolean): ResultAsync<EngineAct, ActError> {
-        this.forceTimer();
+        this.autoPoker.forceTimer();
         const game = this.registry.games.find(g => g.getAction(act.name));
         if (!game) {
             r.error("Engine selected unknown action", {
@@ -223,4 +185,55 @@ export type ActionNotFound = {
 export type ConnError = {
     type: "connError";
     error: string;
+}
+
+export class AutoPoker {
+    public autoAct = $state(false);
+    public tryInterval = $state(5000);
+    public forceInterval = $state(30000);
+    public readonly tryTimer: ReturnType<typeof useDebounce<[], void>>;
+    public readonly forceTimer: ReturnType<typeof useDebounce<[], void>>;
+
+    private readonly scheduler: Scheduler;
+
+    constructor(private session: Session) {
+        this.scheduler = $derived(this.session.scheduler);
+        this.tryTimer = useDebounce(() => {
+            r.info("Engine idle, poking");
+            this.scheduler.actPending = true;
+            void this.tryTimer();
+        }, () => this.tryInterval);
+        
+        this.forceTimer = useDebounce(() => {
+            r.info("Engine idle for a long time, force acting");
+            if (this.scheduler.forceQueue.length === 0) {
+                this.scheduler.forceQueue.push(null);
+            }
+        }, () => this.forceInterval);
+
+        $effect(() => {
+            if (!this.autoAct) {
+                untrack(() => this.forceTimer.cancel());
+                untrack(() => this.tryTimer.cancel());
+            } else {
+                untrack(() => void this.tryTimer());
+                untrack(() => void this.forceTimer());
+
+                if (this.scheduler.canAct && !this.scheduler.actPending && !this.scheduler.forceQueue.length) {
+                    untrack(() => void this.tryTimer());
+                } else {
+                    untrack(() => this.tryTimer.cancel());
+                }
+            }
+        });
+        // HMR
+        session.onDispose(() => {
+            this.tryTimer.cancel();
+            this.forceTimer.cancel();
+            // @ts-expect-error
+            this.tryTimer = null as any;
+            // @ts-expect-error
+            this.forceTimer = null as any;
+        });
+    }
 }
