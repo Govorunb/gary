@@ -105,7 +105,9 @@ export class Scheduler {
     }
 
     private doAct(act: EngineAct, forced: boolean): ResultAsync<EngineAct, ActError> {
-        this.autoPoker.forceTimer();
+        if (this.autoPoker.autoAct) {
+            this.autoPoker.forceTimer();
+        }
         const game = this.registry.games.find(g => g.getAction(act.name));
         if (!game) {
             r.error("Engine selected unknown action", {

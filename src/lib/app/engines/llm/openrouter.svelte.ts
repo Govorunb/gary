@@ -47,12 +47,12 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             model: this.options.model ?? "openrouter/auto",
             stream: true,
             stream_options: { include_usage: true },
-            // reasoning_effort: "none", // sometimes zero providers support this even on a decent model
             // @ts-expect-error
-            // reasoning: { effort: "none" }, // ignored by provider. whatever
+            reasoning: { effort: "none" }, // ignored by provider. whatever
             // debug: { echo_upstream_body: true },
             structured_outputs: true,
-            provider: { require_parameters: true },
+            // some providers require reasoning (dude why)
+            // provider: { require_parameters: true },
         };
         if (outputSchema) {
             params.response_format = {
@@ -105,12 +105,13 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         let usage: CompletionUsage | null = null;
         for await (const chunk of stream) {
             id ??= chunk.id;
-            rawResp.push(JSON.stringify(chunk));
-            
+            r.verbose(`OpenRouter response chunk: ${JSON.stringify(chunk)}`);
+            rawResp.push(chunk);
+
             const resp = chunk.choices[0];
             // first debug chunk
             if (!resp) continue;
-            
+
             textOutput += resp.delta.content || "";
             reasoning += ((resp.delta as any).reasoning || "");
             if (resp.finish_reason) {
@@ -124,7 +125,6 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             }
         }
 
-        r.verbose(`Raw OpenRouter response: ${rawResp.join("\n")}`);
         if (!textOutput) {
             return err(new EngineError(`Empty response`));
         }
@@ -136,7 +136,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             customData: {
                 [this.id]: { id, rawResp, usage, reasoning, },
             },
-        })
+        });
         // if (id) {
         //     // getting the generation fails ("doesn't exist") if you request it immediately on response
         //     // my brother in christ you gave me the id
