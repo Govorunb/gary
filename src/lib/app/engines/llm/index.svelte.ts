@@ -112,6 +112,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (isForce) {
                 return err(new EngineError("Internal error - force act allowed waiting"));
             }
+            // FIXME: the output needs to be in context. otherwise, the model will get stuck in a time loop
             return ok(null);
         }
         const say = zSay.safeParse(command);
@@ -119,6 +120,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (isForce) {
                 return err(new EngineError("Internal error - force act allowed yapping"));
             }
+            genMsg.customData.rawCommand = genMsg.text;
             genMsg.text = say.data.say;
             genMsg.silent = !say.data.notify;
             session.context.actor(genMsg);
@@ -237,26 +239,43 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     /** A reminder message at the end of context to improve model performance. */
-    protected closerMessage(): OpenAIMessage {
-        const finalMsg = {
-            role: "user",
-            content: "It is your turn to act.\n"
-        } satisfies OpenAIMessage;
+    protected closerMessage(actions?: Action[]): OpenAIMessage {
+        const msgContents = ["It is your turn to act."];
         const tools = this.options.promptingStrategy === "tools";
-        finalMsg.content += tools
-            ? "Your output should consist of tool calls that correspond to registered actions."
-            : `Your output should be a command in JSON syntax. Example: \`{"command":{"action":"open_door","data":{"door_number":1}}\``;
         if (this.options.allowDoNothing) {
-            finalMsg.content += tools
+            msgContents.push(tools
                 ? "\nThe `_gary_wait` command is available. You may use it to skip acting this turn."
-                : "\nThe `wait` command is available. You may output `{\"command\":\"wait\"}` to skip this turn.\n";
+                : "\nThe `wait` command is available. You may output `{\"command\":\"wait\"}` to skip this turn.\n"
+            );
         }
         if (this.options.allowYapping) {
-            finalMsg.content += (tools
+            msgContents.push((tools
                 ? "\nThe `_gary_say` command is available. You may use it"
                 : "\nThe `say` command is available. You may output `{\"command\":{\"say\":(string),\"notify\":(boolean)}}`")
-                + " to send a message to the human user running your software. The message will not be sent to any clients - meaning, nobody in-game will hear you.";
+                + " to send a message to the human user running your software. The message will not be sent to any clients - meaning, nobody in-game will hear you."
+            );
         }
+        if (actions) {
+            msgContents.push(`The following actions are available to you:`);
+            for (const action of actions) {
+                let actionText = `    - **${action.name}**`;
+                if (action.description) {
+                    actionText += `: ${action.description}`;
+                }
+                if (action.schema) {
+                    actionText += ` (Schema: ${action.schema})`;
+                }
+                msgContents.push(actionText);
+            }
+        }
+        msgContents.push(tools
+            ? "\nYour output should consist of tool calls that correspond to registered actions."
+            : `\nYour output should be a command in JSON syntax. Example: \`{"command":{"action":"open_door","data":{"door_number":1}}\``
+        );
+        const finalMsg = {
+            role: "user", // TODO: should this be "developer" role?
+            content: msgContents.join("\n"),
+        } satisfies OpenAIMessage;
         return finalMsg;
     }
 

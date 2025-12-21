@@ -11,9 +11,9 @@ The project recently underwent a renovation, porting functionality and UI from P
 
 App logic:
 - [.] Scheduler stuff
-    - [ ] Timer for poke/force (both timers reset when an action is performed; poke resets on attempt)
-    - [ ] Non-silent message (from user) with no connected games still primes the scheduler
-- [.] OpenRouter (broken)
+    - [x] Timer for poke/force (both timers reset when an action is performed; poke resets on attempt)
+    - [ ] Non-silent message (from user) with no connected games still primes the scheduler (should be able to call model if yapping is allowed)
+- [.] Fix OpenRouter (mostly done but ehhhhhh)
 - [ ] Prefs
     - [ ] File backing storage (so it's user editable)
     - [ ] `$env:MY_ENV_VAR` syntax (for API keys etc)
@@ -50,10 +50,6 @@ I like the idea of collapsing everything down to just a list of connected games 
 Same with e.g. accomodating someone testing their SDK implementation vs a game integration - they have different requirements, and it'd be nice to have modes that focus in on each of those workflows.
 
 Previously this was sort of kind of accomodated by allowing different logging levels for each module/"subsystem" (e.g. logging websockets at `trace` to diagnose message passing), but I wonder if it could be made more ergonomic.
-
-#### Configure scheduler timers
-
-I want to see Randy speed through the schema test in 0.1 seconds
 
 #### Per-game tweaks/compat
 

@@ -45,11 +45,13 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         const params: StreamingChatParams = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
-            // reasoning_effort: "none",
             stream: true,
             stream_options: { include_usage: true },
+            // reasoning_effort: "none", // sometimes zero providers support this even on a decent model
             // @ts-expect-error
-            debug: { echo_upstream_body: true },
+            // reasoning: { effort: "none" }, // ignored by provider. whatever
+            // debug: { echo_upstream_body: true },
+            structured_outputs: true,
             provider: { require_parameters: true },
         };
         if (outputSchema) {
@@ -97,6 +99,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 
         const stream = res.value;
         let textOutput = "";
+        let reasoning = "";
         const rawResp = [];
         let id: string | null = null;
         let usage: CompletionUsage | null = null;
@@ -109,6 +112,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             if (!resp) continue;
             
             textOutput += resp.delta.content || "";
+            reasoning += ((resp.delta as any).reasoning || "");
             if (resp.finish_reason) {
                 // final chunk
                 if (resp.finish_reason && resp.finish_reason !== "stop" && resp.finish_reason !== "length") {
@@ -130,7 +134,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             source: zActorSource.decode({manual: false}),
             silent: true,
             customData: {
-                [this.id]: { id, rawResp, usage },
+                [this.id]: { id, rawResp, usage, reasoning, },
             },
         })
         // if (id) {
