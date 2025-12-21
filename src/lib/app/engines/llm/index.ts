@@ -91,8 +91,9 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         if (isForce && !resolvedActions.length) {
             return err(new EngineError("Tried to force act with no available actions"));
         }
-        const ctx = this.convertContext(session.context);
+        let ctx = this.convertContext(session.context);
         ctx.push(this.closerMessage());
+        ctx = this.mergeUserTurns(ctx);
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
         const gen = await this.generateStructuredOutput(ctx, schema);
         const commandRes = gen
@@ -246,6 +247,34 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 + " to send a message to the human user running your software. The message will not be sent to any clients - meaning, nobody in-game will hear you.";
         }
         return finalMsg;
+    }
+
+    protected mergeUserTurns(msgs: OpenAIMessage[]): OpenAIMessage[] {
+        const result: OpenAIMessage[] = [];
+        const userMsgs: OpenAIMessage[] = [];
+        
+        function flush() {
+            if (userMsgs.length > 0) {
+                const collapsed: OpenAIMessage = {
+                    role: 'user',
+                    content: userMsgs.map(m => m.content).join('\n')
+                };
+                result.push(collapsed);
+                userMsgs.length = 0;
+            }
+        }
+        
+        for (const msg of msgs) {
+            if (msg.role === 'user') {
+                userMsgs.push(msg);
+            } else {
+                flush();
+                result.push(msg);
+            }
+        }
+        
+        flush();
+        return result;
     }
 }
 
