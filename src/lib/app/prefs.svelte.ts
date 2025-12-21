@@ -5,8 +5,6 @@ import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
 import { APP_VERSION } from "./utils";
-// import { useDebounce } from "runed";
-// import { untrack } from "svelte";
 
 export const USER_PREFS = "userPrefs";
 
@@ -17,18 +15,11 @@ export class UserPrefs {
 
     constructor(data: UserPrefsData) {
         this.#data = $state(zUserPrefs.parse(data));
-        // FIXME
-        // const save = useDebounce(() => void this.save(), 500);
-        $effect(() => {
-            // void this.app;
-            // void this.server;
-            // void this.engines;
-            // untrack(() => void save());
-
-            this.save();
-        });
-        // TODO: proxy w/ setters that parse through zod
-        // (not sure it's possible with Svelte's own proxies)
+        
+        // TODO: debounce for file write (if ever)
+        // the runed debouncer self-depends so we have to untrack
+        // but then this.#data is also untracked (https://svelte.dev/docs/svelte/$effect#Understanding-dependencies)
+        $effect(() => void this.save());
     }
     get app() {
         return this.#data.app;
@@ -97,8 +88,12 @@ export class UserPrefs {
 
     async save() {
         // TODO: validation here (fatal if fails)
-        localStorage.setItem(USER_PREFS, JSON.stringify(this.#data));
+        this.write(JSON.stringify(this.#data));
         r.debug("saved prefs");
+    }
+
+    private async write(contents: string) {
+        localStorage.setItem(USER_PREFS, contents);
     }
 }
 
