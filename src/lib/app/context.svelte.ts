@@ -15,8 +15,10 @@ export class ContextManager {
         this.reset();
     }
 
-    push(msg: z.input<typeof zMessage>) {
-        this.allMessages.push(zMessage.decode(msg));
+    push(msg: z.input<typeof zMessage>): z.output<typeof zMessage> {
+        const msg_ = zMessage.decode(msg);
+        this.allMessages.push(msg_);
+        return msg_;
     }
 
     pop() {
@@ -32,19 +34,19 @@ export class ContextManager {
     }
 
     system(partialMsg: SourcelessMessageInput) {
-        this.push({ source: zSystemSource.decode({}), ...partialMsg });
+        return this.push({ source: zSystemSource.decode({}), ...partialMsg });
     }
 
     client(game: Game, partialMsg: SourcelessMessageInput) {
-        this.push({ source: zClientSource.decode({name: game.name, id: game.conn.id}), ...partialMsg });
+        return this.push({ source: zClientSource.decode({name: game.name, id: game.conn.id}), ...partialMsg });
     }
 
     user(partialMsg: SourcelessMessageInput) {
-        this.push({ source: zUserSource.decode({}), ...partialMsg });
+        return this.push({ source: zUserSource.decode({}), ...partialMsg });
     }
 
     actor(partialMsg: SourcelessMessageInput, manual: boolean = false) {
-        this.push({ source: zActorSource.decode({manual}), silent: true, ...partialMsg });
+        return this.push({ source: zActorSource.decode({manual}), silent: true, ...partialMsg });
     }
 }
 

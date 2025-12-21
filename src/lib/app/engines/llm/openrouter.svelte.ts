@@ -1,8 +1,8 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { LLMEngine, zLLMOptions, type OpenAIContext } from ".";
+import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import r from "$lib/app/utils/reporting";
-import type { ChatGenerationParams } from "@openrouter/sdk/models";
+import type { ChatGenerationParams, ChatGenerationTokenUsage } from "@openrouter/sdk/models";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import type { SDKOptions } from "@openrouter/sdk";
 import z from "zod";
@@ -30,6 +30,9 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     }
 
     generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError> {
+        if (!this.options.apiKey) {
+            return errAsync(new ConfigError("OpenRouter API key is required"));
+        }
         return new ResultAsync(this.genJson(context, outputSchema));
     }
     generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
@@ -37,17 +40,17 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     }
 
     async genJson(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
-        type NonStreamingChatParams = ChatGenerationParams & { stream?: false | undefined };
+        type StreamingChatParams = ChatGenerationParams & { stream: true };
 
-        const params: NonStreamingChatParams = {
+        const params: StreamingChatParams = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
-            reasoning: { effort: "none" },
-            provider: {
-                requireParameters: true
-            },
+            // reasoning: { effort: "none" },
+            provider: { requireParameters: true },
             // @ts-expect-error
             transforms: ["middle-out"], // poor man's context trimming
+            stream: true,
+            streamOptions: { includeUsage: true }
         };
         if (outputSchema) {
             params.responseFormat = {
@@ -65,11 +68,11 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         }
 
         console.warn("Full request params:", params);
-        const res = await chatSend(this.client, params satisfies NonStreamingChatParams);
+        const res = await chatSend(this.client, params satisfies StreamingChatParams);
         console.log("Response:", res);
         if (!res.ok) {
             console.error(res.error);
-            r.error("chatSend failed", {
+            r.error("OpenRouter chatSend failed", {
                 toast: false,
                 ctx: {err: res.error}
             })
@@ -96,35 +99,54 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             return err(new EngineError("Failed to generate", respErr, false));
         }
 
-        r.verbose(`Raw OpenRouter response: ${JSON.stringify(res.value)}`);
-        const resp = res.value.choices[0];
-        if (resp.finishReason !== "stop" && resp.finishReason !== "length") {
-            return err(new EngineError(`Unexpected finishReason ${resp.finishReason}`, undefined, false))
+        const stream = res.value;
+        let textOutput = "";
+        const rawResp = [];
+        let id: string | null = null;
+        let usage: ChatGenerationTokenUsage | null = null;
+        for await (const chunk of stream) {
+            id ??= chunk.id;
+            rawResp.push(JSON.stringify(chunk));
+            const resp = chunk.choices[0];
+            textOutput += resp.delta.content || "";
+            if (resp.finishReason) {
+                // final chunk
+                if (resp.finishReason && resp.finishReason !== "stop" && resp.finishReason !== "length") {
+                    return err(new EngineError(`Unexpected finishReason ${resp.finishReason}`, undefined, false))
+                }
+                if (chunk.usage) {
+                    usage = chunk.usage;
+                }
+            }
+        }
+
+        r.verbose(`Raw OpenRouter response: ${rawResp.join("\n")}`);
+        if (!textOutput) {
+            return err(new EngineError(`Empty response`));
         }
 
         const msg = zMessage.decode({
-            text: res.value.choices[0].message.content as string,
+            text: textOutput,
             source: zActorSource.decode({manual: false}),
             silent: true,
             customData: {
-                [this.id]: { res },
+                [this.id]: { id, rawResp, usage },
             },
         })
-        // getting the generation fails ("doesn't exist") if you request it immediately on response
-        // my brother in christ you gave me the id
-        setTimeout(() => {
-            void generationsGetGeneration(this.client, { id: res.value.id })
-                .then(res => {
-                    if (res.ok) {
-                        msg.customData[this.id].gen = res.value;
-                    } else {
-                        const errMsg = `Failed to fetch OpenRouter generation info for request ${msg.id}`;
-                        r.error(errMsg, {
-                            ctx: {err: res.error}
-                        });
-                    }
-                });
-        }, 5000);
+        if (id) {
+            // getting the generation fails ("doesn't exist") if you request it immediately on response
+            // my brother in christ you gave me the id
+            setTimeout(() => void generationsGetGeneration(this.client, { id }).then(res => {
+                if (res.ok) {
+                    msg.customData[this.id].gen = res.value;
+                } else {
+                    const errMsg = `Failed to fetch OpenRouter generation info for request ${id} (msg ${msg.id})`;
+                    r.error(errMsg, {
+                        ctx: {err: res.error}
+                    });
+                }
+            }), 5000);
+        }
         return ok(msg);
     }
 

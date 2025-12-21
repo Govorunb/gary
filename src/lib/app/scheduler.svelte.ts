@@ -126,6 +126,10 @@ export class Scheduler {
                 engine: false,
             }
         }, false);
+        this.session.context.system({
+            text: `Executing action ${act.name} (Request ID: ${actData.id.substring(0, 6)})`,
+            silent: true,
+        })
         return ResultAsync.fromPromise(
             game.conn.send(zAct.decode({data: actData})),
             (e) => ({type: "connError", error: `Failed to send act: ${e}`} as const),

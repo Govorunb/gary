@@ -236,13 +236,13 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             : `Your output should be a command in JSON syntax. Example: \`{"command":{"action":"open_door","data":{"door_number":1}}\``;
         if (this.options.allowDoNothing) {
             finalMsg.content += tools
-                ? "The `_gary_wait` command is available. You may use it to skip acting this turn."
-                : "The `wait` command is available. You may output `{\"command\":\"wait\"}` to skip this turn.\n";
+                ? "\nThe `_gary_wait` command is available. You may use it to skip acting this turn."
+                : "\nThe `wait` command is available. You may output `{\"command\":\"wait\"}` to skip this turn.\n";
         }
         if (this.options.allowYapping) {
             finalMsg.content += (tools
-                ? "The `_gary_say` command is available. You may use it"
-                : "The `say` command is available. You may output `{\"command\":{\"say\":(string),\"notify\":(boolean)}}`")
+                ? "\nThe `_gary_say` command is available. You may use it"
+                : "\nThe `say` command is available. You may output `{\"command\":{\"say\":(string),\"notify\":(boolean)}}`")
                 + " to send a message to the human user running your software. The message will not be sent to any clients - meaning, nobody in-game will hear you.";
         }
         return finalMsg;

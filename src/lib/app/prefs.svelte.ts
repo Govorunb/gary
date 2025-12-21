@@ -1,6 +1,6 @@
 import z from "zod";
 import r from "$lib/app/utils/reporting";
-// import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
+import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
@@ -129,10 +129,9 @@ export const zUserPrefs = z.strictObject({
     server: zServerPrefs.prefault({}),
     engines: z.object({
         randy: zRandyPrefs.prefault({}),
-        // openRouter: zOpenRouterPrefs.prefault({}) // ts pmtfo
+        openRouter: zOpenRouterPrefs.prefault({}) // ts pmtfo
     })
-    // all others are OpenAI-compatible
-    .catchall(zOpenAIPrefs)
+    .catchall(zOpenAIPrefs) // all others are OpenAI-compatible
     // first-time defaults
     .prefault(() => ({
         ollama: zOpenAIPrefs.decode({
