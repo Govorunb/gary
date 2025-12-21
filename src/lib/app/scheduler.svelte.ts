@@ -4,7 +4,6 @@ import r from "$lib/app/utils/reporting";
 import { zAct, zActData, type Action } from "$lib/api/v1/spec";
 import type { EngineError, Engine, EngineAct } from "./engines/index.svelte";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
-import { OpenRouterError } from "@openrouter/sdk/models/errors";
 import { useDebounce } from "runed";
 import { untrack } from "svelte";
 
@@ -152,11 +151,7 @@ export class Scheduler {
     }
 
     private onError(err: EngineError) {
-        let errMsg = (err.cause as Error)?.message;
-        // FIXME: ew
-        if (err.cause instanceof OpenRouterError) {
-            errMsg += `: ${err.cause.body}`;
-        }
+        const errMsg = (err.cause as Error)?.message;
         r.error({
             message: `Engine error: ${err.message}`,
             toast: {

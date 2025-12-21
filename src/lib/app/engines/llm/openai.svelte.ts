@@ -1,5 +1,5 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from ".";
+import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from "./index.svelte";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";

@@ -5,10 +5,10 @@ import type { ContextManager, Message } from "$lib/app/context.svelte";
 import type { JSONSchema } from "openai/lib/jsonschema";
 import z from "zod";
 import { jsonParse, zConst } from "$lib/app/utils";
-import type { Message as OpenAIMessage } from "@openrouter/sdk/models";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import r from "$lib/app/utils/reporting";
+import type { ChatCompletionMessageParam } from "openai/resources/index.mjs";
 
 export const zLLMOptions = z.strictObject({
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
@@ -73,6 +73,7 @@ Based on configuration, you may also have access to the following system-level t
 
 export type CommonLLMOptions = z.infer<typeof zLLMOptions>;
 
+export type OpenAIMessage = ChatCompletionMessageParam;
 export type OpenAIContext = OpenAIMessage[];
 
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
@@ -96,11 +97,13 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         ctx = this.mergeUserTurns(ctx);
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
         const gen = await this.generateStructuredOutput(ctx, schema);
-        const commandRes = gen
-            .andThen(gen => jsonParse(gen.text)
+        if (gen.isErr()) {
+            return err(gen.error);
+        }
+        const genMsg = gen.value;
+        const commandRes = jsonParse(genMsg.text)
                 .map(p => p.command)
-                .mapErr(e => new EngineError(`Failed to parse JSON: ${e}`, e))
-            );
+                .mapErr(e => new EngineError(`Failed to parse JSON: ${e}`, e));
         if (commandRes.isErr()) {
             return commandRes;
         }
@@ -116,7 +119,9 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (isForce) {
                 return err(new EngineError("Internal error - force act allowed yapping"));
             }
-            session.context.actor({ text: say.data.say });
+            genMsg.text = say.data.say;
+            genMsg.silent = !say.data.notify;
+            session.context.actor(genMsg);
             if (say.data.notify) {
                 r.info("Gary wants attention", {
                     details: say.data.say,
@@ -158,7 +163,9 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 // TODO: openai quirks
                 // https://platform.openai.com/docs/guides/structured-outputs#all-fields-must-be-required
                 // https://platform.openai.com/docs/guides/structured-outputs#additionalproperties-false-must-always-be-set-in-objects
-                actionCallSchema.properties!.data = action.schema;
+                const cloned = structuredClone($state.snapshot(action.schema) as JSONSchema);
+                cloned.additionalProperties = false;
+                actionCallSchema.properties!.data = cloned;
                 actionCallSchema.required!.push("data");
             }
             actsAnyOf.push(actionCallSchema);
@@ -177,10 +184,14 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             additionalProperties: false,
         }
         if (!isForce && this.options.allowDoNothing) {
-            cmdAnyOf.push(z.toJSONSchema(zWait) as any);
+            const waitSchema = z.toJSONSchema(zWait, {}) as any;
+            waitSchema.$schema = undefined;
+            cmdAnyOf.push(waitSchema);
         }
         if (!isForce && this.options.allowYapping) {
-            cmdAnyOf.push(z.toJSONSchema(zSay) as any);
+            const saySchema = z.toJSONSchema(zSay) as any;
+            saySchema.$schema = undefined;
+            cmdAnyOf.push(saySchema);
         }
         return root;
     }

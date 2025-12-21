@@ -26,7 +26,6 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.39.4",
     "@lucide/svelte": "^0.562.0",
-    "@openrouter/sdk": "^0.3.10",
     "@tailwindcss/vite": "^4.1.18",
     "@tauri-apps/api": "~2.9.1",
     "@tauri-apps/plugin-fs": "~2.4.4",

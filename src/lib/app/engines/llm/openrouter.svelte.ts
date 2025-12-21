@@ -1,32 +1,30 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from ".";
+import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from "./index.svelte";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import r from "$lib/app/utils/reporting";
-import type { ChatGenerationParams, ChatGenerationTokenUsage } from "@openrouter/sdk/models";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
-import type { SDKOptions } from "@openrouter/sdk";
 import z from "zod";
 import { err, errAsync, ok, ResultAsync, type Result } from "neverthrow";
 import { EngineError, type EngineAct } from "../index.svelte";
-import { chatSend } from "@openrouter/sdk/funcs/chatSend";
-import { generationsGetGeneration } from "@openrouter/sdk/funcs/generationsGetGeneration";
-import { apiKeysGetCurrentKeyMetadata } from "@openrouter/sdk/funcs/apiKeysGetCurrentKeyMetadata";
-import { OpenRouterCore } from "@openrouter/sdk/core.js";
-import { ResponseValidationError } from "@openrouter/sdk/models/errors";
 import type { Action } from "$lib/api/v1/spec";
+import { OpenAI } from 'openai';
+// import { generateObject } from 'ai';
+import type { ChatCompletionCreateParams } from "openai/resources/index.mjs";
+import type { CompletionUsage } from "openai/resources/completions.mjs";
 
 export const ENGINE_ID = "openRouter";
 
 export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     readonly name: string = "OpenRouter";
-    private client: OpenRouterCore;
+    private client: OpenAI;
 
     constructor(userPrefs: UserPrefs) {
         super(userPrefs, ENGINE_ID);
-        const clientOpts: SDKOptions = {
-            apiKey: async () => this.options.apiKey,
-        };
-        this.client = new OpenRouterCore(clientOpts);
+        this.client = new OpenAI({
+            apiKey: this.options.apiKey ?? "-",
+            dangerouslyAllowBrowser: true,
+            baseURL: "https://openrouter.ai/api/v1/",
+        });
     }
 
     generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError> {
@@ -40,45 +38,43 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     }
 
     async genJson(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
-        type StreamingChatParams = ChatGenerationParams & { stream: true };
+        type StreamingChatParams = ChatCompletionCreateParams & { stream: true };
+
+        this.client.apiKey = this.options.apiKey;
 
         const params: StreamingChatParams = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
-            // reasoning: { effort: "none" },
-            provider: { requireParameters: true },
-            // @ts-expect-error
-            transforms: ["middle-out"], // poor man's context trimming
+            // reasoning_effort: "none",
             stream: true,
-            streamOptions: { includeUsage: true }
+            stream_options: { include_usage: true },
+            // @ts-expect-error
+            debug: { echo_upstream_body: true },
+            provider: { require_parameters: true },
         };
         if (outputSchema) {
-            params.responseFormat = {
+            params.response_format = {
                 type: "json_schema",
-                jsonSchema: {
-                    // FIXME: should ideally pass down from somewhere (figure out where)
+                json_schema: {
                     name: "response",
-                    description: "Response schema.",
-                    schema: outputSchema,
+                    schema: outputSchema as any,
                     strict: true,
                 },
             };
-            // @ts-expect-error
-            params.structuredOutputs = true;
         }
 
         console.warn("Full request params:", params);
-        const res = await chatSend(this.client, params satisfies StreamingChatParams);
+        const res = await ResultAsync.fromPromise(this.client.chat.completions.create(params), x => x as Error);
         console.log("Response:", res);
-        if (!res.ok) {
+        if (!res.isOk()) {
             console.error(res.error);
-            r.error("OpenRouter chatSend failed", {
+            r.error("OpenRouter chat.completions.create failed", {
                 toast: false,
                 ctx: {err: res.error}
-            })
+            });
             let respErr: Error = res.error;
-            if (res.error instanceof ResponseValidationError) {
-                const rawVal = res.error.rawValue as {
+            if ((res.error as any)?.metadata?.provider_name) {
+                const rawVal = res.error as any as {
                     error: {
                         message: string;
                         code: number;
@@ -103,16 +99,20 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         let textOutput = "";
         const rawResp = [];
         let id: string | null = null;
-        let usage: ChatGenerationTokenUsage | null = null;
+        let usage: CompletionUsage | null = null;
         for await (const chunk of stream) {
             id ??= chunk.id;
             rawResp.push(JSON.stringify(chunk));
+            
             const resp = chunk.choices[0];
+            // first debug chunk
+            if (!resp) continue;
+            
             textOutput += resp.delta.content || "";
-            if (resp.finishReason) {
+            if (resp.finish_reason) {
                 // final chunk
-                if (resp.finishReason && resp.finishReason !== "stop" && resp.finishReason !== "length") {
-                    return err(new EngineError(`Unexpected finishReason ${resp.finishReason}`, undefined, false))
+                if (resp.finish_reason && resp.finish_reason !== "stop" && resp.finish_reason !== "length") {
+                    return err(new EngineError(`Unexpected finish_reason ${resp.finish_reason}`, undefined, false))
                 }
                 if (chunk.usage) {
                     usage = chunk.usage;
@@ -133,20 +133,20 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
                 [this.id]: { id, rawResp, usage },
             },
         })
-        if (id) {
-            // getting the generation fails ("doesn't exist") if you request it immediately on response
-            // my brother in christ you gave me the id
-            setTimeout(() => void generationsGetGeneration(this.client, { id }).then(res => {
-                if (res.ok) {
-                    msg.customData[this.id].gen = res.value;
-                } else {
-                    const errMsg = `Failed to fetch OpenRouter generation info for request ${id} (msg ${msg.id})`;
-                    r.error(errMsg, {
-                        ctx: {err: res.error}
-                    });
-                }
-            }), 5000);
-        }
+        // if (id) {
+        //     // getting the generation fails ("doesn't exist") if you request it immediately on response
+        //     // my brother in christ you gave me the id
+        //     setTimeout(() => void generationsGetGeneration(this.client, { id }).then(res => {
+        //         if (res.ok) {
+        //             msg.customData[this.id].gen = res.value;
+        //         } else {
+        //             const errMsg = `Failed to fetch OpenRouter generation info for request ${id} (msg ${msg.id})`;
+        //             r.error(errMsg, {
+        //                 ctx: {err: res.error}
+        //             });
+        //         }
+        //     }), 5000);
+        // }
         return ok(msg);
     }
 
@@ -155,9 +155,10 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             return err(new EngineError("API key is required", undefined, false));
         }
 
-        const client = new OpenRouterCore({ apiKey: async () => apiKey });
-        const res = await apiKeysGetCurrentKeyMetadata(client);
-        if (!res.ok) {
+        const res = await ResultAsync.fromPromise(fetch("https://openrouter.ai/api/v1/key", {
+            headers: { Authorization: `Bearer ${apiKey}` }
+        }), x => x as Error);
+        if (!res.isOk()) {
             return err(new EngineError("Invalid API key", res.error, false));
         }
 

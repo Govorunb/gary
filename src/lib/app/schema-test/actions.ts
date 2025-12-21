@@ -292,4 +292,11 @@ export const TEST_ACTIONS: v1.Action[] = [
     },
 ];
 
-export const TEST_ACTIONS_MAP = new Map(TEST_ACTIONS.map(action => [action.name, action]));
+// the test is so mean it breaks inference providers...
+const excluded: string[] = ["mean_test"];
+// const excluded: string[] = [];
+export const TEST_ACTIONS_MAP = new Map(
+    TEST_ACTIONS
+        .filter(a => !excluded.includes(a.name))
+        .map(action => [action.name, action])
+);
