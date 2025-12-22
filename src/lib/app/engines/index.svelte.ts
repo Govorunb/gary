@@ -6,7 +6,7 @@ import type { ResultAsync } from "neverthrow";
 
 export const zEngineAct = zActData.omit({ id: true });
 // FIXME: should be something like EngineActResult
-// ResultAsync<EnginePerformAction | EngineSkip | EngineYap, EngineError>
+// ResultAsync<PerformAction | Skip | Yap, EngineError>
 export type EngineAct = z.infer<typeof zEngineAct>;
 
 export abstract class Engine<TOptions> {

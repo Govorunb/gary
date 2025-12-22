@@ -93,7 +93,6 @@
                         </button>
                         <p class="note">Last checked: {lastCheckedAt}</p>
                     </div>
-                    <!-- TODO: autoclear (where it makes sense) -->
                     {#if updater.skipVersion}
                         <p class="note">
                             You skipped updating to version {updater.skipVersion}

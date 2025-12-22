@@ -24,6 +24,9 @@
     async function doUpdate() {
         if (updating) return;
         updating = true;
+        // you're either updating to the previously skipped version or to an even newer version
+        // in both cases, keeping this makes no sense
+        userPrefs.app.updates.skipUpdateVersion = undefined;
         
         if (isTauri()) {
             await update.downloadAndInstall();

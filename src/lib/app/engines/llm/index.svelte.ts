@@ -223,7 +223,6 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
     
     // TODO: context trimming
-    // TODO: realistically the turns should be user-assistant-user-assistant not user-user-user-user-...
     private convertContext(ctx: ContextManager): OpenAIContext {
         const systemPrompt = ctx.session.userPrefs.app.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
         const msgs = ctx.actorView.map(msg => this.convertMessage(msg));
@@ -284,14 +283,14 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const userMsgs: OpenAIMessage[] = [];
         
         function flush() {
-            if (userMsgs.length > 0) {
-                const collapsed: OpenAIMessage = {
-                    role: 'user',
-                    content: userMsgs.map(m => m.content).join('\n')
-                };
-                result.push(collapsed);
-                userMsgs.length = 0;
-            }
+            if (userMsgs.length === 0) return;
+            
+            const merged: OpenAIMessage = {
+                role: 'user',
+                content: userMsgs.map(m => m.content).join('\n')
+            };
+            result.push(merged);
+            userMsgs.length = 0;
         }
         
         for (const msg of msgs) {
