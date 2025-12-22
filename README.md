@@ -10,10 +10,10 @@ A wide range of tools and environments to test your game integration, in one app
 - A [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md)-like random generator;
 - Tony-like manual action sending, with an option to send raw WebSocket messages for low-level testing (e.g. SDK compliance);
 - Use a real LLM through an OpenAI-compatible inference provider:
-	- Local models are supported through local server hosts like [LMStudio](https://lmstudio.ai) or [Ollama](https://ollama.com)
-	- Remote OpenAI-compatible services are available as an option but are officially unsupported.
-		- If something doesn't work, feel free to raise an issue, but from my (limited) testing a lot of providers just vibe code their APIs so support will be on a best effort basis.
-	- [OpenRouter](https://openrouter.ai) is supported, so you can easily test with *many* models.
+    - Local models are supported through local server hosts like [LMStudio](https://lmstudio.ai) or [Ollama](https://ollama.com)
+    - Remote OpenAI-compatible services are available as an option but are officially unsupported.
+        - If something doesn't work, feel free to raise an issue, but from my (limited) testing a lot of providers just vibe code their APIs so support will be on a best effort basis.
+    - [OpenRouter](https://openrouter.ai) is supported, so you can easily test with *many* models.
 
 The overall goal is to close the gap to the production system, letting you develop and test with confidence.
 The app offers (in my opinion) a comfortable UI with hotkeys for ~~speedrunners~~ power users.
@@ -101,32 +101,32 @@ Getting a less intelligent model to successfully play your game will help more i
 
 #### Prompting (descriptions, context)
 - Use direct and concise language
-	- Having less text to process makes the LLM faster and more focused
-	- Aim for high information density - consider running your prompts through a summarizer
+    - Having less text to process makes the LLM faster and more focused
+    - Aim for high information density - consider running your prompts through a summarizer
 - Do your best to keep a consistent tone
-	- All context influences the response and context that is out-of-tone can throw off the model
-	- (opinion) Flowery or long-winded descriptions should be used very sparingly
+    - All context influences the response and context that is out-of-tone can throw off the model
+    - (opinion) Flowery or long-winded descriptions should be used very sparingly
 - Natural language (e.g. `Consider your goals`) is okay - it is a language model, after all
-	- That said, language models are not humans - watch this short [video](https://www.youtube.com/watch?v=7xTGNNLPyMI) for a very brief overview of how LLMs work
+    - That said, language models are not humans - watch this short [video](https://www.youtube.com/watch?v=7xTGNNLPyMI) for a very brief overview of how LLMs work
 - If you are testing with a small model (under 10B):
-	- Keep in mind Neuro will probably act differently from your model
-	- Including/omitting common-sense stuff can be hit or miss
-	- Rules with structured info (e.g. with [Markdown](https://www.markdownguide.org/basic-syntax/)) seem to perform better than unstructured
-	- Try more models (and try a bigger model - even if it's slower) to see what info is generally useful and what's just a quirk of your specific model
+    - Keep in mind Neuro will probably act differently from your model
+    - Including/omitting common-sense stuff can be hit or miss
+    - Rules with structured info (e.g. with [Markdown](https://www.markdownguide.org/basic-syntax/)) seem to perform better than unstructured
+    - Try more models (and try a bigger model - even if it's slower) to see what info is generally useful and what's just a quirk of your specific model
 
 #### Managing context
 
 When generating, LLMs generally pay more attention to the very first and the very last parts of the context. Therefore, consider the following:
 - Send a description of the game and its rules on startup
 - Keep context messages relevant to upcoming actions/decisions
-	- Consider reminding the model of any relevant state immediately before asking it to make a choice
+    - Consider reminding the model of any relevant state immediately before asking it to make a choice
 - Send reminders of rules/tips/state at breakpoints, e.g. starting a new round
 
 If an action fails because of game state (e.g. trying to place an item in an occupied slot), you should attempt, preferably in this particular order:
 1. Disallow the illegal action (by removing the illegal parameter from the schema, or by unregistering the action entirely)
-	- This is the best option as there's no chance for mistakes at all (unless Neuro decides to ignore the schema)
+    - This is the best option as there's no chance for mistakes at all (unless Neuro decides to ignore the schema)
 2. Suggest a suitable alternative in the result message
-	- For example, `"Battery C is currently charging and cannot be removed. Batteries A and B are charged and available."`
+    - For example, `"Battery C is currently charging and cannot be removed. Batteries A and B are charged and available."`
 3. Send additional context as a state reminder on failure so the model can retry with more knowledge
 4. Or, register a query-like action (e.g. `check_inventory`) that allows the model to ask about the state at any time and just hope for the best
 
@@ -148,11 +148,11 @@ Apologies to Linux users (if any) for [webkit2gtk's terrible performance](https:
 There may be cases where other backends (including Neuro) may behave differently.
 
 - Gary will always be different from Neuro in some aspects, specifically:
-	- Processing other sources of information like vision/audio/chat (for obvious reasons)
-	- Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
-	- Myriad other things like response timings, text filters, allowed JSON schema keywords, long-term memories, etc
+    - Processing other sources of information like vision/audio/chat (for obvious reasons)
+    - Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
+    - Myriad other things like response timings, text filters, allowed JSON schema keywords, long-term memories, etc
 - Gary sends `actions/reregister_all` on every connect (instead of just **re**connects, as in the spec)
-	- Reminder: this command is still non-standard. Your game/SDK implementation should ideally proactively register actions on connect instead of relying on a prompt from the server (which may not ever come).
+    - Reminder: this command is still non-standard. Your game/SDK implementation should ideally proactively register actions on connect instead of relying on a prompt from the server (which may not ever come).
 
 #### Acknowledgements
 Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:

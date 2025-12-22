@@ -21,11 +21,11 @@ Then, the following happens until either side disconnects (e.g. the game ends):
 2. As things happen in the game, the client sends **context** to the server to inform the **actor**.
     - For example, a chess integration may send "Your opponent played 2. Ke2?. It is now your turn."
 3. At some point in time, the **actor** indicates it wants to perform an action and generates action data for it.
-  - In time-sensitive situations, the client may send a **force action** message with a subset of acceptable actions and additional information (namely, `query` detailing context for the choice and `state` to help inform the choice).
+    - In time-sensitive situations, the client may send a **force action** message with a subset of acceptable actions and additional information (namely, `query` detailing context for the choice and `state` to help inform the choice).
 4. The server sends the action (with data) to the client, which validates it against the action schema and attempts to execute the action in-game.
 5. The client responds with the **action result**, which is also inserted into context as feedback to the actor.
-  - Because actions may take a long time, some actions will execute *asynchronously*;
-  - This means they will return a positive result immediately based purely on JSON validation (and not any real in-game result) and may follow up later with a context message.
+    - Because actions may take a long time, some actions will execute *asynchronously*;
+    - This means they will return a positive result immediately based purely on JSON validation (and not any real in-game result) and may follow up later with a context message.
 6. The client may **unregister** actions if they are no longer available (e.g. a non-repeatable action was executed).
 
 If the connection drops, on reconnect, the server *may* send a message prompting the client to re-register all currently available actions in order to synchronize state. The client may ignore it if no actions are available; alternatively, the client can send an empty 'register' message. Courteous clients *should* sync state on (re)connect regardless of whether the server sends that message.
@@ -83,7 +83,7 @@ For Gary specifically, it hosts the WebSocket server, relaying messages to the f
 - Svelte 5 + SvelteKit + Vite
 - Tailwind CSS + Skeleton UI + Lucide Icons
 - Svelte Sonner (toasts)
-  - Skeleton UI already provides toasts, but Zag (their dependency) has a bug that makes it so toasts never get disposed internally and you reach max toasts very quickly
+    - Skeleton UI already provides toasts, but Zag (their dependency) has a bug that makes it so toasts never get disposed internally and you reach max toasts very quickly
 - CodeMirror code editor
 - neverthrow (`Result` type for error handling)
 - Zod (parsing & validation)
@@ -93,8 +93,7 @@ For Gary specifically, it hosts the WebSocket server, relaying messages to the f
 
 ### Current Development Focus
 - The Svelte frontend (`src/`) is the focus for development work going forward.
-- The Rust backend (`src-tauri`) should be treated as read-only unless explicitly instructed to work on it.
-
+- The Rust backend (`src-tauri`) should be treated as read-only.
 
 ## Essential Paths for Project Navigation
 
