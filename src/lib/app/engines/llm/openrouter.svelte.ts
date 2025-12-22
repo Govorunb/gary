@@ -8,8 +8,7 @@ import { err, errAsync, ok, ResultAsync, type Result } from "neverthrow";
 import { EngineError, type EngineAct } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
 import { OpenAI } from 'openai';
-// import { generateObject } from 'ai';
-import type { ChatCompletionCreateParams } from "openai/resources/index.mjs";
+import type { ChatCompletionCreateParamsStreaming } from "openai/resources/index.mjs";
 import type { CompletionUsage } from "openai/resources/completions.mjs";
 
 export const ENGINE_ID = "openRouter";
@@ -38,11 +37,9 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     }
 
     async genJson(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
-        type StreamingChatParams = ChatCompletionCreateParams & { stream: true };
-
         this.client.apiKey = this.options.apiKey;
 
-        const params: StreamingChatParams = {
+        const params: ChatCompletionCreateParamsStreaming = {
             messages: context,
             model: this.options.model ?? "openrouter/auto",
             stream: true,
@@ -58,8 +55,8 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             params.response_format = {
                 type: "json_schema",
                 json_schema: {
-                    name: "response",
-                    schema: outputSchema as any,
+                    name: "gary_action",
+                    schema: outputSchema as Record<string, unknown>,
                     strict: true,
                 },
             };
@@ -137,20 +134,6 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
                 [this.id]: { id, rawResp, usage, reasoning, },
             },
         });
-        // if (id) {
-        //     // getting the generation fails ("doesn't exist") if you request it immediately on response
-        //     // my brother in christ you gave me the id
-        //     setTimeout(() => void generationsGetGeneration(this.client, { id }).then(res => {
-        //         if (res.ok) {
-        //             msg.customData[this.id].gen = res.value;
-        //         } else {
-        //             const errMsg = `Failed to fetch OpenRouter generation info for request ${id} (msg ${msg.id})`;
-        //             r.error(errMsg, {
-        //                 ctx: {err: res.error}
-        //             });
-        //         }
-        //     }), 5000);
-        // }
         return ok(msg);
     }
 

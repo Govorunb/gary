@@ -3,7 +3,6 @@ import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from "./index
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";
-import type { ClientOptions } from "openai";
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
@@ -21,15 +20,7 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         super(userPrefs, engineId);
         this.name = $derived(this.options.name);
         
-        this.client = new OpenAI({
-            apiKey: async () => this.fixupApiKey(this.options.apiKey),
-            baseURL: this.options.serverUrl,
-            dangerouslyAllowBrowser: true, // we have to...
-        } satisfies ClientOptions);
-    }
-
-    private fixupApiKey(key: string) {
-        return key || " "; // the client thinks empty strings aren't strings smh
+        this.client = new OpenAI({ dangerouslyAllowBrowser: true });
     }
 
     private toChatMessages(context: OpenAIContext): ChatCompletionMessageParam[] {
@@ -62,7 +53,6 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
                 type: "json_schema",
                 json_schema: {
                     name: "gary_action",
-                    description: "Structured response matching the requested action schema.",
                     schema: outputSchema as Record<string, unknown>,
                     strict: true,
                 },
@@ -72,6 +62,7 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         // so me use pull model instead of push model. hoh
         // i just know seniorberry shake head and wag finger from inside cloud, but i the one that feel alive
         this.client.baseURL = this.options.serverUrl;
+        this.client.apiKey = this.options.apiKey;
 
         // after evaluating tools/responses api - it all sucks bad
         // ollama still doesn't support it, nor `tool_choice`

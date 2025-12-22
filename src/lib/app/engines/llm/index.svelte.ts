@@ -221,14 +221,22 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             }),
         } satisfies OpenAIMessage;
     }
+
+    protected systemPrompt(session: Session): string {
+        const userDefined = session.userPrefs.app.systemPrompt;
+        if (typeof(userDefined) === "string") { // not null or undefined, accept ""
+            return userDefined;
+        }
+        return DEFAULT_SYSTEM_PROMPT
+            + this.options.promptingStrategy === "json" ? SYS_PROMPT_JSON : SYS_PROMPT_TOOLS;
+    }
     
     // TODO: context trimming
     private convertContext(ctx: ContextManager): OpenAIContext {
-        const systemPrompt = ctx.session.userPrefs.app.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
         const msgs = ctx.actorView.map(msg => this.convertMessage(msg));
         msgs.unshift({
             role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
-            content: systemPrompt,
+            content: this.systemPrompt(ctx.session),
         });
         return msgs;
     }
