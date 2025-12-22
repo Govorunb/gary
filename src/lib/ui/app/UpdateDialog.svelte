@@ -35,6 +35,7 @@
                     label: "Restart now",
                     async onClick() {
                         if (isTauri()) {
+                            // FIXME: AppImage doesn't relaunch
                             await tauriRelaunchProcess();
                         } else {
                             location.reload(); // pretend to relaunch (the app never updates on dev web server obviously)
