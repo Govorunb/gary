@@ -1,0 +1,6 @@
+onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - esbuild
+minimumReleaseAge: 1440 # 1 day (minutes)
+minimumReleaseAgeExclude:
+  - '@openrouter/sdk'

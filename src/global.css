@@ -1,0 +1,65 @@
+@import 'tailwindcss';
+
+@import '@skeletonlabs/skeleton';
+@import '@skeletonlabs/skeleton-svelte';
+@import '@skeletonlabs/skeleton/themes/cerberus';
+
+@layer base {
+    /* for some reason *only some* of the text transitions really slowly (>1s) */
+    h1,h2,h3,h4,p,a,button,span,svg {
+        @apply transition-colors duration-150;
+    }
+
+    body {
+        @apply min-h-screen;
+        @apply font-sans text-base font-normal leading-5 antialiased;
+        @apply bg-surface-100 dark:bg-surface-900;
+        @apply text-neutral-900 dark:text-neutral-100;
+    }
+    .global-popover-arrow {
+        z-index: -1;
+        --arrow-size: calc(var(--spacing) * 4);
+        --arrow-background: light-dark(var(--color-neutral-100), var(--color-neutral-800));
+    }
+    .note {
+        @apply text-xs text-neutral-500 dark:text-neutral-300;
+    }
+    /* absolute hack */
+    .cm-editor {
+        @variant dark {
+            /* selects syntax-highlighted tokens through sheer luck and perseverance */
+            span:not(.cm-selectionMatch):not(.cm-matchingBracket), 
+            .cm-cursor {
+                /* classic lightness invert */
+                filter: invert(100%) hue-rotate(180deg);
+                transition: none;
+            }
+        }
+    }
+    .cm-gutters {
+        @apply border-surface-200! dark:border-surface-700!;
+    }
+    .cm-gutter {
+        @apply bg-surface-100 dark:bg-surface-900;
+    }
+    .cm-activeLine {
+        @apply bg-secondary-100/30! dark:bg-secondary-700/10!;
+    }
+    .cm-activeLineGutter {
+        @apply bg-secondary-100/50! dark:bg-secondary-700/20!;
+    }
+    .cm-selectionBackground {
+        @apply bg-primary-100/50! dark:bg-primary-400/50!;
+    }
+}
+
+@layer theme {
+    * {
+        color-scheme: light;
+        @variant dark {
+            color-scheme: dark;
+        }
+    }
+}
+
+@custom-variant dark (&:where(.dark, .dark *));

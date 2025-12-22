@@ -1,0 +1,54 @@
+[package]
+name = "gary"
+version = "1.0.0-alpha.3"
+description = "Backend implementation for the Neuro-sama SDK."
+authors = ["Govorunb"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "gary_tauri" # not just "gary" because of https://github.com/rust-lang/cargo/issues/8519
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[profile.dev]
+incremental = true
+
+# https://v2.tauri.app/concept/size/
+[profile.release]
+lto = true
+opt-level = 3 # "s" for size ("z" for absolute minimum), 3 for maximum speed
+panic = "abort"
+# strip = true # tauri patches the binary to include the bundle target
+# rustflags = ["-Cdebuginfo=0"] # unstable
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [
+    # "devtools"
+] }
+tauri-plugin-fs = "2"
+tauri-plugin-http = { version = "2", features = ["json", "stream"] }
+tauri-plugin-log = { version = "2", features = ["colored"] }
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-store = "2"
+tauri-plugin-websocket = "2"
+uuid = { version = "1.18", features = ["v4", "serde"] }
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = { version = "0.28" }
+thiserror = "2"
+anyhow = "1"
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+log = { version = "0.4", features = ["kv_serde"] }
+axum = { version = "0.8", features = ["ws", "macros"] }
+tauri-plugin-updater = "2.9.0"
+tauri-plugin-process = "2.3.1"
+serde_repr = "0.1.20"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"

@@ -1,0 +1,70 @@
+{
+    "$schema": "https://biomejs.dev/schemas/2.3.7/schema.json",
+    "css": {
+        "parser": {
+            "cssModules": true,
+            "tailwindDirectives": true
+        }
+    },
+    "html": {
+        "experimentalFullSupportEnabled": true,
+        "formatter": {
+            "indentScriptAndStyle": true
+        }
+    },
+    "formatter": {
+        "enabled": false,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineEnding": "crlf"
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "recommended": true,
+            "style": {
+                "noNonNullAssertion": "off", // shut up
+                "noDescendingSpecificity": "off" // fp (&:hover)
+            },
+            "correctness": {
+                "noSwitchDeclarations": "off" // shut up
+            },
+            "suspicious": {
+                "useIterableCallbackReturn": "off", // shut up
+                "noExplicitAny": "off", // shut up
+                "noDuplicateProperties": "off", // fp (@variant dark)
+                "noAssignInExpressions": "off" // fp (keys.onKeys([...], () => open = !open))
+            }
+        }
+    },
+    "assist": {
+        "enabled": false
+    },
+    "files": {
+        "ignoreUnknown": true,
+        "includes": [
+            "src/**",
+            "!!**/node_modules",
+            "!!**/generated",
+            "!!**/build"
+        ]
+    },
+    "overrides": [
+        {
+            "includes": ["**/*.svelte"],
+            "linter": {
+                "enabled": false,
+                "rules": {
+                    "style": {
+                        "useConst": "off",
+                        "useImportType": "off"
+                    },
+                    "correctness": {
+                        "noUnusedVariables": "off",
+                        "noUnusedImports": "off"
+                    }
+                }
+            }
+        }
+    ]
+}
