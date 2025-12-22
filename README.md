@@ -13,7 +13,7 @@ A wide range of tools and environments to test your game integration, in one app
 	- Local models are supported through local server hosts like [LMStudio](https://lmstudio.ai) or [Ollama](https://ollama.com)
 	- Remote OpenAI-compatible services are available as an option but are officially unsupported.
 		- If something doesn't work, feel free to raise an issue, but from my (limited) testing a lot of providers just vibe code their APIs so support will be on a best effort basis.
-	- [OpenRouter](https://openrouter.ai) support is planned, so you can easily test with virtually *any* model.
+	- [OpenRouter](https://openrouter.ai) is supported, so you can easily test with *many* models.
 
 The overall goal is to close the gap to the production system, letting you develop and test with confidence.
 The app offers (in my opinion) a comfortable UI with hotkeys for ~~speedrunners~~ power users.
@@ -74,19 +74,27 @@ You may encounter models that have a certain number of "active" parameters (e.g.
 <details>
 <summary><b>I don't have the specs for a good model!</b>/<b>I'd rather go touch grass than fiddle with settings, can I pay to win?</b></summary>
 
-You can try a remote `OpenAI-compatible` inference provider. There are free and low-cost options out there - feel free to shop around - but not all of them may support the required generation techniques. Look for the phrase `Structured outputs` or `Tool calling` in the provider's documentation.
+My recommended solution is [OpenRouter](https://openrouter.ai). Get your [API token](https://openrouter.ai/settings/keys), [find a model](https://openrouter.ai/models?fmt=cards&input_modalities=text&output_modalities=text&supported_parameters=structured_outputs) that supports structured outputs, and you're off. You can also look for [free](https://openrouter.ai/models?fmt=cards&input_modalities=text&output_modalities=text&supported_parameters=structured_outputs&max_price=0) models as well - with some caveats below.
+
+If you don't want to think too much, `openai/gpt-oss-20b` (faster/cheaper) and `openai/gpt-oss-120b` (smarter) are decent options. You can also try adding `:free` to the end to see if there are any providers giving away their inference compute.
+
+Otherwise, you can try a remote OpenAI-compatible inference provider. There are free and low-cost options out there - feel free to shop around - but not all of them may support the required generation techniques. Look for the phrase `Structured outputs` or `Tool calling` in the provider's documentation.
 
 Note: Often, providers offer their services for free/cheap by gathering and retaining data (for training or otherwise). If you're both privacy-minded and resource-constrained, you might be better off sticking to smaller local models. There are some [tiny options](https://lmstudio.ai/models/google/gemma-3-1b) out there!
+</details>
 
+<details>
+<summary><b>It gets so much slower as the session goes on!</b>/<b>My session went on for a while and then it broke!</b></summary>
+
+Models have context windows that are limited in capacity. The more text in the context window, the slower it is to process - and when the limit is reached, the model can't process at all. You'll need to periodically reset the context by clicking the menu button next to the "Context Log" heading. This means the model's knowledge will be starting over from scratch! Try to find a good moment to reset the context. You can also add periodic reminders of game rules to your game (e.g. on starting a new round).
 </details>
 
 ### Tips
 
 #### Models
-Smaller models are generally less intelligent than larger ones. Models under 8B parameters may not be able to perform logical leaps or multi-step actions without [extreme handholding](https://github.com/Govorunb/gary/blob/843ea8d01bce2b46396fcdea1b78675eb607d88e/config.py#L90).
+Success will largely depend on model size - with larger models generally more intelligent than smaller ones - which, for local models, depends on your hardware. For example, models under 8B parameters may not be able to perform logical leaps or multi-step actions in your game, placing a soft requirement of at least 6-8GB of VRAM to do useful LLM testing.
 
-For local models, success will depend on your model/hardware. Gary might turn out to be dumber than a rock when it comes to strategy and decisionmaking <sub><sup>(which is ironic because it's made of rock)</sup></sub> - maybe even *worse than Randy*.
-If so, you'd be better off using a remote OpenAI-compatible provider (or [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md), [Tony](https://github.com/Pasu4/neuro-api-tony), or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity)) instead.
+Because of this, Gary might turn out to be dumber than a rock <sub><sup>(which is ironic because it's made of rock)</sup></sub> - maybe even *worse than Randy*. If so, you either need to use a larger model (probably through a remote provider) or fall back to [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md)/[Tony](https://github.com/Pasu4/neuro-api-tony)/[Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
 Getting a less intelligent model to successfully play your game will help more intelligent models make even smarter decisions.
