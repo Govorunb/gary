@@ -262,7 +262,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                     actionText += `: ${action.description}`;
                 }
                 if (action.schema) {
-                    actionText += ` (Schema: ${action.schema})`;
+                    actionText += ` (Schema: ${JSON.stringify(action.schema)})`;
                 }
                 msgContents.push(actionText);
             }
