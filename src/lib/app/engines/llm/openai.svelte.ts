@@ -3,49 +3,84 @@ import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from "./index
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";
-import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineAct } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
+import r from "$lib/app/utils/reporting";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
  */
 export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     readonly name: string;
-    private readonly client: OpenAI;
+    private readonly client: OpenAIClient;
 
     constructor(userPrefs: UserPrefs, engineId: string) {
         super(userPrefs, engineId);
         this.name = $derived(this.options.name);
         
-        this.client = new OpenAI({ dangerouslyAllowBrowser: true });
-    }
-
-    private toChatMessages(context: OpenAIContext): ChatCompletionMessageParam[] {
-        // the only mismatch is missing "tool_call_id" on "role": "tool"; we will not have those
-        return context as ChatCompletionMessageParam[];
+        this.client = new OpenAIClient({ prefs: this.options }, engineId);
     }
 
     generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema) : ResultAsync<Message, EngineError> {
-        return new ResultAsync(this.genJson(context, outputSchema));
+        return new ResultAsync(this.client.genJson(context, outputSchema));
     }
 
     generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
         return errAsync(new EngineError("Tool calling not implemented", undefined, false));
     }
+}
 
-    async genJson(context: OpenAIContext, outputSchema?: JSONSchema): Promise<Result<Message, EngineError>> {
+// TODO: generation params (temperature, etc) (probably not)
+// however: https://platform.openai.com/docs/guides/latest-model#gpt-5-parameter-compatibility
+// gpt5 xor temperature/top_p/logprobs
+export const zOpenAIPrefs = z.looseObject({
+    name: z.string().nonempty(),
+    ...zLLMOptions.shape,
+    /** Leave empty if your server doesn't need authentication. (e.g. local) */
+    apiKey: z.string().default(""),
+    serverUrl: z.url().default("https://api.openai.com/v1"),
+    modelId: z.string().optional(),
+});
+
+export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
+
+// At some point we migrated OpenRouter from its own (beta) SDK back to just using the OpenAI-compatible API
+// It started to look a bit too similar after that... the refactoring itch was irresistible
+export class OpenAIClient {
+    private readonly client: OpenAI;
+    private readonly options: OpenAIPrefs;
+    constructor(reactivePrefs: {prefs: OpenAIPrefs}, private id: string) {
+        this.options = $derived(reactivePrefs.prefs);
+        this.client = new OpenAI({
+            apiKey: this.options.apiKey ?? "-", // throws if key is empty
+            dangerouslyAllowBrowser: true,
+            baseURL: this.options.serverUrl,
+        });
+    }
+
+    get name() {
+        return this.options.name;
+    }
+
+    async genJson(
+        messages: OpenAIContext,
+        outputSchema?: JSONSchema,
+        extraParams?: Record<string, any>,
+    ): Promise<Result<Message, EngineError>> {
         const model = this.options.modelId;
         if (!model) {
-            return err(new ConfigError("OpenAI engine is missing a model ID"));
+            return err(new ConfigError(`${this.name} is missing a model ID`));
         }
 
-        const messages = this.toChatMessages(context);
         const params: ChatCompletionCreateParamsNonStreaming = {
             model,
             messages,
+            reasoning_effort: "none",
+            stream: false,
+            ...extraParams,
         };
 
         if (outputSchema) {
@@ -65,41 +100,44 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.client.apiKey = this.options.apiKey;
 
         // after evaluating tools/responses api - it all sucks bad
-        // ollama still doesn't support it, nor `tool_choice`
+        // ollama only just started to support it (but not `tool_choice` - so, still useless to us)
         // lmstudio has responses (allegedly stateful) but doesn't support `strict` in tool definitions (ouch)
         // it also doesn't seem to constrain generation with `text.format` at all?
         // so... `response_format` on `chat/completions` it is
+        console.warn("Full request params:", params);
         const res = await ResultAsync.fromPromise(
             this.client.chat.completions.create(params),
-            (error) => new OpenAIError(`OpenAI request failed: ${error}`, error as Error, false),
+            (error) => new EngineError(`${this.name} request failed: ${error}`, error as Error, false),
         );
+        console.log("Response:", res);
         if (res.isErr()) {
             return err(res.error);
         }
+        const response = res.value;
+        const resp = response.choices[0];
+        if (!resp) {
+            return err(new EngineError(`${this.name} did not return successful result: ${resp}`));
+        }
+        if (resp.finish_reason !== "stop" && resp.finish_reason !== "length") {
+            return err(new EngineError(`${this.name} returned unexpected finish_reason '${resp.finish_reason}'`, undefined, false))
+        }
+        const textOutput = resp?.message?.content;
+        const reasoning = (resp.message as any)?.reasoning;
+        if (!textOutput) {
+            r.error(`Empty response from '${this.name}'`, {
+                toast: false,
+                ctx: { response },
+            });
+            return err(new EngineError(`${this.name} returned no text`, undefined, true));
+        }
         const msg = zMessage.decode({
-            text: res.value.choices[0].message.content!, // TODO: error handling
+            text: textOutput,
             source: zActorSource.decode({ manual: false }),
             silent: true,
             customData: {
-                [this.id]: { response: res.value },
+                [this.id]: { response, reasoning, },
             },
         });
         return ok(msg);
     }
 }
-
-// TODO: generation params (temperature, etc) (probably not)
-// however: https://platform.openai.com/docs/guides/latest-model#gpt-5-parameter-compatibility
-// gpt5 xor temperature/top_p/logprobs
-export const zOpenAIPrefs = z.looseObject({
-    name: z.string().nonempty(),
-    ...zLLMOptions.shape,
-    /** Leave empty if your server doesn't need authentication. (e.g. local) */
-    apiKey: z.string().default(""),
-    serverUrl: z.url().default("https://api.openai.com/v1"),
-    modelId: z.string().optional(),
-});
-
-export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
-
-export class OpenAIError extends EngineError {}

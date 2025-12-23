@@ -329,10 +329,3 @@ export class ConfigError extends EngineError {
         super(message);
     }
 }
-
-/** Generation failed. */
-export class GenError extends EngineError {
-    constructor(public readonly cause: Error) {
-        super(`Failed to generate: ${cause}`, cause);
-    }
-}
