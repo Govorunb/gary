@@ -26,9 +26,11 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::new()
             .rotation_strategy(RotationStrategy::KeepSome(5))
             .level(LevelFilter::Trace)
-            .target(Target::new(TargetKind::LogDir { file_name: Some("tauri".to_owned()) })
-                .filter(|md| md.target().starts_with("gary_tauri::")
-                    || md.target().contains("tungstenite")))
+            .filter(|md| md.target().starts_with("gary_tauri::") || md.target().starts_with("webview"))
+            .targets([
+                Target::new(TargetKind::Stdout),
+                Target::new(TargetKind::LogDir { file_name: None }),
+            ])
             .build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_websocket::init())
