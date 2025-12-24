@@ -7,12 +7,11 @@ use tauri_plugin_log::{log::LevelFilter, RotationStrategy, Target, TargetKind};
 
 mod api;
 mod app;
-use app::state::App;
+use app::state::{App, AppStateMutex};
 use app::commands::{is_server_running, server_state, start_server, stop_server, open_logs_folder};
 use api::server::{ws_accept, ws_deny, ws_send, ws_close};
-use crate::app::log::gary_log;
+use app::log::gary_log;
 
-use crate::app::state::AppStateMutex;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

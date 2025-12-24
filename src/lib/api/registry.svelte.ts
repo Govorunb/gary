@@ -178,7 +178,7 @@ export class Game {
                     }
                 }
                 this.session.scheduler.forceQueue.push(actions);
-                await this.context(this.forcePrompt(actions, msg.data.query, msg.data.state), false);
+                await this.context(this.forceMsg(actions, msg.data.query, msg.data.state), false);
                 break;
             case "action/result":
                 const silent = msg.data.success;
@@ -252,11 +252,13 @@ export class Game {
         return `Game { name: "${this.name}", version: "${this.version}"}`;
     }
 
-    // FIXME: why tf is this here
-    private forcePrompt(actions: v1.Action[], query?: string, state?: string) {
-        const queryStr = query ? `"query":"${query}",` : "";
-        const stateStr = state ? `"state":"${state}",` : "";
-        const prompt = `You must perform one of the following actions, given this information: {${queryStr}${stateStr}"available_actions":${JSON.stringify(actions)}}`;
+    private forceMsg(actions: v1.Action[], query?: string, state?: string) {
+        const obj = {
+            actions: actions.map(a => a.name),
+            query,
+            state
+        };
+        const prompt = `You must perform one of the following actions, given this information: ${JSON.stringify(obj)}`;
         return prompt;
     }
 }
