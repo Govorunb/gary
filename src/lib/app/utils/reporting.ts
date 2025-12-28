@@ -43,6 +43,7 @@ export type ReportOptions = {
     toast?: boolean | ToastOptions;
     target?: string;
     ctx?: Record<string, any>;
+    ignoreStackLevels?: number;
 };
 
 export type ToastOptions = ExternalToast & {
@@ -114,7 +115,7 @@ class DefaultReporter implements Reporter {
                 [LogLevel.Fatal]: console.error,
             };
             // dev only
-            const loc = getCallerLocation(4);
+            const loc = getCallerLocation(4 + (options.ignoreStackLevels ?? 0));
             msg = `[${LogLevel[level]}] ${msg}\nTarget: [${options.target ?? "webview"}:${loc}]`;
             logFunc = logFuncMap[level];
         } else {
@@ -130,7 +131,7 @@ class DefaultReporter implements Reporter {
                 //      4 trace
                 //      5 actual_caller
                 // jfc
-                location: getCallerLocation(5),
+                location: getCallerLocation(5 + (options.ignoreStackLevels ?? 0)),
             }).orTee(err => toast.error("Failed to log!", { description: err }));
         }
         logFunc(msg);

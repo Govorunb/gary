@@ -5,16 +5,12 @@ import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
 import { jsonParse, safeInvoke, safeParse } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";
-import { getDiagnosticById, DiagnosticSeverity, type GameDiagnostic } from "./diagnostics";
+import { getDiagnosticById, DiagnosticSeverity, type GameDiagnostic, SeverityToLogLevel } from "./diagnostics";
 
-export type WSConnectionRequest = {
-    id: string;
-    version: "v1";
-} | {
-    id: string;
-    version: "v2";
-    game: string;
-};
+export type WSConnectionRequest = { id: string; } & (
+    { version: "v1"; }
+    | { version: "v2"; game: string; }
+);
 
 export class Registry {
     public games: Game[] = $state([]);
@@ -24,21 +20,21 @@ export class Registry {
     constructor(session: Session) {
         this.session = session;
         this.session.onDispose(() => this.dispose());
-        console.log(`Created registry for session ${session.name} (${session.id})`);
+        r.info(`Created registry for session '${session.name}' (${session.id})`);
     }
 
-    async tryConnect(req: WSConnectionRequest) {
-        const id = req.id;
+    tryConnect(req: WSConnectionRequest) {
         // approve/deny connection
-        if (req.version !== "v1" && req.version !== "v2") {
-            await safeInvoke('ws_deny', { id, reason: "Invalid version" });
-            return;
+        switch (req.version) {
+            case "v1": break;
+            case "v2":
+                if (!this.validateGameName(req.game))
+                    return this.deny(req, `Invalid game name ${req.game}`);
+                break;
+            default:
+                return this.deny(req, `Invalid version ${(req as any).version}`);
         }
-        if (req.version !== "v1" && !this.validateGameName(req.game)) {
-            await safeInvoke('ws_deny', { id, reason: "Invalid game name" });
-            return;
-        }
-        await this.accept(req);
+        return this.accept(req);
     }
     
     async accept(req: WSConnectionRequest) {
@@ -52,6 +48,11 @@ export class Registry {
             r.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
             await conn.send(v1.zReregisterAll.decode({}));
         }
+    }
+
+    async deny(req: WSConnectionRequest, reason: string) {
+        r.warn("Denied connection request", { details: reason, ctx: { req } });
+        await safeInvoke('ws_deny', { id: req.id, reason });
     }
 
     createGame(conn: BaseWSConnection, name?: string): Game {
@@ -90,7 +91,6 @@ export class Game {
     public readonly actions = $state(new SvelteMap<string, GameAction>());
     public name: string = $state(null!);
     public diagnostics: GameDiagnostic[] = $state([]);
-    public strict: boolean = $state(false);
 
     constructor(
         private readonly session: Session,
@@ -134,13 +134,25 @@ export class Game {
         return status;
     }
 
-    public triggerDiagnostic(id: string, context?: any) {
-        if (!getDiagnosticById(id)) return;
+    public triggerDiagnostic(id: string, context?: any, report: boolean = true) {
+        const diag = getDiagnosticById(id);
+        if (!diag) {
+            r.error(`Unknown diagnostic ${id}`, {ctx: context});
+            return;
+        }
 
         this.diagnostics.push({
             id,
             timestamp: Date.now(),
             context,
+        });
+
+        if (!report) return;
+        const logLevel = SeverityToLogLevel[diag.severity];
+        r.report(logLevel, {
+            message: `(${this.name}) ${diag.message}`,
+            details: diag.details,
+            ctx: { context },
         });
     }
 
@@ -160,25 +172,14 @@ export class Game {
     async recv(txt: string) {
         const msg = jsonParse(txt)
             .andThen(json => safeParse(v1.zGameMessage, json));
-        if (msg.isErr()) {
-            const err = msg.error;
-            this.triggerDiagnostic("prot/invalid_message", { message: txt, error: err });
-            r.error(`${this.name} sent invalid WebSocket message`, {
-                toast: {
-                    id: `invalid-websocket-message(${this.conn.shortId})`,
-                    description: `Error(s): ${err.message}\nMessage: ${txt}`,
-                },
-                ctx: {
-                    issues: "issues" in err ? err.issues : undefined,
-                    message: txt,
-                },
-            });
-            if (this.strict) {
-                await this.conn.disconnect(1006, `Invalid WebSocket message: ${err.message}`);
-            }
+        if (msg.isOk()) {
+            await this.processMsg(msg.value);
             return;
         }
-        await this.processMsg(msg.value);
+        const err = msg.error;
+        this.triggerDiagnostic("prot/invalid_message", { message: txt, error: err });
+        // TODO: 'strict mode' (raise all severities by 1, errors instantly disconnect WS)
+        // await this.conn.disconnect(1006, `Invalid WebSocket message: ${err.message}`);
     }
 
     async processMsg(msg: v1.GameMessage) {
@@ -197,7 +198,7 @@ export class Game {
             case "startup":
                 r.info(`(${this.name}) startup woo`);
                 // TODO: (w) prot/multiple_startup
-                // TODO: (i) late.startup
+                // TODO: (i) late/startup
                 break;
             case "context":
                 await this.context(msg.data.message, msg.data.silent);
@@ -210,18 +211,23 @@ export class Game {
                 break;
             case "actions/force":
                 const actions = msg.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
+                if (msg.data.action_names.length === 0) {
+                    this.triggerDiagnostic("prot/force/empty", { msg });
+                    return;
+                }
                 if (actions.length < msg.data.action_names.length) {
-                    if (msg.data.action_names.length === 0) {
-                        r.error(`(${this.name}) Sent actions/force with no actions`, { ctx: {msg} });
+                    if (actions.length === 0) {
+                        this.triggerDiagnostic("prot/force/all_invalid", { msg });
+                        return;
                     } else {
-                        r.warn(`(${this.name}) actions/force contained unknown/unregistered action names: ${msg.data.action_names.filter(name => !this.getAction(name)).join(", ")}`);
+                        this.triggerDiagnostic("prot/force/some_invalid", { msg, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
                     }
                 }
                 this.session.scheduler.forceQueue.push(actions);
                 await this.context(this.forceMsg(actions, msg.data.query, msg.data.state), false);
                 break;
             case "action/result":
-                // TODO: late.action_result
+                // TODO: (w) late/action_result
                 const silent = msg.data.success;
                 let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
                 text += msg.data.message ? ` (${msg.data.message})` : " (no message)";
@@ -261,9 +267,9 @@ export class Game {
                 // duplicate action conflict resolution
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                 const isV1 = this.version === "v1";
-                if (isV1) this.triggerDiagnostic("prot/dupe_action_register_v1", { action_name: action.name, existing });
+                if (isV1) this.triggerDiagnostic("prot/v1/register/dupe", { action_name: action.name, existing });
                 const logMethod = isV1 ? r.warn : r.info;
-                logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`);
+                logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`, { toast: false });
                 if (isV1) continue;
             }
             const storedAction = $state({ ...action, active: true });
@@ -280,11 +286,9 @@ export class Game {
         for (const action_name of actions) {
             const existing = this.getAction(action_name, false);
             if (!existing) {
-                // TODO: prot/bad_unregister
-                r.warn(`(${this.name}) Unregistered unknown action '${action_name}'!`);
+                this.triggerDiagnostic("prot/unregister/unknown", { action_name });
             } else if (!existing.active) {
-                // TODO: prot/dupe_unregister
-                r.info(`(${this.name}) Action '${action_name}' already unregistered`);
+                this.triggerDiagnostic("prot/unregister/inactive", { action_name });
             } else {
                 existing.active = false;
                 r.debug(`(${this.name}) Unregistered action '${action_name}'`);
