@@ -3,16 +3,19 @@ import { LogLevel } from "$lib/app/utils/reporting";
 export enum DiagnosticSeverity {
     Info = 0,
     Warning = 1,
-    Error = 2
+    Error = 2,
+    Fatal = 3,
 }
 
 export enum DiagnosticCategory {
+    /** Protocol violations (invalid messages, disallowed behaviours, etc.) */
     Protocol = "prot",
+    /** Performance considerations (spamming actions, long context, etc.) */
     Performance = "perf",
-    Connection = "conn",
+    /** When the game takes too long. */
     Latency = "late",
+    /** idk everything else */
     Miscellaneous = "misc",
-    Testing = "test",
 }
 
 export interface DiagnosticDef {
@@ -30,25 +33,25 @@ export interface GameDiagnostic<TContext = any> {
     dismissed?: boolean;
 }
 
-export const DIAGNOSTICS: DiagnosticDef[] = [
+export const DIAGNOSTICS = [
     {
-        id: "test/info",
+        id: "misc/test/info",
         severity: DiagnosticSeverity.Info,
-        category: DiagnosticCategory.Testing,
+        category: DiagnosticCategory.Miscellaneous,
         message: "Test diagnostic (info)",
         details: "You're really testing me, you know that?",
     },
     {
-        id: "test/warn",
+        id: "misc/test/warn",
         severity: DiagnosticSeverity.Warning,
-        category: DiagnosticCategory.Testing,
+        category: DiagnosticCategory.Miscellaneous,
         message: "Test diagnostic (warn)",
         details: "The next one... well... don't say I didn't warn you.",
     },
     {
-        id: "test/error",
+        id: "misc/test/error",
         severity: DiagnosticSeverity.Error,
-        category: DiagnosticCategory.Testing,
+        category: DiagnosticCategory.Miscellaneous,
         message: "Test diagnostic (error)",
         details: "You failed to comprehend the nature of the attack!",
     },
@@ -109,14 +112,19 @@ Per v1 of the API specification, the incoming action is ignored and the existing
         message: "Do not rename game",
         details: "The protocol forbids changing your game name mid-connection"
     }
-];
+] as const;
+
+export type DiagnosticId = (typeof DIAGNOSTICS)[number]["id"];
 
 export function getDiagnosticById(id: string): DiagnosticDef | undefined {
     return DIAGNOSTICS.find(d => d.id === id);
 }
 
-export const SeverityToLogLevel = {
+export const SeverityToLogLevel: {
+    [sev in DiagnosticSeverity]: LogLevel;
+} = {
     [DiagnosticSeverity.Info]: LogLevel.Info,
     [DiagnosticSeverity.Warning]: LogLevel.Warning,
     [DiagnosticSeverity.Error]: LogLevel.Error,
+    [DiagnosticSeverity.Fatal]: LogLevel.Fatal,
 }

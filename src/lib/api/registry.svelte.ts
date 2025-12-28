@@ -5,7 +5,7 @@ import * as v1 from "./v1/spec";
 import { SvelteMap } from "svelte/reactivity";
 import { jsonParse, safeInvoke, safeParse } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";
-import { getDiagnosticById, DiagnosticSeverity, type GameDiagnostic, SeverityToLogLevel } from "./diagnostics";
+import { getDiagnosticById, DiagnosticSeverity, type GameDiagnostic, SeverityToLogLevel, type DiagnosticId } from "./diagnostics";
 
 export type WSConnectionRequest = { id: string; } & (
     { version: "v1"; }
@@ -134,7 +134,7 @@ export class Game {
         return status;
     }
 
-    public triggerDiagnostic(id: string, context?: any, report: boolean = true) {
+    public triggerDiagnostic(id: DiagnosticId, context?: any, report: boolean = true) {
         const diag = getDiagnosticById(id);
         if (!diag) {
             r.error(`Unknown diagnostic ${id}`, {ctx: context});
@@ -156,7 +156,7 @@ export class Game {
         });
     }
 
-    public dismissDiagnosticsById(id: string) {
+    public dismissDiagnosticsById(id: DiagnosticId) {
         this.diagnostics.forEach(d => d.id === id && (d.dismissed = true));
     }
 
