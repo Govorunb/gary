@@ -21,6 +21,12 @@
         <div class="flex flex-col gap-2">
             <button
                 class="menu-item"
+                onclick={() => uiState.dialogs.openDiagnosticsDialog(game)}
+            >
+                <Braces size={14} /> View Diagnostics
+            </button>
+            <button
+                class="menu-item"
                 onclick={() => uiState.dialogs.openRawMessageDialog(game)}
             >
                 <Braces size={14} /> Send Raw Message

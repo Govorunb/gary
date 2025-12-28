@@ -6,6 +6,7 @@
     import Popover from "$lib/ui/common/Popover.svelte";
     import type { Game } from "$lib/api/registry.svelte";
     import { getUIState } from "$lib/app/utils/di";
+    import { tooltip } from "$lib/app/utils";
 
     interface Props {
         game: Game;
@@ -24,7 +25,18 @@
         if (uiState.anyDialogOpen) {
             gameMenuOpen = false;
         }
-    })
+    });
+
+    function statusTip(game: Game) {
+        switch (game.status) {
+            case "ok": return "OK";
+            case "warn":
+            case "error":
+                // TODO: 5 error(s), 3 warning(s)
+                // TODO 2: SkeletonUI tooltip
+                return `${game.diagnostics.length} diagnostic(s)`;
+        }
+    }
 </script>
 
 <details class="game-tab" name="games-accordion" open={isSelected}>
@@ -33,13 +45,11 @@
             <span class="game-name">{game.name}</span>
         </div>
         <div class="game-controls">
-            <!-- WIP: keep track of and show diagnostics (broken WS messages, dupe action registers, action/result l*tency) -->
             <div class="status-indicator"
-                data-connected={boolAttr(!game.conn.closed)}
-                data-warn={boolAttr(false /* todo */)}
-                data-error={boolAttr(false /* todo */)}
+                data-connected={!game.conn.closed}
+                data-status={game.status}
             >
-                <div class="status-dot" title="WIP: this will show diagnostics for your game (e.g. WebSocket protocol violations)"></div>
+                <div class="status-dot" {@attach tooltip(statusTip(game))}></div>
             </div>
             <Popover open={gameMenuOpen} onOpenChange={(d) => gameMenuOpen = d.open}
                 onFocusOutside={(_) => gameMenuOpen = false}
@@ -111,18 +121,22 @@
         @apply flex items-center justify-center;
 
         .status-dot {
-            @apply bg-neutral-400;
+            @apply bg-neutral-200;
         }
 
-        &[data-connected] .status-dot {
+        &:not([data-connected]) {
+            @apply brightness-75;
+        }
+
+        &[data-status="ok"] .status-dot {
             @apply bg-green-500;
         }
 
-        &[data-warn] .status-dot {
+        &[data-status="warn"] .status-dot {
             @apply bg-warning-500;
         }
 
-        &[data-error] .status-dot {
+        &[data-status="error"] .status-dot {
             @apply bg-red-500;
         }
     }
