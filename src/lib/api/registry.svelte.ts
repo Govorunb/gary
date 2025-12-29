@@ -90,7 +90,9 @@ export type GameAction = v1.Action & { active: boolean };
 export class Game {
     public readonly actions = $state(new SvelteMap<string, GameAction>());
     public name: string = $state(null!);
-    public diagnostics: GameDiagnostic[] = $state([]);
+    public diagnostics = new GameDiagnostics(this);
+    public status = $derived(this.diagnostics);
+    public startupState: { type: "connected" | "startup"; at: number } | null = $state(null);
 
     constructor(
         private readonly session: Session,
@@ -102,6 +104,7 @@ export class Game {
             conn.onconnect(() => this.connected());
         }
         conn.onclose(() => {
+            // FIXME: should be system ctx
             void this.context(`${this.name} disconnected`, true);
         });
         conn.onmessage((txt) => this.recv(txt));
@@ -117,54 +120,8 @@ export class Game {
         return this.conn.version;
     }
 
-    public get status(): 'ok' | 'warn' | 'error' {
-        let status: 'ok' | 'warn' = 'ok';
-        for (const {id, dismissed} of this.diagnostics) {
-            if (dismissed) continue;
-            
-            const diag = getDiagnosticById(id);
-            if (!diag) continue;
-            
-            if (diag.severity === DiagnosticSeverity.Error) {
-                return 'error';
-            } else if (diag.severity === DiagnosticSeverity.Warning) {
-                status = 'warn';
-            }
-        }
-        return status;
-    }
-
-    public triggerDiagnostic(id: DiagnosticId, context?: any, report: boolean = true) {
-        const diag = getDiagnosticById(id);
-        if (!diag) {
-            r.error(`Unknown diagnostic ${id}`, {ctx: context});
-            return;
-        }
-
-        this.diagnostics.push({
-            id,
-            timestamp: Date.now(),
-            context,
-        });
-
-        if (!report) return;
-        const logLevel = SeverityToLogLevel[diag.severity];
-        r.report(logLevel, {
-            message: `(${this.name}) ${diag.message}`,
-            details: diag.details,
-            ctx: { context },
-        });
-    }
-
-    public dismissDiagnosticsById(id: DiagnosticId) {
-        this.diagnostics.forEach(d => d.id === id && (d.dismissed = true));
-    }
-
-    public clearAllDiagnostics() {
-        this.diagnostics.length = 0;
-    }
-
     private connected() {
+        this.startupState = { type: "connected", at: Date.now() };
         void this.context(`${this.name} connected`, true);
         r.info(`${this.name} connected`, { toast: true });
     }
@@ -177,8 +134,9 @@ export class Game {
             return;
         }
         const err = msg.error;
-        this.triggerDiagnostic("prot/invalid_message", { message: txt, error: err });
-        // TODO: 'strict mode' (raise all severities by 1, errors instantly disconnect WS)
+        this.diagnostics.trigger("prot/invalid_message", { message: txt, error: err });
+        // TODO: 'strict mode' that raises all severities by 1
+        // (warnings become errors, errors become fatal and instantly disconnect WS)
         // await this.conn.disconnect(1006, `Invalid WebSocket message: ${err.message}`);
     }
 
@@ -188,17 +146,16 @@ export class Game {
             // technically vulnerable but i'd like to see a game out in the wild actually guess its own id
             if (this.name === v1PendingGameName(this.conn.id)) {
                 r.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
+                this.name = msg.game;
                 this.connected();
             } else if (this.name !== msg.game) {
-                r.warn(`${this.name} changed name to ${msg.game}`);
+                this.diagnostics.trigger("prot/v1/game_renamed", {old: this.name, new: msg.game});
+                this.name = msg.game;
             }
-            this.name = msg.game;
         }
         switch (msg.command) {
             case "startup":
-                r.info(`(${this.name}) startup woo`);
-                // TODO: (w) prot/multiple_startup
-                // TODO: (i) late/startup
+                this.startup();
                 break;
             case "context":
                 await this.context(msg.data.message, msg.data.silent);
@@ -212,16 +169,21 @@ export class Game {
             case "actions/force":
                 const actions = msg.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
                 if (msg.data.action_names.length === 0) {
-                    this.triggerDiagnostic("prot/force/empty", { msg });
+                    this.diagnostics.trigger("prot/force/empty", { msg });
                     return;
                 }
                 if (actions.length < msg.data.action_names.length) {
                     if (actions.length === 0) {
-                        this.triggerDiagnostic("prot/force/all_invalid", { msg });
+                        this.diagnostics.trigger("prot/force/all_invalid", { msg });
                         return;
                     } else {
-                        this.triggerDiagnostic("prot/force/some_invalid", { msg, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
+                        this.diagnostics.trigger("prot/force/some_invalid", { msg, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
                     }
+                }
+                // FIXME: mixes in manual/autoact forces
+                // FIXME: technically only fires when a force is queued, not just running (so on the third and not second simultaneous force)
+                if (this.session.scheduler.forceQueue.length) {
+                    this.diagnostics.trigger("prot/force/multiple", { msg });
                 }
                 this.session.scheduler.forceQueue.push(actions);
                 await this.context(this.forceMsg(actions, msg.data.query, msg.data.state), false);
@@ -238,7 +200,23 @@ export class Game {
             default:
                 r.warn(`(${this.name}) Unimplemented command '${(msg as any).command}'`);
         }
-        // TODO: (w) prot/missing_startup
+        if (this.startupState?.type !== "startup") {
+            this.diagnostics.trigger("prot/startup/missing");
+        }
+    }
+
+    startup() {
+        r.info(`(${this.name}) startup`);
+        if (this.startupState?.type === "startup") {
+            this.diagnostics.trigger("prot/startup/multiple");
+        } else {
+            const now = Date.now();
+            const startupDelay = now - (this.startupState?.at ?? now);
+            this.startupState = { type: "startup", at: now };
+            if (startupDelay > 500) {
+                this.diagnostics.trigger("late/startup", { delay: startupDelay });
+            }
+        }
     }
 
     async context(text: string, silent: boolean) {
@@ -267,7 +245,7 @@ export class Game {
                 // duplicate action conflict resolution
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                 const isV1 = this.version === "v1";
-                if (isV1) this.triggerDiagnostic("prot/v1/register/dupe", { action_name: action.name, existing });
+                if (isV1) this.diagnostics.trigger("prot/v1/register/dupe", { action_name: action.name, existing });
                 const logMethod = isV1 ? r.warn : r.info;
                 logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`, { toast: false });
                 if (isV1) continue;
@@ -286,9 +264,9 @@ export class Game {
         for (const action_name of actions) {
             const existing = this.getAction(action_name, false);
             if (!existing) {
-                this.triggerDiagnostic("prot/unregister/unknown", { action_name });
+                this.diagnostics.trigger("prot/unregister/unknown", { action_name });
             } else if (!existing.active) {
-                this.triggerDiagnostic("prot/unregister/inactive", { action_name });
+                this.diagnostics.trigger("prot/unregister/inactive", { action_name });
             } else {
                 existing.active = false;
                 r.debug(`(${this.name}) Unregistered action '${action_name}'`);
@@ -314,4 +292,58 @@ export class Game {
 
 function v1PendingGameName(id: string) {
     return `<v1-Pending-${id}>`;
+}
+
+export class GameDiagnostics {
+    public diagnostics: GameDiagnostic[] = $state([]);
+    public status: 'ok' | 'warn' | 'error' = $derived(this.getStatus());
+    
+    constructor(private readonly game: Game) {}
+
+    private getStatus(): 'ok' | 'warn' | 'error' {
+        let status: 'ok' | 'warn' = 'ok';
+        for (const {id, dismissed} of this.diagnostics) {
+            if (dismissed) continue;
+            
+            const diag = getDiagnosticById(id);
+            if (!diag) continue;
+            
+            if (diag.severity === DiagnosticSeverity.Error) {
+                return 'error';
+            } else if (diag.severity === DiagnosticSeverity.Warning) {
+                status = 'warn';
+            }
+        }
+        return status;
+    }
+
+    public trigger(id: DiagnosticId, context?: any, report: boolean = true) {
+        const diag = getDiagnosticById(id);
+        if (!diag) {
+            r.error(`Unknown diagnostic ${id}`, {ctx: context});
+            return;
+        }
+
+        this.diagnostics.push({
+            id,
+            timestamp: Date.now(),
+            context,
+        });
+
+        if (!report) return;
+        const logLevel = SeverityToLogLevel[diag.severity];
+        r.report(logLevel, {
+            message: `(${this.game.name}) ${diag.message}`,
+            details: diag.details,
+            ctx: { context },
+        });
+    }
+
+    public dismissDiagnosticsById(id: DiagnosticId) {
+        this.diagnostics.forEach(d => d.id === id && (d.dismissed = true));
+    }
+
+    public clear() {
+        this.diagnostics.length = 0;
+    }
 }

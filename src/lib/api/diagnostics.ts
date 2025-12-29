@@ -4,14 +4,14 @@ export enum DiagnosticSeverity {
     Info = 0,
     Warning = 1,
     Error = 2,
-    Fatal = 3,
+    Fatal = 3, // disconnects WS
 }
 
 export enum DiagnosticCategory {
     /** Protocol violations (invalid messages, disallowed behaviours, etc.) */
     Protocol = "prot",
-    /** Performance considerations (spamming actions, long context, etc.) */
-    Performance = "perf",
+    /** Performance/politeness considerations (spamming actions, long context, etc.) */
+    Quality = "rude",
     /** When the game takes too long. */
     Latency = "late",
     /** idk everything else */
@@ -103,15 +103,43 @@ Per v1 of the API specification, the incoming action is ignored and the existing
         severity: DiagnosticSeverity.Error,
         category: DiagnosticCategory.Protocol,
         message: "Entirely invalid actions/force",
-        details: "Sent an actions/force where none of the actions were registered",
+        details: "Sent an actions/force where none of the actions were registered.",
+    },
+    {
+        id: "prot/force/multiple",
+        severity: DiagnosticSeverity.Error,
+        category: DiagnosticCategory.Protocol,
+        message: "Multiple actions/force at once",
+        details: "Neuro can only handle one action force at a time.",
     },
     {
         id: "prot/v1/game_renamed",
         severity: DiagnosticSeverity.Warning,
         category: DiagnosticCategory.Protocol,
         message: "Do not rename game",
-        details: "The protocol forbids changing your game name mid-connection"
-    }
+        details: "The protocol forbids changing your game name mid-connection."
+    },
+    {
+        id: "prot/startup/missing",
+        severity: DiagnosticSeverity.Warning,
+        category: DiagnosticCategory.Protocol,
+        message: "Missing startup message",
+        details: "The client must send a 'startup' message as its first message"
+    },
+    {
+        id: "prot/startup/multiple",
+        severity: DiagnosticSeverity.Warning,
+        category: DiagnosticCategory.Protocol,
+        message: "Multiple startup messages",
+        details: "Don't send more than one 'startup' message as it may reset Neuro's state."
+    },
+    {
+        id: "late/startup",
+        severity: DiagnosticSeverity.Info,
+        category: DiagnosticCategory.Latency,
+        message: "Late startup",
+        details: "The game should send a 'startup' message as soon as possible."
+    },
 ] as const;
 
 export type DiagnosticId = (typeof DIAGNOSTICS)[number]["id"];
