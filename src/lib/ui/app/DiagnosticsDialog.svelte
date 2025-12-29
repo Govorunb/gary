@@ -1,8 +1,8 @@
 <script lang="ts">
     import Dialog from '$lib/ui/common/Dialog.svelte';
-    import type { Game } from '$lib/api/registry.svelte';
-    import { AlertTriangle, CircleX, Info, X } from '@lucide/svelte';
-    import { DiagnosticSeverity } from '$lib/api/diagnostics';
+    import type { Game } from "$lib/api/game.svelte";
+    import { CircleX, Info, Skull, TriangleAlert, X } from '@lucide/svelte';
+    import { DIAGNOSTICS, DiagnosticSeverity, getDiagnosticById } from '$lib/api/diagnostics';
 
     type Props = {
         open: boolean;
@@ -11,14 +11,19 @@
 
     let { open = $bindable(), game }: Props = $props();
 
-    const severityConfig: Record<string, { icon: typeof CircleX; label: string; class: string }> = {
+    const severityConfig: Record<DiagnosticSeverity, { icon: typeof CircleX; label: string; class: string }> = {
+        [DiagnosticSeverity.Fatal]: {
+            icon: Skull,
+            label: 'Fatal',
+            class: 'severity-fatal'
+        },
         [DiagnosticSeverity.Error]: {
             icon: CircleX,
             label: 'Error',
             class: 'severity-error'
         },
         [DiagnosticSeverity.Warning]: {
-            icon: AlertTriangle,
+            icon: TriangleAlert,
             label: 'Warning',
             class: 'severity-warning'
         },
@@ -29,16 +34,18 @@
         }
     };
 
+    const diagnostics = $derived(game.diagnostics.diagnostics);
+
     function closeDialog() {
         open = false;
     }
 
     function dismissDiagnostic(id: string) {
-        game.clearDiagnostic(id);
+        game.diagnostics.dismissDiagnosticsById(id as any);
     }
 
     function clearAllDiagnostics() {
-        game.clearAllDiagnostics();
+        game.diagnostics.clear();
     }
 </script>
 
@@ -51,7 +58,7 @@
                     <button
                         class="btn preset-outlined-error"
                         onclick={clearAllDiagnostics}
-                        disabled={game.diagnosticDefs.length === 0}
+                        disabled={diagnostics.length === 0}
                     >
                         Clear All
                     </button>
@@ -59,7 +66,7 @@
             </div>
 
             <div class="dialog-body">
-                {#if game.diagnosticDefs.length === 0}
+                {#if diagnostics.length === 0}
                     <div class="empty-state">
                         <Info class="empty-icon" />
                         <p>No active diagnostics</p>
@@ -67,8 +74,9 @@
                     </div>
                 {:else}
                     <div class="diagnostics-list">
-                        {#each game.diagnosticDefs as diagnostic (diagnostic.id)}
-                            {@const config = severityConfig[diagnostic.severity]}
+                        {#each diagnostics as diag (diag.id)}
+                            {@const def = getDiagnosticById(diag.id)!}
+                            {@const config = severityConfig[def.severity]}
                             {@const Icon = config.icon}
                             <div class="diagnostic-item {config.class}">
                                 <div class="diagnostic-icon">
@@ -79,15 +87,15 @@
                                         <span class="severity-label">{config.label}</span>
                                         <button
                                             class="dismiss-btn"
-                                            onclick={() => dismissDiagnostic(diagnostic.id)}
+                                            onclick={() => dismissDiagnostic(diag.id)}
                                             title="Dismiss diagnostic"
                                         >
                                             <X />
                                         </button>
                                     </div>
-                                    <p class="diagnostic-message">{diagnostic.message}</p>
-                                    {#if diagnostic.details}
-                                        <p class="diagnostic-details">{diagnostic.details}</p>
+                                    <p class="diagnostic-message">{def.message}</p>
+                                    {#if def.details}
+                                        <p class="diagnostic-details">{def.details}</p>
                                     {/if}
                                 </div>
                             </div>
@@ -144,7 +152,7 @@
         @apply flex gap-3 p-3 rounded-lg;
         @apply border transition-colors;
 
-        &.severity-error {
+        &.severity-error, &.severity-fatal {
             @apply bg-red-50 dark:bg-red-900/20;
             @apply border-red-200 dark:border-red-800;
         }

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Game } from "$lib/api/registry.svelte";
+    import type { Game } from "$lib/api/game.svelte";
     import GameAction from "./GameAction.svelte";
 
     type Props = {

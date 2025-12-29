@@ -4,7 +4,7 @@
     import GameAction from "./GameAction.svelte";
     import GameMenu from "./GameMenu.svelte";
     import Popover from "$lib/ui/common/Popover.svelte";
-    import type { Game } from "$lib/api/registry.svelte";
+    import type { Game } from "$lib/api/game.svelte";
     import { getUIState } from "$lib/app/utils/di";
     import { tooltip } from "$lib/app/utils";
 
@@ -34,7 +34,7 @@
             case "error":
                 // TODO: 5 error(s), 3 warning(s)
                 // TODO 2: SkeletonUI tooltip
-                return `${game.diagnostics.length} diagnostic(s)`;
+                return `${game.diagnostics.diagnostics.length} diagnostic(s)`;
         }
     }
 </script>

@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Action } from "$lib/api/v1/spec";
-    import type { Game } from "$lib/api/registry.svelte";
+    import type { Game } from "$lib/api/game.svelte";
     import { basicSetup, EditorView } from "codemirror";
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";

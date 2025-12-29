@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Game } from "$lib/api/registry.svelte";
+    import type { Game } from "$lib/api/game.svelte";
     import { basicSetup, EditorView } from "codemirror";
     import { json } from "@codemirror/lang-json";
     import Dialog from '$lib/ui/common/Dialog.svelte';

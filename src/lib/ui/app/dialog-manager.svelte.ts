@@ -1,5 +1,5 @@
 import type { Action } from "$lib/api/v1/spec";
-import type { Game } from "$lib/api/registry.svelte";
+import type { Game } from "$lib/api/game.svelte";
 
 export type ManualSendDialogState = null | { action: Action, game: Game };
 export type RawMessageDialogState = null | { game: Game };

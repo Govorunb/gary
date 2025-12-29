@@ -9,8 +9,7 @@
     import r from "$lib/app/utils/reporting";
     import CopyButton from "../../common/CopyButton.svelte";
     import { preventDefault, tooltip } from "$lib/app/utils";
-    import type { Game } from "$lib/api/registry.svelte";
-    import type { GameAction } from "$lib/api/registry.svelte";
+    import type { Game, GameAction } from "$lib/api/game.svelte";
     import { boolAttr } from "runed";
 
     type Props = {
