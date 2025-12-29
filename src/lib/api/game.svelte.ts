@@ -111,6 +111,9 @@ export class Game {
                 break;
             case "action/result":
                 // TODO: (w) late/action_result
+                if (!msg.data.success && !msg.data.message) {
+                    this.diagnostics.trigger("prot/result/error_nomessage");
+                }
                 const silent = msg.data.success;
                 let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
                 text += msg.data.message ? ` (${msg.data.message})` : " (no message)";
@@ -123,6 +126,7 @@ export class Game {
         }
         if (this.startupState?.type !== "startup") {
             this.diagnostics.trigger("prot/startup/missing");
+            this.startupState = {type: "startup", at: Date.now()};
         }
     }
 
@@ -135,7 +139,7 @@ export class Game {
             const startupDelay = now - (this.startupState?.at ?? now);
             this.startupState = { type: "startup", at: now };
             if (startupDelay > 500) {
-                this.diagnostics.trigger("late/startup", { delay: startupDelay });
+                this.diagnostics.trigger("rude/late/startup", { delay: startupDelay });
             }
         }
     }

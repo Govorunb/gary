@@ -2,7 +2,7 @@
     import Dialog from '$lib/ui/common/Dialog.svelte';
     import type { Game } from "$lib/api/game.svelte";
     import { CircleX, Info, Skull, TriangleAlert, X } from '@lucide/svelte';
-    import { DIAGNOSTICS, DiagnosticSeverity, getDiagnosticById } from '$lib/api/diagnostics';
+    import { DiagnosticSeverity, getDiagnosticById } from '$lib/api/diagnostics';
 
     type Props = {
         open: boolean;
@@ -74,7 +74,7 @@
                     </div>
                 {:else}
                     <div class="diagnostics-list">
-                        {#each diagnostics as diag (diag.id)}
+                        {#each diagnostics as diag ([diag.id, diag.timestamp])}
                             {@const def = getDiagnosticById(diag.id)!}
                             {@const config = severityConfig[def.severity]}
                             {@const Icon = config.icon}
