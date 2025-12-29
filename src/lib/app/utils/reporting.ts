@@ -102,6 +102,10 @@ class DefaultReporter implements Reporter {
         if (options.ctx) {
             msg += `\nContext: ${JSON.stringify(options.ctx)}`;
         }
+        // TODO: user configurable
+        if (level >= this.autoToastLevel && options.toast === undefined) {
+            options.toast = true;
+        }
 
         let logFunc: (message: string) => void;
         if (!isTauri()) {
@@ -178,10 +182,6 @@ class DefaultReporter implements Reporter {
         }
         if (!opts.message) {
             throw new Error("No message provided", { cause: args });
-        }
-        // TODO: user configurable
-        if (level >= this.autoToastLevel && opts.toast === undefined) {
-            opts.toast = true;
         }
         return this.report(level, opts);
     }

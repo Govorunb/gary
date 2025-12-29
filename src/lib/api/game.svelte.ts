@@ -126,7 +126,7 @@ export class Game {
         }
         if (this.startupState?.type !== "startup") {
             this.diagnostics.trigger("prot/startup/missing");
-            this.startupState = {type: "startup", at: Date.now()};
+            this.startupState = { type: "startup", at: Date.now() };
         }
     }
 
