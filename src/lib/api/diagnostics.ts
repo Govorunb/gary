@@ -10,8 +10,10 @@ export enum DiagnosticSeverity {
 export enum DiagnosticCategory {
     /** Protocol violations (invalid messages, disallowed behaviours, etc.) */
     Protocol = "prot",
-    /** Performance/politeness considerations (spamming actions, long context, latency etc.) */
-    Quality = "rude",
+    /** Performance/politeness considerations (spamming actions, long context, latency etc.)
+     * Stuff that prevents Neuro from performing better.
+     */
+    Performance = "perf",
     /** idk everything else */
     Miscellaneous = "misc",
 }
@@ -71,14 +73,14 @@ Per v1 of the API specification, the incoming action is ignored and the existing
     {
         id: "prot/unregister/inactive",
         severity: DiagnosticSeverity.Info,
-        message: "Unregistered an action more than once",
-        details: "Unregistering an action multiple times is harmless, but you should still aim to reduce duplicate calls.",
+        message: "Pointless unregister",
+        details: "Unregistering an action that's already unregistered is harmless, but you should still aim to reduce duplicate calls.",
     },
     {
         id: "prot/force/empty",
         severity: DiagnosticSeverity.Error,
         message: "Empty actions/force",
-        details: "Sent actions/force with no actions",
+        details: "Sent 'actions/force' with no actions",
     },
     {
         id: "prot/force/some_invalid",
@@ -108,7 +110,7 @@ Per v1 of the API specification, the incoming action is ignored and the existing
         id: "prot/startup/missing",
         severity: DiagnosticSeverity.Warning,
         message: "Missing startup message",
-        details: "The client must send a 'startup' message as its first message"
+        details: "The first message sent must be a 'startup' message"
     },
     {
         id: "prot/startup/multiple",
@@ -117,13 +119,13 @@ Per v1 of the API specification, the incoming action is ignored and the existing
         details: "Don't send more than one 'startup' message as it may reset Neuro's state."
     },
     {
-        id: "rude/late/startup",
+        id: "perf/late/startup",
         severity: DiagnosticSeverity.Info,
         message: "Late startup",
         details: "The game should send a 'startup' message as soon as possible."
     },
     {
-        id: "rude/late/action_result",
+        id: "perf/late/action_result",
         severity: DiagnosticSeverity.Warning,
         message: "Late action result",
         details: `Send action results as soon as possible.
@@ -132,7 +134,7 @@ If the action is expected to take a long time, send a "validation" success resul
     {
         id: "prot/result/error_nomessage",
         severity: DiagnosticSeverity.Warning,
-        message: "Error result without message",
+        message: "Unsuccessful action result should have message",
         details: "Provide feedback to let Neuro know what went wrong."
     }
 ] as const satisfies DiagnosticDef[];
@@ -140,8 +142,8 @@ If the action is expected to take a long time, send a "validation" success resul
 export type DiagnosticId = (typeof DIAGNOSTICS)[number]["id"];
 
 export const DIAGNOSTICS_BY_ID = Object.fromEntries(
-    DIAGNOSTICS.map(d => [d.id, d])
-) as any as Record<DiagnosticId, DiagnosticDef>;
+    DIAGNOSTICS.map(d => [d.id, d]) as [DiagnosticId, DiagnosticDef][]
+) as Record<DiagnosticId, DiagnosticDef>;
 
 export function getDiagnosticById(id: string): DiagnosticDef | undefined {
     return DIAGNOSTICS_BY_ID[id as DiagnosticId];

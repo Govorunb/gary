@@ -139,7 +139,7 @@ export class Game {
             const startupDelay = now - (this.startupState?.at ?? now);
             this.startupState = { type: "startup", at: now };
             if (startupDelay > 500) {
-                this.diagnostics.trigger("rude/late/startup", { delay: startupDelay });
+                this.diagnostics.trigger("perf/late/startup", { delay: startupDelay });
             }
         }
     }

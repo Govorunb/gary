@@ -39,6 +39,7 @@ export class GameDiagnostics {
             context,
         });
 
+        // TODO: suppress (from prefs, per game name)
         if (!report) return;
         const logLevel = SeverityToLogLevel[diag.severity];
         r.report(logLevel, {
