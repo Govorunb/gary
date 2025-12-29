@@ -15,7 +15,7 @@
         const conn = new InternalWSConnection(`${Date.now().toString().split("").reverse().join("")}-schema-test`, "v1");
         const schemaTestGame = new SchemaTestGame(new GameWSSender(conn));
 
-        registry.createGame("JSON Schema Test", conn);
+        registry.createGame(conn, "JSON Schema Test");
         await tick();
 
         await schemaTestGame.lifecycle();
