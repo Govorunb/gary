@@ -17,12 +17,12 @@ export class SchemaTestGame extends ClientGame {
     public async lifecycle() {
         await this.hello();
         for await (const msg of this.conn.listen()) {
-            await this.handleMessage(msg);
+            await this.recvRaw(msg);
         }
         this.dispose();
     }
 
-    protected async processAction(name: string, data: any): Promise<ActionResult> {
+    public async runAction(name: string, data: any): Promise<ActionResult> {
         let res: ActionResult;
         if (name === "schema_update") {
             res = await this.schemaUpdateHandler(name, data);
@@ -86,7 +86,7 @@ export class SchemaTestGame extends ClientGame {
         return res;
     }
 
-    protected async hello() {
+    public async hello() {
         r.info(`[schema-test] Registering ${this.actions.size} actions`);
         super.hello();
         
@@ -97,8 +97,8 @@ export class SchemaTestGame extends ClientGame {
         );
     }
 
-    protected async resetActions(): Promise<void> {
-        this.registeredActions.clear();
+    public async resetActions(): Promise<void> {
+        await this.unregisterActions(this.registeredActions.keys().toArray());
         await this.registerActions(Array.from(this.actions.values()));
         this.schemaChanged = false;
     }
