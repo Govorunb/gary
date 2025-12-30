@@ -45,7 +45,7 @@ export class GameDiagnostics {
         r.report(logLevel, {
             message: `(${this.game.name}) ${diag.message}`,
             details: diag.details,
-            ctx: { context },
+            ctx: context ? { context } : undefined,
         });
     }
 
