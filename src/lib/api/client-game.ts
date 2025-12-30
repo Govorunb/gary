@@ -2,7 +2,7 @@ import r from "$lib/app/utils/reporting";
 import Ajv from "ajv";
 import type { GameWSSender } from "$lib/api/ws";
 import * as v1 from "$lib/api/v1/spec";
-import { jsonParse, safeParse } from "../utils";
+import { jsonParse, safeParse } from "../app/utils";
 
 export type ActionResult = Omit<v1.ActionResult['data'], 'id'>;
 
@@ -56,7 +56,6 @@ export abstract class ClientGame {
     }
 
     protected async hello() {
-        this.resetForceActionInterval();
         await this.resetActions();
     }
 
@@ -100,29 +99,6 @@ export abstract class ClientGame {
             data: { message, silent }
         });
         await this.conn.send(context);
-    }
-
-    protected resetForceActionInterval() {
-        if (this.forceActionInterval) {
-            clearInterval(this.forceActionInterval);
-        }
-        
-        this.forceActionInterval = setInterval(async () => {
-            if (!this.registeredActions.size) return;
-            return; // temp
-
-            const force: v1.ForceAction = v1.zForceAction.decode({
-                command: "actions/force",
-                game: this.name,
-                data: {
-                    state: "",
-                    query: "Please execute an action",
-                    ephemeral_context: false,
-                    action_names: Array.from(this.registeredActions.keys())
-                }
-            });
-            await this.conn.send(force);
-        }, 5000);
     }
 
     protected validateData(schema: any, data: any): { valid: boolean; error?: string } {
