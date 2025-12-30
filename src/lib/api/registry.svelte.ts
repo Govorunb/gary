@@ -1,6 +1,6 @@
 import { Channel } from "@tauri-apps/api/core";
 import r from "$lib/app/utils/reporting";
-import { TauriServerConnection, type ServerWSEvent, type AcceptArgs, type BaseConnection } from "./ws";
+import { TauriServerConnection, type ServerWSEvent, type AcceptArgs, type BaseConnection } from "./connection";
 import * as v1 from "./v1/spec";
 import { safeInvoke } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { getRegistry, getUIState } from "$lib/app/utils/di";
     import GameTab from "./GameTab.svelte";
-    import { InternalConnection, InternalConnectionClient } from "$lib/api/ws";
+    import { InternalConnection, InternalConnectionClient } from "$lib/api/connection";
     import { SchemaTestGame } from "$lib/app/schema-test";
     import { Plus, ChevronDown } from "@lucide/svelte";
     import Popover from "$lib/ui/common/Popover.svelte";

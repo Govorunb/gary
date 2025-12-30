@@ -1,5 +1,5 @@
 import r from "$lib/app/utils/reporting";
-import type { InternalConnectionClient } from "$lib/api/ws";
+import type { InternalConnectionClient } from "$lib/api/connection";
 import { ClientGame } from "../../api/client-game";
 import type { ActionResult } from '../../api/client-game';
 import { TEST_ACTIONS_MAP } from "./actions";

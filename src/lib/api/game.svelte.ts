@@ -4,7 +4,7 @@ import r, { LogLevel } from "$lib/app/utils/reporting";
 import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
 import * as v1 from "./v1/spec";
-import type { BaseConnection } from "./ws";
+import type { BaseConnection } from "./connection";
 
 export type GameAction = v1.Action & { active: boolean };
 
