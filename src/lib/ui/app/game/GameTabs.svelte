@@ -1,7 +1,7 @@
 <script lang="ts">
     import { getRegistry, getUIState } from "$lib/app/utils/di";
     import GameTab from "./GameTab.svelte";
-    import { InternalWSConnection, GameWSSender } from "$lib/api/ws";
+    import { InternalConnection, InternalConnectionClient } from "$lib/api/ws";
     import { SchemaTestGame } from "$lib/app/schema-test";
     import { Plus, ChevronDown } from "@lucide/svelte";
     import Popover from "$lib/ui/common/Popover.svelte";
@@ -12,8 +12,9 @@
     const selectedTab = $derived(uiState.selectedGameTab);
 
     async function startSchemaTest() {
-        const conn = new InternalWSConnection(`${Date.now().toString().split("").reverse().join("")}-schema-test`, "v1");
-        const schemaTestGame = new SchemaTestGame(new GameWSSender(conn));
+        // timestamp reversed to make spotting differences easier (seconds at the start vs middle)
+        const conn = new InternalConnection(`${Date.now().toString().reverse()}-schema-test`, "v1");
+        const schemaTestGame = new SchemaTestGame(new InternalConnectionClient(conn));
 
         registry.createGame(conn, "JSON Schema Test");
         await tick();

@@ -1,6 +1,6 @@
 import { Channel } from "@tauri-apps/api/core";
 import r from "$lib/app/utils/reporting";
-import { GameWSConnection, type ServerWSEvent, type AcceptArgs, type BaseWSConnection } from "./ws";
+import { TauriServerConnection, type ServerWSEvent, type AcceptArgs, type BaseConnection } from "./ws";
 import * as v1 from "./v1/spec";
 import { safeInvoke } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";
@@ -38,7 +38,7 @@ export class Registry {
     
     async accept(req: WSConnectionRequest) {
         const channel = new Channel<ServerWSEvent>();
-        const conn = new GameWSConnection(req.id, req.version, channel);
+        const conn = new TauriServerConnection(req.id, req.version, channel);
         const gameName = req.version === "v1" ? v1PendingGameName(conn.id) : req.game;
         r.debug(`Creating game '${gameName}' (${req.version})`);
         this.createGame(conn);
@@ -54,7 +54,7 @@ export class Registry {
         await safeInvoke('ws_deny', { id: req.id, reason });
     }
 
-    createGame(conn: BaseWSConnection, name?: string): Game {
+    createGame(conn: BaseConnection, name?: string): Game {
         const game = new Game(this.session, conn, name);
         this.games.push(game);
         conn.onclose(() => {

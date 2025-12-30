@@ -4,7 +4,7 @@ import r, { LogLevel } from "$lib/app/utils/reporting";
 import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
 import * as v1 from "./v1/spec";
-import type { BaseWSConnection } from "./ws";
+import type { BaseConnection } from "./ws";
 
 export type GameAction = v1.Action & { active: boolean };
 
@@ -17,7 +17,7 @@ export class Game {
 
     constructor(
         private readonly session: Session,
-        public readonly conn: BaseWSConnection,
+        public readonly conn: BaseConnection,
         name?: string
     ) {
         this.name = name ?? v1PendingGameName(conn.id);
