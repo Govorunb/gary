@@ -229,7 +229,7 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
                 lineNumber: string
                 columnNumber: string
             };
-            return `${functionName}@${filePath.substring(filePathStart)}`;
+            return `${functionName}@${filePath.substring(Math.max(filePathStart, filePath.indexOf("src/")))}`;
             // return `${functionName}@${filePath}:${lineNumber}:${columnNumber}`;
         } else {
             // Handle cases where the regex does not match (e.g., last line without function name)
@@ -242,7 +242,7 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
                     lineNumber: string
                     columnNumber: string
                 };
-                return `<anonymous>@${filePath.substring(filePathStart)}:${lineNumber}:${columnNumber}`;
+                return `<anonymous>@${filePath.substring(Math.max(filePathStart, filePath.indexOf("src/")))}:${lineNumber}:${columnNumber}`;
             }
         }
     } else {
@@ -259,7 +259,7 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
             // before: initDI@http://localhost:1420/src/lib/app/session.svelte.ts:44:19
             // after: initDI@src/lib/app/session.svelte.ts
             // seems to use the containing fn for closures, thank god (webkit 1, chromium 999)
-            .map(([name, loc]) => [name, loc.substring(filePathStart).replaceAll(/(:\d+)*$/g, "")]);
+            .map(([name, loc]) => [name, loc.substring(Math.max(filePathStart, loc.indexOf("src/"))).replaceAll(/(:\d+)*$/g, "")]);
         return filtered[targetStackDepth]?.filter((v) => v.length > 0).join('@');
     }
 }

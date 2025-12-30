@@ -10,7 +10,7 @@ const test = baseTest.extend<{harness: SelfTestHarness}>({
         const harness = new SelfTestHarness();
         await harness.connect();
         await use(harness);
-        harness.disconnect();
+        await harness.disconnect();
         vi.useRealTimers();
     }
 });
