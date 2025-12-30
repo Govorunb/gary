@@ -40,7 +40,7 @@ export abstract class BaseConnection {
 
     devAssertNotDisposed() {
         if (!this.#disposed) return;
-        r.error(`Connection id '${this.shortId}' is closed`);
+        r.fatal(`Connection id '${this.shortId}' is closed`);
     }
 
     public abstract sendRaw(text: string): Promise<void>;
@@ -79,6 +79,7 @@ export abstract class BaseConnection {
         return this.receiveRaw(JSON.stringify(msg));
     }
 
+    // TODO: onconnect should instantly fire if already connected
     public onconnect(handler: OnConnectHandler) {
         this.#onconnect.push(handler);
     }
@@ -178,7 +179,10 @@ export class InternalConnection extends BaseConnection {
 
     constructor(id: string, version: string = "v1") {
         super(id, version);
-        setTimeout(() => this.connect(), 10);
+    }
+
+    public override connect() {
+        return super.connect();
     }
 
     public async sendRaw(text: string) {

@@ -98,7 +98,7 @@ For Gary specifically, it hosts the WebSocket server, relaying messages to the f
 ## Essential Paths for Project Navigation
 
 - `src/lib/api/` - WebSocket API code (game integration)
-- `src/lib/` - Application logic
+- `src/lib/app/` - Application logic
 - `src/lib/ui/` - Svelte components and utilities
 - `src/routes/` - Application pages and routing
 - `src-tauri/` - Rust backend and Tauri configuration

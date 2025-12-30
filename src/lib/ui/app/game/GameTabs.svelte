@@ -18,7 +18,7 @@
 
         registry.createGame(conn, "JSON Schema Test");
         await tick();
-
+        await conn.connect();
         await schemaTestGame.lifecycle();
     }
 </script>

@@ -183,3 +183,7 @@ declare global {
 String.prototype.reverse = function() {
     return [...this].reverse().join("")
 };
+
+export function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}

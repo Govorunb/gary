@@ -21,10 +21,14 @@ export class Game {
         name?: string
     ) {
         this.name = name ?? v1PendingGameName(conn.id);
-        if (conn.version !== "v1") {
-            conn.onconnect(() => this.connected());
-        }
+        conn.onconnect(() => {
+            this.startupState = { type: "connected", at: Date.now() };
+            if (conn.version !== "v1") {
+                this.connected();
+            }
+        });
         conn.onclose(() => {
+            if (this.name === v1PendingGameName(conn.id)) return;
             // FIXME: should be system ctx
             void this.context(`${this.name} disconnected`, true);
         });
@@ -42,7 +46,6 @@ export class Game {
     }
 
     private connected() {
-        this.startupState = { type: "connected", at: Date.now() };
         void this.context(`${this.name} connected`, true);
         r.info(`${this.name} connected`, { toast: true });
     }

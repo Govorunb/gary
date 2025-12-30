@@ -196,7 +196,14 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
     const stack = new Error().stack;
     if (!stack) return "(no stack)";
 
-    const filePathStart = window.location.origin.length;
+    let filePathStart: number;
+    try {
+        // no window in e.g. tests
+        filePathStart = window.location.origin.length;
+    } catch {
+        filePathStart = 0;
+    }
+
     if (stack.startsWith('Error')) {
         // Assume it's Chromium V8
         //

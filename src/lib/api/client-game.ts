@@ -13,7 +13,9 @@ export abstract class ClientGame {
     constructor(
         public readonly name: string,
         public readonly conn: InternalConnectionClient
-    ) {}
+    ) {
+        conn.conn.onclose(() => this.dispose());
+    }
 
     public async recvRaw(text: string) {
         const msg = jsonParse(text)
