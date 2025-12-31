@@ -7,29 +7,28 @@ r.level = LogLevel.Warning;
 const simple = {
 	version: "1.0.1",
 	migrate(data: any) {
-		data.migrated = true;
+		data.flag = true;
 	}
 };
 
 const rename = {
 	version: "1.0.1",
 	migrate(data: any) {
-		moveField(data, "server", "api");
-		moveField(data, "api.port", "api.serverPort");
+		moveField(data, "old", "new");
 	}
 };
 
 const add = {
 	version: "1.1.0",
 	migrate(data: any) {
-		data.newField = "defaultValue";
+		data.new = "value";
 	}
 };
 
 const remove = {
 	version: "1.2.0",
 	migrate(data: any) {
-		deleteField(data, "oldField");
+		deleteField(data, "old");
 	}
 };
 
@@ -38,6 +37,13 @@ const moveDeeper = {
 	migrate(data: any) {
 		if (!data.config) return;
 		moveField(data, "config.value", "config.nested.value");
+	}
+};
+
+const wrap = {
+	version: "1.3.0",
+	migrate(data: any) {
+		moveField(data, "old", "new.old");
 	}
 };
 
@@ -68,35 +74,35 @@ describe("migrate", () => {
 	test("applies simple migration", () => {
 		const data = { version: "1.0.0", foo: "bar" };
 		const result = migrate("1.0.1", data, [simple]);
-		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar", migrated: true });
+		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar", flag: true });
 	});
 
-	test("applies rename migration: renames server to api", () => {
-		const data = { version: "1.0.0", server: { port: 8000 }, foo: "bar" };
+	test("applies rename migration", () => {
+		const data = { version: "1.0.0", old: "value", foo: "bar" };
 		const result = migrate("1.0.1", data, [rename]) as any;
-		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar", api: { serverPort: 8000 } });
+		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar", new: "value" });
 	});
 
-	test("applies rename migration: handles missing server field", () => {
+	test("applies rename migration: handles missing old field", () => {
 		const data = { version: "1.0.0", foo: "bar" } as any;
 		const result = migrate("1.0.1", data, [rename]) as any;
 		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar" });
 	});
 
-	test("applies rename migration: handles server with port field", () => {
-		const data = { version: "1.0.0", server: { port: 9000, other: "value" } };
+	test("applies rename migration: handles old field with nested object", () => {
+		const data = { version: "1.0.0", old: { nested: "value", other: "field" } };
 		const result = migrate("1.0.1", data, [rename]) as any;
-		expect(result).toStrictEqual({ version: "1.0.1", api: { other: "value", serverPort: 9000 } });
+		expect(result).toStrictEqual({ version: "1.0.1", new: { nested: "value", other: "field" } });
 	});
 
 	test("applies add field migration", () => {
 		const data = { version: "1.0.0", existing: "value" };
 		const result = migrate("1.1.0", data, [add]);
-		expect(result).toStrictEqual({ version: "1.1.0", existing: "value", newField: "defaultValue" });
+		expect(result).toStrictEqual({ version: "1.1.0", existing: "value", new: "value" });
 	});
 
 	test("applies remove field migration", () => {
-		const data = { version: "1.1.0", oldField: "toRemove", keep: "this" };
+		const data = { version: "1.1.0", old: "toRemove", keep: "this" };
 		const result = migrate("1.2.0", data, [remove]);
 		expect(result).toStrictEqual({ version: "1.2.0", keep: "this" });
 	});
@@ -106,7 +112,7 @@ describe("migrate", () => {
 		const result = migrate("2.0.0", data, [moveDeeper]);
 		expect(result).toStrictEqual({
 			version: "2.0.0",
-			config: { nested: {value: 42}, other: "stay"}
+			config: { nested: { value: 42 }, other: "stay"}
 		});
 	});
 
@@ -125,45 +131,45 @@ describe("migrate", () => {
 	test("applies multiple migrations if needed", () => {
 		const data = { version: "1.0.0", foo: "bar" };
 		const result = migrate("2.0.0", data, [simple, add, moveDeeper]);
-		expect(result).toStrictEqual({ version: "2.0.0", foo: "bar", migrated: true, newField: "defaultValue" });
+		expect(result).toStrictEqual({ version: "2.0.0", foo: "bar", flag: true, new: "value" });
 	});
 
 	test("skips migrations when starting from intermediate version", () => {
 		const data = { version: "1.0.5", foo: "bar" };
 		const result = migrate("1.1.0", data, [simple, add]);
-		expect(result).toStrictEqual({ version: "1.1.0", foo: "bar", newField: "defaultValue" });
+		expect(result).toStrictEqual({ version: "1.1.0", foo: "bar", new: "value" });
 	});
 
 	test("stops at last available migration if target version is beyond available migrations", () => {
 		const data = { version: "1.0.0", foo: "bar" };
 		const result = migrate("100.0.0", data, [simple, add]);
-		expect(result).toStrictEqual({ version: "1.1.0", foo: "bar", migrated: true, newField: "defaultValue" });
+		expect(result).toStrictEqual({ version: "1.1.0", foo: "bar", flag: true, new: "value" });
 	});
 
 	test("handles unsorted migration array", () => {
 		const data = { version: "1.0.0", foo: "bar" };
 		const result = migrate("1.2.0", data, [simple, remove, add]);
-		expect(result).toStrictEqual({ version: "1.2.0", foo: "bar", migrated: true, newField: "defaultValue" });
+		expect(result).toStrictEqual({ version: "1.2.0", foo: "bar", flag: true, new: "value" });
 	});
 
 	test("clones data before modifying", () => {
-		const data = { version: "1.0.0", foo: "bar", server: {} };
+		const data = { version: "1.0.0", foo: "bar", old: {} };
 		const result = migrate("1.0.1", data, [rename]);
 		expect(result).not.toBe(data);
-		expect((data as any).api).toBeUndefined();
-		expect(result.api).toBeDefined();
+		expect((data as any).new).toBeUndefined();
+		expect(result.new).toBeDefined();
 	});
 
 	test("handles semver with pre-release tags", () => {
 		const data = { version: "1.0.0-alpha", foo: "bar" };
 		const result = migrate("1.0.1", data, [simple]) as any;
-		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar", migrated: true });
+		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar", flag: true });
 	});
 
 	test("handles semver with patch versions", () => {
 		const data = { version: "1.0.0", foo: "bar" };
 		const result = migrate("1.0.5", data, [simple]) as any;
-		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar", migrated: true });
+		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar", flag: true });
 	});
 
 	test("preserves nested objects and arrays", () => {
@@ -175,7 +181,7 @@ describe("migrate", () => {
 		const result = migrate("1.0.1", data, [simple]);
 		expect(result).toStrictEqual({
 			version: "1.0.1",
-			migrated: true,
+			flag: true,
 			nested: { deep: { value: [1, 2, 3] } },
 			arr: [{ a: 1 }, { b: 2 }]
 		});
@@ -240,5 +246,21 @@ describe("migrate", () => {
 		const v2_0 = { version: "2.0.0", migrate(d: any) { d.value += 10; } };
 		const result = migrate("2.0.0", data, [v1_5, v2_0, v1_1]);
 		expect(result).toStrictEqual({ version: "2.0.0", value: 14 });
+	});
+
+	test("applies wrap migration", () => {
+		const data = { version: "1.0.0", old: { value: 42, nested: { deep: "test" } }, foo: "bar" };
+		const result = migrate("1.3.0", data, [wrap]) as any;
+		expect(result).toStrictEqual({
+			version: "1.3.0",
+			foo: "bar",
+			new: { old: { value: 42, nested: { deep: "test" } } }
+		});
+	});
+
+	test("wrap migration handles missing old field", () => {
+		const data = { version: "1.0.0", foo: "bar" } as any;
+		const result = migrate("1.3.0", data, [wrap]) as any;
+		expect(result).toStrictEqual({ version: "1.3.0", foo: "bar" });
 	});
 });

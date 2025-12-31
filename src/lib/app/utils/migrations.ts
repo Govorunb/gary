@@ -4,7 +4,7 @@ import { compare as semverCompare, valid as semverParse } from "semver";
 export type Migration = {
     version: string;
     description?: string;
-    migrate(data: any): any;
+    migrate(data?: Record<string, any>): void;
 }
 
 export function migrate(toVersion: string, data: Record<string, any> | null | undefined, migrations: Migration[]): any {

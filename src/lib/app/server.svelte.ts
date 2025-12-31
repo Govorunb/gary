@@ -34,7 +34,7 @@ export class ServerManager {
     }
 
     async start() {
-        return safeInvoke("start_server", { port: this.userPrefs.server.port })
+        return safeInvoke("start_server", { port: this.userPrefs.api.server.port })
             // .orTee(e => r.error(`Failed to start server`, `${e}`))
             .finally(() => this.sync());
     }

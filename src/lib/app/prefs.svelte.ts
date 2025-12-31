@@ -16,7 +16,7 @@ export class UserPrefs {
 
     constructor(data: UserPrefsData) {
         this.#data = $state(zUserPrefs.parse(data));
-        
+
         // TODO: debounce for file write (if ever)
         // the runed debouncer self-depends so we have to untrack
         // but then this.#data is also untracked (https://svelte.dev/docs/svelte/$effect#Understanding-dependencies)
@@ -25,8 +25,8 @@ export class UserPrefs {
     get app() {
         return this.#data.app;
     }
-    get server() {
-        return this.#data.server;
+    get api() {
+        return this.#data.api;
     }
     get engines() {
         return this.#data.engines;
@@ -37,7 +37,9 @@ export class UserPrefs {
     static async loadData(): Promise<UserPrefsData> {
         const dataStr = localStorage.getItem(USER_PREFS);
         const data = dataStr === null ? {} : JSON.parse(dataStr);
+
         const migrated = migrate(APP_VERSION, data, MIGRATIONS);
+
         const parsed = zUserPrefs.safeParse(migrated ?? data);
         // most fields have defaults, so this should only fail in extreme cases
         if (!parsed.success) {
@@ -116,19 +118,26 @@ export const zAppPrefs = z.strictObject({
     }).prefault({}),
 });
 
-export const zServerPrefs = z.strictObject({
-    port: z.coerce.number().int().min(1024).max(65535).fallback(8000),
-    // TODO: server behavior toggles (e.g. conflict resolution)
+export const zGamePrefs = z.strictObject({
+    diagnostics: z.strictObject({
+        suppressions: z.array(z.string()).prefault([]),
+    }).prefault({}),
+}).prefault({});
+
+export const zApiPrefs = z.strictObject({
+    server: z.strictObject({
+        port: z.coerce.number().int().min(1024).max(65535).fallback(8000),
+        // TODO: server behavior toggles (e.g. conflict resolution)
+    }).prefault({}),
+    games: z.record(z.string(), zGamePrefs).prefault({}),
 });
 
-// TODO: env syntax
-// $env:MY_ENV_VAR
-// {env:MY_ENV_VAR}
+// TODO: $env:MY_ENV_VAR
 
 export const zUserPrefs = z.strictObject({
     version: z.string().prefault(APP_VERSION),
     app: zAppPrefs.prefault({}),
-    server: zServerPrefs.prefault({}),
+    api: zApiPrefs.prefault({}),
     engines: z.object({
         randy: zRandyPrefs.prefault({}),
         openRouter: zOpenRouterPrefs.prefault({}) // ts pmtfo
@@ -151,23 +160,15 @@ export const zUserPrefs = z.strictObject({
 
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
 export type AppPrefs = z.infer<typeof zAppPrefs>;
+export type ApiPrefs = z.infer<typeof zApiPrefs>;
 
 const MIGRATIONS: Migration[] = [
     {
         version: "1.0.0-alpha.4",
-        description: [
-            ".server renamed to .api",
-            ".api.port renamed to .api.serverPort",
-        ].join("\n"),
-        migrate(data: any) {
+        description: "created .api and moved .server into it (.server.port -> .api.server.port)",
+        migrate(data) {
             if (!data) return;
-            moveField(data, "server", "api");
-            moveField(data, "api.port", "api.serverPort");
+            moveField(data, "server", "api.server");
         }
     },
-    {
-        version: "99.99.99",
-        description: "The end.",
-        migrate(_data: any) {},
-    }
 ];
