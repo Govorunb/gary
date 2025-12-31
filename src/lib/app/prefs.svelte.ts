@@ -5,7 +5,7 @@ import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
 import { APP_VERSION } from "./utils";
-import { compare as semverCompare, valid as semverParse } from "semver";
+import { migrate, moveField, type Migration } from "./utils/migrations";
 
 export const USER_PREFS = "userPrefs";
 
@@ -37,7 +37,7 @@ export class UserPrefs {
     static async loadData(): Promise<UserPrefsData> {
         const dataStr = localStorage.getItem(USER_PREFS);
         const data = dataStr === null ? {} : JSON.parse(dataStr);
-        const migrated = migrate(APP_VERSION, data);
+        const migrated = migrate(APP_VERSION, data, MIGRATIONS);
         const parsed = zUserPrefs.safeParse(migrated ?? data);
         // most fields have defaults, so this should only fail in extreme cases
         if (!parsed.success) {
@@ -152,66 +152,22 @@ export const zUserPrefs = z.strictObject({
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
 export type AppPrefs = z.infer<typeof zAppPrefs>;
 
-type Migration = {
-    version: string;
-    changes?: string[];
-    migrate(data: any): any;
-}
-
 const MIGRATIONS: Migration[] = [
     {
-        version: "1.0.1",
-        changes: [
-            ".server renamed to .api (to add diagnostic suppression)",
+        version: "1.0.0-alpha.4",
+        description: [
+            ".server renamed to .api",
             ".api.port renamed to .api.serverPort",
-        ],
+        ].join("\n"),
         migrate(data: any) {
             if (!data) return;
-            
-            data.api = data.server;
-            delete data.server;
-            if (data.api) {
-                data.api.serverPort = data.api.port;
-                delete data.api.port;
-            }
-            return data;
+            moveField(data, "server", "api");
+            moveField(data, "api.port", "api.serverPort");
         }
     },
     {
         version: "99.99.99",
-        changes: ["The end."],
-        migrate(data: any) {
-            return data;
-        },
+        description: "The end.",
+        migrate(_data: any) {},
     }
 ];
-
-export function migrate(toVersion: string, data: Record<string, any> | null | undefined, migrations?: Migration[]): any {
-    if (!data) return data;
-    let result = structuredClone(data);
-    
-    let currVersion = semverParse(data?.version);
-    if (!currVersion) return data; // let zod deal with it
-    
-    migrations ??= MIGRATIONS;
-    for (const migration of migrations.sort((a,b) => semverCompare(a.version, b.version))) {
-        if (semverCompare(migration.version, currVersion) <= 0) {
-            r.debug(`Skipping migration to ${migration.version} as ${currVersion} is same or newer`);
-            continue;
-        } else if (semverCompare(migration.version, toVersion) > 0) {
-            r.debug(`Finished migrating, ${migration.version} > ${toVersion}`);
-            break;
-        }
-        r.debug(`Migrating ${currVersion} to ${migration.version}`, migration.changes?.join("\n"));
-        const backup = structuredClone(result);
-        migration.migrate(result);
-        if (typeof result !== "object") {
-            r.error(`Migration to ${migration.version} returned no/invalid data (${result})`);
-            result = backup;
-            break;
-        }
-        currVersion = migration.version;
-    }
-    result.version = currVersion;
-    return result;
-}
