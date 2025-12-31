@@ -16,11 +16,12 @@ export class Game {
     public startupState: { type: "connected" | "startup"; at: number; } | null = $state(null);
 
     constructor(
-        private readonly session: Session,
+        public readonly session: Session,
         public readonly conn: BaseConnection,
         name?: string
     ) {
         this.name = name ?? v1PendingGameName(conn.id);
+
         conn.onconnect(() => {
             this.startupState = { type: "connected", at: Date.now() };
             if (conn.version !== "v1") {
@@ -43,6 +44,10 @@ export class Game {
 
     public get version() {
         return this.conn.version;
+    }
+
+    public get gamePrefs() {
+        return this.session.userPrefs.getGamePrefs(this.name);
     }
 
     private connected() {
@@ -74,6 +79,7 @@ export class Game {
                 this.connected();
             } else if (this.name !== msg.game) {
                 this.diagnostics.trigger("prot/v1/game_renamed", { old: this.name, new: msg.game });
+                // TODO: diag suppressions are per game name... and we just changed the name
                 this.name = msg.game;
             }
         }

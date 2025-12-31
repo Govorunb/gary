@@ -33,14 +33,15 @@ export class GameDiagnostics {
             return;
         }
 
+        const suppressed = this.isSuppressed(id);
         this.diagnostics.push({
             id,
             timestamp: Date.now(),
             context,
+            dismissed: suppressed,
         });
 
-        // TODO: suppress (from prefs, per game name)
-        if (!report) return;
+        if (!report || suppressed) return;
         const logLevel = SeverityToLogLevel[diag.severity];
         r.report(logLevel, {
             message: `(${this.game.name}) ${diag.message}`,
@@ -49,11 +50,35 @@ export class GameDiagnostics {
         });
     }
 
+    public get suppressions() {
+        return this.game.gamePrefs.diagnostics.suppressions;
+    }
+
+    public isSuppressed(id: DiagnosticId) {
+        return this.suppressions.includes(id);
+    }
+
+    public suppress(id: DiagnosticId) {
+        const diag = getDiagnosticById(id);
+        if (!diag) {
+            r.error(`Cannot suppress unknown diagnostic ${id}`);
+            return;
+        }
+        if (!this.suppressions.includes(id)) {
+            this.suppressions.push(id);
+        }
+        this.dismissDiagnosticsById(id);
+    }
+
     public dismissDiagnosticsById(id: DiagnosticId) {
         this.diagnostics.forEach(d => d.id === id && (d.dismissed = true));
     }
 
-    public clear() {
+    public dismissAll() {
+        this.diagnostics.forEach(d => d.dismissed = true);
+    }
+
+    public reset() {
         this.diagnostics.length = 0;
     }
 }

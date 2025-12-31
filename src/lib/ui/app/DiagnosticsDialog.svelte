@@ -45,7 +45,7 @@
     }
 
     function clearAllDiagnostics() {
-        game.diagnostics.clear();
+        game.diagnostics.reset();
     }
 </script>
 

@@ -12,7 +12,12 @@ class MockSession {
         forceQueue: [],
         actPending: false
     };
-    readonly userPrefs: any = zUserPrefs.decode({});
+    readonly userPrefs: any = {
+        ...zUserPrefs.decode({}),
+        getGamePrefs(game: string) {
+            return this.api.games[game] ??= {diagnostics: {suppressions: []}};
+        }
+    };
     readonly engines: Record<string, any> = {};
     readonly activeEngine: any = null;
 }
