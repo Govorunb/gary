@@ -44,5 +44,8 @@ export default defineConfig(async () => ({
   define: {
     // @ts-expect-error
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
-  }
+  },
+  test: {
+    restoreMocks: true,
+  },
 }));

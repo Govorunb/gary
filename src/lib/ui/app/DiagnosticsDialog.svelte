@@ -41,7 +41,7 @@
     }
 
     function dismissDiagnostic(id: string) {
-        game.diagnostics.dismissDiagnosticsById(id as any);
+        game.diagnostics.dismiss(id as any);
     }
 
     function clearAllDiagnostics() {

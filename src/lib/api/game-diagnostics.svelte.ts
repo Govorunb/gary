@@ -5,11 +5,10 @@ import type { Game } from "./game.svelte";
 
 export class GameDiagnostics {
     public diagnostics: GameDiagnostic[] = $state([]);
-    public status: 'ok' | 'warn' | 'error' = $derived(this.getStatus());
 
     constructor(private readonly game: Game) { }
 
-    private getStatus(): 'ok' | 'warn' | 'error' {
+    public get status(): 'ok' | 'warn' | 'error' {
         let status: 'ok' | 'warn' = 'ok';
         for (const { id, dismissed } of this.diagnostics) {
             if (dismissed) continue;
@@ -26,28 +25,31 @@ export class GameDiagnostics {
         return status;
     }
 
-    public trigger(id: DiagnosticId, context?: any, report: boolean = true) {
-        const diag = getDiagnosticById(id);
-        if (!diag) {
+    public trigger(id: DiagnosticId, context?: any, report: boolean = true): GameDiagnostic | null {
+        const diagDef = getDiagnosticById(id);
+        if (!diagDef) {
             r.error(`Unknown diagnostic ${id}`, { ctx: context });
-            return;
+            return null;
         }
 
         const suppressed = this.isSuppressed(id);
-        this.diagnostics.push({
+        const diag = $state<GameDiagnostic>({
             id,
             timestamp: Date.now(),
             context,
             dismissed: suppressed,
         });
+        this.diagnostics.push(diag);
 
-        if (!report || suppressed) return;
-        const logLevel = SeverityToLogLevel[diag.severity];
-        r.report(logLevel, {
-            message: `(${this.game.name}) ${diag.message}`,
-            details: diag.details,
-            ctx: context ? { context } : undefined,
-        });
+        if (report && !suppressed) {
+            const logLevel = SeverityToLogLevel[diagDef.severity];
+            r.report(logLevel, {
+                message: `(${this.game.name}) ${diagDef.message}`,
+                details: diagDef.details,
+                ctx: context ? { context } : undefined,
+            });
+        }
+        return diag;
     }
 
     public get suppressions() {
@@ -67,10 +69,10 @@ export class GameDiagnostics {
         if (!this.suppressions.includes(id)) {
             this.suppressions.push(id);
         }
-        this.dismissDiagnosticsById(id);
+        this.dismiss(id);
     }
 
-    public dismissDiagnosticsById(id: DiagnosticId) {
+    public dismiss(id: DiagnosticId) {
         this.diagnostics.forEach(d => d.id === id && (d.dismissed = true));
     }
 

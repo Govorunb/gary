@@ -57,12 +57,15 @@ export class SelfTestHarness {
     public get diagnostics() {
         return this.server.diagnostics.diagnostics;
     }
+    public get diagnosticIds() {
+        return this.server.diagnostics.diagnostics.map(d => (d.dismissed ? "!" : "") + d.id);
+    }
 
     public get actions() {
         return this.server.actions;
     }
 
     public get status() {
-        return this.server.status;
+        return this.server.diagnostics.status;
     }
 }
