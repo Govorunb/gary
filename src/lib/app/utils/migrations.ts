@@ -49,6 +49,7 @@ export function moveField(
 	const toParts = toPath.split(".");
 	const fromKey = fromParts.pop()!;
 	const toKey = toParts.pop()!;
+	r.verbose(`Moving .${fromPath} to .${toPath}`);
 
 	const fromParent = navigate(data, fromParts);
 	if (!fromParent || !(fromKey in fromParent)) {

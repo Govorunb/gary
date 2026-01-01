@@ -13,7 +13,7 @@ export class Game {
     public name: string = $state(null!);
     public diagnostics = new GameDiagnostics(this);
     public status = $derived(this.diagnostics.status);
-    public startupState: { type: "connected" | "startup"; at: number; } | null = $state(null);
+    public startupState: { type: "connected" | "implied" | "startup"; at: number; } | null = $state(null);
 
     constructor(
         public readonly session: Session,
@@ -133,9 +133,9 @@ export class Game {
             default:
                 r.warn(`(${this.name}) Unimplemented command '${(msg as any).command}'`);
         }
-        if (this.startupState?.type !== "startup") {
+        if (!["startup", "implied"].includes(this.startupState?.type ?? "")) {
             this.diagnostics.trigger("prot/startup/missing");
-            this.startupState = { type: "startup", at: Date.now() };
+            this.startupState = { type: "implied", at: Date.now() };
         }
     }
 

@@ -1,8 +1,11 @@
 <script lang="ts">
     import Dialog from '$lib/ui/common/Dialog.svelte';
     import type { Game } from "$lib/api/game.svelte";
-    import { CircleX, Info, Skull, TriangleAlert, X } from '@lucide/svelte';
-    import { DiagnosticSeverity, getDiagnosticById } from '$lib/api/diagnostics';
+    import { CircleX, Info, Skull, TriangleAlert, Check, CheckCheck, EyeOff, Eye } from '@lucide/svelte';
+    import { DiagnosticSeverity, getDiagnosticById, type GameDiagnostic } from '$lib/api/diagnostics';
+    import { pressedKeys } from '$lib/app/utils/hotkeys.svelte';
+    import { tooltip } from '$lib/app/utils';
+    import { boolAttr } from 'runed';
 
     type Props = {
         open: boolean;
@@ -10,6 +13,8 @@
     };
 
     let { open = $bindable(), game }: Props = $props();
+    const shiftPressed = $derived(pressedKeys.has('Shift'));
+    let showAll = $state(false);
 
     const severityConfig: Record<DiagnosticSeverity, { icon: typeof CircleX; label: string; class: string }> = {
         [DiagnosticSeverity.Fatal]: {
@@ -35,18 +40,32 @@
     };
 
     const diagnostics = $derived(game.diagnostics.diagnostics);
+    const visibleDiagnostics = $derived(showAll ? diagnostics : diagnostics.filter(d => !d.dismissed));
 
     function closeDialog() {
         open = false;
     }
 
-    function dismissDiagnostic(id: string) {
+    function dismissInstance(diag: GameDiagnostic) {
+        diag.dismissed = true;
+    }
+
+    function dismissAllOfKind(id: string) {
         game.diagnostics.dismiss(id as any);
     }
 
-    function clearAllDiagnostics() {
-        game.diagnostics.reset();
+    function suppressDiagnostic(id: string) {
+        // TODO: first time teaching tip on where you can unsuppress (in settings (when unsuppressing is implemented))
+        game.diagnostics.suppress(id as any);
     }
+
+    function clearBtn() {
+        if (shiftPressed)
+            game.diagnostics.reset();
+        else
+            game.diagnostics.dismissAll();
+    }
+    const showAllLabel = "Show hidden";
 </script>
 
 <Dialog bind:open>
@@ -56,47 +75,75 @@
                 <h2 class="text-lg font-bold">Diagnostics ({game.name})</h2>
                 <div class="header-actions">
                     <button
-                        class="btn preset-outlined-error"
-                        onclick={clearAllDiagnostics}
-                        disabled={diagnostics.length === 0}
+                        class="btn preset-tonal-surface"
+                        onclick={() => showAll = !showAll}
                     >
-                        Clear All
+                        {#if showAll}
+                            <Eye class="size-4" />
+                        {:else}
+                            <EyeOff class="size-4" />
+                        {/if}
+                        <span>{showAllLabel}</span>
+                    </button>
+                    <button
+                        class={['btn', shiftPressed ? "preset-tonal-warning" : "preset-tonal-surface"]}
+                        onclick={clearBtn}
+                        disabled={visibleDiagnostics.length === 0}
+                    >
+                    {shiftPressed ? "Clear all" : "Dismiss all"}
                     </button>
                 </div>
             </div>
 
             <div class="dialog-body">
-                {#if diagnostics.length === 0}
+                {#if visibleDiagnostics.length === 0}
+                    {@const diagCount = diagnostics.length}
                     <div class="empty-state">
                         <Info class="empty-icon" />
-                        <p>No active diagnostics</p>
-                        <p class="text-sm text-neutral-500">This game is running without any issues.</p>
+                        <p>{!diagCount ? 'No diagnostics' : 'No active diagnostics'}</p>
+                        <p class="text-sm text-neutral-500">
+                            {!diagCount
+                                ? 'This game is running without any issues.'
+                                : `All ${diagCount} diagnostics are suppressed or dismissed. Click "${showAllLabel}" to show them.`}
+                        </p>
                     </div>
                 {:else}
                     <div class="diagnostics-list">
-                        {#each diagnostics as diag ([diag.id, diag.timestamp])}
+                        {#each visibleDiagnostics as diag ([diag.id, diag.timestamp])}
                             {@const def = getDiagnosticById(diag.id)!}
                             {@const config = severityConfig[def.severity]}
                             {@const Icon = config.icon}
-                            <div class="diagnostic-item {config.class}">
+                            {@const ActionIcon = shiftPressed ? EyeOff : CheckCheck}
+                            {@const isDismissed = diag.dismissed}
+                            <div
+                                class="diagnostic-item {config.class} group {isDismissed ? 'dismissed' : ''}"
+                                data-shift={boolAttr(shiftPressed)}
+                            >
                                 <div class="diagnostic-icon">
-                                    <Icon />
+                                    <Icon size="20" />
                                 </div>
                                 <div class="diagnostic-content">
-                                    <div class="diagnostic-header">
-                                        <span class="severity-label">{config.label}</span>
-                                        <button
-                                            class="dismiss-btn"
-                                            onclick={() => dismissDiagnostic(diag.id)}
-                                            title="Dismiss diagnostic"
-                                        >
-                                            <X />
-                                        </button>
-                                    </div>
                                     <p class="diagnostic-message">{def.message}</p>
                                     {#if def.details}
                                         <p class="diagnostic-details">{def.details}</p>
                                     {/if}
+                                </div>
+                                <div class="actions">
+                                    <button
+                                        class="action-btn"
+                                        onclick={() => dismissInstance(diag)}
+                                        title="Dismiss this diagnostic"
+                                        >
+                                        <Check class="size-4" />
+                                    </button>
+                                    <button
+                                        class="action-btn"
+                                        class:suppress={shiftPressed}
+                                        onclick={() => shiftPressed ? suppressDiagnostic(diag.id) : dismissAllOfKind(diag.id)}
+                                        {@attach tooltip(shiftPressed ? "Suppress all diagnostics of this kind" : "Dismiss all diagnostics of this kind")}
+                                    >
+                                        <ActionIcon class="size-4" />
+                                    </button>
                                 </div>
                             </div>
                         {/each}
@@ -149,7 +196,7 @@
     }
 
     .diagnostic-item {
-        @apply flex gap-3 p-3 rounded-lg;
+        @apply relative flex gap-3 p-3 rounded-lg;
         @apply border transition-colors;
 
         &.severity-error, &.severity-fatal {
@@ -166,17 +213,17 @@
             @apply bg-sky-50 dark:bg-sky-900/20;
             @apply border-sky-200 dark:border-sky-800;
         }
+
+        &.dismissed {
+            @apply opacity-60;
+        }
     }
 
     .diagnostic-icon {
         @apply shrink-0 flex items-center justify-center;
     }
 
-    .diagnostic-icon :global(svg) {
-        @apply w-5 h-5;
-    }
-
-    .diagnostic-icon.severity-error {
+    .diagnostic-icon.severity-error, .diagnostic-icon.severity-fatal {
         @apply text-red-600 dark:text-red-400;
     }
 
@@ -192,32 +239,24 @@
         @apply flex flex-col gap-1 min-w-0;
     }
 
-    .diagnostic-header {
-        @apply flex items-center justify-between gap-2;
+    .actions {
+        @apply absolute top-2 right-2 flex items-center gap-1 transition-opacity;
+        @apply opacity-0 group-hover:opacity-100 focus-within:opacity-100;
+        @apply group-data-shift:opacity-100;
     }
 
-    .severity-label {
-        @apply text-xs font-medium uppercase tracking-wide;
-    }
-
-    .severity-label.severity-error {
-        @apply text-red-700 dark:text-red-300;
-    }
-
-    .severity-label.severity-warning {
-        @apply text-amber-700 dark:text-amber-300;
-    }
-
-    .severity-label.severity-info {
-        @apply text-sky-700 dark:text-sky-300;
-    }
-
-    .dismiss-btn {
-        @apply p-1 rounded-md;
-        @apply text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200;
-        @apply transition-colors;
+    .action-btn {
+        @apply p-1.5 rounded-md transition-colors text-neutral-400;
         &:hover {
-            @apply bg-neutral-200/50 dark:bg-neutral-700/50;
+            @apply bg-neutral-200 dark:bg-surface-700;
+            @apply text-neutral-900 dark:text-neutral-100;
+        }
+        &.suppress {
+            @apply text-amber-600 dark:text-amber-400;
+            &:hover {
+                @apply text-amber-700 dark:text-amber-300;
+                @apply bg-amber-100 dark:bg-amber-900/20;
+            }
         }
     }
 
@@ -226,7 +265,8 @@
     }
 
     .diagnostic-details {
-        @apply text-xs text-neutral-600 dark:text-neutral-400;
+        @apply text-neutral-600 dark:text-neutral-400;
+        @apply text-xs whitespace-pre-line;
     }
 
     .dialog-footer {
