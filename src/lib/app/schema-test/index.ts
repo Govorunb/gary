@@ -90,8 +90,11 @@ export class SchemaTestGame extends ClientGame {
         super.hello();
         
         await this.sendContext(
-            "Welcome to the JSON Schema test. Please execute the actions available to you.\n" +
-            "You may deviate from the given schema, it is part of the test.",
+            [
+                "Welcome to the JSON Schema test.",
+                "This is an application designed to test the performance of large language models (LLMs) and LLM inference providers on different kinds of JSON schemas.",
+                "Please execute the actions available to you. You may deviate from the given schema, it is part of the test.",
+            ].join("\n"),
             true
         );
         this.resetActions();
