@@ -31,7 +31,7 @@ export class Session {
         this.id = uuidv4();
         this.name = $state(name);
         this.ondispose = [];
-        this.context = new ContextManager(this);
+        this.context = new ContextManager();
         this.registry = new Registry(this);
         this.scheduler = new Scheduler(this);
         r.debug(`Created session ${name} (${this.id})`);

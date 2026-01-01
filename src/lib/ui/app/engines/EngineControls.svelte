@@ -44,20 +44,24 @@
     const machine = {
         errored: {
             icon: BugPlay,
+            text: "Resume",
             tooltip: "Clear error pause"
         },
         muted: {
             icon: Play,
+            text: "Resume",
             tooltip: "Unpause engine"
         },
         unmuted: {
             icon: Pause,
+            text: "Pause",
             tooltip: "Pause engine"
         }
     }
 
     const MuteIcon = $derived(machine[state].icon);
     const muteTooltip = $derived(machine[state].tooltip);
+    const muteText = $derived(machine[state].text);
 </script>
 
 <div class="engine-controls">
@@ -69,21 +73,21 @@
         data-errored={boolAttr(scheduler.errored)}
         {@attach tooltip(muteTooltip)}
     >
-        <MuteIcon />
+        <MuteIcon /> {muteText}
     </button>
     <button 
         onclick={() => poke(shiftPressed)} 
-        class="act-btn"
+        class="act-btn flex flex-row gap-2"
         disabled={scheduler.busy}
         {@attach tooltip(scheduler.busy ? "Engine busy" : shiftPressed ? "Force Act" : "Act (Shift for Force)")}
     >
         {#if scheduler.busy}
-            <Hourglass />
+            <Hourglass /> Busy
         {:else}
             {#if shiftPressed}
-                <HandFist />
+                <HandFist /> Force act
             {:else}
-                <Pointer />
+                <Pointer /> Act
             {/if}
         {/if}
     </button>
@@ -93,7 +97,7 @@
         {@attach tooltip("Act automatically")}
         data-checked={boolAttr(scheduler.autoPoker.autoAct)}
     >
-        <Infinity />
+        <Infinity /> Auto-act
     </button>
 </div>
 
@@ -105,6 +109,8 @@
     }
 
     .act-btn {
+        @apply flex flex-row gap-2;
+        @apply font-semibold text-base;
         @apply p-2 rounded-lg transition-all;
         @apply bg-neutral-100 dark:bg-neutral-800;
         @apply border border-neutral-200/50 dark:border-neutral-700/50;

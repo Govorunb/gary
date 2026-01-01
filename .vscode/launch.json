@@ -8,7 +8,6 @@
         {
             "name": "Pnpm dev",
             "command": "pnpm d",
-            "cwd": "${workspaceFolder}/app",
             "request": "launch",
             "type": "node-terminal"
         }

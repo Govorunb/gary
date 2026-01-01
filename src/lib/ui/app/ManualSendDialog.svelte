@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Action } from "$lib/api/v1/spec";
-    import type { Game } from "$lib/api/registry.svelte";
+    import type { Game } from "$lib/api/game.svelte";
     import { basicSetup, EditorView } from "codemirror";
     import { json } from "@codemirror/lang-json";
     import { EditorState } from "@codemirror/state";
@@ -153,10 +153,11 @@
         });
 
         try {
-            await game.conn.send(zAct.decode({ data: actData }));
-            const msg = `User act to ${game.name}: ${JSON.stringify(actData)}`;
-            session.context.actor({ text: msg }, true);
+            const msg = `Manual user act to ${game.name}: ${action.name}`;
+            // TODO: should ideally be visible to engine (as user role)
+            session.context.actor({ text: msg, visibilityOverrides: { engine: false, user: true } }, true);
             r.debug(msg);
+            await game.sendAction(actData);
         } catch (e) {
             r.error(`Failed to send action ${action.name}`, `${e}`);
         } finally {

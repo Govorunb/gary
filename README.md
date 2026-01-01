@@ -26,7 +26,7 @@ Compared to the previous Python app:
 
 That said...
 > [!Note]
-> The app just came out of a major rewrite (from Python + [panel](https://panel.holoviz.org/) to Svelte + [Tauri](https://tauri.app)) and is currently in late alpha. Some areas or systems may change their behavior and/or internals (especially internals).
+> The app is currently in late alpha. Some areas or systems may change their behavior and/or internals (especially internals).
 > The project is in active development so ~~don't be mean please 🥺👉👈~~ PRs are welcome. It's mostly for fun but I'm open to feedback and contributions.
 
 ## Quick start

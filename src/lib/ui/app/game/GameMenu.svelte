@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Game } from "$lib/api/registry.svelte";
+    import type { Game } from "$lib/api/game.svelte";
     // import VersionChip from "./VersionChip.svelte";
     import { Unplug, Braces } from "@lucide/svelte";
     import CopyButton from "$lib/ui/common/CopyButton.svelte";

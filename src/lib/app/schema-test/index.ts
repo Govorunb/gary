@@ -1,28 +1,27 @@
 import r from "$lib/app/utils/reporting";
-import type { GameWSSender } from "$lib/api/ws";
-import { ClientGame } from "./client-game";
-import type { ActionResult } from './client-game';
+import type { InternalConnectionClient } from "$lib/api/connection";
+import { ClientGame } from "../../api/client-game";
+import type { ActionResult } from '../../api/client-game';
 import { TEST_ACTIONS_MAP } from "./actions";
-
 
 export class SchemaTestGame extends ClientGame {
     private readonly actions = TEST_ACTIONS_MAP;
     private schemaChanged = false;
     private samsara = true; // when there's no more actions left, reregister them all again
 
-    constructor(conn: GameWSSender) {
+    constructor(conn: InternalConnectionClient) {
         super("JSON Schema Test", conn);
     }
 
     public async lifecycle() {
         await this.hello();
         for await (const msg of this.conn.listen()) {
-            await this.handleMessage(msg);
+            await this.recvRaw(msg);
         }
         this.dispose();
     }
 
-    protected async processAction(name: string, data: any): Promise<ActionResult> {
+    public async runAction(name: string, data: any): Promise<ActionResult> {
         let res: ActionResult;
         if (name === "schema_update") {
             res = await this.schemaUpdateHandler(name, data);
@@ -86,7 +85,7 @@ export class SchemaTestGame extends ClientGame {
         return res;
     }
 
-    protected async hello() {
+    public async hello() {
         r.info(`[schema-test] Registering ${this.actions.size} actions`);
         super.hello();
         
@@ -95,10 +94,11 @@ export class SchemaTestGame extends ClientGame {
             "You may deviate from the given schema, it is part of the test.",
             true
         );
+        this.resetActions();
     }
 
-    protected async resetActions(): Promise<void> {
-        this.registeredActions.clear();
+    public async resetActions(): Promise<void> {
+        await this.unregisterActions(this.registeredActions.keys().toArray());
         await this.registerActions(Array.from(this.actions.values()));
         this.schemaChanged = false;
     }

@@ -7,14 +7,14 @@ import { listenSub, safeInvoke, type Awaitable } from "$lib/app/utils";
 type OnMessageHandler = (msg: string) => Awaitable;
 type OnCloseHandler = (clientDisconnected?: CloseFrame) => Awaitable;
 type OnConnectHandler = () => Awaitable;
-type OnWSErrorHandler = (err: string) => Awaitable;
+type OnErrorHandler = (err: string) => Awaitable;
 
-export abstract class BaseWSConnection {
+export abstract class BaseConnection {
     #disposed: boolean = false;
     #onmessage: OnMessageHandler[] = [];
     #onclose: OnCloseHandler[] = [];
     #onconnect: OnConnectHandler[] = [];
-    #onwserror: OnWSErrorHandler[] = [];
+    #onerror: OnErrorHandler[] = [];
 
     public get closed() {
         return this.#disposed;
@@ -33,13 +33,14 @@ export abstract class BaseWSConnection {
         this.#disposed = true;
         this.#onconnect.length = 0;
         this.#onmessage.length = 0;
-        this.#onwserror.length = 0;
+        this.#onerror.length = 0;
         this.#onclose.forEach(close => close(clientDisconnected));
         this.#onclose.length = 0;
     }
 
     devAssertNotDisposed() {
-        if (this.#disposed) throw new Error(`Connection id '${this.shortId}' is closed`);
+        if (!this.#disposed) return;
+        r.fatal(`Connection id '${this.shortId}' is closed`);
     }
 
     public abstract sendRaw(text: string): Promise<void>;
@@ -47,7 +48,7 @@ export abstract class BaseWSConnection {
     public async receiveRaw(text: string) {
         if (this.#disposed) return;
         if (!this.#onmessage.length) {
-            r.warn(`Connection ${this.shortId} received a WS message but has no onmessage handler! I have no mouth and I must scream`);
+            r.warn(`Connection ${this.shortId} has no onmessage handlers!`, `Text: ${text}`);
         }
         for (const cbMessage of this.#onmessage) {
             await cbMessage(text);
@@ -63,18 +64,12 @@ export abstract class BaseWSConnection {
 
     protected async error(err: string) {
         if (this.#disposed) return;
-        for (const cbError of this.#onwserror) {
+        for (const cbError of this.#onerror) {
             await cbError(err);
         }
     }
 
-    public abstract disconnect(code?: number, reason?: string): Promise<void>;
-
-    protected clientDisconnect(clientDisconnected?: CloseFrame) {
-        if (this.#disposed) return;
-        r.info(`client ${this.shortId} disconnected`);
-        this.dispose(clientDisconnected);
-    }
+    public abstract disconnect(): Promise<void>;
 
     public send(msg: NeuroMessage): Promise<void> {
         return this.sendRaw(JSON.stringify(msg));
@@ -84,6 +79,7 @@ export abstract class BaseWSConnection {
         return this.receiveRaw(JSON.stringify(msg));
     }
 
+    // TODO: onconnect should instantly fire if already connected
     public onconnect(handler: OnConnectHandler) {
         this.#onconnect.push(handler);
     }
@@ -96,12 +92,29 @@ export abstract class BaseWSConnection {
         this.#onclose.push(handler);
     }
 
-    public onwserror(handler: OnWSErrorHandler) {
-        this.#onwserror.push(handler);
+    public onwserror(handler: OnErrorHandler) {
+        this.#onerror.push(handler);
+    }
+    
+    public async* listen(): AsyncGenerator<string> {
+        type T = string | null;
+        // type Resolve = Parameters<ConstructorParameters<typeof Promise<T>>[0]>[0];
+        type Resolve = (value: T) => void;
+        
+        const state = {resolve: null as Resolve | null};
+        
+        this.onmessage((text) => state.resolve?.(text));
+        this.onclose(() => state.resolve?.(null));
+        
+        while (!this.closed) {
+            const res = await new Promise<T>(resolve => void (state.resolve = resolve));
+            if (res === null) break;
+            yield res;
+        }
     }
 }
 
-export class GameWSConnection extends BaseWSConnection {
+export class TauriServerConnection extends BaseConnection {
     private subscriptions: UnlistenFn[] = [];
 
     constructor(
@@ -153,21 +166,30 @@ export class GameWSConnection extends BaseWSConnection {
             .orTee(e => r.error(`Tauri failed to close WS`, e));
         this.dispose();
     }
+
+    protected clientDisconnect(clientDisconnected?: CloseFrame) {
+        if (this.closed) return;
+        r.info(`client ${this.shortId} disconnected`);
+        this.dispose(clientDisconnected);
+    }
 }
 
-export class InternalWSConnection extends BaseWSConnection {
+export class InternalConnection extends BaseConnection {
     protected readonly sendListeners: ((value: string | null) => void)[] = [];
 
     constructor(id: string, version: string = "v1") {
         super(id, version);
-        setTimeout(() => this.connect(), 10);
+    }
+
+    public override connect() {
+        return super.connect();
     }
 
     public async sendRaw(text: string) {
         this.devAssertNotDisposed();
         r.verbose(`Internal connection ${this.shortId} sent: ${text}`);
         if (!this.sendListeners.length) {
-            r.warn(`${this.shortId} screaming into the void`);
+            r.error(`${this.shortId} screaming into the void`);
         }
         for (const listener of this.sendListeners) {
             listener(text);
@@ -196,10 +218,12 @@ export class InternalWSConnection extends BaseWSConnection {
     }
 }
 
-/** The 'client' side of a connection (as opposed to the regular, server side). */
-export class GameWSSender {
+/** The 'client' side of a connection (as opposed to the regular, server side).
+ * Inverts sender and receiver.
+*/
+export class InternalConnectionClient {
     constructor(
-        public readonly conn: InternalWSConnection
+        public readonly conn: InternalConnection
     ) {}
 
     public async send(msg: GameMessage) {
@@ -216,6 +240,9 @@ export class GameWSSender {
 
     public listen() {
         return this.conn.listenSend();
+    }
+    public listenSend() {
+        return this.conn.listen();
     }
 }
 

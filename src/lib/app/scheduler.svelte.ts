@@ -1,7 +1,7 @@
 import type { Session } from "./session.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
 import r from "$lib/app/utils/reporting";
-import { zAct, zActData, type Action } from "$lib/api/v1/spec";
+import { zActData, type Action } from "$lib/api/v1/spec";
 import type { EngineError, Engine, EngineAct } from "./engines/index.svelte";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { useDebounce } from "runed";
@@ -43,7 +43,14 @@ export class Scheduler {
         $effect(() => {
             if (!this.canAct) return;
             if (this.forceQueue.length) {
-                this.forceAct(this.forceQueue.shift());
+                // don't unqueue until we've finished processing it (helps diagnostics)
+                const force = this.forceQueue[0];
+                this.forceAct(force)
+                    .finally(() => {
+                        if (force === this.forceQueue[0]) {
+                            this.forceQueue.shift();
+                        }
+                    });
             } else if (this.actPending) {
                 this.tryAct();
             }
@@ -120,21 +127,20 @@ export class Scheduler {
         }
         r.info(`Engine acting ${forced ? "(forced)" : ""}: ${act.name}`);
         const actData = zActData.decode({...act});
-        // FIXME: xd
+        // FIXME: just do events mannnnnnnnnnnnnnn
         this.session.context.actor({
-            text: `Act${forced ? " (forced)" : ""}: ${JSON.stringify(actData)}`,
+            text: `Act${forced ? " (forced)" : ""}: ${actData.name}`,
+            // user-facing; LLM sees a copy of its own response (LLMEngine.actCore)
             visibilityOverrides: {
                 engine: false,
-            }
+                user: true,
+            },
+            customData: { actData },
         }, false);
-        this.session.context.system({
-            text: `Executing action ${act.name} (Request ID: ${actData.id.substring(0, 6)})`,
-            silent: true,
-        })
-        return ResultAsync.fromPromise(
-            game.conn.send(zAct.decode({data: actData})),
-            (e) => ({type: "connError", error: `Failed to send act: ${e}`} as const),
-        ).map(() => act);
+        return ResultAsync.fromPromise(game.sendAction(actData), 
+            (e) => ({type: "connError", error: `Failed to send act: ${e}`} as const)
+        )
+        .map(() => act);
     }
 
     private checkIgnored() {

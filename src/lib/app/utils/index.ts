@@ -174,3 +174,16 @@ export function clearLocalStorage() {
     localStorage.clear();
     location.reload();
 }
+
+declare global {
+    interface String {
+        reverse(): string;
+    }
+}
+String.prototype.reverse = function() {
+    return [...this].reverse().join("")
+};
+
+export function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}

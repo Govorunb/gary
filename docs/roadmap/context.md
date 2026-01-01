@@ -6,11 +6,11 @@ To get the app ready for a full 1.0 release, we need to significantly improve co
     Clearing context should "reset" it instead - keeping the system prompt as the first message; this applies to context trimming as well (read below)
     - [.] Editable system prompt
     Prefs (current `const SYSTEM_PROMPT` used when null); a user-facing editor would be nice as well.
-2. [ ] JSON Context
-    - [.] JSON prompting
-    Currently, messages are converted to a chat-like format (e.g. `Client: Something happened.`). Converting to JSON would allow us to include more data and more clearly delineate message boundaries. (TODO: this still sucks)
-    - [ ] Store raw LLM response
-    LLM responses are done through structured output; however, we throw away the outer `command` and modify the response before including it in context. This may affect LLM response accuracy as messages with the `assistant` role may include text the LLM didn't naturally generate; not to mention we'd have to re-convert it back to a `command` anyway for better <span style="text-decoration:underline dotted" title="Filling the model's context with good examples makes it less likely to make mistakes.">priming</span>. Easier to just store the raw response.
+2. [x] JSON Context
+    - [x] JSON prompting
+    Currently, messages are converted to a chat-like format (e.g. `Client: Something happened.`). Converting to JSON allows to include more data and more clearly delineate message boundaries. (TODO: this still sucks)
+    - [x] Store raw LLM response
+    LLM responses are done through structured output; however, we throw away the outer `command` and modify the response before including it in context. This may affect LLM response accuracy as messages with the `assistant` role may include text the LLM didn't naturally generate; not to mention we'd have to re-convert it back to a `command` anyway for better _priming_ (filling the model's context with good examples makes it less likely to make mistakes). Easier to just store the raw response.
 3. [ ] Context trimming
     - Sessions can be long, so context can grow very large. Context trimming will be necessary for smaller local models as their context windows are likely more in the 8K-32K range compared to remote hosting providers' 100K-200K.
     - [ ] Priority trimming

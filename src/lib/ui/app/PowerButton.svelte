@@ -35,7 +35,7 @@
             if (typeof(err_msg) !== "string") {
                 err_msg = `Internal error: ${err_msg}`;
             } else if (err_msg.includes("in use")) {
-                err_msg = `The port ${userPrefs.server.port} is already in use. Check for other instances of Gary, Tony, etc.`;
+                err_msg = `The port ${userPrefs.api.server.port} is already in use. Check for other instances of Gary, Tony, etc.`;
             }
             r.error({
                 message: err_title,
@@ -93,7 +93,7 @@
         </Popover>
     </div>
     {#if running}
-        <p class="text-sm">Server is running on port {userPrefs.server.port}</p>
+        <p class="text-sm">Server is running on port {userPrefs.api.server.port}</p>
     {:else}
         <p class="text-sm">Server is not running</p>
     {/if}

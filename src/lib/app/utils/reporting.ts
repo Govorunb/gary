@@ -43,6 +43,7 @@ export type ReportOptions = {
     toast?: boolean | ToastOptions;
     target?: string;
     ctx?: Record<string, any>;
+    ignoreStackLevels?: number;
 };
 
 export type ToastOptions = ExternalToast & {
@@ -101,6 +102,10 @@ class DefaultReporter implements Reporter {
         if (options.ctx) {
             msg += `\nContext: ${JSON.stringify(options.ctx)}`;
         }
+        // TODO: user configurable
+        if (level >= this.autoToastLevel && options.toast === undefined) {
+            options.toast = true;
+        }
 
         let logFunc: (message: string) => void;
         if (!isTauri()) {
@@ -114,7 +119,7 @@ class DefaultReporter implements Reporter {
                 [LogLevel.Fatal]: console.error,
             };
             // dev only
-            const loc = getCallerLocation(4);
+            const loc = getCallerLocation(4 + (options.ignoreStackLevels ?? 0));
             msg = `[${LogLevel[level]}] ${msg}\nTarget: [${options.target ?? "webview"}:${loc}]`;
             logFunc = logFuncMap[level];
         } else {
@@ -130,7 +135,7 @@ class DefaultReporter implements Reporter {
                 //      4 trace
                 //      5 actual_caller
                 // jfc
-                location: getCallerLocation(5),
+                location: getCallerLocation(5 + (options.ignoreStackLevels ?? 0)),
             }).orTee(err => toast.error("Failed to log!", { description: err }));
         }
         logFunc(msg);
@@ -178,10 +183,6 @@ class DefaultReporter implements Reporter {
         if (!opts.message) {
             throw new Error("No message provided", { cause: args });
         }
-        // TODO: user configurable
-        if (level >= this.autoToastLevel && opts.toast === undefined) {
-            opts.toast = true;
-        }
         return this.report(level, opts);
     }
 }
@@ -195,7 +196,14 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
     const stack = new Error().stack;
     if (!stack) return "(no stack)";
 
-    const filePathStart = window.location.origin.length;
+    let filePathStart: number;
+    try {
+        // no window in e.g. tests
+        filePathStart = window.location.origin.length;
+    } catch {
+        filePathStart = 0;
+    }
+
     if (stack.startsWith('Error')) {
         // Assume it's Chromium V8
         //
@@ -221,7 +229,7 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
                 lineNumber: string
                 columnNumber: string
             };
-            return `${functionName}@${filePath.substring(filePathStart)}`;
+            return `${functionName}@${filePath.substring(Math.max(filePathStart, filePath.indexOf("src/")))}`;
             // return `${functionName}@${filePath}:${lineNumber}:${columnNumber}`;
         } else {
             // Handle cases where the regex does not match (e.g., last line without function name)
@@ -234,7 +242,7 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
                     lineNumber: string
                     columnNumber: string
                 };
-                return `<anonymous>@${filePath.substring(filePathStart)}:${lineNumber}:${columnNumber}`;
+                return `<anonymous>@${filePath.substring(Math.max(filePathStart, filePath.indexOf("src/")))}:${lineNumber}:${columnNumber}`;
             }
         }
     } else {
@@ -251,7 +259,7 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
             // before: initDI@http://localhost:1420/src/lib/app/session.svelte.ts:44:19
             // after: initDI@src/lib/app/session.svelte.ts
             // seems to use the containing fn for closures, thank god (webkit 1, chromium 999)
-            .map(([name, loc]) => [name, loc.substring(filePathStart).replaceAll(/(:\d+)*$/g, "")]);
+            .map(([name, loc]) => [name, loc.substring(Math.max(filePathStart, loc.indexOf("src/"))).replaceAll(/(:\d+)*$/g, "")]);
         return filtered[targetStackDepth]?.filter((v) => v.length > 0).join('@');
     }
 }

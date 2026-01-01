@@ -4,19 +4,21 @@
     import EngineControls from "$lib/ui/app/engines/EngineControls.svelte";
     import ManualSendDialog from "$lib/ui/app/ManualSendDialog.svelte";
     import RawMessageDialog from "$lib/ui/app/RawMessageDialog.svelte";
+    import DiagnosticsDialog from "$lib/ui/app/DiagnosticsDialog.svelte";
     import UpdateDialog from "$lib/ui/app/UpdateDialog.svelte";
     import SettingsDialog from "$lib/ui/app/SettingsDialog.svelte";
     import { Settings } from "@lucide/svelte";
     import { getUIState, getUpdater, getUserPrefs } from "$lib/app/utils/di";
     import { registerAppHotkey } from "$lib/app/utils/hotkeys.svelte";
     import { onMount } from "svelte";
-    
+
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
     const updater = getUpdater();
 
     let manualSendOpen = $derived(!!dialogs.manualSendDialog);
     let rawMsgOpen = $derived(!!dialogs.rawMessageDialog);
+    let diagnosticsOpen = $derived(!!dialogs.diagnosticsDialog);
     let updateOpen = $derived(dialogs.updateDialogOpen);
     let settingsOpen = $derived(dialogs.settingsDialogOpen);
 
@@ -27,6 +29,9 @@
         if (!rawMsgOpen) {
             dialogs.closeRawMessageDialog();
         }
+        if (!diagnosticsOpen) {
+            dialogs.closeDiagnosticsDialog();
+        }
         if (!updateOpen) {
             dialogs.closeUpdateDialog();
         }
@@ -34,7 +39,7 @@
             dialogs.closeSettingsDialog();
         }
     })
-    
+
     onMount(() => {
         const settingsHotkey = registerAppHotkey(["Control", ","], () => {
             if (!dialogs.settingsDialogOpen)
@@ -83,9 +88,16 @@
 {/if}
 
 {#if dialogs.rawMessageDialog}
-    <RawMessageDialog 
+    <RawMessageDialog
         {...dialogs.rawMessageDialog}
         bind:open={rawMsgOpen}
+    />
+{/if}
+
+{#if dialogs.diagnosticsDialog}
+    <DiagnosticsDialog
+        {...dialogs.diagnosticsDialog}
+        bind:open={diagnosticsOpen}
     />
 {/if}
 

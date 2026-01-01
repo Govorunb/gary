@@ -6,7 +6,7 @@
     let userPrefs = getUserPrefs();
 </script>
 
-<NumberField bind:value={userPrefs.server.port}
+<NumberField bind:value={userPrefs.api.server.port}
     disabled={manager.running}
     min={1024}
     max={65535}

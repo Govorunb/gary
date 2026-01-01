@@ -1,7 +1,7 @@
 import type { Action } from "$lib/api/v1/spec";
 import { Engine, EngineError, zEngineAct, type EngineAct } from "../index.svelte";
 import type { Session } from "$lib/app/session.svelte";
-import type { ContextManager, Message } from "$lib/app/context.svelte";
+import type { Message } from "$lib/app/context.svelte";
 import type { JSONSchema } from "openai/lib/jsonschema";
 import z from "zod";
 import { jsonParse, zConst } from "$lib/app/utils";
@@ -92,7 +92,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         if (isForce && !resolvedActions.length) {
             return err(new EngineError("Tried to force act with no available actions"));
         }
-        let ctx = this.convertContext(session.context);
+        let ctx = this.convertContext(session);
         ctx.push(this.closerMessage());
         ctx = this.mergeUserTurns(ctx);
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
@@ -101,6 +101,12 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return err(gen.error);
         }
         const genMsg = gen.value;
+        // shown only to LLM -> preserves prior example for in-context learning or something
+        genMsg.visibilityOverrides = {
+            engine: true,
+            user: false,
+        };
+        session.context.actor(genMsg);
         const commandRes = jsonParse(genMsg.text)
                 .map(p => p.command)
                 .mapErr(e => new EngineError(`Failed to parse JSON: ${e}`, e));
@@ -232,11 +238,11 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
     
     // TODO: context trimming
-    private convertContext(ctx: ContextManager): OpenAIContext {
-        const msgs = ctx.actorView.map(msg => this.convertMessage(msg));
+    private convertContext(session: Session): OpenAIContext {
+        const msgs = session.context.actorView.map(msg => this.convertMessage(msg));
         msgs.unshift({
             role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
-            content: this.systemPrompt(ctx.session),
+            content: this.systemPrompt(session),
         });
         return msgs;
     }
