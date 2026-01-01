@@ -16,7 +16,7 @@ export class GameDiagnostics {
             const diag = getDiagnosticById(id);
             if (!diag) continue;
 
-            if (diag.severity === DiagnosticSeverity.Error) {
+            if (diag.severity >= DiagnosticSeverity.Error) {
                 return 'error';
             } else if (diag.severity === DiagnosticSeverity.Warning) {
                 status = 'warn';
@@ -75,10 +75,18 @@ export class GameDiagnostics {
     public dismiss(id: DiagnosticId) {
         this.diagnostics.forEach(d => d.id === id && (d.dismissed = true));
     }
+    public restore(id: DiagnosticId) {
+        this.diagnostics.forEach(d => d.id === id && (d.dismissed = false));
+    }
 
     public dismissAll() {
         this.diagnostics.forEach(d => d.dismissed = true);
     }
+
+    public restoreAll() {
+        this.diagnostics.forEach(d => d.dismissed = false);
+    }
+
 
     public reset() {
         this.diagnostics.length = 0;
