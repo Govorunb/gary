@@ -32,6 +32,12 @@ export interface GameDiagnostic<TContext = any> {
     dismissed?: boolean;
 }
 
+export const TIMEOUTS = {
+    "perf/late/startup": 500,
+    "perf/late/action_result": 500,
+    "perf/timeout/action_result": 5000,
+} as const;
+
 export const DIAGNOSTICS = [
     {
         id: "misc/test/info",
@@ -132,11 +138,18 @@ Per v1 of the API specification, the incoming action is ignored and the existing
 If the action is expected to take a long time, send a "validation" success result immediately and follow up later with a 'context' message.`
     },
     {
+        id: "perf/timeout/action_result",
+        severity: DiagnosticSeverity.Error,
+        message: "Action result not received",
+        details: `The game did not send an action result within a reasonable timeframe.
+If the action is expected to take a long time, send a "validation" success result immediately and follow up later with a 'context' message.`
+    },
+    {
         id: "prot/result/error_nomessage",
         severity: DiagnosticSeverity.Warning,
         message: "Unsuccessful action result should have message",
         details: "Provide feedback to let Neuro know what went wrong."
-    }
+    },
 ] as const satisfies DiagnosticDef[];
 
 export type DiagnosticId = (typeof DIAGNOSTICS)[number]["id"];

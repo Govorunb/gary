@@ -3,6 +3,7 @@ import { jsonParse, safeParse } from "$lib/app/utils";
 import r, { LogLevel } from "$lib/app/utils/reporting";
 import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
+import { TIMEOUTS } from "./diagnostics";
 import * as v1 from "./v1/spec";
 import type { BaseConnection } from "./connection";
 
@@ -15,6 +16,7 @@ export class Game {
     public status = $derived(this.diagnostics.status);
     public startupState: { type: "connected" | "implied" | "startup"; at: number; } | null = $state(null);
     private pendingActions = $state(new SvelteMap<string, number>());
+    private pendingTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
     constructor(
         public readonly session: Session,
@@ -33,6 +35,7 @@ export class Game {
             if (this.name === v1PendingGameName(conn.id)) return;
             // FIXME: should be system ctx
             void this.context(`${this.name} disconnected`, true);
+            this.clearAllTimeouts();
         });
         conn.onmessage((txt) => this.recv(txt));
         conn.onwserror((err) => {
@@ -126,10 +129,15 @@ export class Game {
                 const sentAt = this.pendingActions.get(msg.data.id);
                 if (sentAt) {
                     const diff = Date.now() - sentAt;
-                    if (diff > 500) {
+                    if (diff > TIMEOUTS["perf/late/action_result"]) {
                         this.diagnostics.trigger("perf/late/action_result");
                     }
                     this.pendingActions.delete(msg.data.id);
+                }
+                const timeoutId = this.pendingTimeouts.get(msg.data.id);
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    this.pendingTimeouts.delete(msg.data.id);
                 }
                 const silent = msg.data.success;
                 let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
@@ -155,7 +163,7 @@ export class Game {
             const now = Date.now();
             const startupDelay = now - (this.startupState?.at ?? now);
             this.startupState = { type: "startup", at: now };
-            if (startupDelay > 500) {
+            if (startupDelay > TIMEOUTS["perf/late/startup"]) {
                 this.diagnostics.trigger("perf/late/startup", { delay: startupDelay });
             }
         }
@@ -223,6 +231,13 @@ export class Game {
             silent: true,
         });
         this.pendingActions.set(actData.id, Date.now());
+        const timeoutId = setTimeout(() => {
+            if (this.pendingActions.has(actData.id)) {
+                this.diagnostics.trigger("perf/timeout/action_result", { actionId: actData.id });
+                this.pendingActions.delete(actData.id);
+            }
+        }, TIMEOUTS["perf/timeout/action_result"]);
+        this.pendingTimeouts.set(actData.id, timeoutId);
         await this.conn.send(v1.zAct.decode({data: actData}));
     }
 
@@ -238,6 +253,13 @@ export class Game {
         };
         const prompt = `You must perform one of the following actions, given this information: ${JSON.stringify(obj)}`;
         return prompt;
+    }
+
+    private clearAllTimeouts() {
+        for (const [_id, timeoutId] of this.pendingTimeouts) {
+            clearTimeout(timeoutId);
+        }
+        this.pendingTimeouts.clear();
     }
 }
 

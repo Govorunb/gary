@@ -1,10 +1,11 @@
 import { expect, vi, describe } from "vitest";
 import * as v1 from "$lib/api/v1/spec";
 import { test } from "$lib/testing";
+import { TIMEOUTS } from "$lib/api/diagnostics";
 
 describe("startup", () => {
     test("perf/late/startup", async ({harness}) => {
-        vi.advanceTimersByTime(600);
+        vi.advanceTimersByTime(TIMEOUTS["perf/late/startup"] + 100);
         await harness.client.hello();
 
         expect(harness.diagnosticIds).toStrictEqual(["perf/late/startup"]);
@@ -176,7 +177,7 @@ describe("action/result", () => {
 
         await harness.server.sendAction(v1.zActData.decode({id: "test-id", name: "e" }));
 
-        vi.advanceTimersByTime(600);
+        vi.advanceTimersByTime(TIMEOUTS["perf/late/action_result"] + 100);
 
         const result: v1.ActionResult = v1.zActionResult.decode({
             game: harness.server.name,
@@ -185,6 +186,16 @@ describe("action/result", () => {
         await harness.client.conn.send(result);
 
         expect(harness.diagnosticIds).toStrictEqual(["perf/late/action_result"]);
+    });
+    test("perf/timeout/action_result", async ({harness}) => {
+        await harness.client.hello();
+
+        await harness.server.sendAction(v1.zActData.decode({id: "test-id", name: "e"}));
+
+        vi.advanceTimersByTime(TIMEOUTS["perf/timeout/action_result"] + 100);
+
+        expect(harness.diagnosticIds).toStrictEqual(["perf/timeout/action_result"]);
+        expect(harness.diagnostics[0].context).toEqual({ actionId: "test-id" });
     });
 });
 
