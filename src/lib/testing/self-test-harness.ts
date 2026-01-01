@@ -1,23 +1,33 @@
 import { Game } from "$lib/api/game.svelte";
 import { ClientGame, type ActionResult } from "$lib/api/client-game";
 import { InternalConnection, InternalConnectionClient } from "$lib/api/connection";
-import { zGamePrefs, zUserPrefs } from "$lib/app/prefs.svelte";
+import { type UserPrefs, zGamePrefs, zUserPrefs } from "$lib/app/prefs.svelte";
 import { ContextManager } from "$lib/app/context.svelte";
+import type { Scheduler } from "$lib/app/scheduler.svelte";
+import type * as v1 from "$lib/api/v1/spec";
+
+const mockScheduler = {
+    forceQueue: [] as Array<v1.Action[] | null>,
+    actPending: false
+};
+
+const mockPrefs = {
+    ...zUserPrefs.decode({}),
+    getGamePrefs(game: string) {
+        return this.api.games[game] ??= zGamePrefs.decode({});
+    }
+};
+
+function mock<T, U extends Partial<T>>(mock: U): U & { [K in Exclude<keyof T, keyof U>]: never } {
+    return mock as any;
+}
 
 class MockSession {
     readonly id = "test-session";
     readonly name = "test-session";
-    readonly context: any = new ContextManager(null!);
-    readonly scheduler: any = {
-        forceQueue: [],
-        actPending: false
-    };
-    readonly userPrefs: any = {
-        ...zUserPrefs.decode({}),
-        getGamePrefs(game: string) {
-            return this.api.games[game] ??= zGamePrefs.decode({});
-        }
-    };
+    readonly context = new ContextManager();
+    readonly scheduler = mock<Scheduler, typeof mockScheduler>(mockScheduler);
+    readonly userPrefs = mock<UserPrefs, typeof mockPrefs>(mockPrefs);
     readonly engines: Record<string, any> = {};
     readonly activeEngine: any = null;
 }

@@ -1,5 +1,4 @@
 import { v7 as uuid7 } from "uuid";
-import type { Session } from "./session.svelte";
 import { z } from "zod";
 import { zConst } from "$lib/app/utils";
 import type { Game } from "$lib/api/game.svelte";
@@ -11,7 +10,7 @@ export class ContextManager {
     /** A subset of messages that are visible to the user. */
     readonly userView: Message[] = $derived(this.allMessages.filter(m => m.visibilityOverrides?.user ?? true));
 
-    constructor(public readonly session: Session) {
+    constructor() {
         this.reset();
     }
 
