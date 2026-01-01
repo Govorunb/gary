@@ -1,13 +1,11 @@
 <script lang="ts">
-    import { basicSetup, EditorView } from "codemirror";
-    import { json } from "@codemirror/lang-json";
-    import { EditorState } from "@codemirror/state";
     import { Dices, Send } from "@lucide/svelte";
     import { getSession, getUIState } from "$lib/app/utils/di";
     import { JSONSchemaFaker } from "json-schema-faker";
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
     import CopyButton from "../../common/CopyButton.svelte";
+    import CodeMirror from "../../common/CodeMirror.svelte";
     import { preventDefault, tooltip } from "$lib/app/utils";
     import type { Game, GameAction } from "$lib/api/game.svelte";
     import { boolAttr } from "runed";
@@ -24,36 +22,8 @@
     const active = $derived(action.active);
 
     let open = $state(false);
-
+    let schemaOpen = $state(false);
     const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
-    let schemaEl = $state<HTMLDivElement>();
-    let view: EditorView | null = null;
-    $effect(() => {
-        if (schemaEl && schemaJson) {
-            // CM recommends @lezer/highlight over a full editor; however,
-            // - line numbers
-            // - fold gutter
-            // - active line highlighting
-            // - active line gutter highlighting
-            // - selection match highlighting
-            view ??= new EditorView({
-                parent: schemaEl,
-                doc: schemaJson,
-                extensions: [
-                    basicSetup,
-                    // FIXME: token colors in dark mode (boolean invisible until selected, integer invisible if selected, etc)
-                    // workaround in global.css but needs an actual fix https://codemirror.net/examples/styling/#highlighting
-                    json(),
-                    EditorState.readOnly.of(true),
-                    EditorView.editable.of(false),
-                    EditorView.lineWrapping,
-                ],
-            });
-        } else {
-            view?.destroy();
-            view = null;
-        }
-    });
 
     function send() {
         uiState.dialogs.openManualSendDialog(action, game);
@@ -109,18 +79,14 @@
         <p>{action.description}</p>
     </div>
     {#if schemaJson}
-        <details class="accordion">
+        <details class="accordion" bind:open={schemaOpen}>
             <summary>
                 <span>Schema</span>
                 <div class="actions">
                     <CopyButton data={schemaJson} desc="schema" />
                 </div>
             </summary>
-            <!-- (perf) defer loading editor until user actually opens the action
-                flickers if placed in the schemaJson conditional above (so don't) -->
-            {#if open}
-                <div class="schema-code" bind:this={schemaEl}></div>
-            {/if}
+            <CodeMirror code={schemaJson} open={schemaOpen} readonly />
         </details>
     {/if}
 </details>
@@ -166,11 +132,6 @@
         @apply text-neutral-600 dark:text-neutral-200;
     }
 
-    .schema-code {
-        @apply text-xs;
-        @apply bg-neutral-100 dark:bg-neutral-800;
-        @apply text-neutral-900 dark:text-neutral-100;
-    }
     .root:not([data-active]) {
         @apply opacity-60;
     }

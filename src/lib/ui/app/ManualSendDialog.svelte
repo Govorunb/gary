@@ -1,10 +1,8 @@
 <script lang="ts">
     import type { Action } from "$lib/api/v1/spec";
     import type { Game } from "$lib/api/game.svelte";
-    import { basicSetup, EditorView } from "codemirror";
-    import { json } from "@codemirror/lang-json";
-    import { EditorState } from "@codemirror/state";
     import Dialog from '$lib/ui/common/Dialog.svelte';
+    import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
     import { Send, ChevronLeft, ChevronRight, Dice6 } from "@lucide/svelte";
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
@@ -15,7 +13,6 @@
     import { tooltip } from "$lib/app/utils";
     import { JSONSchemaFaker } from "json-schema-faker";
     import { boolAttr, PressedKeys } from "runed";
-    import { on } from "svelte/events";
 
     type Props = {
         open: boolean;
@@ -32,19 +29,16 @@
     keys.onKeys(["Control", "Enter"], sendAction);
     keys.onKeys(["Alt", "R"], reroll);
 
-    let editorEl = $state<HTMLDivElement>();
-    let schemaEl = $state<HTMLDivElement>();
-    let view = $state<EditorView | null>(null);
-    let schemaView = $state<EditorView | null>(null);
     let jsonContent = $state(genJson());
     let validationErrors = $state<string[] | null>(null);
     const isValid = $derived(!validationErrors);
     const schemaCollapsed = $derived(userPrefs.app.manualSendSchemaCollapsed);
+    const schemaOpen = $derived(!schemaCollapsed);
 
     function toggleCollapsed() {
         userPrefs.app.manualSendSchemaCollapsed = !userPrefs.app.manualSendSchemaCollapsed;
     }
-    
+
     const validate = $derived((action.schema && ajv.compile(action.schema)) as ValidateFunction);
     const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
 
@@ -54,67 +48,16 @@
     }
 
     $effect(() => {
-        if (editorEl && open && !view) {
-            view = new EditorView({
-                parent: editorEl,
-                doc: jsonContent,
-                extensions: [
-                    basicSetup,
-                    json(),
-                    EditorView.lineWrapping,
-                    EditorView.updateListener.of((update) => {
-                        if (update.docChanged) {
-                            jsonContent = view!.state.doc.toString();
-                            validateJSON();
-                        }
-                    }),
-                ],
-            });
-            validateJSON();
-        } else if (!open) {
-            view?.destroy();
-            view = null;
-        }
-    });
-    function reroll() {
-        view?.dispatch({
-            changes: {
-                from: 0,
-                to: view.state.doc.length,
-                insert: genJson(),
-            },
-        });
-    }
-    $effect(() => {
-        return editorEl && on(editorEl, 'keydown', (e) => {
-            if (e.key === "Enter" && e.ctrlKey) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        })
-    })
-
-    $effect(() => {
-        if (schemaEl && schemaJson) {
-            schemaView ??= new EditorView({
-                parent: schemaEl,
-                doc: schemaJson,
-                extensions: [
-                    basicSetup,
-                    json(),
-                    EditorView.lineWrapping,
-                    EditorState.readOnly.of(true),
-                    EditorView.editable.of(false),
-                ],
-            });
-        } else {
-            schemaView?.destroy();
-            schemaView = null;
-        }
-    });
-    $effect(() => {
         validateJSON();
     })
+
+    function reroll() {
+        jsonContent = genJson();
+    }
+
+    function handleCodeChange(newCode: string) {
+        jsonContent = newCode;
+    }
 
     function validateJSON() {
         if (!action.schema) {
@@ -125,15 +68,15 @@
             const parsed = JSON.parse(jsonContent);
 
             const valid = validate(parsed);
-            
+
             if (!valid && validate.errors) {
-                const errorMessages = validate.errors.map(err => 
+                const errorMessages = validate.errors.map(err =>
                     `${err.instancePath || '(root)'}: ${err.message}`
                 );
                 validationErrors = errorMessages;
                 return;
             }
-            
+
             validationErrors = null;
         } catch (e) {
             validationErrors = [e instanceof Error ? e.message : 'Invalid JSON'];
@@ -206,7 +149,13 @@
                                 </div>
                                 <div class="editor-split" class:schema-collapsed={schemaCollapsed}>
                                     <div class="editor-panel">
-                                        <div class="editor-container" bind:this={editorEl}></div>
+                                        <CodeMirror
+                                            code={jsonContent}
+                                            {open}
+                                            onChange={handleCodeChange}
+                                            minHeight="12rem"
+                                            maxHeight="24rem"
+                                        />
                                         {#if validationErrors}
                                             <div class="error-message">
                                                 {#each validationErrors as error}
@@ -216,7 +165,15 @@
                                         {/if}
                                     </div>
                                     <div class="editor-panel" class:hidden={schemaCollapsed}>
-                                        <div class="editor-container schema-container" bind:this={schemaEl}></div>
+                                        {#if schemaJson}
+                                            <CodeMirror
+                                                code={schemaJson}
+                                                open={schemaOpen}
+                                                readonly
+                                                minHeight="12rem"
+                                                maxHeight="24rem"
+                                            />
+                                        {/if}
                                     </div>
                                 </div>
                             </div>
@@ -335,20 +292,6 @@
     .editor-label {
         @apply text-lg font-medium;
         @apply self-end;
-        @apply text-neutral-700 dark:text-neutral-300;
-    }
-
-    .editor-container {
-        @apply flex-1 min-w-md min-h-48 max-h-96 overflow-auto;
-        @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
-        @apply bg-neutral-50 dark:bg-neutral-900;
-        & :global(.cm-editor) {
-            @apply h-full;
-        }
-    }
-
-    .schema-container {
-        @apply bg-neutral-100 dark:bg-neutral-800;
         @apply text-neutral-700 dark:text-neutral-300;
     }
 

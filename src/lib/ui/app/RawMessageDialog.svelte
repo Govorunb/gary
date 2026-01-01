@@ -1,8 +1,7 @@
 <script lang="ts">
     import type { Game } from "$lib/api/game.svelte";
-    import { basicSetup, EditorView } from "codemirror";
-    import { json } from "@codemirror/lang-json";
     import Dialog from '$lib/ui/common/Dialog.svelte';
+    import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
     import { Send } from "@lucide/svelte";
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
@@ -23,8 +22,6 @@
     const keys = new PressedKeys();
     keys.onKeys(["Control", "Enter"], sendMessage);
 
-    let editorEl = $state<HTMLDivElement>();
-    let view = $state<EditorView | null>(null);
     let jsonContent = $state('');
     let validationErrors = $state<string[] | null>(null);
     let selectedPreset = $derived(userPrefs.app.rawSendSelectedPreset);
@@ -76,74 +73,40 @@
         let key = presetKey as keyof typeof messagePresets;
         selectedPreset = key;
         const preset = messagePresets[key];
-        if (preset && view) {
-            view.dispatch({
-                changes: {
-                    from: 0,
-                    to: view.state.doc.length,
-                    insert: preset.template,
-                },
-            });
+        if (preset) {
+            jsonContent = preset.template;
         }
     }
 
     $effect(() => {
-        if (editorEl && open && !view) {
-            view = new EditorView({
-                parent: editorEl,
-                doc: jsonContent,
-                extensions: [
-                    basicSetup,
-                    json(),
-                    EditorView.lineWrapping,
-                    EditorView.updateListener.of((update) => {
-                        if (update.docChanged) {
-                            jsonContent = view!.state.doc.toString();
-                            validateJSON();
-                        }
-                    }),
-                ],
-            });
-            validateJSON();
-            // Focus the editor when dialog opens
-            view.focus();
-        } else if (!open) {
-            view?.destroy();
-            view = null;
-        }
+        validateJSON();
     });
-
-    $effect(() => {
-        if (!editorEl) return;
-        return on(editorEl, 'keyup', (e) => {
-            if (e.key === "Enter" && e.ctrlKey) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        })
-    })
 
     function validateJSON() {
         if (!jsonContent.trim()) {
             validationErrors = ['Message should not be empty'];
             return;
         }
-        
+
         const result = jsonParse(jsonContent).andThen(c => safeParse(zNeuroMessage, c));
-        
+
         if (result.isErr()) {
-            if ('issues' in result.error) { // zod parse failed
-                const errorMessages = result.error.issues.map(err => 
+            if ('issues' in result.error) {
+                const errorMessages = result.error.issues.map(err =>
                     `${err.path.join('.') || '(root)'}: ${err.message}`
                 );
                 validationErrors = errorMessages;
-            } else { // json parse failed
+            } else {
                 validationErrors = [result.error.message ?? "Invalid JSON"];
             }
             return;
         }
-        
+
         validationErrors = null;
+    }
+
+    function handleCodeChange(newCode: string) {
+        jsonContent = newCode;
     }
 
     function closeDialog() {
@@ -179,7 +142,13 @@
             <div class="dialog-body">
                 <div class="editor-section">
                     <div class="editor-panel">
-                        <div class="editor-container" bind:this={editorEl} aria-label="Message JSON editor"></div>
+                        <CodeMirror
+                            code={jsonContent}
+                            {open}
+                            onChange={handleCodeChange}
+                            minHeight="12rem"
+                            maxHeight="24rem"
+                        />
                         {#if validationErrors}
                             <div class="validation-warnings">
                                 <div class="warning-header">Validation Warnings:</div>
@@ -265,16 +234,6 @@
 
     .editor-panel {
         @apply flex flex-col gap-2 flex-1 overflow-hidden;
-    }
-
-    .editor-container {
-        @apply flex-1 min-w-md min-h-48 max-h-96 overflow-auto;
-        @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
-        @apply bg-neutral-50 dark:bg-neutral-900;
-        
-        & :global(.cm-editor) {
-            @apply h-full;
-        }
     }
 
     .validation-warnings {
