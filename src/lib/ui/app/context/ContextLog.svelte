@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { untrack } from "svelte";
+    import { settled, untrack } from "svelte";
     import { getSession } from "$lib/app/utils/di";
     import OutLink from "$lib/ui/common/OutLink.svelte";
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
@@ -15,6 +15,7 @@
     let scrollOffset = $state(0);
     const scrollThreshold = 100;
     const logElemSize = new ElementSize(() => scrollElem);
+    let pendingScroll = $state(false);
 
     $effect(() => {
         void session.context.userView.length;
@@ -23,8 +24,12 @@
     });
     
     function updateScroll() {
-        if (scrollElem && scrollOffset < scrollThreshold) {
-            scrollElem.scrollTop = scrollElem.scrollHeight;
+        if (!pendingScroll && scrollElem && scrollOffset < scrollThreshold) {
+            pendingScroll = true;
+            settled().then(() => {
+                pendingScroll = false;
+                scrollElem!.scrollTop = scrollElem!.scrollHeight;
+            });
         }
     }
 

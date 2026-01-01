@@ -17,6 +17,7 @@ export class Game {
     public status = $derived(this.diagnostics.status);
     public startupState: { type: "connected" | "implied" | "startup"; at: number; } | null = $state(null);
     private pendingActions = $state(new SvelteMap<string, PendingAction>());
+    private forceQueue: v1.ForceAction[] = $state([]);
 
     constructor(
         public readonly session: Session,
@@ -24,6 +25,15 @@ export class Game {
         name?: string
     ) {
         this.name = name ?? v1PendingGameName(conn.id);
+        const dispose = $effect.root(() => {
+            $effect(() => {
+                if (this.forceQueue.length && !this.pendingActions.size) {
+                    const force = this.forceQueue.shift()!;
+                    this.forceAction(force);
+                }
+            });
+        });
+        conn.onclose(dispose);
 
         conn.onconnect(() => {
             this.startupState = { type: "connected", at: Date.now() };
@@ -101,26 +111,7 @@ export class Game {
                 this.unregisterActions(msg.data.action_names);
                 break;
             case "actions/force":
-                const actions = msg.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
-                if (msg.data.action_names.length === 0) {
-                    this.diagnostics.trigger("prot/force/empty", { msg });
-                    return;
-                }
-                if (actions.length < msg.data.action_names.length) {
-                    if (actions.length === 0) {
-                        this.diagnostics.trigger("prot/force/all_invalid", { msg });
-                        return;
-                    } else {
-                        this.diagnostics.trigger("prot/force/some_invalid", { msg, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
-                    }
-                }
-                // only real forces (from client) - manual/autoact forces exist in the queue but are null
-                const realForces = this.session.scheduler.forceQueue.filter(Boolean);
-                if (realForces.length) {
-                    this.diagnostics.trigger("prot/force/multiple", { msg });
-                }
-                this.session.scheduler.forceQueue.push(actions);
-                await this.context(this.forceMsg(actions, msg.data.query, msg.data.state), false);
+                await this.forceAction(msg);
                 break;
             case "action/result":
                 await this.actionResult(msg);
@@ -213,10 +204,44 @@ export class Game {
         r.debug(`(${this.name}) Actions unregistered: [${actions}]`);
     }
 
+    async forceAction(msg: v1.ForceAction) {
+        if (this.pendingActions.size) {
+            this.diagnostics.trigger("prot/force/while_pending_result", {
+                pending: this.pendingActions.values().toArray(),
+                msg,
+            });
+            this.forceQueue.push(msg);
+            return;
+        }
+        const actions = msg.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
+        if (msg.data.action_names.length === 0) {
+            this.diagnostics.trigger("prot/force/empty", { msg });
+            return;
+        }
+        if (actions.length < msg.data.action_names.length) {
+            if (actions.length === 0) {
+                this.diagnostics.trigger("prot/force/all_invalid", { msg });
+                return;
+            } else {
+                this.diagnostics.trigger("prot/force/some_invalid", { msg, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
+            }
+        }
+        // only real forces (from client) - manual/autoact forces exist in the queue but are null
+        const realForces = this.session.scheduler.forceQueue.filter(Boolean);
+        if (realForces.length + this.forceQueue.length) {
+            this.diagnostics.trigger("prot/force/multiple", { msg });
+        }
+        this.session.scheduler.forceQueue.push(actions);
+        await this.context(this.forceMsg(actions, msg.data.query, msg.data.state), false);
+    }
+
     async sendAction(actData: v1.ActData) {
         this.session.context.system({
-            text: `Executing action ${actData.name} (Request ID: ${actData.id.substring(0, 6)})`,
+            text: `Executing action ${actData.name} (Request ID: ${actData.id.substring(0, 8)})`,
             silent: true,
+            visibilityOverrides: {
+                user: false,
+            }
         });
         const sentAt = Date.now();
         const timeout = setTimeout(() => {
@@ -247,7 +272,7 @@ export class Game {
             this.diagnostics.trigger("prot/result/error_nomessage");
         }
         const silent = success;
-        let text = `Result for action ${id.substring(0, 6)}: ${success ? "Performing" : "Failure"}`;
+        let text = `Result for action ${id.substring(0, 8)}: ${success ? "Performing" : "Failure"}`;
         text += message ? ` (${message})` : " (no message)";
         await this.context(text, silent);
     }
@@ -259,7 +284,7 @@ export class Game {
         });
 
         // biome-ignore lint/style/useTemplate: no thanks
-        const msg = `User act to ${this.name}: ${actData.name}` + (actData.data ? `\nData: ${actData.data}` : " (no data)");
+        const msg = `User act to ${this.name} (request ID ${actData.id.substring(0, 8)}): ${actData.name}` + (actData.data ? `\nData: ${actData.data}` : " (no data)");
         this.session.context.user({ text: msg, silent: true });
         r.debug(msg);
         await this.sendAction(actData);

@@ -38,6 +38,8 @@ export const TIMEOUTS = {
     "perf/timeout/action_result": 5000,
 } as const;
 
+const asyncResultNag = `If the action is expected to take a long time, send a "validation" success result immediately and follow up later with a 'context' message.`;
+
 export const DIAGNOSTICS = [
     {
         id: "misc/test/info",
@@ -107,6 +109,12 @@ Per v1 of the API specification, the incoming action is ignored and the existing
         details: "Neuro can only handle one action force at a time.",
     },
     {
+        id: "prot/force/while_pending_result",
+        severity: DiagnosticSeverity.Error,
+        message: "Cannot process actions/force while waiting for an action result",
+        details: `Make sure you send action results as soon as possible.\n${asyncResultNag}`
+    },
+    {
         id: "prot/v1/game_renamed",
         severity: DiagnosticSeverity.Warning,
         message: "Do not rename game",
@@ -134,15 +142,13 @@ Per v1 of the API specification, the incoming action is ignored and the existing
         id: "perf/late/action_result",
         severity: DiagnosticSeverity.Warning,
         message: "Late action result",
-        details: `Send action results as soon as possible.
-If the action is expected to take a long time, send a "validation" success result immediately and follow up later with a 'context' message.`
+        details: `Send action results as soon as possible.\n${asyncResultNag}`
     },
     {
         id: "perf/timeout/action_result",
         severity: DiagnosticSeverity.Error,
         message: "Action result not received",
-        details: `The game did not send an action result within a reasonable timeframe.
-If the action is expected to take a long time, send a "validation" success result immediately and follow up later with a 'context' message.`
+        details: `The game did not send an action result within a reasonable timeframe.\n${asyncResultNag}`
     },
     {
         id: "prot/result/error_nomessage",

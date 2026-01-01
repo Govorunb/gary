@@ -43,14 +43,8 @@ export class Scheduler {
         $effect(() => {
             if (!this.canAct) return;
             if (this.forceQueue.length) {
-                // don't unqueue until we've finished processing it (helps diagnostics)
-                const force = this.forceQueue[0];
-                this.forceAct(force)
-                    .finally(() => {
-                        if (force === this.forceQueue[0]) {
-                            this.forceQueue.shift();
-                        }
-                    });
+                const force = this.forceQueue.shift();
+                this.forceAct(force);
             } else if (this.actPending) {
                 this.tryAct();
             }
@@ -129,14 +123,14 @@ export class Scheduler {
         const actData = zActData.decode({...act});
         // FIXME: just do events mannnnnnnnnnnnnnn
         this.session.context.actor({
-            text: `Act${forced ? " (forced)" : ""}: ${actData.name}`
+            text: `Act${forced ? " (forced)" : ""}: ${actData.name} (ID ${actData.id.substring(0, 8)})`
                 + (actData.data ? `\nData: ${actData.data}` : " (no data)"),
             // user-facing; LLM sees a copy of its own response (LLMEngine.actCore)
             visibilityOverrides: {
                 engine: false,
                 user: true,
             },
-            customData: { actData },
+            customData: { actData, game: game.name },
         }, false);
         return ResultAsync.fromPromise(game.sendAction(actData), 
             (e) => ({type: "connError", error: `Failed to send act: ${e}`} as const)
