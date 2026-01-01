@@ -3,7 +3,7 @@ import type { InternalConnectionClient } from "$lib/api/connection";
 import { ClientGame } from "../../api/client-game";
 import type { ActionResult } from '../../api/client-game';
 import { TEST_ACTIONS_MAP } from "./actions";
-import { sleep } from "../utils";
+// import { sleep } from "../utils";
 
 
 export class SchemaTestGame extends ClientGame {
@@ -16,14 +16,14 @@ export class SchemaTestGame extends ClientGame {
     }
 
     public async lifecycle() {
-        await sleep(600);
-        await this.registerActions([{name: "test", schema: null}]);
-        await this.registerActions([{name: "test", schema: null}]);
-        await this.unregisterActions(["test"]);
-        await this.unregisterActions(["test"]);
-        await this.unregisterActions(["test"]);
-        await this.unregisterActions(["erm"]);
-        await this.hello();
+        // await sleep(600);
+        // await this.registerActions([{name: "test", schema: null}]);
+        // await this.registerActions([{name: "test", schema: null}]);
+        // await this.unregisterActions(["test"]);
+        // await this.unregisterActions(["test"]);
+        // await this.unregisterActions(["test"]);
+        // await this.unregisterActions(["erm"]);
+        // await this.hello();
         await this.hello();
         for await (const msg of this.conn.listen()) {
             await this.recvRaw(msg);
