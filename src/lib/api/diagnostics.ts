@@ -64,9 +64,9 @@ export const DIAGNOSTICS = [
         details: "The game sent a message that doesn't conform to the API specification"
     },
     {
-        id: "prot/v1/register/dupe",
+        id: "prot/v1/register/conflict",
         severity: DiagnosticSeverity.Warning,
-        message: "Duplicate action registration attempted",
+        message: "Duplicate action registration conflict",
         details: `An action with this name is already registered.
 Per v1 of the API specification, the incoming action is ignored and the existing is kept; this may not be the behaviour you expected or intended.`,
     },

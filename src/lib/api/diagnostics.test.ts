@@ -62,13 +62,13 @@ describe("prot/invalid_message", () => {
 });
 
 describe("actions/register", () => {
-    test("prot/v1/register/dupe", async ({harness}) => {
+    test("prot/v1/register/conflict", async ({harness}) => {
         await harness.client.hello();
         const action = v1.zAction.decode({ name: "test_action", schema: null });
         await harness.client.registerActions([action]);
         await harness.client.registerActions([action]);
     
-        expect(harness.diagnosticIds).toStrictEqual(["prot/v1/register/dupe"]);
+        expect(harness.diagnosticIds).toStrictEqual(["prot/v1/register/conflict"]);
     });
 });
 

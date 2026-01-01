@@ -150,7 +150,7 @@ export class Game {
                 r.warn(`(${this.name}) Unimplemented command '${(msg as any).command}'`);
         }
         if (!["startup", "implied"].includes(this.startupState?.type ?? "")) {
-            this.diagnostics.trigger("prot/startup/missing");
+            this.diagnostics.trigger("prot/startup/missing", { firstMessage: { msg } });
             this.startupState = { type: "implied", at: Date.now() };
         }
     }
@@ -164,7 +164,7 @@ export class Game {
             const startupDelay = now - (this.startupState?.at ?? now);
             this.startupState = { type: "startup", at: now };
             if (startupDelay > TIMEOUTS["perf/late/startup"]) {
-                this.diagnostics.trigger("perf/late/startup", { delay: startupDelay });
+                this.diagnostics.trigger("perf/late/startup", { delayMs: startupDelay });
             }
         }
     }
@@ -195,7 +195,13 @@ export class Game {
                 // duplicate action conflict resolution
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                 const isV1 = this.version === "v1";
-                if (isV1) this.diagnostics.trigger("prot/v1/register/dupe", { action_name: action.name, existing });
+                if (isV1) {
+                    const {active, ...rawExisting} = existing;
+                    this.diagnostics.trigger("prot/v1/register/conflict", {
+                        incoming: action,
+                        existing: rawExisting,
+                    });
+                }
                 const logMethod = isV1 ? r.warn : r.info;
                 logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`, { toast: false });
                 if (isV1) continue;
