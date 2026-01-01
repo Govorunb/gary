@@ -1,7 +1,7 @@
 import { Game } from "$lib/api/game.svelte";
 import { ClientGame, type ActionResult } from "$lib/api/client-game";
 import { InternalConnection, InternalConnectionClient } from "$lib/api/connection";
-import { zUserPrefs } from "$lib/app/prefs.svelte";
+import { zGamePrefs, zUserPrefs } from "$lib/app/prefs.svelte";
 import { ContextManager } from "$lib/app/context.svelte";
 
 class MockSession {
@@ -15,7 +15,7 @@ class MockSession {
     readonly userPrefs: any = {
         ...zUserPrefs.decode({}),
         getGamePrefs(game: string) {
-            return this.api.games[game] ??= {diagnostics: {suppressions: []}};
+            return this.api.games[game] ??= zGamePrefs.decode({});
         }
     };
     readonly engines: Record<string, any> = {};
