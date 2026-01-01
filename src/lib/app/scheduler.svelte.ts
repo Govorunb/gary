@@ -48,7 +48,7 @@ export class Scheduler {
                 this.forceAct(force)
                     .finally(() => {
                         if (force === this.forceQueue[0]) {
-                            this.forceQueue.unshift();
+                            this.forceQueue.shift();
                         }
                     });
             } else if (this.actPending) {

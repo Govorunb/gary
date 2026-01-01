@@ -136,12 +136,17 @@ describe("actions/force", () => {
     
         const action = v1.zAction.decode({ name: "test_action", schema: null });
         await harness.client.registerActions([action]);
+        
+        // manual/auto-act (should be completely ignored by the diagnostic)
+        harness.server.session.scheduler.forceQueue.push(null);
     
         const force: v1.ForceAction = v1.zForceAction.decode({
             game: harness.server.name,
             data: { query: "test", action_names: [action.name] },
         });
         await harness.client.conn.send(force);
+        expect(harness.diagnosticIds, "first force with non-client in queue").toStrictEqual([]);
+
         await harness.client.conn.send(force);
     
         expect(harness.diagnosticIds).toStrictEqual(["prot/force/multiple"]);

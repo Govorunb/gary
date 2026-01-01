@@ -111,9 +111,8 @@ export class Game {
                         this.diagnostics.trigger("prot/force/some_invalid", { msg, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
                     }
                 }
-                // FIXME: mixes in manual/autoact forces
-                // FIXME: technically only fires when a force is queued, not just running (so on the third and not second simultaneous force)
-                if (this.session.scheduler.forceQueue.length) {
+                // only real forces (from client) - manual/autoact forces exist in the queue but are null
+                if (this.session.scheduler.forceQueue.filter(Boolean).length) {
                     this.diagnostics.trigger("prot/force/multiple", { msg });
                 }
                 this.session.scheduler.forceQueue.push(actions);
