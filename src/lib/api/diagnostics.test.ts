@@ -150,7 +150,7 @@ describe("actions/force", () => {
         expect(fq).toStrictEqual([null]);
         
         await harness.client.conn.send(force);
-        expect(fq).toEqual([null, [action]]);
+        expect(fq).toEqual([null, [{...action, active:true}]]);
         expect(harness.diagnosticIds, "first force with non-client in queue").toStrictEqual([]);
 
         await harness.client.conn.send(force);
