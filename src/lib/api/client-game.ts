@@ -71,7 +71,6 @@ export abstract class ClientGame {
     public async registerActions(actions: v1.Action[]) {
         actions.forEach(action => this.registeredActions.set(action.name, action));
         const message: v1.RegisterActions = v1.zRegisterActions.decode({
-            command: "actions/register",
             game: this.name,
             data: { actions }
         });
@@ -81,7 +80,6 @@ export abstract class ClientGame {
     public async unregisterActions(actionNames: string[]) {
         actionNames.forEach(name => this.registeredActions.delete(name));
         const message: v1.UnregisterActions = v1.zUnregisterActions.decode({
-            command: "actions/unregister",
             game: this.name,
             data: { action_names: actionNames }
         });
@@ -90,7 +88,6 @@ export abstract class ClientGame {
 
     public async sendActionResult(id: string, success: boolean, message?: string) {
         const result: v1.ActionResult = v1.zActionResult.decode({
-            command: "action/result",
             game: this.name,
             data: { id, success, message: message || "" }
         });
@@ -99,7 +96,6 @@ export abstract class ClientGame {
 
     public async sendContext(message: string, silent: boolean = false) {
         const context: v1.Context = v1.zContext.decode({
-            command: "context",
             game: this.name,
             data: { message, silent }
         });
