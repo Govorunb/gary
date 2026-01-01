@@ -162,6 +162,21 @@ describe("action/result", () => {
 
         expect(harness.diagnosticIds).toStrictEqual(["prot/result/error_nomessage"]);
     });
+    test("perf/late/action_result", async ({harness}) => {
+        await harness.client.hello();
+
+        await harness.server.sendAction(v1.zActData.decode({id: "test-id", name: "e" }));
+
+        vi.advanceTimersByTime(600);
+
+        const result: v1.ActionResult = v1.zActionResult.decode({
+            game: harness.server.name,
+            data: { id: "test-id", success: true }
+        });
+        await harness.client.conn.send(result);
+
+        expect(harness.diagnosticIds).toStrictEqual(["perf/late/action_result"]);
+    });
 });
 
 test("prot/v1/game_renamed", async ({harness}) => {

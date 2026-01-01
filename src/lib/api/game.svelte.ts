@@ -5,6 +5,7 @@ import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
 import * as v1 from "./v1/spec";
 import type { BaseConnection } from "./connection";
+import dayjs from "dayjs";
 
 export type GameAction = v1.Action & { active: boolean };
 
@@ -119,9 +120,20 @@ export class Game {
                 await this.context(this.forceMsg(actions, msg.data.query, msg.data.state), false);
                 break;
             case "action/result":
-                // TODO: (w) late/action_result
                 if (!msg.data.success && !msg.data.message) {
                     this.diagnostics.trigger("prot/result/error_nomessage");
+                }
+                // FIXME: bad, should keep track of sent actions & setTimeout
+                const shortId = msg.data.id.substring(0, 6);
+                const execMsgText = `Executing.*Request ID: ${shortId}`;
+                const executingMsg = Iterator.from(this.session.context.allMessages)
+                    // god js iterators are so dogwater
+                    .drop(Math.max(0, this.session.context.allMessages.length - 10))
+                    .find(m => m.source.type === "system" && m.text.match(execMsgText));
+                const sentAt = dayjs(executingMsg?.timestamp); // `now` if undefined
+                const diff = -sentAt.diff(); // then to now -> negative diff
+                if (diff > 500) {
+                    this.diagnostics.trigger("perf/late/action_result");
                 }
                 const silent = msg.data.success;
                 let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
@@ -207,6 +219,14 @@ export class Game {
             }
         }
         r.debug(`(${this.name}) Actions unregistered: [${actions}]`);
+    }
+
+    async sendAction(actData: v1.ActData) {
+        this.session.context.system({
+            text: `Executing action ${actData.name} (Request ID: ${actData.id.substring(0, 6)})`,
+            silent: true,
+        });
+        await this.conn.send(v1.zAct.decode({data: actData}));
     }
 
     toString() {
