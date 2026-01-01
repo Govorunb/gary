@@ -3,6 +3,7 @@
     import GameTab from "./GameTab.svelte";
     import { InternalConnection, InternalConnectionClient } from "$lib/api/connection";
     import { SchemaTestGame } from "$lib/app/schema-test";
+    import { DiagnosticsExampleGame } from "$lib/app/diagnostics-example";
     import { Plus, ChevronDown } from "@lucide/svelte";
     import Popover from "$lib/ui/common/Popover.svelte";
     import { tick } from "svelte";
@@ -21,6 +22,16 @@
         await conn.connect();
         await schemaTestGame.lifecycle();
     }
+
+    async function startDiagnosticsExample() {
+        const conn = new InternalConnection(`${Date.now().toString().reverse()}-diagnostics-example`, "v1");
+        const diagnosticsExampleGame = new DiagnosticsExampleGame(new InternalConnectionClient(conn));
+
+        registry.createGame(conn, "Diagnostics Example");
+        await tick();
+        await conn.connect();
+        await diagnosticsExampleGame.lifecycle();
+    }
 </script>
 
 <div class="flex h-full flex-col">
@@ -38,6 +49,9 @@
                 <div class="menu-divider"></div>
                 <button class="menu-item" onclick={startSchemaTest}>
                     Schema Test
+                </button>
+                <button class="menu-item" onclick={startDiagnosticsExample}>
+                    Diagnostics Example
                 </button>
             </div>
         </Popover>

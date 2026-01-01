@@ -8,6 +8,7 @@ import * as v1 from "./v1/spec";
 import type { BaseConnection } from "./connection";
 
 export type GameAction = v1.Action & { active: boolean };
+export type PendingAction = { sentAt: number, timeout: ReturnType<typeof setTimeout> };
 
 export class Game {
     public readonly actions = $state(new SvelteMap<string, GameAction>());
@@ -15,8 +16,7 @@ export class Game {
     public diagnostics = new GameDiagnostics(this);
     public status = $derived(this.diagnostics.status);
     public startupState: { type: "connected" | "implied" | "startup"; at: number; } | null = $state(null);
-    private pendingActions = $state(new SvelteMap<string, number>());
-    private pendingTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+    private pendingActions = $state(new SvelteMap<string, PendingAction>());
 
     constructor(
         public readonly session: Session,
@@ -33,9 +33,9 @@ export class Game {
         });
         conn.onclose(() => {
             if (this.name === v1PendingGameName(conn.id)) return;
-            // FIXME: should be system ctx
-            void this.context(`${this.name} disconnected`, true);
-            this.clearAllTimeouts();
+            r.info(`${this.name} disconnected`);
+            void this.session.context.system({ text: `${this.name} disconnected`, silent: true });
+            this.clearPendingActions();
         });
         conn.onmessage((txt) => this.recv(txt));
         conn.onwserror((err) => {
@@ -55,7 +55,7 @@ export class Game {
     }
 
     private connected() {
-        void this.context(`${this.name} connected`, true);
+        void this.session.context.system({ text: `${this.name} connected`, silent: true });
         r.info(`${this.name} connected`, { toast: true });
     }
 
@@ -126,18 +126,15 @@ export class Game {
                 if (!msg.data.success && !msg.data.message) {
                     this.diagnostics.trigger("prot/result/error_nomessage");
                 }
-                const sentAt = this.pendingActions.get(msg.data.id);
-                if (sentAt) {
+                const pending = this.pendingActions.get(msg.data.id);
+                if (pending) {
+                    const {sentAt, timeout} = pending;
+                    clearTimeout(timeout);
                     const diff = Date.now() - sentAt;
                     if (diff > TIMEOUTS["perf/late/action_result"]) {
                         this.diagnostics.trigger("perf/late/action_result");
                     }
                     this.pendingActions.delete(msg.data.id);
-                }
-                const timeoutId = this.pendingTimeouts.get(msg.data.id);
-                if (timeoutId) {
-                    clearTimeout(timeoutId);
-                    this.pendingTimeouts.delete(msg.data.id);
                 }
                 const silent = msg.data.success;
                 let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
@@ -236,14 +233,13 @@ export class Game {
             text: `Executing action ${actData.name} (Request ID: ${actData.id.substring(0, 6)})`,
             silent: true,
         });
-        this.pendingActions.set(actData.id, Date.now());
         const timeoutId = setTimeout(() => {
             if (this.pendingActions.has(actData.id)) {
                 this.diagnostics.trigger("perf/timeout/action_result", { actionId: actData.id });
                 this.pendingActions.delete(actData.id);
             }
         }, TIMEOUTS["perf/timeout/action_result"]);
-        this.pendingTimeouts.set(actData.id, timeoutId);
+        this.pendingActions.set(actData.id, { sentAt: Date.now(), timeout: timeoutId });
         await this.conn.send(v1.zAct.decode({data: actData}));
     }
 
@@ -261,11 +257,11 @@ export class Game {
         return prompt;
     }
 
-    private clearAllTimeouts() {
-        for (const [_id, timeoutId] of this.pendingTimeouts) {
-            clearTimeout(timeoutId);
+    private clearPendingActions() {
+        for (const [_id, {timeout}] of this.pendingActions) {
+            clearTimeout(timeout);
         }
-        this.pendingTimeouts.clear();
+        this.pendingActions.clear();
     }
 }
 
