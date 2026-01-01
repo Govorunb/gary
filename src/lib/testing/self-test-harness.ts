@@ -6,28 +6,27 @@ import { ContextManager } from "$lib/app/context.svelte";
 import type { Scheduler } from "$lib/app/scheduler.svelte";
 import type * as v1 from "$lib/api/v1/spec";
 
-const mockScheduler = {
-    forceQueue: [] as Array<v1.Action[] | null>,
-    actPending: false
-};
-
-const mockPrefs = {
-    ...zUserPrefs.decode({}),
-    getGamePrefs(game: string) {
-        return this.api.games[game] ??= zGamePrefs.decode({});
-    }
-};
 
 function mock<T, U extends Partial<T>>(mock: U): U & { [K in Exclude<keyof T, keyof U>]: never } {
     return mock as any;
 }
 
 class MockSession {
+    private readonly mockScheduler = {
+        forceQueue: [] as Array<v1.Action[] | null>,
+        actPending: false
+    };
+    private readonly mockPrefs = {
+        ...zUserPrefs.decode({}),
+        getGamePrefs(game: string) {
+            return this.api.games[game] ??= zGamePrefs.decode({});
+        }
+    };
     readonly id = "test-session";
     readonly name = "test-session";
     readonly context = new ContextManager();
-    readonly scheduler = mock<Scheduler, typeof mockScheduler>(mockScheduler);
-    readonly userPrefs = mock<UserPrefs, typeof mockPrefs>(mockPrefs);
+    readonly scheduler = mock<Scheduler, typeof this.mockScheduler>(this.mockScheduler);
+    readonly userPrefs = mock<UserPrefs, typeof this.mockPrefs>(this.mockPrefs);
     readonly engines: Record<string, any> = {};
     readonly activeEngine: any = null;
 }
