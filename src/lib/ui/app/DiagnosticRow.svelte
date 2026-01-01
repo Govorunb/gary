@@ -108,7 +108,7 @@
                         open={ctxOpen}
                         readonly
                         minHeight="4rem"
-                        maxHeight="8rem"
+                        maxHeight="16rem"
                     />
                 </div>
             </details>
@@ -177,7 +177,7 @@
     }
 
     .diagnostic-content {
-        @apply flex flex-col gap-1 min-w-0;
+        @apply flex flex-col gap-1 min-w-0 flex-1;
     }
 
     .actions {
@@ -230,7 +230,7 @@
     }
 
     .context-editor {
-        @apply mt-2;
+        @apply mt-2 w-full;
     }
 
     .chevron-icon {

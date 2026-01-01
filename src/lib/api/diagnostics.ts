@@ -150,6 +150,12 @@ If the action is expected to take a long time, send a "validation" success resul
         message: "Unsuccessful action result should have message",
         details: "Provide feedback to let Neuro know what went wrong."
     },
+    {
+        id: "prot/result/unexpected",
+        severity: DiagnosticSeverity.Warning,
+        message: "Received a result for an action we didn't send",
+        details: "This usually indicates stale state on the client side."
+    }
 ] as const satisfies DiagnosticDef[];
 
 export type DiagnosticId = (typeof DIAGNOSTICS)[number]["id"];

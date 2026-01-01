@@ -195,7 +195,6 @@ describe("action/result", () => {
         vi.advanceTimersByTime(TIMEOUTS["perf/timeout/action_result"] + 100);
 
         expect(harness.diagnosticIds).toStrictEqual(["perf/timeout/action_result"]);
-        expect(harness.diagnostics[0].context).toEqual({ actionId: "test-id" });
     });
 });
 

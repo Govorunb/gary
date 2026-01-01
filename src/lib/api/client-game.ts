@@ -1,6 +1,6 @@
 import r from "$lib/app/utils/reporting";
 import Ajv from "ajv";
-import type { InternalConnectionClient } from "$lib/api/connection";
+import type { ConnectionClient } from "$lib/api/connection";
 import * as v1 from "$lib/api/v1/spec";
 import { jsonParse, safeParse } from "../app/utils";
 
@@ -12,7 +12,7 @@ export abstract class ClientGame {
 
     constructor(
         public readonly name: string,
-        public readonly conn: InternalConnectionClient
+        public readonly conn: ConnectionClient
     ) {
         conn.conn.onclose(() => this.dispose());
     }

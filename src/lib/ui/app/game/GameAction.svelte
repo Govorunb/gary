@@ -40,18 +40,8 @@
                 return;
             }
         }
-        const actData = zActData.decode({
-            name: action.name,
-            data: generatedData,
-        });
-        
-        game.conn.send(zAct.decode({ data: actData }))
-            .then(() => {
-                const msg = `User act to ${game.name}: ${JSON.stringify(actData)}`;
-                session.context.actor({text: msg}, true);
-                r.debug(msg);
-            })
-            .catch((e) => r.error(`Failed to send action ${action.name}`, `${e}`));
+        game.manualSend(action.name, generatedData)
+            .catch(e => r.error(`Failed to send action ${action.name}`, `${e}`));
     }
 </script>
 

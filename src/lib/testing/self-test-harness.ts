@@ -1,6 +1,6 @@
 import { Game } from "$lib/api/game.svelte";
 import { ClientGame, type ActionResult } from "$lib/api/client-game";
-import { InternalConnection, InternalConnectionClient } from "$lib/api/connection";
+import { InternalConnection, ConnectionClient } from "$lib/api/connection";
 import { type UserPrefs, zGamePrefs, zUserPrefs } from "$lib/app/prefs.svelte";
 import { ContextManager } from "$lib/app/context.svelte";
 import type { Scheduler } from "$lib/app/scheduler.svelte";
@@ -32,7 +32,7 @@ class MockSession {
 }
 
 export class TestClientGame extends ClientGame {
-    constructor(conn: InternalConnectionClient, gameName: string = "test-game") {
+    constructor(conn: ConnectionClient, gameName: string = "test-game") {
         super(gameName, conn);
     }
 
@@ -50,7 +50,7 @@ export class SelfTestHarness {
         this.session = new MockSession();
         
         const svConn = new InternalConnection(`${gameName}-conn`, version);
-        const clConn = new InternalConnectionClient(svConn);
+        const clConn = new ConnectionClient(svConn);
         
         this.server = new Game(this.session as any, svConn);
         this.client = new TestClientGame(clConn, gameName);

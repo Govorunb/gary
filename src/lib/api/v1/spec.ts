@@ -53,9 +53,10 @@ export const zForceAction = z.strictObject({
     data: z.strictObject({
         state: z.string().optional(),
         query: z.string(),
-        ephemeral_context: z.boolean().default(false),
+        ephemeral_context: z.boolean().optional(), // default false
         action_names: z.array(z.string()),
-        priority: z.enum(["low", "medium", "high", "critical"]).fallback("low"), // TODO: interrupt llm gen (when we start streaming responses)
+        // TODO: interrupt llm gen (if/when we start streaming responses)
+        priority: z.enum(["low", "medium", "high", "critical"]).fallback("low"), // theoretically optional (default "low") but spec doesn't say so
     }),
 });
 

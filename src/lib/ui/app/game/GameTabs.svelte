@@ -1,7 +1,7 @@
 <script lang="ts">
     import { getRegistry, getUIState } from "$lib/app/utils/di";
     import GameTab from "./GameTab.svelte";
-    import { InternalConnection, InternalConnectionClient } from "$lib/api/connection";
+    import { InternalConnection, ConnectionClient } from "$lib/api/connection";
     import { SchemaTestGame } from "$lib/app/schema-test";
     import { DiagnosticsExampleGame } from "$lib/app/diagnostics-example";
     import { Plus, ChevronDown } from "@lucide/svelte";
@@ -15,7 +15,7 @@
     async function startSchemaTest() {
         // timestamp reversed to make spotting differences easier (seconds at the start vs middle)
         const conn = new InternalConnection(`${Date.now().toString().reverse()}-schema-test`, "v1");
-        const schemaTestGame = new SchemaTestGame(new InternalConnectionClient(conn));
+        const schemaTestGame = new SchemaTestGame(new ConnectionClient(conn));
 
         registry.createGame(conn, "JSON Schema Test");
         await tick();
@@ -25,7 +25,7 @@
 
     async function startDiagnosticsExample() {
         const conn = new InternalConnection(`${Date.now().toString().reverse()}-diagnostics-example`, "v1");
-        const diagnosticsExampleGame = new DiagnosticsExampleGame(new InternalConnectionClient(conn));
+        const diagnosticsExampleGame = new DiagnosticsExampleGame(new ConnectionClient(conn));
 
         registry.createGame(conn, "Diagnostics Example");
         await tick();

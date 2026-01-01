@@ -90,21 +90,9 @@
     async function sendAction() {
         if (!isValid && !shiftPressed) return;
 
-        const actData = zActData.decode({
-            name: action.name,
-            data: jsonContent,
-        });
-
-        try {
-            const msg = `Manual user act to ${game.name}: ${actData.name}` + (actData.data ? `\nData: ${actData.data}` : " (no data)");
-            session.context.user({ text: msg });
-            r.debug(msg);
-            await game.sendAction(actData);
-        } catch (e) {
-            r.error(`Failed to send action ${action.name}`, `${e}`);
-        } finally {
-            closeDialog();
-        }
+        game.manualSend(action.name, jsonContent)
+            .catch(e => r.error(`Failed to send action ${action.name}`, `${e}`))
+            .finally(closeDialog);
     }
 </script>
 

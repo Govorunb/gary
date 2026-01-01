@@ -11,10 +11,11 @@ type OnErrorHandler = (err: string) => Awaitable;
 
 export abstract class BaseConnection {
     #disposed: boolean = false;
-    #onmessage: OnMessageHandler[] = [];
-    #onclose: OnCloseHandler[] = [];
-    #onconnect: OnConnectHandler[] = [];
     #onerror: OnErrorHandler[] = [];
+    #onconnect: OnConnectHandler[] = [];
+    #onmessage: OnMessageHandler[] = [];
+    #onsend: OnMessageHandler[] = [];
+    #onclose: OnCloseHandler[] = [];
 
     public get closed() {
         return this.#disposed;
@@ -31,9 +32,10 @@ export abstract class BaseConnection {
 
     public dispose(clientDisconnected?: CloseFrame) {
         this.#disposed = true;
+        this.#onerror.length = 0;
         this.#onconnect.length = 0;
         this.#onmessage.length = 0;
-        this.#onerror.length = 0;
+        this.#onsend.length = 0;
         this.#onclose.forEach(close => close(clientDisconnected));
         this.#onclose.length = 0;
     }
@@ -43,7 +45,15 @@ export abstract class BaseConnection {
         r.fatal(`Connection id '${this.shortId}' is closed`);
     }
 
-    public abstract sendRaw(text: string): Promise<void>;
+    protected abstract protocolSend(text: string): Promise<void>;
+
+    public async sendRaw(text: string) {
+        if (this.#disposed) return;
+        void this.protocolSend(text);
+        for (const cbSend of this.#onsend) {
+            await cbSend(text);
+        }
+    }
 
     public async receiveRaw(text: string) {
         if (this.#disposed) return;
@@ -79,6 +89,9 @@ export abstract class BaseConnection {
         return this.receiveRaw(JSON.stringify(msg));
     }
 
+    public onerror(handler: OnErrorHandler) {
+        this.#onerror.push(handler);
+    }
     // TODO: onconnect should instantly fire if already connected
     public onconnect(handler: OnConnectHandler) {
         this.#onconnect.push(handler);
@@ -88,24 +101,41 @@ export abstract class BaseConnection {
         this.#onmessage.push(handler);
     }
 
+    public onsend(handler: OnMessageHandler) {
+        this.#onsend.push(handler);
+    }
+
     public onclose(handler: OnCloseHandler) {
         this.#onclose.push(handler);
     }
 
-    public onwserror(handler: OnErrorHandler) {
-        this.#onerror.push(handler);
-    }
-    
     public async* listen(): AsyncGenerator<string> {
         type T = string | null;
         // type Resolve = Parameters<ConstructorParameters<typeof Promise<T>>[0]>[0];
         type Resolve = (value: T) => void;
-        
+
         const state = {resolve: null as Resolve | null};
-        
+
         this.onmessage((text) => state.resolve?.(text));
         this.onclose(() => state.resolve?.(null));
-        
+
+        while (!this.closed) {
+            const res = await new Promise<T>(resolve => void (state.resolve = resolve));
+            if (res === null) break;
+            yield res;
+        }
+    }
+
+    public async* listenSend(): AsyncGenerator<string> {
+        type T = string | null;
+        // type Resolve = Parameters<ConstructorParameters<typeof Promise<T>>[0]>[0];
+        type Resolve = (value: T) => void;
+
+        const state = {resolve: null as Resolve | null};
+
+        this.onsend((text) => state.resolve?.(text));
+        this.onclose(() => state.resolve?.(null));
+
         while (!this.closed) {
             const res = await new Promise<T>(resolve => void (state.resolve = resolve));
             if (res === null) break;
@@ -153,7 +183,7 @@ export class TauriServerConnection extends BaseConnection {
         }
     }
 
-    public async sendRaw(text: string) {
+    protected async protocolSend(text: string) {
         this.devAssertNotDisposed();
         await safeInvoke('ws_send', { id: this.id, text } satisfies SendArgs)
             .orTee(e => r.error(`Tauri failed to send WS text`, e));
@@ -175,8 +205,6 @@ export class TauriServerConnection extends BaseConnection {
 }
 
 export class InternalConnection extends BaseConnection {
-    protected readonly sendListeners: ((value: string | null) => void)[] = [];
-
     constructor(id: string, version: string = "v1") {
         super(id, version);
     }
@@ -185,45 +213,24 @@ export class InternalConnection extends BaseConnection {
         return super.connect();
     }
 
-    public async sendRaw(text: string) {
+    protected async protocolSend(text: string) {
         this.devAssertNotDisposed();
-        r.verbose(`Internal connection ${this.shortId} sent: ${text}`);
-        if (!this.sendListeners.length) {
-            r.error(`${this.shortId} screaming into the void`);
-        }
-        for (const listener of this.sendListeners) {
-            listener(text);
-        }
+        r.verbose(`Internal connection ${this.shortId} sent: ${text} (should be listening with onsend)`);
     }
 
-    public async disconnect(code?: number, reason?: string) {
+    public async disconnect() {
         if (this.closed) return;
-        r.verbose(`Internal connection ${this.shortId} disconnecting: ${code} (${reason || 'no reason'})`);
+        r.verbose(`Internal connection ${this.shortId} disconnecting`);
         this.dispose();
-    }
-
-    public dispose() {
-        for (const listener of this.sendListeners) {
-            listener(null);
-        }
-        super.dispose();
-    }
-
-    public async* listenSend(): AsyncGenerator<string> {
-        while (!this.closed) {
-            const res = await new Promise<string | null>(resolve => this.sendListeners.push(resolve));
-            if (res === null) break;
-            yield res;
-        }
     }
 }
 
 /** The 'client' side of a connection (as opposed to the regular, server side).
  * Inverts sender and receiver.
 */
-export class InternalConnectionClient {
+export class ConnectionClient {
     constructor(
-        public readonly conn: InternalConnection
+        public readonly conn: BaseConnection
     ) {}
 
     public async send(msg: GameMessage) {
@@ -234,8 +241,8 @@ export class InternalConnectionClient {
         this.conn.receiveRaw(text);
     }
 
-    public async disconnect(code?: number, reason?: string) {
-        this.conn.disconnect(code, reason);
+    public async disconnect() {
+        this.conn.disconnect();
     }
 
     public listen() {

@@ -1,5 +1,5 @@
 import r from "$lib/app/utils/reporting";
-import type { InternalConnectionClient } from "$lib/api/connection";
+import type { ConnectionClient } from "$lib/api/connection";
 import { ClientGame } from "../../api/client-game";
 import type { ActionResult } from '../../api/client-game';
 import { TEST_ACTIONS_MAP } from "./actions";
@@ -9,7 +9,7 @@ export class SchemaTestGame extends ClientGame {
     private schemaChanged = false;
     private samsara = true; // when there's no more actions left, reregister them all again
 
-    constructor(conn: InternalConnectionClient) {
+    constructor(conn: ConnectionClient) {
         super("JSON Schema Test", conn);
     }
 

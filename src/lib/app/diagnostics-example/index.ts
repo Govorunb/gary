@@ -1,6 +1,6 @@
 import r from "$lib/app/utils/reporting";
 import { jsonParse } from "$lib/app/utils";
-import type { InternalConnectionClient } from "$lib/api/connection";
+import type { ConnectionClient } from "$lib/api/connection";
 import { ClientGame } from "../../api/client-game";
 import type { ActionResult } from '../../api/client-game';
 import { DIAGNOSTIC_ACTIONS_MAP } from "./actions";
@@ -10,7 +10,7 @@ export class DiagnosticsExampleGame extends ClientGame {
     private readonly actions = DIAGNOSTIC_ACTIONS_MAP;
     private unregisterActionCalled = false;
 
-    constructor(conn: InternalConnectionClient) {
+    constructor(conn: ConnectionClient) {
         super("Diagnostics Example", conn);
     }
 

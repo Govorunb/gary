@@ -8,7 +8,7 @@ import * as v1 from "./v1/spec";
 import type { BaseConnection } from "./connection";
 
 export type GameAction = v1.Action & { active: boolean };
-export type PendingAction = { sentAt: number, timeout: ReturnType<typeof setTimeout> };
+export type PendingAction = { actData: v1.ActData, sentAt: number, timeout: ReturnType<typeof setTimeout> };
 
 export class Game {
     public readonly actions = $state(new SvelteMap<string, GameAction>());
@@ -38,7 +38,7 @@ export class Game {
             this.clearPendingActions();
         });
         conn.onmessage((txt) => this.recv(txt));
-        conn.onwserror((err) => {
+        conn.onerror((err) => {
             r.warn(`${this.name} broke its websocket somehow`, {
                 details: err,
                 toast: { level: LogLevel.Error },
@@ -123,23 +123,7 @@ export class Game {
                 await this.context(this.forceMsg(actions, msg.data.query, msg.data.state), false);
                 break;
             case "action/result":
-                if (!msg.data.success && !msg.data.message) {
-                    this.diagnostics.trigger("prot/result/error_nomessage");
-                }
-                const pending = this.pendingActions.get(msg.data.id);
-                if (pending) {
-                    const {sentAt, timeout} = pending;
-                    clearTimeout(timeout);
-                    const diff = Date.now() - sentAt;
-                    if (diff > TIMEOUTS["perf/late/action_result"]) {
-                        this.diagnostics.trigger("perf/late/action_result");
-                    }
-                    this.pendingActions.delete(msg.data.id);
-                }
-                const silent = msg.data.success;
-                let text = `Result for action ${msg.data.id.substring(0, 6)}: ${msg.data.success ? "Performing" : "Failure"}`;
-                text += msg.data.message ? ` (${msg.data.message})` : " (no message)";
-                await this.context(text, silent);
+                await this.actionResult(msg);
                 break;
             case "shutdown/ready":
                 break;
@@ -160,6 +144,7 @@ export class Game {
             const now = Date.now();
             const startupDelay = now - (this.startupState?.at ?? now);
             this.startupState = { type: "startup", at: now };
+            r.info(`Startup delay: ${startupDelay}`);
             if (startupDelay > TIMEOUTS["perf/late/startup"]) {
                 this.diagnostics.trigger("perf/late/startup", { delayMs: startupDelay });
             }
@@ -233,14 +218,51 @@ export class Game {
             text: `Executing action ${actData.name} (Request ID: ${actData.id.substring(0, 6)})`,
             silent: true,
         });
-        const timeoutId = setTimeout(() => {
+        const sentAt = Date.now();
+        const timeout = setTimeout(() => {
             if (this.pendingActions.has(actData.id)) {
-                this.diagnostics.trigger("perf/timeout/action_result", { actionId: actData.id });
+                this.diagnostics.trigger("perf/timeout/action_result", { actData, sentAt });
                 this.pendingActions.delete(actData.id);
             }
         }, TIMEOUTS["perf/timeout/action_result"]);
-        this.pendingActions.set(actData.id, { sentAt: Date.now(), timeout: timeoutId });
+        this.pendingActions.set(actData.id, { actData, sentAt, timeout });
         await this.conn.send(v1.zAct.decode({data: actData}));
+    }
+
+    async actionResult(msg: v1.ActionResult) {
+        const { id, success, message } = msg.data;
+        const pending = this.pendingActions.get(id);
+        if (!pending) {
+            this.diagnostics.trigger("prot/result/unexpected", { msg });
+            return;
+        }
+        const { actData, sentAt, timeout } = pending;
+        clearTimeout(timeout);
+        const diff = Date.now() - sentAt;
+        if (diff > TIMEOUTS["perf/late/action_result"]) {
+            this.diagnostics.trigger("perf/late/action_result", { actData, sentAt });
+        }
+        this.pendingActions.delete(id);
+        if (!success && !message) {
+            this.diagnostics.trigger("prot/result/error_nomessage");
+        }
+        const silent = success;
+        let text = `Result for action ${id.substring(0, 6)}: ${success ? "Performing" : "Failure"}`;
+        text += message ? ` (${message})` : " (no message)";
+        await this.context(text, silent);
+    }
+
+    async manualSend(action: string, data: any) {
+        const actData = v1.zActData.decode({
+            name: action,
+            data: data,
+        });
+
+        // biome-ignore lint/style/useTemplate: no thanks
+        const msg = `User act to ${this.name}: ${actData.name}` + (actData.data ? `\nData: ${actData.data}` : " (no data)");
+        this.session.context.user({ text: msg, silent: true });
+        r.debug(msg);
+        await this.sendAction(actData);
     }
 
     toString() {
