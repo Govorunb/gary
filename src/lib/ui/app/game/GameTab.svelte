@@ -45,12 +45,15 @@
             <span class="game-name">{game.name}</span>
         </div>
         <div class="game-controls">
-            <div class="status-indicator"
+            <!-- svelte-ignore a11y_consider_explicit_label : tooltip() sets title -->
+            <button class="status-indicator p-2"
                 data-connected={!game.conn.closed}
                 data-status={game.status}
+                {@attach tooltip(statusTip(game) + ". Click to view diagnostics")}
+                onclick={() => uiState.dialogs.openDiagnosticsDialog(game)}
             >
-                <div class="status-dot" {@attach tooltip(statusTip(game))}></div>
-            </div>
+                <div class="status-dot"></div>
+            </button>
             <Popover open={gameMenuOpen} onOpenChange={(d) => gameMenuOpen = d.open}
                 onFocusOutside={(_) => gameMenuOpen = false}
             >
