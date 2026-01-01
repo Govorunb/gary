@@ -153,9 +153,8 @@
         });
 
         try {
-            const msg = `Manual user act to ${game.name}: ${action.name}`;
-            // TODO: should ideally be visible to engine (as user role)
-            session.context.actor({ text: msg, visibilityOverrides: { engine: false, user: true } }, true);
+            const msg = `Manual user act to ${game.name}: ${actData.name}` + (actData.data ? `\nData: ${actData.data}` : " (no data)");
+            session.context.user({ text: msg });
             r.debug(msg);
             await game.sendAction(actData);
         } catch (e) {

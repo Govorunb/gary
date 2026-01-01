@@ -129,7 +129,8 @@ export class Scheduler {
         const actData = zActData.decode({...act});
         // FIXME: just do events mannnnnnnnnnnnnnn
         this.session.context.actor({
-            text: `Act${forced ? " (forced)" : ""}: ${actData.name}`,
+            text: `Act${forced ? " (forced)" : ""}: ${actData.name}`
+                + (actData.data ? `\nData: ${actData.data}` : " (no data)"),
             // user-facing; LLM sees a copy of its own response (LLMEngine.actCore)
             visibilityOverrides: {
                 engine: false,
