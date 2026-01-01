@@ -168,7 +168,7 @@ export type ApiPrefs = z.infer<typeof zApiPrefs>;
 
 const MIGRATIONS: Migration[] = [
     {
-        version: "1.0.0-alpha.3",
+        version: "1.0.0-beta.0",
         description: "created .api and moved .server into it (.server.port -> .api.server.port)",
         migrate(data) {
             if (!data) return;
