@@ -127,12 +127,15 @@ export class Scheduler {
         }
         r.info(`Engine acting ${forced ? "(forced)" : ""}: ${act.name}`);
         const actData = zActData.decode({...act});
-        // FIXME: xd
+        // FIXME: just do events mannnnnnnnnnnnnnn
         this.session.context.actor({
-            text: `Act${forced ? " (forced)" : ""}: ${JSON.stringify(actData)}`,
+            text: `Act${forced ? " (forced)" : ""}: ${actData.name}`,
+            // user-facing; LLM sees a copy of its own response (LLMEngine.actCore)
             visibilityOverrides: {
                 engine: false,
-            }
+                user: true,
+            },
+            customData: { actData },
         }, false);
         return ResultAsync.fromPromise(game.sendAction(actData), 
             (e) => ({type: "connError", error: `Failed to send act: ${e}`} as const)
