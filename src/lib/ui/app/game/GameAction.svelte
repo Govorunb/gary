@@ -94,6 +94,14 @@
         & > summary {
             @apply flex cursor-pointer items-center justify-between gap-2;
             @apply px-4 py-1.5 text-sm font-medium text-neutral-700 transition;
+            & > span:first-child {
+                @apply flex-1;
+            }
+            .group:hover &, &:focus-within {
+                & > span:first-child {
+                    @apply min-w-0 truncate;
+                }
+            }
             &:hover {
                 @apply bg-neutral-100/80 dark:bg-neutral-800/70;
             }
