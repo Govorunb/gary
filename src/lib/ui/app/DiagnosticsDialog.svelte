@@ -18,6 +18,8 @@
     const diagnostics = $derived(game.diagnostics.diagnostics);
     const visibleDiagnostics = $derived(diagnostics.filter(d => !d.dismissed));
     const hiddenDiagnostics = $derived(diagnostics.filter(d => d.dismissed));
+    const activeDiagnostics = $derived(showHidden ? hiddenDiagnostics : visibleDiagnostics);
+    const inactiveDiagnostics = $derived(showHidden ? visibleDiagnostics : hiddenDiagnostics);
 
     function closeDialog() {
         open = false;
@@ -37,7 +39,6 @@
 
 <Dialog bind:open>
     {#snippet content(props)}
-        {@const activeDiagnostics = showHidden ? hiddenDiagnostics : visibleDiagnostics}
         {@const ShowBtnIcon = showHidden ? Eye : EyeOff}
         <div {...props} class="diagnostics-content">
             <div class="dialog-header">
@@ -73,8 +74,9 @@
             <div class="dialog-footer">
                 <div class="footer-actions">
                     <button
-                        class="btn preset-tonal-surface"
+                        class={['btn', 'preset-tonal-surface']}
                         onclick={() => showHidden = !showHidden}
+                        disabled={inactiveDiagnostics.length === 0}
                     >
                         <ShowBtnIcon size="16" />
                         <span>{visibilityBtnLabel}</span>
