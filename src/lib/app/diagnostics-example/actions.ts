@@ -57,6 +57,11 @@ export const DIAGNOSTIC_ACTIONS: v1.Action[] = [
         schema: null,
     },
     {
+        name: "prot/force/while_pending_result",
+        description: "Send actions/force while another force action result is pending (ERROR)",
+        schema: null,
+    },
+    {
         name: "test_action",
         description: "A normal test action that always succeeds",
         schema: null,

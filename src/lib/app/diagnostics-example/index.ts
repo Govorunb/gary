@@ -54,9 +54,9 @@ export class DiagnosticsExampleGame extends ClientGame {
                         query: "Test",
                     },
                 });
+                await this.sendActionResult(id, true, "Sent empty actions/force (check diagnostics)");
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent empty actions/force`);
-                await this.sendActionResult(id, true, "Sent empty actions/force (check diagnostics)");
                 break;
             }
 
@@ -68,9 +68,9 @@ export class DiagnosticsExampleGame extends ClientGame {
                         query: "Test",
                     },
                 });
+                await this.sendActionResult(id, true, "Sent actions/force with some invalid actions (check diagnostics)");
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent actions/force with some invalid actions`);
-                await this.sendActionResult(id, true, "Sent actions/force with some invalid actions (check diagnostics)");
                 break;
             }
 
@@ -82,9 +82,9 @@ export class DiagnosticsExampleGame extends ClientGame {
                         query: "Test",
                     },
                 });
+                await this.sendActionResult(id, true, "Sent actions/force with all invalid actions (check diagnostics)");
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent actions/force with all invalid actions`);
-                await this.sendActionResult(id, true, "Sent actions/force with all invalid actions (check diagnostics)");
                 break;
             }
 
@@ -96,37 +96,37 @@ export class DiagnosticsExampleGame extends ClientGame {
                         query: "Test",
                     },
                 });
+                await this.sendActionResult(id, true, "Sent two actions/force messages (check diagnostics)");
                 await this.conn.send(msg);
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent two actions/force messages`);
-                await this.sendActionResult(id, true, "Sent two actions/force messages (check diagnostics)");
                 break;
             }
 
             case "prot/unregister/unknown": {
+                await this.sendActionResult(id, true, "Unregistered unknown action (check diagnostics)");
                 await this.unregisterActions(["never_registered_action"]);
                 r.info(`[diagnostics-example] Unregistered unknown action 'never_registered_action'`);
-                await this.sendActionResult(id, true, "Unregistered unknown action (check diagnostics)");
                 break;
             }
 
             case "prot/unregister/inactive": {
+                await this.sendActionResult(id, true, "Unregistered inactive action (check diagnostics)");
                 if (!this.unregisterActionCalled) {
                     await this.unregisterActions(["test_action"]);
                     this.unregisterActionCalled = true;
                 }
                 await this.unregisterActions(["test_action"]);
                 r.info(`[diagnostics-example] Unregistered inactive action`);
-                await this.sendActionResult(id, true, "Unregistered inactive action (check diagnostics)");
                 break;
             }
 
             case "prot/v1/register/conflict": {
                 const action = this.actions.get("test_action")!;
+                await this.sendActionResult(id, true, "Registered same action twice (check diagnostics)");
                 await this.registerActions([action]);
                 await this.registerActions([action]);
                 r.info(`[diagnostics-example] Registered same action twice`);
-                await this.sendActionResult(id, true, "Registered same action twice (check diagnostics)");
                 break;
             }
 
@@ -134,10 +134,24 @@ export class DiagnosticsExampleGame extends ClientGame {
                 const msg: v1.Startup = v1.zStartup.decode({
                     game: this.name,
                 });
+                await this.sendActionResult(id, true, "Sent two startup messages (check diagnostics)");
                 await this.conn.send(msg);
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent two startup messages`);
-                await this.sendActionResult(id, true, "Sent two startup messages (check diagnostics)");
+                break;
+            }
+
+            case "prot/force/while_pending_result": {
+                const msg: v1.ForceAction = v1.zForceAction.decode({
+                    game: this.name,
+                    data: {
+                        action_names: ["test_action"],
+                        query: "Test",
+                    },
+                });
+                await this.conn.send(msg);
+                r.info(`[diagnostics-example] Sent actions/force with pending result`);
+                await this.sendActionResult(id, true, "Sent actions/force with pending result (check diagnostics)");
                 break;
             }
 
