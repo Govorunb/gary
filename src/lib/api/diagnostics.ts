@@ -67,6 +67,12 @@ export const DIAGNOSTICS = [
         details: "The game sent a message that doesn't conform to the API specification"
     },
     {
+        key: "perf/register/identical_duplicate",
+        severity: DiagnosticSeverity.Info,
+        message: "Identical action re-registered",
+        details: "The incoming action is identical to an already-registered one. This is harmless but redundant.",
+    },
+    {
         key: "prot/v1/register/conflict",
         severity: DiagnosticSeverity.Warning,
         message: "Duplicate action registration conflict",

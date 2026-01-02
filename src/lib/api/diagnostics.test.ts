@@ -62,12 +62,22 @@ describe("prot/invalid_message", () => {
 });
 
 describe("actions/register", () => {
-    test("prot/v1/register/conflict", async ({harness}) => {
+    test("perf/register/identical_duplicate - identical action", async ({harness}) => {
         await harness.client.hello();
         const action = v1.zAction.decode({ name: "test_action", schema: null });
         await harness.client.registerActions([action]);
         await harness.client.registerActions([action]);
-    
+
+        expect(harness.diagnosticKeys).toStrictEqual(["perf/register/identical_duplicate"]);
+    });
+
+    test("prot/v1/register/conflict - different action", async ({harness}) => {
+        await harness.client.hello();
+        const action1 = v1.zAction.decode({ name: "test_action", description: "first", schema: null });
+        const action2 = v1.zAction.decode({ name: "test_action", description: "second", schema: null });
+        await harness.client.registerActions([action1]);
+        await harness.client.registerActions([action2]);
+
         expect(harness.diagnosticKeys).toStrictEqual(["prot/v1/register/conflict"]);
     });
 });

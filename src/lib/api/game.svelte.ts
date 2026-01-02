@@ -159,6 +159,12 @@ export class Game {
         return Array.from(this.actions.values().filter(a => a.active));
     }
 
+    private isIdenticalAction(a: v1.Action, b: v1.Action): boolean {
+        return a.name === b.name &&
+            a.description === b.description &&
+            JSON.stringify(a.schema) === JSON.stringify(b.schema);
+    }
+
     async registerActions(actions: v1.Action[]) {
         r.debug(`${this.getActiveActions().length} currently registered actions`);
         let new_actions = 0;
@@ -170,8 +176,12 @@ export class Game {
                 // duplicate action conflict resolution
                 // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                 const isV1 = this.version === "v1";
-                if (isV1) {
-                    const {active, ...rawExisting} = existing;
+                const {active, ...rawExisting} = existing;
+                const isIdentical = this.isIdenticalAction(action, rawExisting);
+                if (isIdentical) {
+                    this.diagnostics.trigger("perf/register/identical_duplicate", { action: action.name });
+                    continue; // skip since it doesn't matter (already active too)
+                } else if (isV1) {
                     this.diagnostics.trigger("prot/v1/register/conflict", {
                         incoming: action,
                         existing: rawExisting,

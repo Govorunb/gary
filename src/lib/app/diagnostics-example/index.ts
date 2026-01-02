@@ -124,11 +124,23 @@ export class DiagnosticsExampleGame extends ClientGame {
                 break;
             }
 
-            case "prot/v1/register/conflict": {
+            case "perf/register/identical_duplicate": {
                 const action = this.actions.get("test_action")!;
-                await this.sendActionResult(id, true, "Registered same action twice (check diagnostics)");
+                await this.sendActionResult(id, true, "Registered identical action twice (check diagnostics)");
                 await this.registerActions([action]);
-                r.info(`[diagnostics-example] Registered same action twice`);
+                r.info(`[diagnostics-example] Registered identical action twice`);
+                break;
+            }
+
+            case "prot/v1/register/conflict": {
+                const conflictingAction: v1.Action = {
+                    name: "test_action",
+                    description: "This is a different description",
+                    schema: null,
+                };
+                await this.sendActionResult(id, true, "Registered conflicting action with same name (check diagnostics)");
+                await this.registerActions([conflictingAction]);
+                r.info(`[diagnostics-example] Registered conflicting action with same name`);
                 break;
             }
 

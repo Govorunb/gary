@@ -32,8 +32,13 @@ export const DIAGNOSTIC_ACTIONS: v1.Action[] = [
         schema: null,
     },
     {
+        name: "perf/register/identical_duplicate",
+        description: "Re-register an identical action (INFO)",
+        schema: null,
+    },
+    {
         name: "prot/v1/register/conflict",
-        description: "Register the same action twice (WARNING)",
+        description: "Register an action with the same name but different definition (WARNING)",
         schema: null,
     },
     {
