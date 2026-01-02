@@ -111,16 +111,37 @@ export abstract class BaseConnection {
 
     public async* listen(): AsyncGenerator<string> {
         type T = string | null;
-        // type Resolve = Parameters<ConstructorParameters<typeof Promise<T>>[0]>[0];
         type Resolve = (value: T) => void;
 
-        const state = {resolve: null as Resolve | null};
+        const queue: T[] = [];
+        let resolve: Resolve | null = null;
 
-        this.onmessage((text) => state.resolve?.(text));
-        this.onclose(() => state.resolve?.(null));
+        const tryResolve = () => {
+            if (!resolve) return;
+            const value = queue.shift();
+            if (!value) return;
+            
+            // reentry
+            const next = resolve;
+            resolve = null;
+            next(value);
+        };
+
+        this.onmessage(text => { queue.push(text); tryResolve(); });
+        this.onclose(() => { queue.push(null); tryResolve(); });
+
+        tryResolve();
 
         while (!this.closed) {
-            const res = await new Promise<T>(resolve => void (state.resolve = resolve));
+            if (queue.length) {
+                const value = queue.shift()!;
+                if (value === null) break;
+                yield value;
+                tryResolve();
+                continue;
+            }
+            const res = await new Promise<T>(r => resolve = r);
+            tryResolve();
             if (res === null) break;
             yield res;
         }
@@ -128,16 +149,37 @@ export abstract class BaseConnection {
 
     public async* listenSend(): AsyncGenerator<string> {
         type T = string | null;
-        // type Resolve = Parameters<ConstructorParameters<typeof Promise<T>>[0]>[0];
         type Resolve = (value: T) => void;
 
-        const state = {resolve: null as Resolve | null};
+        const queue: T[] = [];
+        let resolve: Resolve | null = null;
 
-        this.onsend((text) => state.resolve?.(text));
-        this.onclose(() => state.resolve?.(null));
+        const tryResolve = () => {
+            if (!resolve) return;
+            const value = queue.shift();
+            if (!value) return;
+            
+            // reentry
+            const next = resolve;
+            resolve = null;
+            next(value);
+        };
+
+        this.onsend(text => { queue.push(text); tryResolve(); });
+        this.onclose(() => { queue.push(null); tryResolve(); });
+
+        tryResolve();
 
         while (!this.closed) {
-            const res = await new Promise<T>(resolve => void (state.resolve = resolve));
+            if (queue.length) {
+                const value = queue.shift()!;
+                if (value === null) break;
+                yield value;
+                tryResolve();
+                continue;
+            }
+            const res = await new Promise<T>(r => resolve = r);
+            tryResolve();
             if (res === null) break;
             yield res;
         }
