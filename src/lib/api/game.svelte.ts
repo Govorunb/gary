@@ -142,7 +142,7 @@ export class Game {
         }
     }
 
-    async context(text: string, silent: boolean) {
+    context(text: string, silent: boolean) {
         this.session.context.client(this, { text, silent });
     }
 
@@ -232,7 +232,19 @@ export class Game {
             this.diagnostics.trigger("prot/force/multiple", { msg });
         }
         this.session.scheduler.forceQueue.push(actions);
-        await this.context(this.forceMsg(actions, msg.data.query, msg.data.state), false);
+        // this shit is so ass
+        // basically: forceQueue.push trips the scheduler and runs a forceAct (yay reactivity)
+        // the user needs this context message for display, and it needs to be non-silent (so it "looks" more like a "force")
+        // the actor side also needs the query/state... but!
+        // the actor can't have it non-silent because it'll trigger a tryAct (unsolicited (yay reactivity))
+        const text = this.forceMsg(actions, msg.data.query, msg.data.state);
+        // scheduler (silent)
+        this.session.context.client(this, { text, visibilityOverrides: { user: false }, silent: true });
+        // user (non-silent)
+        this.session.context.client(this, { text, visibilityOverrides: {engine: false}, silent: false});
+        // TODO: try the following fix
+        // remove scheduler's force queue, it now scans all games' force queues instead
+        // (also might solve edge case where 2+ connected games would trigger prot/force/multiple on each other through no fault of their own)
     }
 
     async sendAction(actData: v1.ActData) {
@@ -274,7 +286,7 @@ export class Game {
         const silent = success;
         let text = `Result for action ${id.substring(0, 8)}: ${success ? "Performing" : "Failure"}`;
         text += message ? ` (${message})` : " (no message)";
-        await this.context(text, silent);
+        this.context(text, silent);
     }
 
     async manualSend(action: string, data: any) {
