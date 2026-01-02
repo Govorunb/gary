@@ -162,7 +162,7 @@ describe("action/result", () => {
     test("prot/result/error_nomessage", async ({harness}) => {
         await harness.client.hello();
 
-        await harness.server.conn.send(v1.zAct.decode({ data: { id: "test-id", name: "e" } }));
+        await harness.server.sendAction(v1.zActData.decode({ id: "test-id", name: "e" }));
 
         const result: v1.ActionResult = v1.zActionResult.decode({
             game: harness.server.name,
@@ -171,6 +171,17 @@ describe("action/result", () => {
         await harness.client.conn.send(result);
 
         expect(harness.diagnosticIds).toStrictEqual(["prot/result/error_nomessage"]);
+    });
+    test("prot/result/unexpected", async ({harness}) => {
+        await harness.client.hello();
+
+        const result: v1.ActionResult = v1.zActionResult.decode({
+            game: harness.server.name,
+            data: { id: "test-id", success: false }
+        });
+        await harness.client.conn.send(result);
+
+        expect(harness.diagnosticIds).toStrictEqual(["prot/result/unexpected"]);
     });
     test("perf/late/action_result", async ({harness}) => {
         await harness.client.hello();
