@@ -161,7 +161,13 @@ Per v1 of the API specification, the incoming action is ignored and the existing
         severity: DiagnosticSeverity.Warning,
         message: "Received a result for an action we didn't send",
         details: "This usually indicates stale state on the client side."
-    }
+    },
+    {
+        id: "prot/schema/additionalProperties",
+        severity: DiagnosticSeverity.Warning,
+        message: "Action schema should have 'additionalProperties: false'",
+        details: "Action schemas should explicitly set 'additionalProperties: false' to reject unknown fields and prevent bugs from typo'd field names."
+    },
 ] as const satisfies DiagnosticDef[];
 
 export type DiagnosticId = (typeof DIAGNOSTICS)[number]["id"];

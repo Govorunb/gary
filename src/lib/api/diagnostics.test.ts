@@ -220,3 +220,74 @@ test("prot/v1/game_renamed", async ({harness}) => {
 
     expect(harness.diagnosticIds).toStrictEqual(["prot/v1/game_renamed"]);
 });
+
+describe("prot/schema/additionalProperties", () => {
+    test("trigger when not defined", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { type: "string" }
+                }
+            }
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticIds).toStrictEqual(["prot/schema/additionalProperties"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: "test_action",
+            schema: action.schema,
+        });
+    });
+
+    test("ignore additionalProperties: true", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { type: "string" }
+                },
+                additionalProperties: true
+            }
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticIds).toStrictEqual([]);
+    });
+
+    test("ignore additionalProperties: false", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { type: "string" }
+                },
+                additionalProperties: false
+            }
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticIds).toStrictEqual([]);
+    });
+
+    test("ignore null schema", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: null
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticIds).toStrictEqual([]);
+    });
+});

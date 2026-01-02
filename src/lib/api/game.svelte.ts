@@ -181,6 +181,14 @@ export class Game {
                 logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`, { toast: false });
                 if (isV1) continue;
             }
+            if (action.schema !== null) {
+                if (!('additionalProperties' in action.schema)) {
+                    this.diagnostics.trigger("prot/schema/additionalProperties", {
+                        action: action.name,
+                        schema: action.schema,
+                    });
+                }
+            }
             const storedAction = $state({ ...action, active: true });
             this.actions.set(action.name, storedAction);
         }
