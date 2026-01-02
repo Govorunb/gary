@@ -2,9 +2,12 @@
     import Dialog from '$lib/ui/common/Dialog.svelte';
     import TeachingTooltip from '$lib/ui/common/TeachingTooltip.svelte';
     import type { Game } from "$lib/api/game.svelte";
-    import { Info, EyeOff, Eye } from '@lucide/svelte';
+    import { Info, Check } from '@lucide/svelte';
     import { pressedKeys } from '$lib/app/utils/hotkeys.svelte';
     import DiagnosticRow from './DiagnosticRow.svelte';
+    import Hotkey from '../common/Hotkey.svelte';
+    import { tooltip } from '$lib/app/utils';
+    import { SegmentedControl } from '@skeletonlabs/skeleton-svelte';
 
     type Props = {
         open: boolean;
@@ -21,6 +24,8 @@
     const activeDiagnostics = $derived(showHidden ? hiddenDiagnostics : visibleDiagnostics);
     const inactiveDiagnostics = $derived(showHidden ? visibleDiagnostics : hiddenDiagnostics);
 
+    const showClearBtn = $derived(activeDiagnostics.length && shiftPressed);
+
     function closeDialog() {
         open = false;
     }
@@ -34,59 +39,70 @@
             game.diagnostics.dismissAll();
         }
     }
-    const visibilityBtnLabel = $derived(showHidden ? "Show active" : "Show hidden");
+    const filterValue = $derived(showHidden ? 'hidden' : 'active');
 </script>
 
 <Dialog bind:open>
     {#snippet content(props)}
-        {@const ShowBtnIcon = showHidden ? Eye : EyeOff}
         <div {...props} class="diagnostics-content">
             <div class="dialog-header">
                 <h2 class="text-lg font-bold">Diagnostics ({game.name})</h2>
                 <TeachingTooltip>
                     <p>Diagnostics help catch common off-spec behaviors in game integrations.</p>
-                    <p>Dismiss hides a diagnostic temporarily. It will reappear if the issue occurs again.</p>
-                    <p>Suppress hides a diagnostic permanently for this game (saved by game name).</p>
+                    <p><b>Dismissing</b> a diagnostic instance hides it. Future diagnostics are still visible.</p>
+                    <p><b>Suppressing</b> hides current and future diagnostics of the same type for this game (specifically, game <em>name</em>).</p>
+                    <p><Hotkey>Shift</Hotkey>-click "Dismiss all" to clear all diagnostics (this will <b>delete</b>, not dismiss!).</p>
                 </TeachingTooltip>
             </div>
 
             <div class="dialog-body">
-                {#if !activeDiagnostics.length}
-                    {@const diagCount = diagnostics.length}
-                    <div class="empty-state">
-                        <Info class="empty-icon" />
-                        <p>No{diagCount ? (showHidden ? ' hidden ' : ' active ') : ' '}diagnostics</p>
-                        <p class="text-sm text-neutral-500">
-                            {!diagCount
-                                ? 'This game is running without any issues.'
-                                : `All ${diagCount} diagnostics are ${showHidden ? "active" : "suppressed or dismissed"}. Click "${visibilityBtnLabel}" to show them.`}
-                        </p>
-                    </div>
-                {:else}
-                    <div class="diagnostics-list">
-                        {#each activeDiagnostics as diag (`${diag.id}:${diag.timestamp}`)}
-                            <DiagnosticRow {game} {diag} {shiftPressed} />
-                        {/each}
-                    </div>
+                {#if diagnostics.length}
+                    <SegmentedControl
+                        value={filterValue}
+                        onValueChange={(details) => showHidden = details.value === 'hidden'}
+                        disabled={diagnostics.length === 0}
+                    >
+                        <SegmentedControl.Control>
+                            <SegmentedControl.Indicator class="indicator" />
+                            <SegmentedControl.Item value="active">
+                                <SegmentedControl.ItemText>Active</SegmentedControl.ItemText>
+                                <SegmentedControl.ItemHiddenInput />
+                            </SegmentedControl.Item>
+                            <SegmentedControl.Item value="hidden">
+                                <SegmentedControl.ItemText>Hidden</SegmentedControl.ItemText>
+                                <SegmentedControl.ItemHiddenInput />
+                            </SegmentedControl.Item>
+                        </SegmentedControl.Control>
+                    </SegmentedControl>
                 {/if}
+                <div class="diagnostics-list">
+                    {#each activeDiagnostics as diag (`${diag.id}:${diag.timestamp}`)}
+                        <DiagnosticRow {game} {diag} {shiftPressed} />
+                    {:else}
+                        {@const diagCount = diagnostics.length}
+                        {@const OKIcon = diagCount ? Info : Check}
+                        <div class="empty-state">
+                            <OKIcon class="empty-icon" />
+                            <p>No{diagCount ? (showHidden ? ' hidden ' : ' active ') : ' '}diagnostics</p>
+                            <p class="text-sm text-neutral-500">
+                                {!diagCount
+                                    ? 'This game is running without any issues.'
+                                    : `All ${diagCount} diagnostic(s) are ${showHidden ? "active" : "suppressed or dismissed"}.`}
+                            </p>
+                        </div>
+                    {/each}
+                </div>
             </div>
 
             <div class="dialog-footer">
                 <div class="footer-actions">
                     <button
-                        class={['btn', 'preset-tonal-surface']}
-                        onclick={() => showHidden = !showHidden}
-                        disabled={diagnostics.length === 0}
-                    >
-                        <ShowBtnIcon size="16" />
-                        <span>{visibilityBtnLabel}</span>
-                    </button>
-                    <button
-                        class={['btn', shiftPressed ? "preset-tonal-warning" : "preset-tonal-surface"]}
+                        class={['btn', showClearBtn ? "preset-tonal-warning" : "preset-tonal-surface"]}
                         onclick={() => clearBtn()}
-                        disabled={activeDiagnostics.length === 0}
+                        disabled={!activeDiagnostics.length}
+                        {@attach tooltip(showClearBtn ? "This will permanently remove all diagnostics!" : "")}
                     >
-                        {shiftPressed ? "Clear" : showHidden ? "Restore" : "Dismiss"} all
+                        {showClearBtn ? "Clear" : showHidden ? "Restore" : "Dismiss"} all
                     </button>
                 </div>
                 <button class="btn preset-tonal-surface" onclick={() => closeDialog()}>Close</button>
@@ -116,6 +132,9 @@
 
     .dialog-body {
         @apply flex flex-col gap-3 flex-1 overflow-hidden;
+        & :global(.indicator) {
+            @apply contrast-50 dark:contrast-75;
+        }
     }
 
     .empty-state {
