@@ -76,7 +76,7 @@
                     <button
                         class={['btn', 'preset-tonal-surface']}
                         onclick={() => showHidden = !showHidden}
-                        disabled={inactiveDiagnostics.length === 0}
+                        disabled={diagnostics.length === 0}
                     >
                         <ShowBtnIcon size="16" />
                         <span>{visibilityBtnLabel}</span>
