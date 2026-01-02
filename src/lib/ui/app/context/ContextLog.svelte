@@ -39,7 +39,7 @@
     }
 </script>
 
-<div class="container">
+<div class="context-log-container">
     <div class="flex flex-row gap-4 w-full">
         <ContextLogMenu />
         <h2 class="flex-1">Context Log</h2>
@@ -72,7 +72,7 @@
         @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
         @apply select-none;
     }
-    .container {
+    .context-log-container {
         @apply flex flex-col h-full gap-4;
         @apply p-4 rounded-xl text-sm shadow-sm;
         @apply bg-neutral-50 ring-1 ring-primary-200/40;

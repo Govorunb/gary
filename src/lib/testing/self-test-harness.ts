@@ -66,8 +66,8 @@ export class SelfTestHarness {
     public get diagnostics() {
         return this.server.diagnostics.diagnostics;
     }
-    public get diagnosticIds() {
-        return this.server.diagnostics.diagnostics.map(d => (d.dismissed ? "!" : "") + d.id);
+    public get diagnosticKeys() {
+        return this.server.diagnostics.diagnostics.map(d => (d.dismissed ? "!" : "") + d.key);
     }
 
     public get actions() {

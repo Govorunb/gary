@@ -24,28 +24,28 @@ describe("suppression", () => {
     test("suppression + dismissal", ({harness}) => {
         const diag = harness.server.diagnostics;
         diag.trigger(INFO);
-        expect(harness.diagnosticIds).toStrictEqual([INFO]);
+        expect(harness.diagnosticKeys).toStrictEqual([INFO]);
 
         diag.dismiss(INFO);
-        expect(harness.diagnosticIds).toStrictEqual([info]);
+        expect(harness.diagnosticKeys).toStrictEqual([info]);
         
         diag.trigger(INFO);
-        expect(harness.diagnosticIds).toStrictEqual([info, INFO]);
+        expect(harness.diagnosticKeys).toStrictEqual([info, INFO]);
         
         diag.trigger(WARN);
-        expect(harness.diagnosticIds).toStrictEqual([info, INFO, WARN]);
+        expect(harness.diagnosticKeys).toStrictEqual([info, INFO, WARN]);
         
         diag.suppress(WARN);
-        expect(harness.diagnosticIds).toStrictEqual([info, INFO, warn]);
+        expect(harness.diagnosticKeys).toStrictEqual([info, INFO, warn]);
         
         diag.trigger(INFO);
-        expect(harness.diagnosticIds).toStrictEqual([info, INFO, warn, INFO]);
+        expect(harness.diagnosticKeys).toStrictEqual([info, INFO, warn, INFO]);
 
         diag.trigger(ERR, undefined, false);
-        expect(harness.diagnosticIds).toStrictEqual([info, INFO, warn, INFO, ERR]);
+        expect(harness.diagnosticKeys).toStrictEqual([info, INFO, warn, INFO, ERR]);
         
         diag.suppress(INFO);
-        expect(harness.diagnosticIds).toStrictEqual([info, info, warn, info, ERR]);
+        expect(harness.diagnosticKeys).toStrictEqual([info, info, warn, info, ERR]);
     });
 
     test("report", ({harness}) => {
@@ -64,7 +64,7 @@ describe("suppression", () => {
         expect(reportSpy, "report but suppressed").not.toHaveBeenCalled();
     });
 
-    test("dismissDiagnosticsById", ({harness}) => {
+    test("dismiss by key", ({harness}) => {
         const diag = harness.server.diagnostics;
         diag.trigger(INFO);
         diag.trigger(INFO);
@@ -72,7 +72,7 @@ describe("suppression", () => {
 
         diag.dismiss(INFO);
 
-        expect(harness.diagnosticIds).toStrictEqual([info, info, WARN]);
+        expect(harness.diagnosticKeys).toStrictEqual([info, info, WARN]);
     });
 
     test("dismissAll", ({harness}) => {
@@ -98,7 +98,7 @@ describe("suppression", () => {
         expect(harness.status).toBe("error");
         diag.suppress(ERR);
         
-        expect(harness.diagnosticIds).toStrictEqual([warn, err]);
+        expect(harness.diagnosticKeys).toStrictEqual([warn, err]);
         expect(harness.status, "suppress didn't dismiss").toBe("ok");
     });
 

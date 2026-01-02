@@ -76,7 +76,7 @@
                     </SegmentedControl>
                 {/if}
                 <div class="diagnostics-list">
-                    {#each activeDiagnostics as diag (`${diag.id}:${diag.timestamp}`)}
+                    {#each activeDiagnostics as diag (diag.id)}
                         <DiagnosticRow {game} {diag} {shiftPressed} />
                     {:else}
                         {@const diagCount = diagnostics.length}

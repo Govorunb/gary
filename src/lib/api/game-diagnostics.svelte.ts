@@ -1,5 +1,6 @@
+import { shortId } from "$lib/app/utils";
 import r from "$lib/app/utils/reporting";
-import { type GameDiagnostic, getDiagnosticById, DiagnosticSeverity, type DiagnosticId, SeverityToLogLevel } from "./diagnostics";
+import { type GameDiagnostic, getDiagnosticDefinition, DiagnosticSeverity, type DiagnosticKey, SeverityToLogLevel } from "./diagnostics";
 import type { Game } from "./game.svelte";
 
 
@@ -10,10 +11,10 @@ export class GameDiagnostics {
 
     public get status(): 'ok' | 'warn' | 'error' {
         let status: 'ok' | 'warn' = 'ok';
-        for (const { id, dismissed } of this.diagnostics) {
+        for (const { key, dismissed } of this.diagnostics) {
             if (dismissed) continue;
 
-            const diag = getDiagnosticById(id);
+            const diag = getDiagnosticDefinition(key);
             if (!diag) continue;
 
             if (diag.severity >= DiagnosticSeverity.Error) {
@@ -25,17 +26,18 @@ export class GameDiagnostics {
         return status;
     }
 
-    public trigger(id: DiagnosticId, context?: any, report: boolean = true): GameDiagnostic | null {
-        const diagDef = getDiagnosticById(id);
+    public trigger(key: DiagnosticKey, context?: any, report: boolean = true): GameDiagnostic | null {
+        const diagDef = getDiagnosticDefinition(key);
         if (!diagDef) {
-            r.error(`Unknown diagnostic ${id}`, { ctx: context });
+            r.error(`Unknown diagnostic ${key}`, { ctx: context });
             return null;
         }
 
-        const suppressed = this.isSuppressed(id);
+        const suppressed = this.isSuppressed(key);
         const diag = $state<GameDiagnostic>({
-            id,
+            id: shortId(),
             timestamp: Date.now(),
+            key,
             context,
             dismissed: suppressed,
         });
@@ -56,27 +58,27 @@ export class GameDiagnostics {
         return this.game.gamePrefs.diagnostics.suppressions;
     }
 
-    public isSuppressed(id: DiagnosticId) {
-        return this.suppressions.includes(id);
+    public isSuppressed(key: DiagnosticKey) {
+        return this.suppressions.includes(key);
     }
 
-    public suppress(id: DiagnosticId) {
-        const diag = getDiagnosticById(id);
+    public suppress(key: DiagnosticKey) {
+        const diag = getDiagnosticDefinition(key);
         if (!diag) {
-            r.error(`Cannot suppress unknown diagnostic ${id}`);
+            r.error(`Cannot suppress unknown diagnostic ${key}`);
             return;
         }
-        if (!this.suppressions.includes(id)) {
-            this.suppressions.push(id);
+        if (!this.suppressions.includes(key)) {
+            this.suppressions.push(key);
         }
-        this.dismiss(id);
+        this.dismiss(key);
     }
 
-    public dismiss(id: DiagnosticId) {
-        this.diagnostics.forEach(d => d.id === id && (d.dismissed = true));
+    public dismiss(key: DiagnosticKey) {
+        this.diagnostics.forEach(d => d.key === key && (d.dismissed = true));
     }
-    public restore(id: DiagnosticId) {
-        this.diagnostics.forEach(d => d.id === id && (d.dismissed = false));
+    public restore(key: DiagnosticKey) {
+        this.diagnostics.forEach(d => d.key === key && (d.dismissed = false));
     }
 
     public dismissAll() {

@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Game } from "$lib/api/game.svelte";
     import { CircleX, Info, Skull, TriangleAlert, Check, CheckCheck, EyeOff, Eye, Undo, Undo2, ChevronDown } from '@lucide/svelte';
-    import { DiagnosticSeverity, getDiagnosticById, type GameDiagnostic } from '$lib/api/diagnostics';
+    import { DiagnosticSeverity, getDiagnosticDefinition, type GameDiagnostic } from '$lib/api/diagnostics';
     import { tooltip } from '$lib/app/utils';
     import { boolAttr } from 'runed';
     import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
@@ -38,7 +38,7 @@
         }
     };
 
-    const def = $derived(getDiagnosticById(diag.id)!);
+    const def = $derived(getDiagnosticDefinition(diag.key)!);
     const config = $derived(severityConfig[def.severity]);
     const Icon = $derived(config.icon);
     const hasContext = $derived(!!diag.context);
@@ -46,7 +46,7 @@
     let ctxDetailsOpen = $state(false);
 
     const isDismissed = $derived(diag.dismissed);
-    const isSuppressed = $derived(game.diagnostics.isSuppressed(diag.id as any));
+    const isSuppressed = $derived(game.diagnostics.isSuppressed(diag.key as any));
 
     const Btn1Icon = $derived(isDismissed ? Undo : Check);
     const Btn2Icon = $derived(isDismissed ? Undo2 : CheckCheck);
@@ -61,19 +61,19 @@
     }
 
     function dismissDiagnostic() {
-        game.diagnostics.dismiss(diag.id as any);
+        game.diagnostics.dismiss(diag.key as any);
     }
 
     function restoreDiagnostic() {
-        game.diagnostics.restore(diag.id as any);
+        game.diagnostics.restore(diag.key as any);
     }
 
     function suppressDiagnostic() {
-        game.diagnostics.suppress(diag.id as any);
+        game.diagnostics.suppress(diag.key as any);
     }
 
     function unsuppressDiagnostic() {
-        const idx = game.diagnostics.suppressions.indexOf(diag.id as any);
+        const idx = game.diagnostics.suppressions.indexOf(diag.key as any);
         if (idx !== -1) {
             game.diagnostics.suppressions.splice(idx, 1);
         }
@@ -92,7 +92,7 @@
         <span class="note">{dayjs(diag.timestamp).toDate().toLocaleTimeString()}</span>
         <Icon size="20" />
     </div>
-    <p class="diagnostic-message">{def.message}</p>
+    <p class="diagnostic-message" title={def.key}>{def.message}</p>
     {#if def.details}
         <p class="diagnostic-details">{def.details}</p>
     {/if}

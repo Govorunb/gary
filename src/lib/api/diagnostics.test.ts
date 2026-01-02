@@ -8,20 +8,20 @@ describe("startup", () => {
         vi.advanceTimersByTime(TIMEOUTS["perf/late/startup"] + 100);
         await harness.client.hello();
 
-        expect(harness.diagnosticIds).toStrictEqual(["perf/late/startup"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["perf/late/startup"]);
     });
 
     test("prot/startup/missing", async ({harness}) => {
         await harness.client.registerActions([]);
 
-        expect(harness.diagnosticIds).toStrictEqual(["prot/startup/missing"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/startup/missing"]);
     });
 
     test("prot/startup/multiple", async ({harness}) => {
         await harness.client.hello();
         await harness.client.hello();
 
-        expect(harness.diagnosticIds).toStrictEqual(["prot/startup/multiple"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/startup/multiple"]);
     });
 });
 
@@ -29,7 +29,7 @@ describe("prot/invalid_message", () => {
     test("not JSON", async ({harness}) => {
         await harness.client.conn.sendRaw("not valid JSON");
 
-        expect(harness.diagnosticIds).toStrictEqual(["prot/invalid_message"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/invalid_message"]);
     });
 
     test("invalid command", async ({harness}) => {
@@ -39,7 +39,7 @@ describe("prot/invalid_message", () => {
             data: {}
         }));
 
-        expect(harness.diagnosticIds).toStrictEqual(["prot/invalid_message"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/invalid_message"]);
     });
 
     test("Neuro message from game", async ({harness}) => {
@@ -48,7 +48,7 @@ describe("prot/invalid_message", () => {
             data: { id: "a", action: "test", data: {} }
         }));
 
-        expect(harness.diagnosticIds).toStrictEqual(["prot/invalid_message"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/invalid_message"]);
     });
 
     test("missing game", async ({harness}) => {
@@ -57,7 +57,7 @@ describe("prot/invalid_message", () => {
             data: { actions: [] }
         }));
 
-        expect(harness.diagnosticIds).toStrictEqual(["prot/invalid_message"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/invalid_message"]);
     });
 });
 
@@ -68,7 +68,7 @@ describe("actions/register", () => {
         await harness.client.registerActions([action]);
         await harness.client.registerActions([action]);
     
-        expect(harness.diagnosticIds).toStrictEqual(["prot/v1/register/conflict"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/v1/register/conflict"]);
     });
 });
 
@@ -77,7 +77,7 @@ describe("actions/unregister", () => {
         await harness.client.hello();
         await harness.client.unregisterActions(["nonexistent"]);
     
-        expect(harness.diagnosticIds).toStrictEqual(["prot/unregister/unknown"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/unregister/unknown"]);
     });
     
     test("prot/unregister/inactive", async ({harness}) => {
@@ -87,7 +87,7 @@ describe("actions/unregister", () => {
         await harness.client.unregisterActions([action.name]);
         await harness.client.unregisterActions([action.name]);
     
-        expect(harness.diagnosticIds).toStrictEqual(["prot/unregister/inactive"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/unregister/inactive"]);
     });
 });
 
@@ -100,7 +100,7 @@ describe("actions/force", () => {
         });
         await harness.client.conn.send(force);
     
-        expect(harness.diagnosticIds).toStrictEqual(["prot/force/empty"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/force/empty"]);
         expect(harness.diagnostics[0].context).toEqual({ msg: force });
     });
     
@@ -116,7 +116,7 @@ describe("actions/force", () => {
         });
         await harness.client.conn.send(force);
     
-        expect(harness.diagnosticIds).toStrictEqual(["prot/force/some_invalid"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/force/some_invalid"]);
         expect(harness.diagnostics[0].context).toEqual({ msg: force, unknownActions: ["unknown"] });
     });
     
@@ -128,7 +128,7 @@ describe("actions/force", () => {
         });
         await harness.client.conn.send(force);
     
-        expect(harness.diagnosticIds).toStrictEqual(["prot/force/all_invalid"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/force/all_invalid"]);
         expect(harness.diagnostics[0].context).toEqual({ msg: force });
     });
     
@@ -151,10 +151,10 @@ describe("actions/force", () => {
         
         await harness.client.conn.send(force);
         expect(fq).toEqual([null, [{...action, active:true}]]);
-        expect(harness.diagnosticIds, "first force with non-client in queue").toStrictEqual([]);
+        expect(harness.diagnosticKeys, "first force with non-client in queue").toStrictEqual([]);
 
         await harness.client.conn.send(force);
-        expect(harness.diagnosticIds).toStrictEqual(["prot/force/multiple"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/force/multiple"]);
     });
 });
 
@@ -170,7 +170,7 @@ describe("action/result", () => {
         });
         await harness.client.conn.send(result);
 
-        expect(harness.diagnosticIds).toStrictEqual(["prot/result/error_nomessage"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/result/error_nomessage"]);
     });
     test("prot/result/unexpected", async ({harness}) => {
         await harness.client.hello();
@@ -181,7 +181,7 @@ describe("action/result", () => {
         });
         await harness.client.conn.send(result);
 
-        expect(harness.diagnosticIds).toStrictEqual(["prot/result/unexpected"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/result/unexpected"]);
     });
     test("perf/late/action_result", async ({harness}) => {
         await harness.client.hello();
@@ -196,7 +196,7 @@ describe("action/result", () => {
         });
         await harness.client.conn.send(result);
 
-        expect(harness.diagnosticIds).toStrictEqual(["perf/late/action_result"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["perf/late/action_result"]);
     });
     test("perf/timeout/action_result", async ({harness}) => {
         await harness.client.hello();
@@ -205,7 +205,7 @@ describe("action/result", () => {
 
         vi.advanceTimersByTime(TIMEOUTS["perf/timeout/action_result"] + 100);
 
-        expect(harness.diagnosticIds).toStrictEqual(["perf/timeout/action_result"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["perf/timeout/action_result"]);
     });
 });
 
@@ -218,7 +218,7 @@ test("prot/v1/game_renamed", async ({harness}) => {
     });
     await harness.client.conn.send(context);
 
-    expect(harness.diagnosticIds).toStrictEqual(["prot/v1/game_renamed"]);
+    expect(harness.diagnosticKeys).toStrictEqual(["prot/v1/game_renamed"]);
 });
 
 describe("prot/schema/additionalProperties", () => {
@@ -236,7 +236,7 @@ describe("prot/schema/additionalProperties", () => {
         });
         await harness.client.registerActions([action]);
 
-        expect(harness.diagnosticIds).toStrictEqual(["prot/schema/additionalProperties"]);
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/additionalProperties"]);
         expect(harness.diagnostics[0].context).toEqual({
             action: "test_action",
             schema: action.schema,
@@ -258,7 +258,7 @@ describe("prot/schema/additionalProperties", () => {
         });
         await harness.client.registerActions([action]);
 
-        expect(harness.diagnosticIds).toStrictEqual([]);
+        expect(harness.diagnosticKeys).toStrictEqual([]);
     });
 
     test("ignore additionalProperties: false", async ({harness}) => {
@@ -276,7 +276,7 @@ describe("prot/schema/additionalProperties", () => {
         });
         await harness.client.registerActions([action]);
 
-        expect(harness.diagnosticIds).toStrictEqual([]);
+        expect(harness.diagnosticKeys).toStrictEqual([]);
     });
 
     test("ignore null schema", async ({harness}) => {
@@ -288,6 +288,6 @@ describe("prot/schema/additionalProperties", () => {
         });
         await harness.client.registerActions([action]);
 
-        expect(harness.diagnosticIds).toStrictEqual([]);
+        expect(harness.diagnosticKeys).toStrictEqual([]);
     });
 });
