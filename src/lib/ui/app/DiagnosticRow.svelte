@@ -43,6 +43,7 @@
     const Icon = $derived(config.icon);
     const hasContext = $derived(!!diag.context);
     let ctxOpen = $state(false);
+    let ctxDetailsOpen = $state(false);
 
     const isDismissed = $derived(diag.dismissed);
     const isSuppressed = $derived(game.diagnostics.isSuppressed(diag.id as any));
@@ -83,7 +84,7 @@
 </script>
 
 <div
-    class="diagnostic-item {config.class} group"
+    class="diagnostic-item {config.class} {ctxOpen ? 'context-open' : 'context-closed'} group"
     data-dismissed={boolAttr(isDismissed)}
     data-shift={boolAttr(shiftPressed)}
 >
@@ -91,29 +92,27 @@
         <span class="note">{dayjs(diag.timestamp).toDate().toLocaleTimeString()}</span>
         <Icon size="20" />
     </div>
-    <div class="diagnostic-content">
-        <p class="diagnostic-message">{def.message}</p>
-        {#if def.details}
-            <p class="diagnostic-details">{def.details}</p>
-        {/if}
-        {#if hasContext}
-            <details class="context-details" bind:open={ctxOpen}>
-                <summary class="context-summary">
-                    <ChevronDown size="14" class="chevron-icon" />
-                    <span>Details</span>
-                </summary>
-                <div class="context-editor">
-                    <CodeMirror
-                        code={contextJson}
-                        open={ctxOpen}
-                        readonly
-                        minHeight="4rem"
-                        maxHeight="16rem"
-                    />
-                </div>
-            </details>
-        {/if}
-    </div>
+    <p class="diagnostic-message">{def.message}</p>
+    {#if def.details}
+        <p class="diagnostic-details">{def.details}</p>
+    {/if}
+    {#if hasContext}
+        <details class="context-details" bind:open={ctxOpen}>
+            <summary>
+                <ChevronDown size="14" class="chevron-icon" />
+                <span>Details</span>
+            </summary>
+            <div class="context-editor">
+                <CodeMirror
+                    code={contextJson}
+                    open={ctxOpen}
+                    readonly
+                    minHeight="4rem"
+                    maxHeight="16rem"
+                />
+            </div>
+        </details>
+    {/if}
     <div class="actions">
         <button class="action-btn"
             onclick={() => isDismissed ? restoreSingle() : dismissSingle()}
@@ -140,8 +139,56 @@
     @reference "global.css";
 
     .diagnostic-item {
-        @apply relative flex gap-3 p-3 rounded-lg;
+        @apply relative p-3 rounded-lg;
         @apply border transition-colors;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto auto;
+        gap: 0.25rem 0.75rem;
+
+        &.context-closed .diagnostic-icon {
+            grid-row: 1 / span 3;
+        }
+
+        &.context-open .diagnostic-icon {
+            grid-row: 1 / span 2;
+        }
+
+        .diagnostic-icon {
+            grid-column: 1;
+            @apply shrink-0 flex items-center justify-center;
+            transition: all 150ms ease;
+        }
+
+        .diagnostic-message {
+            grid-row: 1;
+            grid-column: 2;
+            @apply font-medium;
+        }
+
+        .diagnostic-details {
+            grid-row: 2;
+            grid-column: 2;
+            @apply text-neutral-600 dark:text-neutral-400;
+            @apply text-xs whitespace-pre-line;
+        }
+
+        .context-details {
+            grid-row: 3;
+            grid-column: 2;
+            transition: all 150ms ease;
+        }
+
+        &.context-open .context-details {
+            grid-column: 1 / span 2;
+            max-width: 100%;
+        }
+
+        .actions {
+            @apply absolute top-2 right-2 flex items-center gap-1 transition-opacity;
+            @apply opacity-0 group-hover:opacity-100 focus-within:opacity-100;
+            @apply group-data-shift:opacity-100;
+        }
 
         &.severity-error, &.severity-fatal {
             @apply bg-red-50 dark:bg-red-900/20;
@@ -160,10 +207,6 @@
         @apply data-dismissed:opacity-60;
     }
 
-    .diagnostic-icon {
-        @apply shrink-0 flex items-center justify-center;
-    }
-
     .diagnostic-icon.severity-error, .diagnostic-icon.severity-fatal {
         @apply text-red-600 dark:text-red-400;
     }
@@ -176,14 +219,8 @@
         @apply text-sky-600 dark:text-sky-400;
     }
 
-    .diagnostic-content {
-        @apply flex flex-col gap-1 min-w-0 flex-1;
-    }
-
-    .actions {
-        @apply absolute top-2 right-2 flex items-center gap-1 transition-opacity;
-        @apply opacity-0 group-hover:opacity-100 focus-within:opacity-100;
-        @apply group-data-shift:opacity-100;
+    .note {
+        @apply text-xs text-neutral-400 dark:text-neutral-500;
     }
 
     .action-btn {
@@ -206,34 +243,25 @@
         }
     }
 
-    .diagnostic-message {
-        @apply font-medium;
-    }
-
-    .diagnostic-details {
-        @apply text-neutral-600 dark:text-neutral-400;
-        @apply text-xs whitespace-pre-line;
-    }
-
     .context-details {
-        @apply mt-2;
-    }
-
-    .context-summary {
-        @apply flex items-center gap-1.5 cursor-pointer select-none;
-        @apply text-xs font-medium text-sky-700 dark:text-sky-300;
-        @apply hover:text-sky-800 dark:hover:text-sky-200;
-        &::marker {
-            @apply hidden;
-            @apply open:rotate-180;
+        @apply mt-1 border border-neutral-200 dark:border-neutral-700 rounded-md;
+        padding: 0.5rem;
+        &[open] summary {
+            @apply pb-2;
+        }
+        & summary {
+            @apply flex items-center gap-1.5 cursor-pointer select-none;
+            @apply text-xs font-medium text-sky-700 dark:text-sky-300;
+            @apply hover:text-sky-800 dark:hover:text-sky-200;
         }
     }
 
+
     .context-editor {
-        @apply mt-2 w-full;
+        @apply w-full;
     }
 
     .chevron-icon {
-        @apply transition-transform;
+        @apply transition-transform open:rotate-180;
     }
 </style>
