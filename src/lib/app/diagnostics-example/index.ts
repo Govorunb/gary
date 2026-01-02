@@ -53,7 +53,7 @@ export class DiagnosticsExampleGame extends ClientGame {
                         query: "Test",
                     },
                 });
-                await this.sendActionResult(id, true, "Sent empty actions/force (check diagnostics)");
+                await this.sendActionResult(id, true);
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent empty actions/force`);
                 break;
@@ -67,7 +67,7 @@ export class DiagnosticsExampleGame extends ClientGame {
                         query: "Test",
                     },
                 });
-                await this.sendActionResult(id, true, "Sent actions/force with some invalid actions (check diagnostics)");
+                await this.sendActionResult(id, true);
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent actions/force with some invalid actions`);
                 break;
@@ -81,7 +81,7 @@ export class DiagnosticsExampleGame extends ClientGame {
                         query: "Test",
                     },
                 });
-                await this.sendActionResult(id, true, "Sent actions/force with all invalid actions (check diagnostics)");
+                await this.sendActionResult(id, true);
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent actions/force with all invalid actions`);
                 break;
@@ -95,7 +95,7 @@ export class DiagnosticsExampleGame extends ClientGame {
                         query: "Test",
                     },
                 });
-                await this.sendActionResult(id, true, "Sent multiple actions/force messages (check diagnostics)");
+                await this.sendActionResult(id, true);
                 // if awaited, first force would complete before second, so it would not be "multiple at once"
                 this.conn.send(msg);
                 this.conn.send(msg);
@@ -104,14 +104,14 @@ export class DiagnosticsExampleGame extends ClientGame {
             }
 
             case "prot/unregister/unknown": {
-                await this.sendActionResult(id, true, "Unregistered unknown action (check diagnostics)");
+                await this.sendActionResult(id, true);
                 await this.unregisterActions(["never_registered_action"]);
                 r.info(`[diagnostics-example] Unregistered unknown action 'never_registered_action'`);
                 break;
             }
 
             case "prot/unregister/inactive": {
-                await this.sendActionResult(id, true, "Unregistered inactive action (check diagnostics)");
+                await this.sendActionResult(id, true);
                 const dummyAction: v1.Action = {
                     name: "dummy",
                     description: "Dummy action for prot/unregister/inactive",
@@ -126,7 +126,7 @@ export class DiagnosticsExampleGame extends ClientGame {
 
             case "perf/register/identical_duplicate": {
                 const action = this.actions.get("test_action")!;
-                await this.sendActionResult(id, true, "Registered identical action twice (check diagnostics)");
+                await this.sendActionResult(id, true);
                 await this.registerActions([action]);
                 r.info(`[diagnostics-example] Registered identical action twice`);
                 break;
@@ -138,7 +138,7 @@ export class DiagnosticsExampleGame extends ClientGame {
                     description: "This is a different description",
                     schema: null,
                 };
-                await this.sendActionResult(id, true, "Registered conflicting action with same name (check diagnostics)");
+                await this.sendActionResult(id, true);
                 await this.registerActions([conflictingAction]);
                 r.info(`[diagnostics-example] Registered conflicting action with same name`);
                 break;
@@ -148,7 +148,7 @@ export class DiagnosticsExampleGame extends ClientGame {
                 const msg: v1.Startup = v1.zStartup.decode({
                     game: this.name,
                 });
-                await this.sendActionResult(id, true, "Sent startup message (check diagnostics)");
+                await this.sendActionResult(id, true);
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent startup message`);
                 break;
@@ -164,14 +164,14 @@ export class DiagnosticsExampleGame extends ClientGame {
                 });
                 await this.conn.send(msg);
                 r.info(`[diagnostics-example] Sent actions/force with pending result`);
-                await this.sendActionResult(id, true, "Sent actions/force with pending result (check diagnostics)");
+                await this.sendActionResult(id, true);
                 break;
             }
 
             case "perf/late/action_result": {
                 r.info(`[diagnostics-example] Delaying action result by 1 second`);
                 setTimeout(async () => {
-                    await this.sendActionResult(id, true, "Delayed success");
+                    await this.sendActionResult(id, true);
                 }, 1000);
                 break;
             }
@@ -189,12 +189,12 @@ export class DiagnosticsExampleGame extends ClientGame {
 
             case "test_action": {
                 r.info(`[diagnostics-example] Normal test action executed`);
-                await this.sendActionResult(id, true, "Test action succeeded");
+                await this.sendActionResult(id, true);
                 break;
             }
 
             case "prot/invalid_message": {
-                await this.sendActionResult(id, true, "Sent invalid message (check diagnostics)");
+                await this.sendActionResult(id, true);
                 r.info(`[diagnostics-example] Sending invalid WebSocket message`);
                 await this.conn.sendRaw(JSON.stringify({ invalid: "message" }));
                 break;
@@ -204,7 +204,7 @@ export class DiagnosticsExampleGame extends ClientGame {
                 const msg: v1.Startup = v1.zStartup.decode({
                     game: "Different Game Name",
                 });
-                await this.sendActionResult(id, true, "Sent startup with different game name (check diagnostics)");
+                await this.sendActionResult(id, true);
                 r.info(`[diagnostics-example] Sent startup with different game name`);
                 await this.conn.send(msg);
                 break;
@@ -212,14 +212,14 @@ export class DiagnosticsExampleGame extends ClientGame {
 
             case "prot/result/unexpected": {
                 const fakeActionId = shortId();
-                await this.sendActionResult(id, true, "Sent result for non-existent action ID (check diagnostics)");
+                await this.sendActionResult(id, true);
                 r.info(`[diagnostics-example] Sending result for non-existent action ID: ${fakeActionId}`);
                 await this.sendActionResult(fakeActionId, true, "Unexpected result");
                 break;
             }
 
             case "prot/schema/additionalProperties": {
-                await this.sendActionResult(id, true, "Registered action with bad schema (check diagnostics)");
+                await this.sendActionResult(id, true);
                 r.info(`[diagnostics-example] Registering action with schema missing additionalProperties: false`);
                 const badSchemaAction: v1.Action = {
                     name: "bad_schema_action",

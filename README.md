@@ -14,7 +14,7 @@ A wide range of tools and environments to test your game integration, in one app
     - Remote OpenAI-compatible services are available as an option but are officially unsupported.
         - If something doesn't work, feel free to raise an issue, but from my (limited) testing a lot of providers just vibe code their APIs so support will be on a best effort basis.
     - [OpenRouter](https://openrouter.ai) is supported, so you can easily test with *many* models.
-- Diagnostics - easy automatic checks for common off-spec behavior.
+- Diagnostics - easy automatic checks for common pitfalls and off-spec behavior.
 
 The overall goal is to close and/or document the gap to the production system, letting you develop and test with confidence.
 The app offers (in my opinion) a comfortable UI with hotkeys for ~~speedrunners~~ power users.

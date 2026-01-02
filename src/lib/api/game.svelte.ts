@@ -180,6 +180,7 @@ export class Game {
                 const isIdentical = this.isIdenticalAction(action, rawExisting);
                 if (isIdentical) {
                     this.diagnostics.trigger("perf/register/identical_duplicate", { action: action.name });
+                    r.info(`Skipped registering identical duplicate of action ${action.name}`);
                     continue; // skip since it doesn't matter (already active too)
                 } else if (isV1) {
                     this.diagnostics.trigger("prot/v1/register/conflict", {
@@ -303,7 +304,7 @@ export class Game {
             this.diagnostics.trigger("prot/result/error_nomessage");
         }
         const silent = success;
-        let text = `Result for action ${id.substring(0, 8)}: ${success ? "Performing" : "Failure"}`;
+        let text = `Result for action ${actData.name} (request ID ${id.substring(0, 8)}): ${success ? "Performing" : "Failure"}`;
         text += message ? ` (${message})` : " (no message)";
         this.context(text, silent);
     }
