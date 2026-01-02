@@ -18,7 +18,7 @@ export const DIAGNOSTIC_ACTIONS: v1.Action[] = [
     },
     {
         name: "prot/force/multiple",
-        description: "Send two actions/force messages in quick succession (ERROR)",
+        description: "Send three actions/force messages in quick succession (ERROR)",
         schema: null,
     },
     {
@@ -64,6 +64,26 @@ export const DIAGNOSTIC_ACTIONS: v1.Action[] = [
     {
         name: "test_action",
         description: "A normal test action that always succeeds",
+        schema: null,
+    },
+    {
+        name: "prot/invalid_message",
+        description: "Send an invalid WebSocket message (ERROR)",
+        schema: null,
+    },
+    {
+        name: "prot/v1/game_renamed",
+        description: "Send a startup message with a different game name (WARNING)",
+        schema: null,
+    },
+    {
+        name: "prot/result/unexpected",
+        description: "Send an action result for a non-existent action ID (WARNING)",
+        schema: null,
+    },
+    {
+        name: "prot/schema/additionalProperties",
+        description: "Register an action with a schema missing additionalProperties: false (WARNING)",
         schema: null,
     },
 ];

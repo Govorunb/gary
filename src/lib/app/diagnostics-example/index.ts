@@ -1,5 +1,5 @@
 import r from "$lib/app/utils/reporting";
-import { jsonParse } from "$lib/app/utils";
+import { jsonParse, shortId } from "$lib/app/utils";
 import type { ConnectionClient } from "$lib/api/connection";
 import { ClientGame } from "../../api/client-game";
 import type { ActionResult } from '../../api/client-game';
@@ -95,10 +95,11 @@ export class DiagnosticsExampleGame extends ClientGame {
                         query: "Test",
                     },
                 });
-                await this.sendActionResult(id, true, "Sent two actions/force messages (check diagnostics)");
-                await this.conn.send(msg);
-                await this.conn.send(msg);
-                r.info(`[diagnostics-example] Sent two actions/force messages`);
+                await this.sendActionResult(id, true, "Sent multiple actions/force messages (check diagnostics)");
+                // if awaited, first force would complete before second, so it would not be "multiple at once"
+                this.conn.send(msg);
+                this.conn.send(msg);
+                r.info(`[diagnostics-example] Sent multiple actions/force messages`);
                 break;
             }
 
@@ -127,7 +128,6 @@ export class DiagnosticsExampleGame extends ClientGame {
                 const action = this.actions.get("test_action")!;
                 await this.sendActionResult(id, true, "Registered same action twice (check diagnostics)");
                 await this.registerActions([action]);
-                await this.registerActions([action]);
                 r.info(`[diagnostics-example] Registered same action twice`);
                 break;
             }
@@ -136,10 +136,9 @@ export class DiagnosticsExampleGame extends ClientGame {
                 const msg: v1.Startup = v1.zStartup.decode({
                     game: this.name,
                 });
-                await this.sendActionResult(id, true, "Sent two startup messages (check diagnostics)");
+                await this.sendActionResult(id, true, "Sent startup message (check diagnostics)");
                 await this.conn.send(msg);
-                await this.conn.send(msg);
-                r.info(`[diagnostics-example] Sent two startup messages`);
+                r.info(`[diagnostics-example] Sent startup message`);
                 break;
             }
 
@@ -179,6 +178,49 @@ export class DiagnosticsExampleGame extends ClientGame {
             case "test_action": {
                 r.info(`[diagnostics-example] Normal test action executed`);
                 await this.sendActionResult(id, true, "Test action succeeded");
+                break;
+            }
+
+            case "prot/invalid_message": {
+                await this.sendActionResult(id, true, "Sent invalid message (check diagnostics)");
+                r.info(`[diagnostics-example] Sending invalid WebSocket message`);
+                await this.conn.sendRaw(JSON.stringify({ invalid: "message" }));
+                break;
+            }
+
+            case "prot/v1/game_renamed": {
+                const msg: v1.Startup = v1.zStartup.decode({
+                    game: "Different Game Name",
+                });
+                await this.sendActionResult(id, true, "Sent startup with different game name (check diagnostics)");
+                r.info(`[diagnostics-example] Sent startup with different game name`);
+                await this.conn.send(msg);
+                break;
+            }
+
+            case "prot/result/unexpected": {
+                const fakeActionId = shortId();
+                await this.sendActionResult(id, true, "Sent result for non-existent action ID (check diagnostics)");
+                r.info(`[diagnostics-example] Sending result for non-existent action ID: ${fakeActionId}`);
+                await this.sendActionResult(fakeActionId, true, "Unexpected result");
+                break;
+            }
+
+            case "prot/schema/additionalProperties": {
+                await this.sendActionResult(id, true, "Registered action with bad schema (check diagnostics)");
+                r.info(`[diagnostics-example] Registering action with schema missing additionalProperties: false`);
+                const badSchemaAction: v1.Action = {
+                    name: "bad_schema_action",
+                    description: "Action with schema missing additionalProperties",
+                    schema: {
+                        type: "object",
+                        properties: {
+                            test: { type: "string" },
+                        },
+                    },
+                };
+                await this.registerActions([badSchemaAction]);
+                await this.unregisterActions([badSchemaAction.name]);
                 break;
             }
 
