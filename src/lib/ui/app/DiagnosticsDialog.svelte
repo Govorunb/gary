@@ -1,5 +1,6 @@
 <script lang="ts">
     import Dialog from '$lib/ui/common/Dialog.svelte';
+    import TeachingTooltip from '$lib/ui/common/TeachingTooltip.svelte';
     import type { Game } from "$lib/api/game.svelte";
     import { Info, EyeOff, Eye } from '@lucide/svelte';
     import { pressedKeys } from '$lib/app/utils/hotkeys.svelte';
@@ -41,6 +42,11 @@
         <div {...props} class="diagnostics-content">
             <div class="dialog-header">
                 <h2 class="text-lg font-bold">Diagnostics ({game.name})</h2>
+                <TeachingTooltip>
+                    <p>Diagnostics help catch common off-spec behaviors in game integrations.</p>
+                    <p>Dismiss hides a diagnostic temporarily. It will reappear if the issue occurs again.</p>
+                    <p>Suppress hides a diagnostic permanently for this game (saved by game name).</p>
+                </TeachingTooltip>
             </div>
 
             <div class="dialog-body">
