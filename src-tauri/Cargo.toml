@@ -1,6 +1,6 @@
 [package]
 name = "gary"
-version = "1.0.0-beta.1"
+version = "1.0.0-beta.2"
 description = "Backend implementation for the Neuro-sama SDK."
 authors = ["Govorunb"]
 edition = "2024"
