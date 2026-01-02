@@ -8,7 +8,6 @@ import * as v1 from "$lib/api/v1/spec";
 
 export class DiagnosticsExampleGame extends ClientGame {
     private readonly actions = DIAGNOSTIC_ACTIONS_MAP;
-    private unregisterActionCalled = false;
 
     constructor(conn: ConnectionClient) {
         super("Diagnostics Example", conn);
@@ -112,11 +111,14 @@ export class DiagnosticsExampleGame extends ClientGame {
 
             case "prot/unregister/inactive": {
                 await this.sendActionResult(id, true, "Unregistered inactive action (check diagnostics)");
-                if (!this.unregisterActionCalled) {
-                    await this.unregisterActions(["test_action"]);
-                    this.unregisterActionCalled = true;
-                }
-                await this.unregisterActions(["test_action"]);
+                const dummyAction: v1.Action = {
+                    name: "dummy",
+                    description: "Dummy action for prot/unregister/inactive",
+                    schema: null,
+                };
+                await this.registerActions([dummyAction]);
+                await this.unregisterActions([dummyAction.name]);
+                await this.unregisterActions([dummyAction.name]);
                 r.info(`[diagnostics-example] Unregistered inactive action`);
                 break;
             }
