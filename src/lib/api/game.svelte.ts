@@ -17,7 +17,7 @@ export class Game {
     public status = $derived(this.diagnostics.status);
     public startupState: { type: "connected" | "implied" | "startup"; at: number; } | null = $state(null);
     private pendingActions = $state(new SvelteMap<string, PendingAction>());
-    // TODO: remove scheduler's force queue, it now scans all games' force queues instead
+    // TODO: remove scheduler's force queue (it would scan all games' force queues instead)
     // (might solve edge case where 2+ connected games would trigger prot/force/multiple on each other through no fault of their own)
     private forceQueue: v1.ForceAction[] = $state([]);
 

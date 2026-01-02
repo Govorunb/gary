@@ -24,6 +24,11 @@ export class Randy extends Engine<RandyPrefs> {
             return okAsync(null);
         }
         if (Math.random() < this.options.chanceDoNothing) {
+            session.context.actor({
+                text: "Randy chose not to act",
+                silent: true,
+                visibilityOverrides: { engine: false }
+            });
             return okAsync(null);
         }
         return this.forceAct(session, resolvedActions);

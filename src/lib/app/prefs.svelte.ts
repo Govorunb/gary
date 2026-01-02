@@ -9,8 +9,7 @@ import { migrate, moveField, type Migration } from "./utils/migrations";
 
 export const USER_PREFS = "userPrefs";
 
-// TODO: use a tauri store instead (json in appdata for free, auto saves too)
-// would still need a validation/coercion wrapper unfortunately
+// TODO: json export
 export class UserPrefs {
     #data: UserPrefsData;
 
@@ -32,8 +31,6 @@ export class UserPrefs {
         return this.#data.engines;
     }
 
-    // TODO: file storage down the road (to make it user editable)
-    // or just use [tauri-store](https://github.com/ferreira-tb/tauri-store/)
     static async loadData(): Promise<UserPrefsData> {
         const dataStr = localStorage.getItem(USER_PREFS);
         const data = dataStr === null ? {} : JSON.parse(dataStr);
@@ -69,7 +66,7 @@ export class UserPrefs {
             return zUserPrefs.decode({});
         }
         r.debug("loaded prefs");
-        // TODO: dedicated thing for fixups/migrations
+        // TODO: dedicated thing for fixups
         if (!Reflect.has(parsed.data.engines, parsed.data.app.selectedEngine)) {
             parsed.data.app.selectedEngine = RANDY_ID;
             r.warn("Selected engine not found, defaulting to Randy", {
@@ -144,7 +141,7 @@ export const zUserPrefs = z.strictObject({
     api: zApiPrefs.prefault({}),
     engines: z.object({
         randy: zRandyPrefs.prefault({}),
-        openRouter: zOpenRouterPrefs.prefault({}) // ts pmtfo
+        openRouter: zOpenRouterPrefs.prefault({})
     })
     .catchall(zOpenAIPrefs) // all others are OpenAI-compatible
     // first-time defaults

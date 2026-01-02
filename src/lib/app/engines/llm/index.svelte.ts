@@ -67,8 +67,8 @@ export const SYS_PROMPT_TOOLS = `\
 
 Your output should consist of tool calls corresponding to registered actions.
 Based on configuration, you may also have access to the following system-level tools:
-- **\`_gary_wait\`**: Skips your turn instead of executing any actions.
-- **\`_gary_say\`**: Communicate with the user running your software through text. This text is not sent to any clients.\
+- **\`__wait__\`**: Skips your turn instead of executing any actions.
+- **\`__say__\`**: Communicate with the user running your software through text. This text is not sent to any clients.\
 `;
 
 export type CommonLLMOptions = z.infer<typeof zLLMOptions>;
@@ -102,11 +102,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         }
         const genMsg = gen.value;
         // shown only to LLM -> preserves prior example for in-context learning or something
-        genMsg.visibilityOverrides = {
-            engine: true,
-            user: false,
-        };
-        session.context.actor(genMsg);
+        session.context.actor({...genMsg, visibilityOverrides: { user: false }});
         const commandRes = jsonParse(genMsg.text)
                 .map(p => p.command)
                 .mapErr(e => new EngineError(`Failed to parse JSON: ${e}`, e));
@@ -118,7 +114,12 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (isForce) {
                 return err(new EngineError("Internal error - force act allowed waiting"));
             }
-            // FIXME: the output needs to be in context. otherwise, the model will get stuck in a time loop
+            // for user display (see context.actor call above)
+            session.context.actor({
+                text: "(LLM chose not to act)",
+                silent: true,
+                visibilityOverrides: { engine: false }
+            });
             return ok(null);
         }
         const say = zSay.safeParse(command);
@@ -126,10 +127,12 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (isForce) {
                 return err(new EngineError("Internal error - force act allowed yapping"));
             }
-            genMsg.customData.rawCommand = genMsg.text;
-            genMsg.text = say.data.say;
-            genMsg.silent = !say.data.notify;
-            session.context.actor(genMsg);
+            // for user display (see context.actor call above)
+            session.context.actor({
+                text: `Gary ${say.data.notify ? "wants attention" : "says"}: ${say.data.say}`,
+                silent: !say.data.notify,
+                visibilityOverrides: { engine: false }
+            });
             if (say.data.notify) {
                 r.info("Gary wants attention", {
                     details: say.data.say,
