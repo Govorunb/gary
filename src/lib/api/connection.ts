@@ -2,7 +2,7 @@ import type { Channel } from "@tauri-apps/api/core";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import r from "$lib/app/utils/reporting";
 import type { NeuroMessage, GameMessage } from "./v1/spec";
-import { listenSub, safeInvoke, type Awaitable } from "$lib/app/utils";
+import { listenSub, safeInvoke, type Awaitable, createListener } from "$lib/app/utils";
 
 type OnMessageHandler = (msg: string) => Awaitable;
 type OnCloseHandler = (clientDisconnected?: CloseFrame) => Awaitable;
@@ -109,80 +109,18 @@ export abstract class BaseConnection {
         this.#onclose.push(handler);
     }
 
-    public async* listen(): AsyncGenerator<string> {
-        type T = string | null;
-        type Resolve = (value: T) => void;
-
-        const queue: T[] = [];
-        let resolve: Resolve | null = null;
-
-        const tryResolve = () => {
-            if (!resolve) return;
-            const value = queue.shift();
-            if (!value) return;
-            
-            // reentry
-            const next = resolve;
-            resolve = null;
-            next(value);
-        };
-
-        this.onmessage(text => { queue.push(text); tryResolve(); });
-        this.onclose(() => { queue.push(null); tryResolve(); });
-
-        tryResolve();
-
-        while (!this.closed) {
-            if (queue.length) {
-                const value = queue.shift()!;
-                if (value === null) break;
-                yield value;
-                tryResolve();
-                continue;
-            }
-            const res = await new Promise<T>(r => resolve = r);
-            tryResolve();
-            if (res === null) break;
-            yield res;
-        }
+    public listen() {
+        return createListener<string>((next, done) => {
+            this.onmessage(next);
+            this.onclose(done);
+        });
     }
 
-    public async* listenSend(): AsyncGenerator<string> {
-        type T = string | null;
-        type Resolve = (value: T) => void;
-
-        const queue: T[] = [];
-        let resolve: Resolve | null = null;
-
-        const tryResolve = () => {
-            if (!resolve) return;
-            const value = queue.shift();
-            if (!value) return;
-            
-            // reentry
-            const next = resolve;
-            resolve = null;
-            next(value);
-        };
-
-        this.onsend(text => { queue.push(text); tryResolve(); });
-        this.onclose(() => { queue.push(null); tryResolve(); });
-
-        tryResolve();
-
-        while (!this.closed) {
-            if (queue.length) {
-                const value = queue.shift()!;
-                if (value === null) break;
-                yield value;
-                tryResolve();
-                continue;
-            }
-            const res = await new Promise<T>(r => resolve = r);
-            tryResolve();
-            if (res === null) break;
-            yield res;
-        }
+    public listenSend() {
+        return createListener<string>((next, done) => {
+            this.onsend(next);
+            this.onclose(done);
+        });
     }
 }
 

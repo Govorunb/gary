@@ -104,7 +104,7 @@ export class Game {
                 this.startup();
                 break;
             case "context":
-                await this.context(msg.data.message, msg.data.silent);
+                this.context(msg.data.message, msg.data.silent);
                 break;
             case "actions/register":
                 this.registerActions(msg.data.actions);

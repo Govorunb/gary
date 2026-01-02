@@ -187,3 +187,55 @@ String.prototype.reverse = function() {
 export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+/**
+ * Convert callback-based event streams into async generators.
+ *
+ * The `setup` callback receives `next` and `done` functions which you use to register your event handlers.
+ * Call `next(value)` to push values into the stream. Call `done()` to signal termination.
+ *
+ * ```ts
+ * const stream = createListener<string>((next, done) => {
+ *     socket.onmessage = (e) => next(e.data);
+ *     socket.onclose = () => done();
+ * });
+ * for await (const msg of stream) {
+ *     console.log(msg);
+ * }
+ * ```
+ *
+ * Values are buffered if the generator isn't currently awaiting (e.g. in reentrant calls).
+ * After `done()` is called, further `next()` calls are ignored.
+ */
+export async function* createListener<T>(setup: (next: (value: T) => void, done: () => void) => void): AsyncGenerator<T> {
+    const DONE = Symbol("done");
+    type QueueValue = T | typeof DONE;
+    type Resolve = (value: QueueValue) => void;
+
+    const queue: QueueValue[] = [];
+    let resolve: Resolve | null = null;
+
+    const tryResolve = () => {
+        if (!resolve || !queue.length) return;
+        
+        const value = queue.shift()!;
+        // reentry (just in case)
+        const r = resolve;
+        resolve = null;
+        r(value);
+    };
+
+    setup(
+        (value) => { queue.push(value); tryResolve(); },
+        () => { queue.push(DONE); tryResolve(); }
+    );
+
+    while (true) {
+        const value: QueueValue
+            = queue.length ? queue.shift()!
+            : await new Promise<QueueValue>(r => resolve = r);
+
+        if (value === DONE) break;
+        yield value;
+    }
+}
