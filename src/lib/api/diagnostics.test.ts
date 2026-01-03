@@ -111,7 +111,7 @@ describe("actions/force", () => {
         await harness.client.conn.send(force);
     
         expect(harness.diagnosticKeys).toStrictEqual(["prot/force/empty"]);
-        expect(harness.diagnostics[0].context).toEqual({ msg: force });
+        expect(harness.diagnostics[0].context).toEqual({ msgData: force.data });
     });
     
     test("prot/force/some_invalid", async ({harness}) => {
@@ -127,7 +127,7 @@ describe("actions/force", () => {
         await harness.client.conn.send(force);
     
         expect(harness.diagnosticKeys).toStrictEqual(["prot/force/some_invalid"]);
-        expect(harness.diagnostics[0].context).toEqual({ msg: force, unknownActions: ["unknown"] });
+        expect(harness.diagnostics[0].context).toEqual({ msgData: force.data, unknownActions: ["unknown"] });
     });
     
     test("prot/force/all_invalid", async ({harness}) => {
@@ -139,7 +139,7 @@ describe("actions/force", () => {
         await harness.client.conn.send(force);
     
         expect(harness.diagnosticKeys).toStrictEqual(["prot/force/all_invalid"]);
-        expect(harness.diagnostics[0].context).toEqual({ msg: force });
+        expect(harness.diagnostics[0].context).toEqual({ msgData: force.data });
     });
     
     test("prot/force/multiple", async ({harness}) => {
