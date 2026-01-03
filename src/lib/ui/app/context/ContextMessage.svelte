@@ -3,12 +3,15 @@
     import { getRegistry, getUIState } from "$lib/app/utils/di";
     import { tooltip } from "$lib/app/utils";
     import { boolAttr } from "runed";
+    import dayjs from "dayjs";
 
     interface Props {
         msg: Message;
     }
 
     const { msg }: Props = $props();
+
+    const timestamp = $derived(dayjs(msg.timestamp));
     
     const registry = getRegistry();
     const uiState = getUIState();
@@ -40,9 +43,9 @@
     <div class="message-content">
         <div class="message-header">
             <span class="message-timestamp"
-                {@attach tooltip(msg.timestamp.toString())}
+                {@attach tooltip(timestamp.toString())}
             >
-                {msg.timestamp.toLocaleTimeString()}
+                {timestamp.format("LTS")}
             </span>
             {#if msg.source.type === 'client'}
                 <button class="client-name"

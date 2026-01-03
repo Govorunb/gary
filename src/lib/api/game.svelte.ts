@@ -1,5 +1,5 @@
 import type { Session } from "$lib/app/session.svelte";
-import { jsonParse, safeParse } from "$lib/app/utils";
+import { jsonParse, localeTimeWithMs, safeParse } from "$lib/app/utils";
 import r, { LogLevel } from "$lib/app/utils/reporting";
 import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
@@ -354,6 +354,6 @@ export function v1PendingGameName(id: string) {
 function prettyPending(p: PendingAction) {
     return {
         act: p.actData,
-        sentAt: dayjs(p.sentAt).format("LTS.SSS")
+        sentAt: localeTimeWithMs(dayjs(p.sentAt))
     };
 }
