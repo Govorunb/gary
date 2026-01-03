@@ -92,9 +92,9 @@
         <span class="note">{dayjs(diag.timestamp).toDate().toLocaleTimeString()}</span>
         <Icon size="20" />
     </div>
-    <p class="diagnostic-message" title={def.key}>{def.message}</p>
-    {#if def.details}
-        <p class="diagnostic-details">{def.details}</p>
+    <p class="diagnostic-title" title={def.key}>{def.title}</p>
+    {#if def.description}
+        <p class="diagnostic-desc">{def.description}</p>
     {/if}
     {#if hasContext}
         <details class="context-details" bind:open={ctxOpen}>
@@ -160,13 +160,13 @@
             transition: all 150ms ease;
         }
 
-        .diagnostic-message {
+        .diagnostic-title {
             grid-row: 1;
             grid-column: 2;
             @apply font-medium;
         }
 
-        .diagnostic-details {
+        .diagnostic-desc {
             grid-row: 2;
             grid-column: 2;
             @apply text-neutral-600 dark:text-neutral-400;

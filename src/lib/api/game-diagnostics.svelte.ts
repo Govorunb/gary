@@ -46,8 +46,8 @@ export class GameDiagnostics {
         if (report && !suppressed) {
             const logLevel = SeverityToLogLevel[diagDef.severity];
             r.report(logLevel, {
-                message: `(${this.game.name}) ${diagDef.message}`,
-                details: diagDef.details,
+                message: `(${this.game.name}) ${diagDef.title}`,
+                details: diagDef.description,
                 ctx: context ? { context } : undefined,
             });
         }

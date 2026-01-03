@@ -21,8 +21,8 @@ export enum DiagnosticCategory {
 export interface DiagnosticDef {
     key: `${DiagnosticCategory}/${string}`;
     severity: DiagnosticSeverity;
-    message: string;
-    details?: string;
+    title: string;
+    description?: string;
 }
 
 export interface GameDiagnostic<TContext = any> {
@@ -45,135 +45,135 @@ export const DIAGNOSTICS = [
     {
         key: "misc/test/info",
         severity: DiagnosticSeverity.Info,
-        message: "Test diagnostic (info)",
-        details: "You're really testing me, you know that?",
+        title: "Test diagnostic (info)",
+        description: "You're really testing me, you know that?",
     },
     {
         key: "misc/test/warn",
         severity: DiagnosticSeverity.Warning,
-        message: "Test diagnostic (warn)",
-        details: "The next one... well... don't say I didn't warn you.",
+        title: "Test diagnostic (warn)",
+        description: "The next one... well... don't say I didn't warn you.",
     },
     {
         key: "misc/test/error",
         severity: DiagnosticSeverity.Error,
-        message: "Test diagnostic (error)",
-        details: "You failed to comprehend the nature of the attack!",
+        title: "Test diagnostic (error)",
+        description: "You failed to comprehend the nature of the attack!",
     },
     {
         key: "prot/invalid_message",
         severity: DiagnosticSeverity.Error,
-        message: "Invalid WebSocket message received",
-        details: "The game sent a message that doesn't conform to the API specification"
+        title: "Invalid WebSocket message received",
+        description: "The game sent a message that doesn't conform to the API specification"
     },
     {
         key: "perf/register/identical_duplicate",
         severity: DiagnosticSeverity.Info,
-        message: "Identical action re-registered",
-        details: "The incoming action is identical to an already-registered one. This is harmless but redundant.",
+        title: "Identical action re-registered",
+        description: "The incoming action is identical to an already-registered one. This is harmless but redundant.",
     },
     {
         key: "prot/v1/register/conflict",
         severity: DiagnosticSeverity.Warning,
-        message: "Duplicate action registration conflict",
-        details: `An action with this name is already registered.
+        title: "Duplicate action registration conflict",
+        description: `An action with this name is already registered.
 Per v1 of the API specification, the incoming action is ignored and the existing is kept; this may not be the behaviour you expected or intended.`,
     },
     {
         key: "prot/unregister/unknown",
         severity: DiagnosticSeverity.Warning,
-        message: "Unregistered unknown action",
-        details: "The action was never registered. This may indicate a serious error or state desync (e.g. forgetting to re-register actions after a reconnect)."
+        title: "Unregistered unknown action",
+        description: "The action was never registered. This may indicate a serious error or state desync (e.g. forgetting to re-register actions after a reconnect)."
     },
     {
         key: "prot/unregister/inactive",
         severity: DiagnosticSeverity.Info,
-        message: "Pointless unregister",
-        details: "Unregistering an action that's already unregistered is harmless, but you should still aim to reduce duplicate calls.",
+        title: "Pointless unregister",
+        description: "Unregistering an action that's already unregistered is harmless, but you should still aim to reduce duplicate calls.",
     },
     {
         key: "prot/force/empty",
         severity: DiagnosticSeverity.Error,
-        message: "Empty actions/force",
-        details: "Sent 'actions/force' with no actions",
+        title: "Empty actions/force",
+        description: "Sent 'actions/force' with no actions",
     },
     {
         key: "prot/force/some_invalid",
         severity: DiagnosticSeverity.Warning,
-        message: "Partially invalid actions/force",
-        details: "Not all actions were known/registered"
+        title: "Partially invalid actions/force",
+        description: "Not all actions were known/registered"
     },
     {
         key: "prot/force/all_invalid",
         severity: DiagnosticSeverity.Error,
-        message: "Entirely invalid actions/force",
-        details: "Sent an actions/force where none of the actions were registered.",
+        title: "Entirely invalid actions/force",
+        description: "Sent an actions/force where none of the actions were registered.",
     },
     {
         key: "prot/force/multiple",
         severity: DiagnosticSeverity.Error,
-        message: "Multiple actions/force at once",
-        details: "Neuro can only handle one action force at a time.",
+        title: "Multiple actions/force at once",
+        description: "Neuro can only handle one action force at a time.",
     },
     {
         key: "prot/force/while_pending_result",
         severity: DiagnosticSeverity.Error,
-        message: "Cannot process actions/force while waiting for an action result",
-        details: `Make sure you send action results as soon as possible.\n${asyncResultNag}`
+        title: "Cannot process actions/force while waiting for an action result",
+        description: `Make sure you send action results as soon as possible.\n${asyncResultNag}`
     },
     {
         key: "prot/v1/game_renamed",
         severity: DiagnosticSeverity.Warning,
-        message: "Do not rename game",
-        details: "The protocol forbids changing your game name mid-connection."
+        title: "Do not rename game",
+        description: "The protocol forbids changing your game name mid-connection."
     },
     {
         key: "prot/startup/missing",
         severity: DiagnosticSeverity.Warning,
-        message: "Missing startup message",
-        details: "The first message sent must be a 'startup' message"
+        title: "Missing startup message",
+        description: "The first message sent must be a 'startup' message"
     },
     {
         key: "prot/startup/multiple",
         severity: DiagnosticSeverity.Warning,
-        message: "Multiple startup messages",
-        details: "Don't send more than one 'startup' message as it may reset Neuro's state."
+        title: "Multiple startup messages",
+        description: "Don't send more than one 'startup' message as it may reset Neuro's state."
     },
     {
         key: "perf/late/startup",
         severity: DiagnosticSeverity.Info,
-        message: "Late startup",
-        details: "The game should send a 'startup' message as soon as possible."
+        title: "Late startup",
+        description: "The game should send a 'startup' message as soon as possible."
     },
     {
         key: "perf/late/action_result",
         severity: DiagnosticSeverity.Warning,
-        message: "Late action result",
-        details: `Send action results as soon as possible.\n${asyncResultNag}`
+        title: "Late action result",
+        description: `Send action results as soon as possible.\n${asyncResultNag}`
     },
     {
         key: "perf/timeout/action_result",
         severity: DiagnosticSeverity.Error,
-        message: "Action result not received",
-        details: `The game did not send an action result within a reasonable timeframe.\n${asyncResultNag}`
+        title: "Action result not received",
+        description: `The game did not send an action result within a reasonable timeframe.\n${asyncResultNag}`
     },
     {
         key: "prot/result/error_nomessage",
         severity: DiagnosticSeverity.Warning,
-        message: "Unsuccessful action result should have message",
-        details: "Provide feedback to let Neuro know what went wrong."
+        title: "Unsuccessful action result should have message",
+        description: "Provide feedback to let Neuro know what went wrong."
     },
     {
         key: "prot/result/unexpected",
         severity: DiagnosticSeverity.Warning,
-        message: "Received a result for an action we didn't send",
-        details: "This usually indicates stale state on the client side."
+        title: "Received a result for an action we didn't send",
+        description: "This usually indicates stale state on the client side."
     },
     {
         key: "prot/schema/additionalProperties",
         severity: DiagnosticSeverity.Warning,
-        message: "Action schema should have 'additionalProperties: false'",
-        details: `Action schemas should explicitly set 'additionalProperties: false' to reject unknown fields and prevent bugs from typo'd field names.
+        title: "Action schema should have 'additionalProperties: false'",
+        description: `Action schemas should explicitly set 'additionalProperties: false' to reject unknown fields and prevent bugs from typo'd field names.
 If you do want freeform extra fields, you should explicitly set 'additionalProperties: true'.`
     },
 ] as const satisfies DiagnosticDef[];
