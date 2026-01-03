@@ -142,6 +142,8 @@ export class Game {
                 this.diagnostics.trigger("perf/late/startup", { delayMs: startupDelay });
             }
         }
+        // TODO: diag suggest sending context (game info/rules) on connect
+        // (like a 1s timer after startup or sth)
     }
 
     context(text: string, silent: boolean) {

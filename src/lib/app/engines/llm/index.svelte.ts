@@ -95,6 +95,8 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         let ctx = this.convertContext(session);
         ctx.push(this.closerMessage());
         ctx = this.mergeUserTurns(ctx);
+        // TODO: tools
+        // TODO: AbortSignal (critical prio)
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
         const gen = await this.generateStructuredOutput(ctx, schema);
         if (gen.isErr()) {

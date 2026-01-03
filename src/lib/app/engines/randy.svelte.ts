@@ -1,11 +1,11 @@
 import type { Action } from "$lib/api/v1/spec";
-import { pickRandom } from "../utils";
+import { pickRandom, sleep } from "../utils";
 import { Engine, EngineError, zEngineAct, type EngineAct } from "./index.svelte";
 import { JSONSchemaFaker } from "json-schema-faker";
 import type { Session } from "../session.svelte";
 import z from "zod";
 import type { UserPrefs } from "../prefs.svelte";
-import { errAsync, okAsync, type ResultAsync } from "neverthrow";
+import { errAsync, okAsync, ResultAsync } from "neverthrow";
 
 export const ENGINE_ID = "randy";
 /** Automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
@@ -34,16 +34,20 @@ export class Randy extends Engine<RandyPrefs> {
         return this.forceAct(session, resolvedActions);
     }
 
+    // TODO: use force prio to shorten l*tency (just so we can use it literally anywhere)
     forceAct(session: Session, actions?: Action[]): ResultAsync<EngineAct, EngineError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
             return errAsync(new EngineError("forceAct called with no available actions"));
         }
-        const action = pickRandom(resolvedActions);
-        return okAsync(zEngineAct.decode({
-            name: action.name,
-            data: JSON.stringify(this.generate(action)),
-        }));
+        return ResultAsync.fromSafePromise(sleep(this.options.latencyMs))
+            .map(() => {
+                const action = pickRandom(resolvedActions);
+                return zEngineAct.decode({
+                    name: action.name,
+                    data: JSON.stringify(this.generate(action)),
+                });
+            });
     }
 
     private generate(action: Action): any {
@@ -60,6 +64,8 @@ export const zRandyPrefs = z.strictObject({
      * Number between 0 and 1.
      * */
     chanceDoNothing: z.number().min(0).max(1).fallback(0.2),
+    /** Randy will sleep for this long before responding (in milliseconds). Don't set too low or the app might freeze. */
+    latencyMs: z.number().min(1).max(864000000).default(200),
 });
 
 export type RandyPrefs = z.infer<typeof zRandyPrefs>;
