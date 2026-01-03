@@ -30,6 +30,7 @@ export const tauriWebkitScrollNum: Attachment<HTMLInputElement> = (el) => {
         // increment/decrement on scroll
         if (target.disabled) return;
         if (evt.deltaY === 0) return;
+        evt.preventDefault(); // in case the browser has its own input scroll
         evt.deltaY < 0 ? target.stepUp() : target.stepDown();
         target.dispatchEvent(new Event("input")); // svelte 5 targets 'input' and not 'change'
     };
