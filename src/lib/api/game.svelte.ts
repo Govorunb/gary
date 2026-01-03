@@ -236,21 +236,21 @@ export class Game {
         }
         const actions = msg.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
         if (msg.data.action_names.length === 0) {
-            this.diagnostics.trigger("prot/force/empty", { msg });
+            this.diagnostics.trigger("prot/force/empty", { msgData: msg.data });
             return;
         }
         if (actions.length < msg.data.action_names.length) {
             if (actions.length === 0) {
-                this.diagnostics.trigger("prot/force/all_invalid", { msg });
+                this.diagnostics.trigger("prot/force/all_invalid", { msgData: msg.data });
                 return;
             } else {
-                this.diagnostics.trigger("prot/force/some_invalid", { msg, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
+                this.diagnostics.trigger("prot/force/some_invalid", { msgData: msg.data, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
             }
         }
         // only real forces (from client) - manual/autoact forces exist in the queue but are null
         const realForces = this.session.scheduler.forceQueue.filter(Boolean);
         if (realForces.length + this.forceQueue.length) {
-            this.diagnostics.trigger("prot/force/multiple", { msg });
+            this.diagnostics.trigger("prot/force/multiple", { msgData: msg.data });
         }
         this.session.scheduler.forceQueue.push(actions);
         // this shit is so ass
@@ -278,7 +278,7 @@ export class Game {
         const sentAt = Date.now();
         const timeout = setTimeout(() => {
             if (this.pendingActions.has(actData.id)) {
-                this.diagnostics.trigger("perf/timeout/action_result", { actData, sentAt });
+                this.diagnostics.trigger("perf/timeout/action_result", { actData, sentAt: new Date(sentAt).toLocaleTimeString() });
                 this.pendingActions.delete(actData.id);
             }
         }, TIMEOUTS["perf/timeout/action_result"]);
@@ -290,7 +290,7 @@ export class Game {
         const { id, success, message } = msg.data;
         const pending = this.pendingActions.get(id);
         if (!pending) {
-            this.diagnostics.trigger("prot/result/unexpected", { msg });
+            this.diagnostics.trigger("prot/result/unexpected", { msgData: msg.data });
             return;
         }
         const { actData, sentAt, timeout } = pending;
