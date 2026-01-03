@@ -65,6 +65,9 @@ importers:
       dayjs:
         specifier: ^1.11.19
         version: 1.11.19
+      dequal:
+        specifier: ^2.0.3
+        version: 2.0.3
       json-schema-faker:
         specifier: ^0.5.9
         version: 0.5.9

@@ -7,6 +7,7 @@ import { TIMEOUTS } from "./diagnostics";
 import * as v1 from "./v1/spec";
 import type { BaseConnection } from "./connection";
 import dayjs from "dayjs";
+import { dequal } from "dequal/lite";
 
 export type GameAction = v1.Action & { active: boolean };
 export type PendingAction = { actData: v1.ActData, sentAt: number, timeout: ReturnType<typeof setTimeout> };
@@ -192,24 +193,20 @@ export class Game {
         for (const action of actions) {
             const existing = this.actions.get(action.name);
             let schemaUpdated = false;
-            let isIdentical = false;
             if (!existing) {
                 new_actions++;
                 schemaUpdated = true;
             } else {
                 const {active: wasActive, ...rawExisting} = existing;
-                // checking equality in the worst possible way (but we save 20 microseconds afterwards so it's all good)
-                const newSchema = JSON.stringify(action.schema);
-                const oldSchema = JSON.stringify(rawExisting.schema);
-                if (newSchema !== oldSchema) {
+                if (!dequal(action.schema, rawExisting.schema)) {
                     schemaUpdated = true;
                 }
-                isIdentical = action.description === rawExisting.description
-                    && !schemaUpdated;
                 if (wasActive) {
                     // duplicate action conflict resolution
                     // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                     const isV1 = this.version === "v1";
+                    const isIdentical = action.description === rawExisting.description
+                        && !schemaUpdated;
                     if (isIdentical) {
                         this.diagnostics.trigger("perf/register/identical_duplicate", { action: action.name });
                         r.info(`Skipped registering identical duplicate of action ${action.name}`);
