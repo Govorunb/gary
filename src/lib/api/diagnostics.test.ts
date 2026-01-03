@@ -301,3 +301,123 @@ describe("prot/schema/additionalProperties", () => {
         expect(harness.diagnosticKeys).toStrictEqual([]);
     });
 });
+
+describe("prot/schema/prefer_omit_to_empty", () => {
+    test("trigger for empty object schema", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: {}
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/prefer_omit_to_empty"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: "test_action",
+        });
+    });
+
+    test("ignore non-empty object schema", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { type: "string" }
+                },
+                additionalProperties: false
+            }
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual([]);
+    });
+
+    test("ignore null schema", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: null
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual([]);
+    });
+});
+
+describe("prot/schema/type_object", () => {
+    test("trigger when type is not object", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: {
+                type: "array",
+                items: { type: "string" },
+                additionalProperties: false
+            }
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/type_object"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: "test_action",
+            schema: action.schema,
+        });
+    });
+
+    test("trigger when type is missing", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: {
+                properties: {
+                    foo: { type: "string" }
+                },
+                additionalProperties: false
+            }
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/type_object"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: "test_action",
+            schema: action.schema,
+        });
+    });
+
+    test("ignore when type is object", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { type: "string" }
+                },
+                additionalProperties: false
+            }
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual([]);
+    });
+
+    test("ignore null schema", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: null
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual([]);
+    });
+});

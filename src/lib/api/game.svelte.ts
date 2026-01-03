@@ -168,12 +168,39 @@ export class Game {
             JSON.stringify(a.schema) === JSON.stringify(b.schema);
     }
 
+    private checkActionSchema(action: v1.Action) {
+        const { name, schema } = action;
+        if (!schema) return;
+        // for some reason spec allows {} for parameterless actions (some quantity of zaza was definitely involved)
+        // there's some tricks with hasOwn and Object.keys and all that funny stuff
+        // but this object comes from JSON.parse so we don't need to be clever at all
+        let isEmpty = true;
+        for (const _ in schema) {
+            isEmpty = false;
+            break;
+        }
+        if (isEmpty) {
+            this.diagnostics.trigger("prot/schema/prefer_omit_to_empty", { action: name });
+            return;
+        }
+        if (schema.type !== "object") {
+            this.diagnostics.trigger("prot/schema/type_object", { action: name, schema });
+        }
+
+        if (!('additionalProperties' in schema)) {
+            this.diagnostics.trigger("prot/schema/additionalProperties", { action: name, schema });
+        }
+    }
+
     async registerActions(actions: v1.Action[]) {
         r.debug(`${this.getActiveActions().length} currently registered actions`);
         let new_actions = 0;
         for (const action of actions) {
             const existing = this.actions.get(action.name);
-            if (!existing) { new_actions++; }
+            if (!existing) {
+                new_actions++;
+                this.checkActionSchema(action);
+            }
 
             if (existing?.active) {
                 // duplicate action conflict resolution
@@ -194,14 +221,6 @@ export class Game {
                 const logMethod = isV1 ? r.warn : r.info;
                 logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`, { toast: false });
                 if (isV1) continue;
-            }
-            if (action.schema !== null) {
-                if (!('additionalProperties' in action.schema)) {
-                    this.diagnostics.trigger("prot/schema/additionalProperties", {
-                        action: action.name,
-                        schema: action.schema,
-                    });
-                }
             }
             const storedAction = $state({ ...action, active: true });
             this.actions.set(action.name, storedAction);

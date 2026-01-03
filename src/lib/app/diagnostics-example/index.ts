@@ -222,7 +222,7 @@ export class DiagnosticsExampleGame extends ClientGame {
                 await this.sendActionResult(id, true);
                 r.info(`[diagnostics-example] Registering action with schema missing additionalProperties: false`);
                 const badSchemaAction: v1.Action = {
-                    name: "bad_schema_action",
+                    name: shortId(),
                     description: "Action with schema missing additionalProperties",
                     schema: {
                         type: "object",

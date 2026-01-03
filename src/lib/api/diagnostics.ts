@@ -176,6 +176,28 @@ Per v1 of the API specification, the incoming action is ignored and the existing
         description: `Action schemas should explicitly set 'additionalProperties: false' to reject unknown fields and prevent bugs from typo'd field names.
 If you do want freeform extra fields, you should explicitly set 'additionalProperties: true'.`
     },
+    {
+        key: "prot/schema/prefer_omit_to_empty",
+        severity: DiagnosticSeverity.Warning,
+        title: "Prefer omitting schema field for parameterless actions",
+        description: `An empty object - "{}" - is specified as valid in the API for parameterless actions. However, as a JSON Schema, it allows ANY input.
+LLMs may end up generating unconstrained, possibly filling objects with garbage random parameters and costing you time and/or money.
+This is very likely not what you want. You should register actions without a schema field instead.`
+    },
+    {
+        key: "prot/schema/type_object",
+        severity: DiagnosticSeverity.Info,
+        title: "Root schema object should contain \"type\": \"object\"",
+        description: `The Neuro API spec requires top-level schemas to be constrained to objects.
+Randy supports all top-level types, so you may not experience errors; however, some LLM providers may share the requirement.
+Use your judgment.`
+    },
+    {
+        key: "prot/schema/unsupported_keywords",
+        severity: DiagnosticSeverity.Warning,
+        title: "Unsupported keywords in action schema",
+        description: "TODO"
+    }
 ] as const satisfies DiagnosticDef[];
 
 export type DiagnosticKey = (typeof DIAGNOSTICS)[number]["key"];
