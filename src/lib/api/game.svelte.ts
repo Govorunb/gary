@@ -162,12 +162,6 @@ export class Game {
         return Array.from(this.actions.values().filter(a => a.active));
     }
 
-    private isIdenticalAction(a: v1.Action, b: v1.Action): boolean {
-        return a.name === b.name &&
-            a.description === b.description &&
-            JSON.stringify(a.schema) === JSON.stringify(b.schema);
-    }
-
     private checkActionSchema(action: v1.Action) {
         const { name, schema } = action;
         if (!schema) return;
@@ -197,30 +191,42 @@ export class Game {
         let new_actions = 0;
         for (const action of actions) {
             const existing = this.actions.get(action.name);
+            let schemaUpdated = false;
+            let isIdentical = false;
             if (!existing) {
                 new_actions++;
-                this.checkActionSchema(action);
-            }
-
-            if (existing?.active) {
-                // duplicate action conflict resolution
-                // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
-                const isV1 = this.version === "v1";
-                const {active, ...rawExisting} = existing;
-                const isIdentical = this.isIdenticalAction(action, rawExisting);
-                if (isIdentical) {
-                    this.diagnostics.trigger("perf/register/identical_duplicate", { action: action.name });
-                    r.info(`Skipped registering identical duplicate of action ${action.name}`);
-                    continue; // skip since it doesn't matter (already active too)
-                } else if (isV1) {
-                    this.diagnostics.trigger("prot/v1/register/conflict", {
-                        incoming: action,
-                        existing: rawExisting,
-                    });
+                schemaUpdated = true;
+            } else {
+                const {active: wasActive, ...rawExisting} = existing;
+                // checking equality in the worst possible way (but we save 20 microseconds afterwards so it's all good)
+                const newSchema = JSON.stringify(action.schema);
+                const oldSchema = JSON.stringify(rawExisting.schema);
+                if (newSchema !== oldSchema) {
+                    schemaUpdated = true;
                 }
-                const logMethod = isV1 ? r.warn : r.info;
-                logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`, { toast: false });
-                if (isV1) continue;
+                isIdentical = action.description === rawExisting.description
+                    && !schemaUpdated;
+                if (wasActive) {
+                    // duplicate action conflict resolution
+                    // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
+                    const isV1 = this.version === "v1";
+                    if (isIdentical) {
+                        this.diagnostics.trigger("perf/register/identical_duplicate", { action: action.name });
+                        r.info(`Skipped registering identical duplicate of action ${action.name}`);
+                        continue; // skip since it doesn't matter (already active too)
+                    } else if (isV1) {
+                        this.diagnostics.trigger("prot/v1/register/conflict", {
+                            incoming: action,
+                            existing: rawExisting,
+                        });
+                    }
+                    const logMethod = isV1 ? r.warn : r.info;
+                    logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`, { toast: false });
+                    if (isV1) continue;                    
+                }
+            }
+            if (schemaUpdated) {
+                this.checkActionSchema(action);
             }
             const storedAction = $state({ ...action, active: true });
             this.actions.set(action.name, storedAction);
