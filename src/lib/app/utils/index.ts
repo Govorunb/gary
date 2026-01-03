@@ -5,6 +5,7 @@ import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/cor
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
 import r from "./reporting";
+import type { Dayjs } from "dayjs";
 // import { isTauri } from "@tauri-apps/api/core";
 
 export function pickRandom<T>(arr: T[]) {
@@ -238,4 +239,14 @@ export async function* createListener<T>(setup: (next: (value: T) => void, done:
         if (value === DONE) break;
         yield value;
     }
+}
+
+// you're telling me not a single programmer in the history of programming ever needed this
+export function localeTimeWithMs(d: Dayjs): string {
+    const time = d.format('LTS');
+    const ms = d.format('SSS');
+
+    return time.endsWith('M') ? // 12-hour
+        time.replace(/(\s*[AP]M)$/i, `.${ms}$1`)
+        : `${time}.${ms}`;
 }

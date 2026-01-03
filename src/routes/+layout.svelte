@@ -6,10 +6,12 @@
     import { getSession, initDI } from '$lib/app/utils/di';
     import dayjs from 'dayjs';
     import relativeTime from "dayjs/plugin/relativeTime";
+    import localizedTime from "dayjs/plugin/localizedFormat";
     import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
     import { clearLocalStorage } from '$lib/app/utils';
 
     dayjs.extend(relativeTime);
+    dayjs.extend(localizedTime);
 
     let { data, children }: LayoutProps = $props();
 

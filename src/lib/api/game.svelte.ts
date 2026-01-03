@@ -6,6 +6,7 @@ import { GameDiagnostics } from "./game-diagnostics.svelte";
 import { TIMEOUTS } from "./diagnostics";
 import * as v1 from "./v1/spec";
 import type { BaseConnection } from "./connection";
+import dayjs from "dayjs";
 
 export type GameAction = v1.Action & { active: boolean };
 export type PendingAction = { actData: v1.ActData, sentAt: number, timeout: ReturnType<typeof setTimeout> };
@@ -230,7 +231,7 @@ export class Game {
     async forceAction(msg: v1.ForceAction) {
         if (this.pendingActions.size) {
             this.diagnostics.trigger("prot/force/while_pending_result", {
-                pending: this.pendingActions.values().toArray(),
+                pending: this.pendingActions.values().map(prettyPending).toArray(),
                 msg,
             });
             this.forceQueue.push(msg);
@@ -280,7 +281,7 @@ export class Game {
         const sentAt = Date.now();
         const timeout = setTimeout(() => {
             if (this.pendingActions.has(actData.id)) {
-                this.diagnostics.trigger("perf/timeout/action_result", { actData, sentAt: new Date(sentAt).toLocaleTimeString() });
+                this.diagnostics.trigger("perf/timeout/action_result", prettyPending({actData, sentAt, timeout}));
                 this.pendingActions.delete(actData.id);
             }
         }, TIMEOUTS["perf/timeout/action_result"]);
@@ -299,7 +300,7 @@ export class Game {
         clearTimeout(timeout);
         const diff = Date.now() - sentAt;
         if (diff > TIMEOUTS["perf/late/action_result"]) {
-            this.diagnostics.trigger("perf/late/action_result", { actData, sentAt });
+            this.diagnostics.trigger("perf/late/action_result", prettyPending(pending));
         }
         this.pendingActions.delete(id);
         if (!success && !message) {
@@ -348,4 +349,11 @@ export class Game {
 
 export function v1PendingGameName(id: string) {
     return `<v1-Pending-${id}>`;
+}
+
+function prettyPending(p: PendingAction) {
+    return {
+        act: p.actData,
+        sentAt: dayjs(p.sentAt).format("LTS.SSS")
+    };
 }
