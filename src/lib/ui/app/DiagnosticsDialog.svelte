@@ -60,7 +60,6 @@
                     <SegmentedControl
                         value={filterValue}
                         onValueChange={(details) => showHidden = details.value === 'hidden'}
-                        disabled={diagnostics.length === 0}
                     >
                         <SegmentedControl.Control>
                             <SegmentedControl.Indicator class="indicator" />
