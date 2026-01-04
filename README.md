@@ -27,7 +27,7 @@ Compared to the previous Python app:
 
 That said...
 > [!Note]
-> The app is currently in early beta. Some areas or systems may change their behavior and/or internals (especially internals).
+> The app is currently in beta. Some areas or systems may change their behavior and/or internals (especially internals).
 > The project is in active development so ~~don't be mean please 🥺👉👈~~ PRs are welcome. It's mostly for fun but I'm open to feedback and contributions.
 
 ## Quick start
@@ -47,7 +47,7 @@ If you're not familiar with the Neuro SDK, you should read a bit from the [archi
 
 The app will check for updates via [GitHub Releases](https://github.com/Govorunb/gary/releases/latest). Updates are checked on launch (by default, at most once a day).
 
-If you're coming in from the old Python app, you may have just `git pull`ed in an update that removed your whole app - uhhh, sorry. You can run `git switch python-app` to return to the old branch. Otherwise, if you want to update to the new Tauri app, just download and install from Releases.
+If you're coming in from the old Python app, you may have just `git pull`ed in an update that removed your whole app - uhhh, sorry. You can run `git switch python-app` to return to the old branch. Otherwise, if you want to update to the new Tauri app, you don't need to clone the repo anymore - just download and install from Releases.
 
 ### FAQ <sub><sup>(nobody asked any of these so it's neither F nor A)</sup></sub>
 
