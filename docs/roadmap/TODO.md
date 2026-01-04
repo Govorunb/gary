@@ -39,6 +39,7 @@ Frontend:
     - [ ] Collapse left sidebar to hamburger on small widths
     - [ ] On fullscreen, use empty right half for something
 - [ ] Diagnostics filtering/sorting (errors first, only warnings, regex etc.)
+- [ ] Allow binding to `0.0.0.0`
 
 ### Miscellaneous wishlist/musings
 

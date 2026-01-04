@@ -256,21 +256,23 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         return "system";
     }
 
-    /** A reminder message at the end of context to improve model performance. */
+    /** An ephemeral reminder message at the end of context to improve model performance.
+     * Not kept between generations to reduce context size. (it adds up)
+    */
     protected closerMessage(actions?: Action[]): OpenAIMessage {
         const msgContents = ["It is your turn to act."];
         const tools = this.options.promptingStrategy === "tools";
         if (this.options.allowDoNothing) {
             msgContents.push(tools
-                ? "\nThe `_gary_wait` command is available. You may use it to skip acting this turn."
+                ? "\nThe `__wait__` command is available. You may use it to skip acting this turn."
                 : "\nThe `wait` command is available. You may output `{\"command\":\"wait\"}` to skip this turn.\n"
             );
         }
         if (this.options.allowYapping) {
             msgContents.push((tools
-                ? "\nThe `_gary_say` command is available. You may use it"
+                ? "\nThe `__say__` command is available. You may use it"
                 : "\nThe `say` command is available. You may output `{\"command\":{\"say\":(string),\"notify\":(boolean)}}`")
-                + " to send a message to the human user running your software. The message will not be sent to any clients - meaning, nobody in-game will hear you."
+                + " to send a message to the human user running your software. The message will not be sent to any clients - nobody in-game will hear you."
             );
         }
         if (actions) {

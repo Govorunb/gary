@@ -1,6 +1,7 @@
 import { toast, type ExternalToast } from "svelte-sonner";
 import { isTauri } from "@tauri-apps/api/core";
 import { safeInvoke } from ".";
+import { dev } from "$app/environment";
 
 export interface Reporter {
     /** Minimum log level. */
@@ -191,6 +192,12 @@ const defaultReporter = new DefaultReporter(LogLevel.Verbose);
 
 export default defaultReporter as Reporter;
 
+function removeBundledPaths(func: string | undefined, path: string): string {
+    const parts = [func];
+    if (dev && path) parts.push(path);
+    return parts.join('@');
+}
+
 // adapted from https://github.com/tauri-apps/plugins-workspace/blob/ce6835d50ff7800dcfb8508a98e9ee83771fb283/plugins/log/guest-js/index.ts#L47
 function getCallerLocation(targetStackDepth: number = 5): string | undefined {
     const stack = new Error().stack;
@@ -198,7 +205,7 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
 
     let filePathStart: number;
     try {
-        // no window in e.g. tests
+        // no window in tests
         filePathStart = window.location.origin.length;
     } catch {
         filePathStart = 0;
@@ -217,34 +224,26 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
         const callerLine = lines[targetStackDepth+1]?.trim();
         if (!callerLine) return;
 
-        const regex = /at\s+(?<functionName>.*?)\s+\((?<filePath>.*?):(?<lineNumber>\d+):(?<columnNumber>\d+)\)/;
+        const regex = /at\s+(?<fnName>.*?)?\s+\((?<file>.*?):(?<line>\d+):(?<col>\d+)\)/;
         const match = callerLine.match(regex);
-
-        if (match) {
-            // TODO: line numbers seem to be from *after* svelte compiles the file (i.e. they're inaccurate)
-            // no clue if it's because of HMR or if i haven't enabled some setting but :shrug:
-            const { functionName, filePath, /* lineNumber, columnNumber */ } = match.groups as {
-                functionName: string
-                filePath: string
-                lineNumber: string
-                columnNumber: string
-            };
-            return `${functionName}@${filePath.substring(Math.max(filePathStart, filePath.indexOf("src/")))}`;
-            // return `${functionName}@${filePath}:${lineNumber}:${columnNumber}`;
-        } else {
-            // Handle cases where the regex does not match (e.g., last line without function name)
-            const regexNoFunction = /at\s+(?<filePath>.*?):(?<lineNumber>\d+):(?<columnNumber>\d+)/;
-            const matchNoFunction = callerLine.match(regexNoFunction);
-            if (matchNoFunction) {
-                // here, we leave line numbers in because, well... better than nothing
-                const { filePath, lineNumber, columnNumber } = matchNoFunction.groups as {
-                    filePath: string
-                    lineNumber: string
-                    columnNumber: string
-                };
-                return `<anonymous>@${filePath.substring(Math.max(filePathStart, filePath.indexOf("src/")))}:${lineNumber}:${columnNumber}`;
-            }
-        }
+        if (!match) return;
+        
+        const {fnName, file, line, col} = match.groups as {
+            fnName?: string; // e.g. closure
+            file: string;
+            line: string;
+            col: string;
+        };
+        
+        // before: initDI@http://localhost:1420/src/lib/app/session.svelte.ts:44:19
+        // after: initDI@src/lib/app/session.svelte.ts:44:19
+        const srcPath = file.substring(Math.max(filePathStart, file.indexOf("src/")));
+        // TODO: line numbers seem to be from *after* svelte compiles the file (i.e. they're inaccurate)
+        // no clue if it's because of HMR or if i haven't enabled some setting but :shrug:
+        const loc = [srcPath, line, col];
+        const result = removeBundledPaths(fnName, loc.join(':'));
+        if (!result) return;
+        return result;
     } else {
         // Assume it's Webkit JavaScriptCore, example:
         //
@@ -256,10 +255,9 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
         const traces = stack.split('\n').map((line) => line.split('@'));
         const filtered = traces
             .filter(([name, location]) => name.length > 0 && location !== '[native code]')
-            // before: initDI@http://localhost:1420/src/lib/app/session.svelte.ts:44:19
-            // after: initDI@src/lib/app/session.svelte.ts
             // seems to use the containing fn for closures, thank god (webkit 1, chromium 999)
-            .map(([name, loc]) => [name, loc.substring(Math.max(filePathStart, loc.indexOf("src/"))).replaceAll(/(:\d+)*$/g, "")]);
-        return filtered[targetStackDepth]?.filter((v) => v.length > 0).join('@');
+            .map(([name, loc]) => [name, loc.substring(Math.max(filePathStart, loc.indexOf("src/")))]);
+        const [name, loc] = filtered[targetStackDepth]?.filter((v) => v.length > 0) ?? [];
+        return removeBundledPaths(name, loc);
     }
 }
