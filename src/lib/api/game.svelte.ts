@@ -10,7 +10,12 @@ import dayjs from "dayjs";
 import { dequal } from "dequal/lite";
 
 export type GameAction = v1.Action & { active: boolean };
-export type PendingAction = { actData: v1.ActData, sentAt: number, timeout: ReturnType<typeof setTimeout> };
+export type PendingAction = {
+    actData: v1.ActData,
+    sentAt: number,
+    timeout: ReturnType<typeof setTimeout>,
+    v1Force?: v1.ForceAction,
+};
 
 export class Game {
     public readonly actions = $state(new SvelteMap<string, GameAction>());
@@ -148,8 +153,18 @@ export class Game {
         // (like a 1s timer after startup or sth)
     }
 
-    context(text: string, silent: boolean) {
-        this.session.context.client(this, { text, silent });
+    context(text: string, silent: boolean | "engineSilent") {
+        // non-silent message that doesn't trigger the scheduler to act
+        // see end of this.forceAction for why
+        // this is only here to deduplicate the behavior
+        if (silent === "engineSilent") {
+            // scheduler (silent)
+            this.session.context.client(this, { text, visibilityOverrides: { user: false }, silent: true });
+            // user (non-silent)
+            this.session.context.client(this, { text, visibilityOverrides: {engine: false}, silent: false });
+        } else {
+            this.session.context.client(this, { text, silent });
+        }
     }
 
     getAction(name: string, onlyActive: boolean = true) {
@@ -286,10 +301,7 @@ export class Game {
         // we don't want it to trigger tryAct because then we're acting twice from one prompt
         // (if this ever happens again, add a "deduplication mark" to scheduler)
         const text = this.forceMsg(actions, msg.data.query, msg.data.state);
-        // scheduler (silent)
-        this.session.context.client(this, { text, visibilityOverrides: { user: false }, silent: true });
-        // user (non-silent)
-        this.session.context.client(this, { text, visibilityOverrides: {engine: false}, silent: false});
+        this.context(text, "engineSilent");
     }
 
     async sendAction(actData: v1.ActData) {
@@ -318,7 +330,7 @@ export class Game {
             this.diagnostics.trigger("prot/result/unexpected", { msgData: msg.data });
             return;
         }
-        const { actData, sentAt, timeout } = pending;
+        const { actData, sentAt, timeout, v1Force } = pending;
         clearTimeout(timeout);
         const diff = Date.now() - sentAt;
         if (diff > TIMEOUTS["perf/late/action_result"]) {
@@ -328,10 +340,15 @@ export class Game {
         if (!success && !message) {
             this.diagnostics.trigger("prot/result/error_nomessage");
         }
-        const silent = success;
         let text = `Result for action ${actData.name} (request ID ${id.substring(0, 8)}): ${success ? "Performing" : "Failure"}`;
         text += message ? ` (${message})` : " (no message)";
-        this.context(text, silent);
+        // fake-nonsilent to represent the upcoming retry
+        // (in v2+, the game will retry - so we still don't want to trigger acting)
+        this.context(text, success || "engineSilent");
+        // v1 spec: Neuro will retry failed `actions/force`s
+        if (this.version === "v1" && v1Force) {
+            this.forceQueue.push(v1Force);
+        }
     }
 
     async manualSend(action: string, data: any) {
@@ -340,10 +357,10 @@ export class Game {
             data: data,
         });
 
-        // biome-ignore lint/style/useTemplate: no thanks
-        const msg = `User act to ${this.name} (request ID ${actData.id.substring(0, 8)}): ${actData.name}` + (actData.data ? `\nData: ${actData.data}` : " (no data)");
-        this.session.context.user({ text: msg, silent: true });
-        r.debug(msg);
+        let text = `User act to ${this.name} (request ID ${actData.id.substring(0, 8)}): ${actData.name}`;
+        text += (actData.data ? `\nData: ${actData.data}` : " (no data)");
+        r.debug(text);
+        this.session.context.user({ text: text, silent: true });
         await this.sendAction(actData);
     }
 
