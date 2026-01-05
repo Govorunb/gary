@@ -40,6 +40,7 @@ Frontend:
     - [ ] On fullscreen, use empty right half for something
 - [ ] Diagnostics filtering/sorting (errors first, only warnings, regex etc.)
 - [ ] Allow binding to `0.0.0.0`
+- [ ] Single button (send) for schemaless actions (no dialog)
 
 ### Miscellaneous wishlist/musings
 

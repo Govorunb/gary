@@ -331,7 +331,7 @@ export class Game {
         this.context(text, success || "noAct");
         // v1 spec: Neuro will retry failed `actions/force`s
         if (this.version === "v1" && v1Force) {
-            this.forceQueue.push(v1Force);
+            this.forceQueue.unshift(v1Force); // spec says "immediately" so i guess we doom loop
         }
     }
 
