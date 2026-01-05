@@ -8,6 +8,7 @@ import * as v1 from "./v1/spec";
 import type { BaseConnection } from "./connection";
 import dayjs from "dayjs";
 import { dequal } from "dequal/lite";
+import type { Message } from "$lib/app/context.svelte";
 
 export type GameAction = v1.Action & { active: boolean };
 export type PendingAction = {
@@ -153,18 +154,8 @@ export class Game {
         // (like a 1s timer after startup or sth)
     }
 
-    context(text: string, silent: boolean | "engineSilent") {
-        // non-silent message that doesn't trigger the scheduler to act
-        // see end of this.forceAction for why
-        // this is only here to deduplicate the behavior
-        if (silent === "engineSilent") {
-            // scheduler (silent)
-            this.session.context.client(this, { text, visibilityOverrides: { user: false }, silent: true });
-            // user (non-silent)
-            this.session.context.client(this, { text, visibilityOverrides: {engine: false}, silent: false });
-        } else {
-            this.session.context.client(this, { text, silent });
-        }
+    context(text: string, silent: Message['silent']) {
+        this.session.context.client(this, { text, silent });
     }
 
     getAction(name: string, onlyActive: boolean = true) {
@@ -293,15 +284,8 @@ export class Game {
             this.diagnostics.trigger("prot/force/multiple", { msgData: msg.data });
         }
         this.session.scheduler.forceQueue.push(actions);
-        // this shit is so ass
-        // basically: forceQueue.push trips the scheduler and runs a forceAct (yay reactivity)
-        // the user needs this context message for display, and it needs to be non-silent (so it "looks" more like a "force")
-        // the actor side also needs the query/state... but!
-        // the actor can't have it non-silent because it'll trigger a tryAct (unsolicited (yay reactivity))
-        // we don't want it to trigger tryAct because then we're acting twice from one prompt
-        // (if this ever happens again, add a "deduplication mark" to scheduler)
         const text = this.forceMsg(actions, msg.data.query, msg.data.state);
-        this.context(text, "engineSilent");
+        this.context(text, "noAct"); // don't act twice from one prompt
     }
 
     async sendAction(actData: v1.ActData) {
@@ -342,9 +326,9 @@ export class Game {
         }
         let text = `Result for action ${actData.name} (request ID ${id.substring(0, 8)}): ${success ? "Performing" : "Failure"}`;
         text += message ? ` (${message})` : " (no message)";
-        // fake-nonsilent to represent the upcoming retry
+        // noAct on failure to represent the upcoming retry
         // (in v2+, the game will retry - so we still don't want to trigger acting)
-        this.context(text, success || "engineSilent");
+        this.context(text, success || "noAct");
         // v1 spec: Neuro will retry failed `actions/force`s
         if (this.version === "v1" && v1Force) {
             this.forceQueue.push(v1Force);

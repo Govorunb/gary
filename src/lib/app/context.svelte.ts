@@ -69,11 +69,16 @@ export const zMessage = z.strictObject({
     // though context *should* ideally be separate
     source: zSource, // aka "role"
     text: z.string(),
-    /** Non-silent messages will prompt the engine to act. Defaults to false.
+    /** If `true`, the message will show de-emphasized in the UI.
      * 
-     * Actor messages are ignored even if non-silent.
+     * `false` will prompt the scheduler to act, `true` and `"noAct"` won't.
+
+     * Defaults to `false`.
+     * 
+     * ---
+     * Actor messages don't prompt acting even if non-silent.
      */
-    silent: z.boolean().default(false),
+    silent: z.union([z.boolean(), z.literal("noAct")]).default(false),
     visibilityOverrides: z.strictObject({
         user: z.boolean().default(true),
         engine: z.boolean().default(true),

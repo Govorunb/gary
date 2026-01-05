@@ -33,7 +33,7 @@
 </script>
 
 <div class={["message", msg.source.type]}
-    class:silent={msg.silent}
+    class:silent={msg.silent === true /* boolean | "noAct" */}
 >
     <span class="message-icon"
         {@attach tooltip(msg.source.type)}
