@@ -86,13 +86,9 @@
         class="act-btn flex flex-row gap-2"
         disabled={scheduler.busy && !shiftPressed}
         {@attach tooltip(
-            scheduler.busy && shiftPressed
-                ? "Stop"
-                : scheduler.busy
-                    ? "Engine busy (Shift to stop)"
-                    : shiftPressed
-                        ? "Force Act"
-                        : "Act (Shift for Force)"
+            scheduler.busy
+                ? (shiftPressed ? "Stop" : "Engine busy (Shift to stop)")
+                : (shiftPressed ? "Force Act" : "Act (Shift for Force)")
         )}
     >
         {#if scheduler.busy && shiftPressed}
