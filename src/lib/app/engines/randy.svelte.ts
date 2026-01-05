@@ -69,7 +69,7 @@ export const zRandyPrefs = z.strictObject({
      * */
     chanceDoNothing: z.number().min(0).max(1).fallback(0.2),
     /** Randy will sleep for this long before responding (in milliseconds). Don't set too low or the app might freeze. */
-    latencyMs: z.number().min(1).max(864000000).default(200),
+    latencyMs: z.number().min(1).max(864000000).default(100),
 });
 
 export type RandyPrefs = z.infer<typeof zRandyPrefs>;
