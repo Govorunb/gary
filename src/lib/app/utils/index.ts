@@ -78,10 +78,10 @@ export function parseError(e: unknown): Error;
 export function parseError(e: unknown): Error {
     if (e instanceof Error) return e;
     const stringed = e?.toString?.();
-    if (stringed === "[object Object]") {
-        return new Error(JSON.stringify(e));
+    if (stringed && !stringed.startsWith("[object")) {
+        return new Error(stringed);
     }
-    return new Error(stringed);
+    return new Error(JSON.stringify(e));
 }
 
 export function jsonParse(s: string): Result<any, Error> {

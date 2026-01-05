@@ -9,6 +9,7 @@ import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
 import r from "$lib/app/utils/reporting";
+import { parseError } from "$lib/app/utils";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
@@ -118,9 +119,10 @@ export class OpenAIClient {
             return err(res.error);
         }
         const response = res.value;
-        const resp = response.choices[0];
+        type RespOrError = typeof response | { choices?: never, error: any };
+        const resp = (response as RespOrError).choices?.[0];
         if (!resp) {
-            return err(new EngineError(`${this.name} did not return successful result: ${resp}`));
+            return err(new EngineError(`${this.name} did not return successful result`, parseError(res.value)));
         }
         if (resp.finish_reason !== "stop" && resp.finish_reason !== "length") {
             return err(new EngineError(`${this.name} returned unexpected finish_reason '${resp.finish_reason}'`, undefined, false))

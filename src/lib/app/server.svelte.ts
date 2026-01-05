@@ -29,7 +29,7 @@ export class ServerManager {
             void this.sync();
         } else {
             // we're called before toasts init (so they can't show until settled)
-            settled().then(() => r.warn("Tauri backend unavailable", "WS server disabled"));
+            settled().then(() => r.warn("No Tauri backend on browser (vite dev)", "Some app features disabled."));
         }
     }
 
