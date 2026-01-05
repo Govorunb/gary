@@ -5,7 +5,7 @@ import { zConst } from "$lib/app/utils";
 export const zAction = z.strictObject({
     name: z.string().nonempty(),
     description: z.string().optional(),
-    schema: z.record(z.string(), z.any()).nullable(),
+    schema: z.record(z.string(), z.any()).nullish(),
 });
 
 export type Action = z.infer<typeof zAction>;
