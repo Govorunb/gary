@@ -17,7 +17,7 @@
         const conn = new InternalConnection(`${Date.now().toString().reverse()}-schema-test`, "v1");
         const schemaTestGame = new SchemaTestGame(new ConnectionClient(conn));
 
-        registry.createGame(conn, "JSON Schema Test");
+        registry.createGame(conn);
         await tick();
         await conn.connect();
         await schemaTestGame.lifecycle();
@@ -27,7 +27,7 @@
         const conn = new InternalConnection(`${Date.now().toString().reverse()}-diagnostics-example`, "v1");
         const diagnosticsExampleGame = new DiagnosticsExampleGame(new ConnectionClient(conn));
 
-        registry.createGame(conn, "Diagnostics Example");
+        registry.createGame(conn);
         await tick();
         await conn.connect();
         await diagnosticsExampleGame.lifecycle();

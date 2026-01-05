@@ -11,6 +11,7 @@ type OnErrorHandler = (err: string) => Awaitable;
 
 export abstract class BaseConnection {
     #disposed: boolean = false;
+    #connected: boolean = false;
     #onerror: OnErrorHandler[] = [];
     #onconnect: OnConnectHandler[] = [];
     #onmessage: OnMessageHandler[] = [];
@@ -19,6 +20,10 @@ export abstract class BaseConnection {
 
     public get closed() {
         return this.#disposed;
+    }
+
+    public get connected() {
+        return this.#connected;
     }
 
     constructor(
@@ -31,6 +36,7 @@ export abstract class BaseConnection {
     }
 
     public dispose(clientDisconnected?: CloseFrame) {
+        this.#connected = false;
         this.#disposed = true;
         this.#onerror.length = 0;
         this.#onconnect.length = 0;
@@ -70,6 +76,7 @@ export abstract class BaseConnection {
         for (const cbConnect of this.#onconnect) {
             await cbConnect();
         }
+        this.#connected = true;
     }
 
     protected async error(err: string) {
@@ -90,22 +97,30 @@ export abstract class BaseConnection {
     }
 
     public onerror(handler: OnErrorHandler) {
+        if (this.#disposed) return;
         this.#onerror.push(handler);
     }
-    // TODO: onconnect should instantly fire if already connected
     public onconnect(handler: OnConnectHandler) {
-        this.#onconnect.push(handler);
+        if (this.#disposed) return;
+        if (this.#connected) {
+            void handler();
+        } else {
+            this.#onconnect.push(handler);
+        }
     }
 
     public onmessage(handler: OnMessageHandler) {
+        if (this.#disposed) return;
         this.#onmessage.push(handler);
     }
 
     public onsend(handler: OnMessageHandler) {
+        if (this.#disposed) return;
         this.#onsend.push(handler);
     }
 
     public onclose(handler: OnCloseHandler) {
+        if (this.#disposed) return;
         this.#onclose.push(handler);
     }
 

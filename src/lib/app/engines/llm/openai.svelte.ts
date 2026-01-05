@@ -34,9 +34,6 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     }
 }
 
-// TODO: generation params (temperature, etc) (probably not)
-// however: https://platform.openai.com/docs/guides/latest-model#gpt-5-parameter-compatibility
-// gpt5 xor temperature/top_p/logprobs
 export const zOpenAIPrefs = z.looseObject({
     name: z.string().nonempty(),
     ...zLLMOptions.shape,
