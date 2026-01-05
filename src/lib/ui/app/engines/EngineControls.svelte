@@ -91,15 +91,19 @@
                 : (shiftPressed ? "Force Act" : "Act (Shift for Force)")
         )}
     >
-        {#if scheduler.busy && shiftPressed}
+    {#if scheduler.busy}
+        {#if shiftPressed}
             <Square /> Stop
-        {:else if scheduler.busy}
+        {:else}
             <Hourglass /> Busy
-        {:else if shiftPressed}
+        {/if}
+    {:else}
+        {#if shiftPressed}
             <HandFist /> Force act
         {:else}
             <Pointer /> Act
         {/if}
+    {/if}
     </button>
     <button
         onclick={() => scheduler.autoPoker.autoAct = !scheduler.autoPoker.autoAct}
