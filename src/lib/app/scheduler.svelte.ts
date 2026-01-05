@@ -14,7 +14,7 @@ export class Scheduler {
     /** Busy (or simulating a busy state), e.g. waiting for LLM generation or pretending to wait for TTS. */
     public busy = $state(false);
     /** Paused due to an engine error that requires user intervention. */
-    public errored = $state(false); // TODO: first time teaching tip
+    public errored = $state(false);
     public readonly canAct: boolean = $derived(!this.muted && !this.busy && !this.errored);
 
     private readonly registry: Registry;
@@ -254,10 +254,11 @@ export class AutoPoker {
     public readonly tryTimer: ReturnType<typeof useDebounce<[], void>>;
     public readonly forceTimer: ReturnType<typeof useDebounce<[], void>>;
 
-    private readonly scheduler: Scheduler;
+    private get scheduler() {
+        return this.session.scheduler;
+    }
 
     constructor(private session: Session) {
-        this.scheduler = $derived(this.session.scheduler);
         this.tryTimer = useDebounce(() => {
             r.info("Engine idle, poking");
             this.scheduler.actPending = true;

@@ -25,8 +25,6 @@ export class Game {
     public status = $derived(this.diagnostics.status);
     public startupState: { type: "connected" | "implied" | "startup"; at: number; } | null = $state(null);
     private pendingActions = $state(new SvelteMap<string, PendingAction>());
-    // TODO: remove scheduler's force queue (it would scan all games' force queues instead)
-    // (might solve edge case where 2+ connected games would trigger prot/force/multiple on each other through no fault of their own)
     private forceQueue: v1.ForceAction[] = $state([]);
 
     constructor(
@@ -56,6 +54,7 @@ export class Game {
             r.info(`${this.name} disconnected`);
             void this.session.context.system({ text: `${this.name} disconnected`, silent: true });
             this.clearPendingActions();
+            this.forceQueue.length = 0;
         });
         conn.onmessage((txt) => this.recv(txt));
         conn.onerror((err) => {
@@ -88,9 +87,6 @@ export class Game {
         }
         const err = msg.error;
         this.diagnostics.trigger("prot/invalid_message", { message: txt, error: err });
-        // TODO: 'strict mode' that raises all severities by 1
-        // (warnings become errors, errors become fatal and instantly disconnect WS)
-        // await this.conn.disconnect(1006, `Invalid WebSocket message: ${err.message}`);
     }
 
     async processMsg(msg: v1.GameMessage) {
@@ -103,7 +99,7 @@ export class Game {
                 this.connected();
             } else if (this.name !== msg.game) {
                 this.diagnostics.trigger("prot/v1/game_renamed", { old: this.name, new: msg.game });
-                // TODO: diag suppressions are per game name... and we just changed the name
+                // allowed for now but eventually will have to remove this (too much complexity)
                 this.name = msg.game;
             }
         }

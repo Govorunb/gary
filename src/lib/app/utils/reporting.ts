@@ -224,7 +224,17 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
         const callerLine = lines[targetStackDepth+1]?.trim();
         if (!callerLine) return;
 
-        const regex = /at\s+(?<fnName>.*?)?\s+\((?<file>.*?):(?<line>\d+):(?<col>\d+)\)/;
+        /** Matches line format above (with or without function name)
+         * Breakdown:
+         * - at\s+                        | "at "
+         * - (?:                          | non-capturing group (let's call it group A)
+         *      (?<fnName>\S+)            |   \S+ - non-whitespace characters
+         *                    \s+\(       |   " ("
+         *   )?                           | group A is optional
+         * - (?<file>[^:]+)               | everything until we hit a colon
+         * - :(?<line>\d+):(?<col>\d+)    | :(digits):(digits)
+         */
+        const regex = /at\s+(?:(?<fnName>\S+)\s+\()?(?<file>[^:]+):(?<line>\d+):(?<col>\d+)/;
         const match = callerLine.match(regex);
         if (!match) return;
         
@@ -238,7 +248,7 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
         // before: initDI@http://localhost:1420/src/lib/app/session.svelte.ts:44:19
         // after: initDI@src/lib/app/session.svelte.ts:44:19
         const srcPath = file.substring(Math.max(filePathStart, file.indexOf("src/")));
-        // TODO: line numbers seem to be from *after* svelte compiles the file (i.e. they're inaccurate)
+        // sometimes line numbers seem to be from *after* svelte compiles the file (i.e. they're inaccurate)
         // no clue if it's because of HMR or if i haven't enabled some setting but :shrug:
         const loc = [srcPath, line, col];
         const result = removeBundledPaths(fnName, loc.join(':'));

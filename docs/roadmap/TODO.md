@@ -24,23 +24,32 @@ The project is currently in beta, adding functionality and stabilizing internals
 App logic:
 - [ ] Non-silent message (from user) with no connected games still primes the scheduler (should call model if yapping is allowed?)
 - [.] [Context](./context.md)
+- [ ] 'Strict mode' that raises all diagnostic severities by 1 (warnings become errors, errors become fatal and instantly disconnect WS)
+- [ ] Figure out where game-specific prefs go when the game changes name
+- [ ] Scheduler scans all games' forceQueues instead of having its own (might solve an edge case where 2+ connected games could trigger prot/force/multiple on each other through no fault of their own)
+- [ ] Use force prio literally anywhere (shorten Randy l*tency/interrupt LLM gen)
 
 Frontend:
-- [ ] Extra context features
+- Extra context features
     - [ ] Menu (buttons to copy message text, ID, etc)
     - [ ] Editing the log - edit message text, remove message
-- [ ] Performance (because WebKit is ngmi)
+- Performance (because WebKit is ngmi)
     - [ ] Virtualize context log https://tanstack.com/virtual/latest/docs/introduction
     - [ ] Keep a CodeMirror instance loaded offscreen and Portal it into dialogs (deranged)
     - [ ] Streaming reactive ctx message conversion (entirely reimplement rx it'll be funny)
 - [ ] Launch game processes (+ proposed shutdown API)
 - [x] App logs should surface to the user somewhere
-- [ ] More width-responsive UI
+- More width-responsive UI
     - [ ] Collapse left sidebar to hamburger on small widths
     - [ ] On fullscreen, use empty right half for something
-- [ ] Diagnostics filtering/sorting (errors first, only warnings, regex etc.)
+- Diagnostics
+    - [ ] Filtering/sorting (errors first, only warnings, regex etc.)
+    - [ ] More useful tooltip/popover on status dot
+    - [ ] Maybe have the status dot be the menu button
 - [ ] Allow binding to `0.0.0.0`
 - [ ] Single button (send) for schemaless actions (no dialog)
+- Onboarding (docs, first-time teaching tips)
+    - [ ] First-time tip for when an engine error pauses the scheduler
 
 ### Miscellaneous wishlist/musings
 

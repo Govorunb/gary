@@ -37,7 +37,6 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
         return this.forceAct(session, actions, signal);
     }
 
-    // TODO: use force prio to shorten l*tency (just so we can use it literally anywhere)
     forceAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {

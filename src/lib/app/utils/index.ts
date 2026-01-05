@@ -160,12 +160,6 @@ export function tooltip(text: string): Attachment<HTMLElement> {
     }
 }
 
-export const CHARS_PER_TOKEN = 4; // TODO: may not actually hold with excessive json content
-
-export function estimateTokens(text: string) {
-    return text.length * CHARS_PER_TOKEN;
-}
-
 // @ts-expect-error
 export const APP_VERSION: string = __APP_VERSION__;
 

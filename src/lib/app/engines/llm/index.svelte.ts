@@ -2,7 +2,7 @@ import type { Action } from "$lib/api/v1/spec";
 import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Session } from "$lib/app/session.svelte";
 import type { Message } from "$lib/app/context.svelte";
-import type { JSONSchema } from "openai/lib/jsonschema";
+import type { JSONSchema, JSONSchemaDefinition } from "openai/lib/jsonschema";
 import z from "zod";
 import { jsonParse, safeParse, zConst } from "$lib/app/utils";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
@@ -133,22 +133,22 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const actsAnyOf: JSONSchema[] = [];
         acts.anyOf = actsAnyOf;
         for (const action of actions) {
-            const actionCallSchema: JSONSchema = {
+            const actionCallSchema = {
                 type: "object",
                 properties: {
                     action: { enum: [action.name] },
-                },
+                } as Record<string, JSONSchemaDefinition>,
                 required: ["action"],
                 additionalProperties: false,
-            };
+            } satisfies JSONSchema;
             if (action.schema) {
                 // TODO: openai quirks
                 // https://platform.openai.com/docs/guides/structured-outputs#all-fields-must-be-required
                 // https://platform.openai.com/docs/guides/structured-outputs#additionalproperties-false-must-always-be-set-in-objects
                 const cloned = structuredClone($state.snapshot(action.schema) as JSONSchema);
                 cloned.additionalProperties = false;
-                actionCallSchema.properties!.data = cloned;
-                actionCallSchema.required!.push("data");
+                actionCallSchema.properties.data = cloned;
+                actionCallSchema.required.push("data");
             }
             actsAnyOf.push(actionCallSchema);
         }
@@ -166,13 +166,13 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             additionalProperties: false,
         }
         if (!isForce && this.options.allowDoNothing) {
-            const waitSchema = z.toJSONSchema(zWait, {}) as any;
-            waitSchema.$schema = undefined;
+            const waitSchema = z.toJSONSchema(zWait) as any;
+            delete waitSchema.$schema;
             cmdAnyOf.push(waitSchema);
         }
         if (!isForce && this.options.allowYapping) {
             const saySchema = z.toJSONSchema(zSay) as any;
-            saySchema.$schema = undefined;
+            delete saySchema.$schema;
             cmdAnyOf.push(saySchema);
         }
         return root;

@@ -32,8 +32,6 @@
             case "ok": return "OK";
             case "warn":
             case "error":
-                // TODO: 5 error(s), 3 warning(s)
-                // TODO 2: SkeletonUI tooltip
                 return `${game.diagnostics.diagnostics.length} diagnostic(s)`;
         }
     }

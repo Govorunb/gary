@@ -1,9 +1,9 @@
 <script lang="ts">
     import Dialog from "$lib/ui/common/Dialog.svelte";
     import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
-    import { relaunch as tauriRelaunchProcess } from "@tauri-apps/plugin-process";
     import { isTauri } from "@tauri-apps/api/core";
     import r from "$lib/app/utils/reporting";
+    import { safeInvoke, sleep } from "$lib/app/utils";
 
     type Props = {
         open: boolean;
@@ -38,8 +38,15 @@
                     label: "Restart now",
                     async onClick() {
                         if (isTauri()) {
-                            // FIXME: AppImage doesn't relaunch
-                            await tauriRelaunchProcess();
+                            const res = await safeInvoke('plugin:process|restart');
+                            if (res.isErr()) {
+                                r.error("Failed to restart", res.error);
+                            }
+                            await sleep(2500);
+                            r.success("Erm... awkward...", {
+                                details: `Couldn't restart. Um... You'll have to do it manually. My bad.`,
+                                toast: true,
+                            });
                         } else {
                             location.reload(); // pretend to relaunch (the app never updates on dev web server obviously)
                         }

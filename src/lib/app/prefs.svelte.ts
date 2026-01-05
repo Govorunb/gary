@@ -9,7 +9,6 @@ import { migrate, moveField, type Migration } from "./utils/migrations";
 
 export const USER_PREFS = "userPrefs";
 
-// TODO: json export
 export class UserPrefs {
     #data: UserPrefsData;
 
