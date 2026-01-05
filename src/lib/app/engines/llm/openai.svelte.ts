@@ -24,11 +24,11 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.client = new OpenAIClient({ prefs: this.options }, engineId);
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema) : ResultAsync<Message, EngineError> {
-        return new ResultAsync(this.client.genJson(context, outputSchema));
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<Message, EngineError> {
+        return new ResultAsync(this.client.genJson(context, outputSchema, undefined, signal));
     }
 
-    generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
+    generateToolCall(_context: OpenAIContext, _actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
         return errAsync(new EngineError("Tool calling not implemented", undefined, false));
     }
 }
@@ -69,6 +69,7 @@ export class OpenAIClient {
         messages: OpenAIContext,
         outputSchema?: JSONSchema,
         extraParams?: Record<string, any>,
+        signal?: AbortSignal,
     ): Promise<Result<Message, EngineError>> {
         const model = this.options.modelId;
         if (!model) {
@@ -95,7 +96,7 @@ export class OpenAIClient {
         }
         // ooga booga me no have reactivity because can be instantiate at runtime, outside root effect
         // so me use pull model instead of push model. hoh
-        // i just know seniorberry shake head and wag finger from inside cloud, but i the one that feel alive
+        // me just know seniorberry shake head and wag finger from inside cloud, but me the one that feel alive
         this.client.baseURL = this.options.serverUrl;
         this.client.apiKey = this.options.apiKey;
 
@@ -106,7 +107,7 @@ export class OpenAIClient {
         // so... `response_format` on `chat/completions` it is
         console.warn("Full request params:", params);
         const res = await ResultAsync.fromPromise(
-            this.client.chat.completions.create(params),
+            this.client.chat.completions.create(params, { signal }),
             (error) => new EngineError(`${this.name} request failed: ${error}`, error as Error, false),
         );
         console.log("Response:", res);

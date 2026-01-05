@@ -186,8 +186,19 @@ String.prototype.reverse = function() {
     return [...this].reverse().join("")
 };
 
-export function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (signal?.aborted) {
+            return reject(new Error("Aborted"));
+        }
+        
+        const timeout = setTimeout(resolve, ms);
+        
+        signal?.addEventListener('abort', () => {
+            clearTimeout(timeout);
+            reject(new Error("Aborted"));
+        }, { once: true });
+    });
 }
 
 /**

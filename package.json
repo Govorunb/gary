@@ -14,7 +14,7 @@
     "tauri": "tauri",
     "d": "vite dev",
     "r": "tauri dev",
-    "b": "vite build",
+    "bc": "biome check",
     "sc": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "t": "vitest run",
     "tw": "vitest watch"

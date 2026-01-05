@@ -1,13 +1,11 @@
 import type { Action } from "$lib/api/v1/spec";
-import { Engine, EngineError, zEngineAct, type EngineAct } from "../index.svelte";
+import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Session } from "$lib/app/session.svelte";
 import type { Message } from "$lib/app/context.svelte";
 import type { JSONSchema } from "openai/lib/jsonschema";
 import z from "zod";
-import { jsonParse, zConst } from "$lib/app/utils";
+import { jsonParse, safeParse, zConst } from "$lib/app/utils";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
-import { sendNotification } from "@tauri-apps/plugin-notification";
-import r from "$lib/app/utils/reporting";
 import type { ChatCompletionMessageParam } from "openai/resources/index.mjs";
 
 export const zLLMOptions = z.strictObject({
@@ -79,15 +77,15 @@ export type OpenAIContext = OpenAIMessage[];
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
     abstract name: string;
 
-    tryAct(session: Session, actions?: Action[]): ResultAsync<EngineAct | null, EngineError> {
-        return new ResultAsync(this.actCore(session, actions, false));
+    tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
+        return new ResultAsync(this.actCore(session, actions, false, signal));
     }
-    forceAct(session: Session, actions?: Action[]): ResultAsync<EngineAct, EngineError> {
-        const res = new ResultAsync(this.actCore(session, actions, true));
-        return res.andThen(act => act ? ok(act) : err(new EngineError("Force act did not act")));
+    forceAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError> {
+        const res = new ResultAsync(this.actCore(session, actions, true, signal));
+        return res.andThen(act => (typeof act === 'object' && 'name' in act) ? ok(act) : err(new EngineError("Force act did not act")));
     }
 
-    async actCore(session: Session, actions?: Action[], isForce: boolean = false): Promise<Result<EngineAct | null, EngineError>> {
+    async actCore(session: Session, actions?: Action[], isForce: boolean = false, signal?: AbortSignal): Promise<Result<EngineActResult, EngineActError>> {
         const resolvedActions = this.resolveActions(session, actions);
         if (isForce && !resolvedActions.length) {
             return err(new EngineError("Tried to force act with no available actions"));
@@ -96,9 +94,8 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         ctx.push(this.closerMessage());
         ctx = this.mergeUserTurns(ctx);
         // TODO: tools
-        // TODO: AbortSignal (critical prio)
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
-        const gen = await this.generateStructuredOutput(ctx, schema);
+        const gen = await this.generateStructuredOutput(ctx, schema, signal);
         if (gen.isErr()) {
             return err(gen.error);
         }
@@ -116,45 +113,17 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (isForce) {
                 return err(new EngineError("Internal error - force act allowed waiting"));
             }
-            // for user display (see context.actor call above)
-            session.context.actor({
-                text: "(LLM chose not to act)",
-                silent: true,
-                visibilityOverrides: { engine: false }
-            });
-            return ok(null);
+            return ok("skip");
         }
         const say = zSay.safeParse(command);
         if (say.success) {
             if (isForce) {
                 return err(new EngineError("Internal error - force act allowed yapping"));
             }
-            // for user display (see context.actor call above)
-            session.context.actor({
-                text: `Gary ${say.data.notify ? "wants attention" : "says"}: ${say.data.say}`,
-                silent: !say.data.notify,
-                visibilityOverrides: { engine: false }
-            });
-            if (say.data.notify) {
-                r.info("Gary wants attention", {
-                    details: say.data.say,
-                    toast: true
-                });
-                sendNotification({
-                    title: "Gary wants attention",
-                    body: say.data.say,
-                });
-            }
-            return ok(null);
+            return ok(say.data);
         }
-        const act = zEngineAct.safeParse({
-            name: command.action,
-            data: JSON.stringify(command.data),
-        });
-        if (!act.success) {
-            return err(new EngineError(`Failed to parse action: ${act.error}`, act.error));
-        }
-        return ok(act.data);
+        return safeParse(zEngineAct, { name: command.action, data: JSON.stringify(command.data) })
+            .mapErr(e => new EngineError(`Failed to parse action: ${e}`, e));
     }
 
     protected structuredOutputSchemaForActions(actions: Action[], isForce: boolean = false): JSONSchema {
@@ -210,7 +179,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     /** Generate a response adhering to the given schema. */
-    protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError>;
+    protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<Message, EngineError>;
     protected abstract generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError>;
 
     private convertMessage(msg: Message): OpenAIMessage {

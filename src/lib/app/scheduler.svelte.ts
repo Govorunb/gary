@@ -1,11 +1,12 @@
 import type { Session } from "./session.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
-import r from "$lib/app/utils/reporting";
+import r, { LogLevel } from "$lib/app/utils/reporting";
 import { zActData, type Action } from "$lib/api/v1/spec";
-import type { EngineError, Engine, EngineAct } from "./engines/index.svelte";
-import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
+import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
+import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { useDebounce } from "runed";
 import { untrack } from "svelte";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
@@ -17,8 +18,7 @@ export class Scheduler {
     public readonly canAct: boolean = $derived(!this.muted && !this.busy && !this.errored);
 
     private readonly registry: Registry;
-    private activeEngine: Engine<unknown> | null;
-    public readonly activeMutes: string[];
+    #abort: AbortController | null = $state(null);
     /** A signal telling the scheduler to prompt the active engine to act as soon as possible.
      * This can be flipped true by:
      * - Non-silent context messages
@@ -34,12 +34,6 @@ export class Scheduler {
 
     constructor(private readonly session: Session) {
         this.registry = this.session.registry;
-        this.activeEngine = $derived(this.session.activeEngine);
-        this.activeMutes = $derived.by(() => [
-            this.muted && "muted",
-            this.busy && "busy",
-            this.errored && "paused due to error",
-        ].filter(Boolean) as string[]);
         $effect(() => {
             if (!this.canAct) return;
             if (this.forceQueue.length) {
@@ -51,61 +45,120 @@ export class Scheduler {
         });
         this.autoPoker = new AutoPoker(session);
     }
-
-    async tryAct(): Promise<Result<EngineAct | null, ActError>> {
-        this.actPending = false;
-        const ignores = this.checkIgnored();
-        if (ignores.length) {
-            r.debug(`Scheduler.tryAct ignored - ${ignores.join("; ")}`);
-            return err({type: "ignored", ignores});
-        }
-
-        const actions = this.registry.games.flatMap(g => g.getActiveActions());
-        if (actions.length === 0) {
-            return err({type: "noActions"});
-        }
-        this.busy = true;
-        const actRes = await this.activeEngine!.tryAct(this.session, actions);
-        this.busy = false;
-        if (actRes.isErr()) {
-            this.onError(actRes.error);
-            return err(actRes.error);
-        }
-        const act = actRes.value;
-        if (!act) {
-            r.debug(`Scheduler.tryAct: engine chose not to act`);
-            return ok(null);
-        }
-        return this.doAct(act, false);
+    public get activeMutes() {
+        return [
+            this.muted && "muted",
+            this.busy && "busy",
+            this.errored && "paused due to error",
+        ].filter(Boolean) as string[]
+    }
+    public get activeEngine() {
+        return this.session.activeEngine;
     }
 
-    async forceAct(actions?: Action[] | null): Promise<Result<EngineAct, ActError>> {
+    public cancelAct(): boolean {
+        if (!this.#abort) {
+            return false;
+        }
+        this.#abort.abort();
+        r.info("Cancelled generation", {
+            toast: true,
+            ignoreStackLevels: 1 // log msg is unique, more useful to know who called us
+        });
+        return true;
+    }
+
+    tryAct(): ResultAsync<EngineActResult, EngineActError | ActError> {
+        return new ResultAsync(this.actInner(false));
+    }
+
+    forceAct(actions?: Action[] | null): ResultAsync<EngineAct, ActError> {
+        return new ResultAsync(this.actInner(true, actions))
+            .andThen(choice => this.isAct(choice) ? ok(choice)
+                : err(new LogicError(`If you see this, DON'T tell me. This is under enough layers of "nobody will ever see this" checks that if you do, I'm NOT going to debug it. I'm just going to retrain to a plumber.`)));
+    }
+
+    private isAct(choice: EngineActResult): choice is EngineAct {
+        return typeof choice === "object" && 'name' in choice;
+    }
+
+    private async actInner(force: boolean, actions?: Action[] | null) {
         this.actPending = false;
         const ignores = this.checkIgnored();
+        const type = force ? "force" : "try";
         if (ignores.length) {
-            r.warn(`Scheduler.forceAct ignored - ${ignores.join("; ")}`);
-            return err({type: "ignored", ignores});
+            r.report(force ? LogLevel.Warning : LogLevel.Info, {
+                message: `Scheduler ignored act (${type})`,
+                details: ignores.join("; "),
+            });
+            return err(LogicError.ignored(ignores));
         }
-        
+
         const actionsProvided = actions !== undefined;
         actions ??= this.registry.games.flatMap(g => g.getActiveActions());
         if (actions.length === 0) {
-            const logMethod = actionsProvided ? r.error : r.info;
-            logMethod.bind(r)(`Scheduler.forceAct: no actions ${actionsProvided ? "provided" : "registered"}`);
-            return err({type: "noActions"});
+            r.report(actionsProvided ? LogLevel.Error : LogLevel.Info, {
+                message: `Scheduler act (${type}): no actions ${actionsProvided ? "provided" : "registered"}`
+            });
+            return err(LogicError.noActions());
         }
+
+        const engine = this.activeEngine;
+
         this.busy = true;
-        const actRes = await this.activeEngine!.forceAct(this.session, actions);
+        const controller = new AbortController();
+        this.#abort = controller;
+        const actRes = force
+            ? await this.activeEngine!.forceAct(this.session, actions, controller.signal)
+            : await this.activeEngine!.tryAct(this.session, actions, controller.signal);
+        this.#abort = null;
         this.busy = false;
-        if (actRes.isErr()) {
-            this.onError(actRes.error);
-            return err(actRes.error);
+
+        return actRes
+            .asyncAndThrough(act => this.perform(act, force, engine))
+            .orTee(e => e instanceof EngineError && this.onError(e));
+    }
+    
+    private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>): ResultAsync<EngineActResult, ActError> {
+        if (typeof choice === 'object' && 'name' in choice) {
+            return this.performAct(choice, force);
         }
-        const act = actRes.value;
-        return this.doAct(act, true);
+        if (force) {
+            return errAsync(new LogicError(`Engine chose to ${choice === "skip" ? choice : "yap"} in forced act. Please don't tell developer or I will cry`));
+        }
+        if (choice === "skip") {
+            // for user display only
+            this.session.context.actor({
+                text: `Engine chose not to act`,
+                silent: true,
+                visibilityOverrides: { engine: false },
+                customData: { engine: engine.name },
+            });
+            return okAsync(choice);
+        }
+        if ('say' in choice) {
+            // for user display only
+            this.session.context.actor({
+                text: `Gary ${choice.notify ? "wants attention" : "says"}: ${choice.say}`,
+                silent: !choice.notify,
+                visibilityOverrides: { engine: false }
+            });
+            if (choice.notify) {
+                r.info("Gary wants attention", {
+                    details: choice.say,
+                    toast: true
+                });
+                sendNotification({
+                    title: "Gary wants attention",
+                    body: choice.say,
+                });
+            }
+            return okAsync(choice);
+        }
+        return errAsync(new LogicError(`Reached unreachable fallthrough in 'perform': Did you add a new engine return option?`));
     }
 
-    private doAct(act: EngineAct, forced: boolean): ResultAsync<EngineAct, ActError> {
+    private performAct(act: EngineAct, forced: boolean): ResultAsync<EngineAct, ActError> {
         if (this.autoPoker.autoAct) {
             this.autoPoker.forceTimer();
         }
@@ -117,7 +170,7 @@ export class Scheduler {
                 },
                 ctx: {act}
             });
-            return errAsync({type: "actionNotFound", action: act.name});
+            return errAsync(LogicError.notFound(act.name));
         }
         r.info(`Engine acting ${forced ? "(forced)" : ""}: ${act.name}`);
         const actData = zActData.decode({...act});
@@ -133,7 +186,7 @@ export class Scheduler {
             customData: { actData, game: game.name },
         }, false);
         return ResultAsync.fromPromise(game.sendAction(actData), 
-            (e) => ({type: "connError", error: `Failed to send act: ${e}`} as const)
+            (e) => (LogicError.sendErr(e as Error))
         )
         .map(() => act);
     }
@@ -153,7 +206,12 @@ export class Scheduler {
         return out;
     }
 
-    private onError(err: EngineError) {
+    private onError(err: EngineActError) {
+        if (err === "cancelled") {
+            // this.muted = true; // TODO: figure out which is the better default
+            r.info("Cancelled acting", { toast: true });
+            return;
+        }
         const errMsg = (err.cause as Error)?.message;
         r.error({
             message: `Engine error: ${err.message}`,
@@ -171,23 +229,23 @@ export class Scheduler {
     }
 }
 
-export type ActError = Ignored | NoActions | ActionNotFound | EngineError | ConnError;
+export type ActError = LogicError | EngineError | Cancelled;
 
-export type Ignored = {
-    type: "ignored";
-    ignores: string[];
-};
-export type NoActions = {
-    type: "noActions";
-};
-export type ActionNotFound = {
-    type: "actionNotFound";
-    action: string;
-};
-export type ConnError = {
-    type: "connError";
-    error: string;
+export class LogicError extends Error {
+    static ignored(ignores: string[]) {
+        return new LogicError(`Ignored: [${ignores.join(",")}]`);
+    }
+    static noActions() {
+        return new LogicError(`No actions available`);
+    }
+    static notFound(action: string) {
+        return new LogicError(`Action '${action}' not found in any connected games`);
+    }
+    static sendErr(err: Error) {
+        return new LogicError(`Failed to send act`, { cause: err });
+    }
 }
+export type Cancelled = "cancelled";
 
 export class AutoPoker {
     public autoAct = $state(false);
@@ -205,7 +263,7 @@ export class AutoPoker {
             this.scheduler.actPending = true;
             void this.tryTimer();
         }, () => this.tryInterval);
-        
+
         this.forceTimer = useDebounce(() => {
             r.info("Engine idle for a long time, force acting");
             if (this.scheduler.forceQueue.length === 0) {

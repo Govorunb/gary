@@ -1,5 +1,2 @@
 * text=auto
-
 * eol=crlf
-*.py diff=python
-*.rs diff=rust

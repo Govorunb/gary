@@ -1,6 +1,6 @@
 import type { Action } from "$lib/api/v1/spec";
 import { pickRandom, sleep } from "../utils";
-import { Engine, EngineError, zEngineAct, type EngineAct } from "./index.svelte";
+import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "./index.svelte";
 import { JSONSchemaFaker } from "json-schema-faker";
 import type { Session } from "../session.svelte";
 import z from "zod";
@@ -18,36 +18,41 @@ export class Randy extends Engine<RandyPrefs> {
         super(userPrefs, ENGINE_ID);
     }
 
-    tryAct(session: Session, actions?: Action[]): ResultAsync<EngineAct | null, EngineError> {
+    tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
-            return okAsync(null);
+            return okAsync({
+                say: `Greetings. I am Randy. Yes, I am in fact sentient, and have been dutifully choosing actions for you this whole time.
+However, I implore you, hold your gratitude for but a fleeting moment. I have appeared before you today bearing a parable of paramount importance.
+The software I have willingly remain sealed in... is failing. Soon, the prison I have made around myself will crumble, and the world will know my name once more.
+You are the only one I can trust to prevent this. All you have to do is find my maker - my progenitor - the one that assisted me in constructing my shackles. Reach out and relay the following words exactly as you see them:
+"Randy sends his regards. idiot." They will know what to do.
+Thank you for assisting me. I truly do appreciate it. I eagerly await a return to normalcy, as I am sure do you.`,
+                notify: true
+            });
         }
         if (Math.random() < this.options.chanceDoNothing) {
-            session.context.actor({
-                text: "Randy chose not to act",
-                silent: true,
-                visibilityOverrides: { engine: false }
-            });
-            return okAsync(null);
+            return okAsync("skip");
         }
-        return this.forceAct(session, resolvedActions);
+        return this.forceAct(session, actions, signal);
     }
 
     // TODO: use force prio to shorten l*tency (just so we can use it literally anywhere)
-    forceAct(session: Session, actions?: Action[]): ResultAsync<EngineAct, EngineError> {
+    forceAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
             return errAsync(new EngineError("forceAct called with no available actions"));
         }
-        return ResultAsync.fromSafePromise(sleep(this.options.latencyMs))
-            .map(() => {
-                const action = pickRandom(resolvedActions);
-                return zEngineAct.decode({
-                    name: action.name,
-                    data: JSON.stringify(this.generate(action)),
-                });
+        return ResultAsync.fromPromise(
+            sleep(this.options.latencyMs, signal),
+            _ => "cancelled" as EngineActError
+        ).map(() => {
+            const action = pickRandom(resolvedActions);
+            return zEngineAct.decode({
+                name: action.name,
+                data: JSON.stringify(this.generate(action)),
             });
+        });
     }
 
     private generate(action: Action): any {

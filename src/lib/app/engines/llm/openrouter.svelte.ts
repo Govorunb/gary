@@ -34,16 +34,16 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         this.client = new OpenAIClient(outer, ENGINE_ID);
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema): ResultAsync<Message, EngineError> {
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<Message, EngineError> {
         if (!this.options.apiKey) {
             return errAsync(new ConfigError("OpenRouter API key is required"));
         }
         return new ResultAsync(this.client.genJson(context, outputSchema, {
             // some providers require reasoning (dude why)
             // provider: { require_parameters: true },
-        }));
+        }, signal));
     }
-    generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
+    generateToolCall(_context: OpenAIContext, _actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
         return errAsync(new EngineError("Tool calling not implemented", undefined, false));
     }
 
