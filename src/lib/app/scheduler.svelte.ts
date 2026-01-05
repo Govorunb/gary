@@ -61,7 +61,7 @@ export class Scheduler {
             return false;
         }
         this.#abort.abort();
-        r.info("Cancelled generation", {
+        r.info("Cancelled acting", {
             toast: true,
             ignoreStackLevels: 1 // log msg is unique, more useful to know who called us
         });

@@ -6,7 +6,7 @@ import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
-import { EngineError, type EngineAct } from "../index.svelte";
+import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
 import r from "$lib/app/utils/reporting";
 
@@ -24,11 +24,11 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.client = new OpenAIClient({ prefs: this.options }, engineId);
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<Message, EngineError> {
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<Message, EngineActError> {
         return new ResultAsync(this.client.genJson(context, outputSchema, undefined, signal));
     }
 
-    generateToolCall(_context: OpenAIContext, _actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
+    generateToolCall(_context: OpenAIContext, _actions: Action[]): ResultAsync<EngineActResult, EngineActError> {
         return errAsync(new EngineError("Tool calling not implemented", undefined, false));
     }
 }
@@ -70,7 +70,7 @@ export class OpenAIClient {
         outputSchema?: JSONSchema,
         extraParams?: Record<string, any>,
         signal?: AbortSignal,
-    ): Promise<Result<Message, EngineError>> {
+    ): Promise<Result<Message, EngineActError>> {
         const model = this.options.modelId;
         if (!model) {
             return err(new ConfigError(`${this.name} is missing a model ID`));
@@ -110,6 +110,9 @@ export class OpenAIClient {
             this.client.chat.completions.create(params, { signal }),
             (error) => new EngineError(`${this.name} request failed: ${error}`, error as Error, false),
         );
+        if (signal?.aborted) {
+            return err("cancelled");
+        }
         console.log("Response:", res);
         if (res.isErr()) {
             return err(res.error);

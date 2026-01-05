@@ -1,7 +1,7 @@
 <script lang="ts">
     import EnginePicker from "./EnginePicker.svelte";
     import { getSession } from "$lib/app/utils/di";
-    import { HandFist, Pointer, Pause, BugPlay, Play, Hourglass, Infinity } from "@lucide/svelte";
+    import { HandFist, Pointer, Pause, BugPlay, Play, Hourglass, Infinity, Square } from "@lucide/svelte";
     import { tooltip } from "$lib/app/utils";
     import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
     import { boolAttr } from "runed";
@@ -76,19 +76,33 @@
         <MuteIcon /> {muteText}
     </button>
     <button 
-        onclick={() => poke(shiftPressed)} 
+        onclick={() => {
+            if (scheduler.busy && shiftPressed) {
+                scheduler.cancelAct();
+            } else {
+                poke(shiftPressed);
+            }
+        }}
         class="act-btn flex flex-row gap-2"
-        disabled={scheduler.busy}
-        {@attach tooltip(scheduler.busy ? "Engine busy" : shiftPressed ? "Force Act" : "Act (Shift for Force)")}
+        disabled={scheduler.busy && !shiftPressed}
+        {@attach tooltip(
+            scheduler.busy && shiftPressed
+                ? "Stop"
+                : scheduler.busy
+                    ? "Engine busy (Shift to stop)"
+                    : shiftPressed
+                        ? "Force Act"
+                        : "Act (Shift for Force)"
+        )}
     >
-        {#if scheduler.busy}
+        {#if scheduler.busy && shiftPressed}
+            <Square /> Stop
+        {:else if scheduler.busy}
             <Hourglass /> Busy
+        {:else if shiftPressed}
+            <HandFist /> Force act
         {:else}
-            {#if shiftPressed}
-                <HandFist /> Force act
-            {:else}
-                <Pointer /> Act
-            {/if}
+            <Pointer /> Act
         {/if}
     </button>
     <button

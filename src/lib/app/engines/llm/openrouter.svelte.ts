@@ -4,7 +4,7 @@ import type { Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
-import { EngineError, type EngineAct } from "../index.svelte";
+import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
 import { OpenAIClient } from "./openai.svelte";
 
@@ -34,7 +34,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         this.client = new OpenAIClient(outer, ENGINE_ID);
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<Message, EngineError> {
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<Message, EngineActError> {
         if (!this.options.apiKey) {
             return errAsync(new ConfigError("OpenRouter API key is required"));
         }
@@ -43,7 +43,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             // provider: { require_parameters: true },
         }, signal));
     }
-    generateToolCall(_context: OpenAIContext, _actions: Action[]): ResultAsync<EngineAct | null, EngineError> {
+    generateToolCall(_context: OpenAIContext, _actions: Action[]): ResultAsync<EngineActResult, EngineActError> {
         return errAsync(new EngineError("Tool calling not implemented", undefined, false));
     }
 

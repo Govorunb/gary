@@ -179,8 +179,8 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     /** Generate a response adhering to the given schema. */
-    protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<Message, EngineError>;
-    protected abstract generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineAct | null, EngineError>;
+    protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<Message, EngineActError>;
+    protected abstract generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineActResult, EngineActError>;
 
     private convertMessage(msg: Message): OpenAIMessage {
         if (msg.source.type === "actor") {
