@@ -24,9 +24,15 @@
     let open = $state(false);
     let schemaOpen = $state(false);
     const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
+    const hasSchema = $derived(!!action.schema);
 
     function send() {
         uiState.dialogs.openManualSendDialog(action, game);
+    }
+
+    function sendImmediate() {
+        game.manualSend(action.name, undefined)
+            .catch(e => r.error(`Failed to send action ${action.name}`, `${e}`));
     }
 
     function sendRandom() {
@@ -49,20 +55,30 @@
     <summary>
         <span>{action.name}</span>
         <div class="actions">
-            <button 
-                class="action-btn" 
-                onclick={preventDefault(send)}
-                {@attach tooltip("Send (manual)")}
-            >
-                <Send class="size-4" />
-            </button>
-            <button 
-                class="action-btn" 
-                onclick={preventDefault(sendRandom)}
-                {@attach tooltip("Send (random data)")}
-            >
-                <Dices class="size-4" />
-            </button>
+            {#if hasSchema}
+                <button 
+                    class="action-btn" 
+                    onclick={preventDefault(send)}
+                    {@attach tooltip("Send (manual)")}
+                >
+                    <Send class="size-4" />
+                </button>
+                <button 
+                    class="action-btn" 
+                    onclick={preventDefault(sendRandom)}
+                    {@attach tooltip("Send (random data)")}
+                >
+                    <Dices class="size-4" />
+                </button>
+            {:else}
+                <button 
+                    class="action-btn" 
+                    onclick={preventDefault(sendImmediate)}
+                    {@attach tooltip("Send")}
+                >
+                    <Send class="size-4" />
+                </button>
+            {/if}
         </div>
     </summary>
     <div class="action-description">

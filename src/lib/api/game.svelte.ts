@@ -331,10 +331,10 @@ export class Game {
         }
     }
 
-    async manualSend(action: string, data: any) {
+    async manualSend(action: string, data?: any) {
         const actData = v1.zActData.decode({
             name: action,
-            data: data,
+            data,
         });
 
         let text = `User act to ${this.name} (request ID ${actData.id.substring(0, 8)}): ${actData.name}`;
