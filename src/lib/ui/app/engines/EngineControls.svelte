@@ -1,6 +1,6 @@
 <script lang="ts">
     import EnginePicker from "./EnginePicker.svelte";
-    import { getSession } from "$lib/app/utils/di";
+    import { getSession, getUIState } from "$lib/app/utils/di";
     import { HandFist, Pointer, Pause, BugPlay, Play, Hourglass, Infinity, Square } from "@lucide/svelte";
     import { tooltip } from "$lib/app/utils";
     import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
@@ -10,7 +10,8 @@
 
     const session = getSession();
     const scheduler = $derived(session.scheduler);
-    const shiftPressed = $derived(pressedKeys.has('Shift'));
+    const ui = getUIState();
+    const altMode = $derived(pressedKeys.has('Shift') && !ui.anyDialogOpen);
 
     function userInteracted() {
         scheduler.clearError();
@@ -77,28 +78,28 @@
     </button>
     <button 
         onclick={() => {
-            if (scheduler.busy && shiftPressed) {
+            if (scheduler.busy && altMode) {
                 scheduler.cancelAct();
             } else {
-                poke(shiftPressed);
+                poke(altMode);
             }
         }}
         class="act-btn flex flex-row gap-2"
-        disabled={scheduler.busy && !shiftPressed}
+        disabled={scheduler.busy && !altMode}
         {@attach tooltip(
             scheduler.busy
-                ? (shiftPressed ? "Stop" : "Engine busy (Shift to stop)")
-                : (shiftPressed ? "Force Act" : "Act (Shift for Force)")
+                ? (altMode ? "Stop" : "Engine busy (Shift to stop)")
+                : (altMode ? "Force Act" : "Act (Shift for Force)")
         )}
     >
     {#if scheduler.busy}
-        {#if shiftPressed}
+        {#if altMode}
             <Square /> Stop
         {:else}
             <Hourglass /> Busy
         {/if}
     {:else}
-        {#if shiftPressed}
+        {#if altMode}
             <HandFist /> Force act
         {:else}
             <Pointer /> Act

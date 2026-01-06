@@ -18,18 +18,13 @@
 
     // UI state machine - null shows engine list
     let configEngineId: string | null = $state(null);
-    let open = $derived(uiState.dialogs.enginePickerOpen);
-    const showingEngineList = $derived(open && !configEngineId);
+    const showingEngineList = $derived(uiState.dialogs.enginePickerOpen && !configEngineId);
     const engines = $derived(Object.entries(session.engines));
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has('Shift'));
 
     $effect(() => {
-        // in traditional rx fashion, if you don't subscribe to a falling tree, it makes no sound
-        // the consumer may not be rendered due to an {#if} (meaning it's not subscribed)
-        // which makes the "delete" mode stuck even if you release shift
-        void shiftPressed;
-        if (!open) {
+        if (!uiState.dialogs.enginePickerOpen) {
             closeConfig();
         }
     });
@@ -40,7 +35,7 @@
             if (!showingEngineList) return;
             if (i > engines.length) return;
             selectEngine(engines[i - 1][0]);
-            open = false;
+            uiState.dialogs.closeEnginePicker();
         });
     }
     keys.onKeys(['Alt', 'a'], () => {
@@ -59,8 +54,7 @@
     }
 
     function toggleOpen() {
-        if (open) uiState.dialogs.closeEnginePicker();
-        else uiState.dialogs.openEnginePicker();
+        uiState.dialogs.enginePickerOpen = !uiState.dialogs.enginePickerOpen;
     }
 
     function openConfig(engineId: string) {
@@ -95,7 +89,7 @@
     }
 </script>
 
-<Dialog bind:open position="top-start">
+<Dialog bind:open={uiState.dialogs.enginePickerOpen} position="top-start">
     {#snippet trigger(props)}
         <button {...props} class="trigger">
             <span class="truncate max-w-96">{session.activeEngine.name}</span>

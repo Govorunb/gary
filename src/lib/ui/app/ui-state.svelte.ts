@@ -6,7 +6,9 @@ export class UIState {
     selectedGameTab: number = $state(0);
     readonly dialogs = new DialogManager();
 
-    anyDialogOpen = $derived(this.dialogs.anyDialogOpen);
+    get anyDialogOpen() {
+        return this.dialogs.anyDialogOpen;
+    }
 
     constructor(private readonly session: Session) {
         $effect(() => {
