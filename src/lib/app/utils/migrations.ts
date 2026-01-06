@@ -16,6 +16,10 @@ export function migrate(toVersion: string, data: Record<string, any> | null | un
 		r.warn("Version not detected, cannot migrate");
 		return data;
 	}
+	if (currVersion > toVersion) {
+		r.warn(`Cannot migrate downwards (currently ${currVersion}, target ${toVersion}`);
+		return data;
+	}
 
     for (const migration of migrations.sort((a,b) => semverCompare(a.version, b.version))) {
         if (semverCompare(migration.version, currVersion) <= 0) {

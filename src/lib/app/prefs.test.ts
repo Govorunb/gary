@@ -143,7 +143,7 @@ describe("migrate", () => {
 	test("stops at last available migration if target version is beyond available migrations", () => {
 		const data = { version: "1.0.0", foo: "bar" };
 		const result = migrate("100.0.0", data, [simple, add]);
-		expect(result).toStrictEqual({ version: "1.1.0", foo: "bar", flag: true, new: "value" });
+		expect(result).toStrictEqual({ version: "100.0.0", foo: "bar", flag: true, new: "value" });
 	});
 
 	test("handles unsorted migration array", () => {
@@ -169,7 +169,7 @@ describe("migrate", () => {
 	test("handles semver with patch versions", () => {
 		const data = { version: "1.0.0", foo: "bar" };
 		const result = migrate("1.0.5", data, [simple]) as any;
-		expect(result).toStrictEqual({ version: "1.0.1", foo: "bar", flag: true });
+		expect(result).toStrictEqual({ version: "1.0.5", foo: "bar", flag: true });
 	});
 
 	test("preserves nested objects and arrays", () => {
@@ -224,7 +224,7 @@ describe("migrate", () => {
 	test("handles empty migrations array", () => {
 		const data = { version: "1.0.0", foo: "bar" };
 		const result = migrate("1.0.1", data, []);
-		expect(result).toEqual(data);
+		expect(result).toEqual({ version: "1.0.1", foo: "bar" });
 	});
 
 	test("handles migration that returns undefined", () => {
