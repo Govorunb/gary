@@ -19,10 +19,10 @@
             validationError = "Input is empty";
             return;
         }
-        validationError = jsonParse(editorContent)
+        const res = jsonParse(editorContent)
             .mapErr((e) => e.message)
-            .andThen((parsed) => safeParse(zUserPrefs, parsed).mapErr((e) => formatZodError(e).join("\n")))
-            .match(() => null, e => e);
+            .andThen((parsed) => safeParse(zUserPrefs, parsed).mapErr((e) => formatZodError(e).join("\n")));
+        validationError = res.flip().unwrapOr(null);
     });
 
     function importFixedJson() {
@@ -40,6 +40,7 @@
             .mapErr((e) => e.message)
             .andThen((parsed) => userPrefs.importData(parsed));
         if (res.isErr()) {
+            validationError = res.error;
             r.error(res.error);
         }
     }
@@ -49,7 +50,7 @@
     const importBtnText = $derived(resetOverride ? "Reset to defaults" : "Import and load");
 </script>
 
-<Dialog open={!!userPrefs.loadError} position="center" onOpenChange={() => {}}>
+<Dialog open={!!userPrefs.loadError} position="center">
     {#snippet content(props)}
         <div {...props} class="safe-mode-content">
             <div class="dialog-header">
@@ -83,7 +84,7 @@
                     {/if}
 
                     <p class="note whitespace-pre-line">
-                        Please note: <b>do not send this data to people you don't trust</b>.
+                        Please note: <b>do not send this text to people you don't trust</b>.
                         It contains data you may want to keep private, such as:
                     </p>
                     <ul class="note list-disc list-inside pl-4">
@@ -93,7 +94,7 @@
                     </ul>
 
                     <div class="import-actions">
-                        <p class="note">As a last resort, you can leave the text above empty and Shift-click "Import and reload" to reset to defaults.</p>
+                        <p class="note">As a last resort, you can leave the text above empty and Shift-click the import button to reset to defaults.</p>
                         <button
                             class="btn preset-filled-surface-50-950"
                             onclick={importFixedJson}

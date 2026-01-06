@@ -1,6 +1,6 @@
 import type { Attachment } from "svelte/attachments";
 import z, { type ZodError, type core, type ZodCatch, type ZodDefault } from "zod";
-import { ok, err, type Result, ResultAsync } from "neverthrow";
+import { ok, err, ResultAsync, Result, Ok, Err } from "neverthrow";
 import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
@@ -100,10 +100,25 @@ declare module "neverthrow" {
     interface ResultAsync<T, E> {
         finally(fn: () => void): ResultAsync<T, E>;
     }
+    namespace Result {
+        function flip<T, E>(): Result<E, T>;
+    }
+    interface Ok<T, E> {
+        flip(): Err<E, T>;
+    }
+    interface Err<T, E> {
+        flip(): Ok<E, T>;
+    }
 }
 ResultAsync.prototype.finally = function <T, E>(fn: () => void): ResultAsync<T, E> {
     return this.andTee(fn).orTee(fn);
 };
+Ok.prototype.flip = function <T, E>(): Err<E, T> {
+    return err(this.value);
+}
+Err.prototype.flip = function <T, E>(): Ok<E, T> {
+    return ok(this.error);
+}
 
 export function safeParse<T>(z: z.ZodType<T>, o: unknown): Result<T, z.ZodError<T>> {
     const res = z.safeParse(o);
