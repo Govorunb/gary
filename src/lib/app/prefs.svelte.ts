@@ -4,8 +4,9 @@ import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
-import { APP_VERSION } from "./utils";
+import { APP_VERSION, formatZodError, safeParse } from "./utils";
 import { migrate, moveField, type Migration } from "./utils/migrations";
+import { err } from "neverthrow";
 
 export const USER_PREFS = "userPrefs";
 
@@ -19,6 +20,10 @@ export class UserPrefs {
         // the runed debouncer self-depends so we have to untrack
         // but then this.#data is also untracked (https://svelte.dev/docs/svelte/$effect#Understanding-dependencies)
         $effect(() => void this.save());
+    }
+    /** A **non-reactive deep copy** of the current data. */
+    get data() {
+        return structuredClone($state.snapshot(this.#data));
     }
     get app() {
         return this.#data.app;
@@ -98,6 +103,14 @@ export class UserPrefs {
 
     public getGamePrefs(game: string) {
         return this.api.games[game] ??= zGamePrefs.decode({});
+    }
+
+    public importData(data: unknown) {
+        if (typeof data !== "object") return err(`Validation failed: Must be a JSON object`);
+        
+        return safeParse(zUserPrefs, migrate(APP_VERSION, data, MIGRATIONS))
+            .map(d => void (this.#data = d))
+            .mapErr(e => `Validation failed. Errors:\n\t${formatZodError(e).join("\n\t")}`);
     }
 }
 

@@ -1,5 +1,5 @@
 import type { Attachment } from "svelte/attachments";
-import z, { type core, type ZodCatch, type ZodDefault } from "zod";
+import z, { type ZodError, type core, type ZodCatch, type ZodDefault } from "zod";
 import { ok, err, type Result, ResultAsync } from "neverthrow";
 import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { on } from "svelte/events";
@@ -255,4 +255,24 @@ export function localeTimeWithMs(d: Dayjs): string {
     return time.endsWith('M') ? // 12-hour
         time.replace(/(\s*[AP]M)$/i, `.${ms}$1`)
         : `${time}.${ms}`;
+}
+
+export type Fn = () => void;
+export type DebouncedFn = Fn & { cancel: Fn, now: Fn };
+export function debounced(func: () => void, delayMs: number): DebouncedFn {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    function f() {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(func, delayMs);
+    };
+    f.cancel = () => timeout && clearTimeout(timeout);
+    f.now = () => {
+        f.cancel();
+        func();
+    };
+    return f;
+}
+
+export function formatZodError<E extends ZodError>(e: E) {
+    return e.issues.map(i => `${i.path.join('.') || "(root)"}: ${i.message}`);
 }

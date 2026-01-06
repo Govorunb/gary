@@ -6,7 +6,9 @@
     import Hotkey from "../common/Hotkey.svelte";
     import dayjs from "dayjs";
     import { app } from "@tauri-apps/api";
-    import { APP_VERSION, clearLocalStorage, safeInvoke } from "$lib/app/utils";
+    import { APP_VERSION, clearLocalStorage, debounced, jsonParse, safeInvoke, safeParse } from "$lib/app/utils";
+    import { ResultAsync } from "neverthrow";
+    import { boolAttr } from "runed";
 
     type Props = {
         open: boolean;
@@ -30,9 +32,9 @@
     }
 
     const lastCheckedAt = $derived.by(() => {
-        const str = userPrefs.app.updates.lastCheckedAt;
-        if (!str) return "never";
-        let date = dayjs(str);
+        const ts = userPrefs.app.updates.lastCheckedAt;
+        if (!ts) return "never";
+        let date = dayjs(ts);
         return `${date.fromNow()} (${date.format("YYYY-MM-DD")})`;
     });
 
@@ -40,6 +42,41 @@
         userPrefs.app.updates.skipUpdateVersion = undefined;
         void checkForUpdates();
     }
+
+    async function exportPrefs() {
+        await navigator.clipboard.writeText(JSON.stringify(userPrefs.data));
+        setBackupFeedback('success', "Copied to clipboard");
+    }
+
+    async function importPrefs() {
+        ResultAsync.fromPromise(navigator.clipboard.readText(), () => "Could not read clipboard")
+            .andThen(text => jsonParse(text).mapErr(e => e.message))
+            .andThen(json => userPrefs.importData(json))
+            .match(
+                () => setBackupFeedback('success', "Imported successfully"),
+                (e) => setBackupFeedback('error', `Failed to import: ${e}`),
+            );
+    }
+
+    function dismissStatus() {
+        prefsBackupFeedback = '';
+    }
+
+    function setBackupFeedback(status: typeof prefsBackupStatus, text: string) {
+        prefsBackupStatus = status;
+        prefsBackupFeedback = text;
+    }
+
+    let prefsBackupFeedback = $state('');
+    let prefsBackupStatus = $state<'success' | 'error'>('success');
+    let clearStatus = debounced(() => prefsBackupFeedback = '', 2000);
+    $effect(() => {
+        if (prefsBackupFeedback === '') {
+            clearStatus.cancel();
+        } else {
+            clearStatus();
+        }
+    });
 </script>
 
 <Dialog bind:open position="center">
@@ -54,9 +91,47 @@
                 <div class="settings-section">
                     <p class="section-title">General</p>
 
-                    <div class="theme-field">
+                    <div class="field">
                         <p class="field-label">Theme</p>
                         <ThemePicker bind:currentTheme={userPrefs.app.theme} />
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <p class="section-title">Preferences</p>
+                    <div class="preferences-layout">
+                        <div class="flex flex-col gap-2">
+                            <p>Backup or restore preferences via clipboard:</p>
+                            <div class="field">
+                                <div class="flex flex-row gap-2">
+                                    <button class="btn preset-outlined-surface-300-700"
+                                        onclick={exportPrefs}
+                                    >
+                                        Export
+                                    </button>
+                                    <button class="btn preset-outlined-surface-300-700"
+                                        onclick={importPrefs}
+                                    >
+                                        Import
+                                    </button>
+                                </div>
+                                <p class="field-label">Raw JSON data</p>
+                            </div>
+                            {#if prefsBackupFeedback}
+                                <div class="prefs-iex-status"
+                                    data-success={boolAttr(prefsBackupStatus === "success")}
+                                    data-error={boolAttr(prefsBackupStatus === "error")}
+                                >
+                                    <div class="status-content">
+                                        {prefsBackupFeedback}
+                                    </div>
+                                    {#if prefsBackupStatus === "error"}
+                                        <button class="dismiss-btn" onclick={dismissStatus}>
+                                            <X size={14} />
+                                        </button>
+                                    {/if}
+                                </div>
+                            {/if}
+                        </div>
                     </div>
                 </div>
                 <div class="settings-section">
@@ -102,10 +177,10 @@
                 </div>
                 <div class="settings-section">
                     <p class="section-title">Troubleshooting</p>
-    
+
                     <div class="flex flex-row gap-2">
                         <button class="btn preset-outlined-surface-300-700"
-                            onclick={() => safeInvoke("open_logs_folder", {})}
+                            onclick={() => safeInvoke("open_logs_folder")}
                         >
                             Open logs folder <ExternalLink size=20 />
                         </button>
@@ -165,8 +240,12 @@
         @apply text-neutral-600 dark:text-neutral-400;
     }
 
-    .theme-field {
+    .field {
         @apply flex items-center gap-3;
+    }
+
+    .preferences-layout {
+        @apply flex flex-col gap-2;
     }
 
     .field-label {
@@ -195,5 +274,34 @@
         &::content, &::slotted {
             @apply rounded-lg;
         }
+    }
+
+    .prefs-iex-status {
+        @apply text-xs rounded-md px-3 py-2;
+        @apply border whitespace-pre-line;
+        @apply transition-all duration-200;
+        @apply flex items-start justify-between gap-2;
+
+        &[data-error] {
+            @apply bg-red-50 dark:bg-red-900/30;
+            @apply border-red-200 dark:border-red-800;
+            @apply text-red-700 dark:text-red-300;
+        }
+
+        &[data-success] {
+            @apply bg-green-50 dark:bg-green-900/30;
+            @apply border-green-200 dark:border-green-800;
+            @apply text-green-700 dark:text-green-300;
+        }
+    }
+
+    .status-content {
+        @apply flex-1;
+    }
+
+    .dismiss-btn {
+        @apply shrink-0 p-0.5 rounded;
+        @apply hover:bg-black/5 dark:hover:bg-white/10;
+        @apply transition-colors;
     }
 </style>
