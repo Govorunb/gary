@@ -4,17 +4,27 @@ import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
-import { APP_VERSION, formatZodError, safeParse } from "./utils";
+import { APP_VERSION, formatZodError, jsonParse, safeParse } from "./utils";
 import { migrate, moveField, type Migration } from "./utils/migrations";
-import { err } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 
 export const USER_PREFS = "userPrefs";
 
 export class UserPrefs {
     #data: UserPrefsData;
 
-    constructor(data: UserPrefsData) {
-        this.#data = $state(zUserPrefs.parse(data));
+    loadError: string | null = $state(null);
+
+    constructor(loadRes: Result<UserPrefsData, string>) {
+        this.#data = $state(null!);
+        console.log(loadRes);
+        // data gets set before effect runs (we don't save defaults over)
+        if (loadRes.isErr()) {
+            this.loadError = loadRes.error;
+            this.#data = zUserPrefs.decode({});
+        } else {
+            this.#data = zUserPrefs.decode(loadRes.value);
+        }
 
         // TODO: debounce for file write (if ever)
         // the runed debouncer self-depends so we have to untrack
@@ -35,9 +45,13 @@ export class UserPrefs {
         return this.#data.engines;
     }
 
-    static async loadData(): Promise<UserPrefsData> {
-        const dataStr = localStorage.getItem(USER_PREFS);
-        const data = dataStr === null ? {} : JSON.parse(dataStr);
+    static async loadData(): Promise<Result<UserPrefsData, string>> {
+        const dataStr = localStorage.getItem(USER_PREFS) ?? "{}";
+        const lsRes = jsonParse(dataStr);
+        if (lsRes.isErr()) {
+            return err(`JSON failed: ${lsRes.error}`);
+        }
+        const data = lsRes.value;
 
         const migrated = migrate(APP_VERSION, data, MIGRATIONS);
 
@@ -45,29 +59,16 @@ export class UserPrefs {
         // most fields have defaults, so this should only fail in extreme cases
         if (!parsed.success) {
             const zodError = parsed.error;
-            // ideally should be a modal (open json in system editor, try reload, use defaults)
-            // mayhaps we should have a loading/splash screen before dashboard init
+            const errorMessage = `Validation failed:\n${formatZodError(zodError).join("\n")}`;
 
-            r.error("Failed to parse user prefs. They will be replaced with defaults", {
-                toast: {
-                    description: `Error(s): ${zodError.message}`,
-                    dismissable: true,
-                    closeButton: true,
-                    id: "prefs-load-error",
-                    position: "top-center",
-                    action: {
-                        label: "OK",
-                        onClick: () => {
-                            toast.dismiss("prefs-load-error");
-                        }
-                    }
-                },
+            r.error("Failed to parse user prefs", {
+                details: errorMessage,
                 ctx: {
                     issues: zodError.issues,
                     data,
                 }
             });
-            return zUserPrefs.decode({});
+            return err(errorMessage);
         }
         r.debug("loaded prefs");
         // TODO: dedicated thing for fixups
@@ -88,10 +89,14 @@ export class UserPrefs {
                 }
             });
         }
-        return parsed.data;
+        return ok(parsed.data);
     }
 
     async save() {
+        if (this.loadError) {
+            r.warn("Load error: not saving");
+            return;
+        }
         // TODO: validation here (fatal if fails)
         this.write(JSON.stringify(this.#data));
         r.debug("saved prefs");
@@ -109,8 +114,12 @@ export class UserPrefs {
         if (typeof data !== "object") return err(`Validation failed: Must be a JSON object`);
         
         return safeParse(zUserPrefs, migrate(APP_VERSION, data, MIGRATIONS))
-            .map(d => void (this.#data = d))
+            .map(d => this.set(d))
             .mapErr(e => `Validation failed. Errors:\n\t${formatZodError(e).join("\n\t")}`);
+    }
+
+    private set(data: UserPrefsData) {
+        this.#data = data;
     }
 }
 

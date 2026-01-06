@@ -9,6 +9,8 @@
     import localizedTime from "dayjs/plugin/localizedFormat";
     import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
     import { clearLocalStorage } from '$lib/app/utils';
+    import SafeModeDialog from '$lib/ui/app/SafeModeDialog.svelte';
+    import { USER_PREFS } from '$lib/app/prefs.svelte';
 
     dayjs.extend(relativeTime);
     dayjs.extend(localizedTime);
@@ -29,6 +31,14 @@
 
     // delete localstorage (dev hotkey)
     registerAppHotkey(['Backspace', 'Delete', 'Shift', 'L'], clearLocalStorage);
+    setTimeout(registerAppHotkey(['Control', 'Shift', 'B'], () => {
+        setTimeout(registerAppHotkey(['Control', 'Shift', '1'], () => {
+            localStorage.setItem(USER_PREFS, "invalid");
+        }), 5000);
+        setTimeout(registerAppHotkey(['Control', 'Shift', '2'], () => {
+            localStorage.setItem(USER_PREFS, `{"version": "1.0.0", "app": {"updates": {"lastCheckedAt": "now :)"}}`);
+        }), 5000);
+    }), 5000);
 </script>
 
 <div class="flex flex-col h-screen" role="application">
@@ -36,3 +46,4 @@
 </div>
 
 <Toaster closeButton richColors position="bottom-right" theme={session.userPrefs.app.theme} duration={10000} />
+<SafeModeDialog />

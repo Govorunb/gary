@@ -7,6 +7,7 @@ import { ServerManager } from "../server.svelte";
 import { UIState } from "$lib/ui/app/ui-state.svelte";
 import { Updater } from "../updater.svelte";
 import { ThemeManager } from "../theme.svelte";
+import type { Result } from "neverthrow";
 
 const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
 const [ getSession, setSession ] = createContext<Session>();
@@ -28,8 +29,8 @@ export {
     getThemeManager,
 }
 
-export function initDI(userPrefsData: UserPrefsData) {
-    const userPrefs = new UserPrefs(userPrefsData);
+export function initDI(prefsLoadRes: Result<UserPrefsData, string>) {
+    const userPrefs = new UserPrefs(prefsLoadRes);
     const session = new Session("default", userPrefs);
     const registry = session.registry;
     const scheduler = session.scheduler;

@@ -29,7 +29,7 @@ export function migrate(toVersion: string, data: Record<string, any> | null | un
         migration.migrate(result);
         currVersion = migration.version;
     }
-    result.version = currVersion;
+    result.version = toVersion;
     return result;
 }
 
