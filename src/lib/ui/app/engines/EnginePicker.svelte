@@ -54,7 +54,11 @@
     }
 
     function toggleOpen() {
-        uiState.dialogs.enginePickerOpen = !uiState.dialogs.enginePickerOpen;
+        if (uiState.dialogs.enginePickerOpen) {
+            uiState.dialogs.closeEnginePicker();
+        } else {
+            uiState.dialogs.openEnginePicker();
+        }
     }
 
     function openConfig(engineId: string) {

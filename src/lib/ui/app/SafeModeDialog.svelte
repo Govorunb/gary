@@ -1,58 +1,52 @@
 <script lang="ts">
     import Dialog from "$lib/ui/common/Dialog.svelte";
     import { getUserPrefs } from "$lib/app/utils/di";
-    import { Clipboard, RotateCcw, Upload } from "@lucide/svelte";
     import { toast } from "svelte-sonner";
-    import { ResultAsync } from "neverthrow";
-    import { USER_PREFS } from "$lib/app/prefs.svelte";
+    import CodeMirror from "$lib/ui/common/CodeMirror.svelte";
+    import { USER_PREFS, zUserPrefs } from "$lib/app/prefs.svelte";
+    import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
+    import { formatZodError, jsonParse, safeParse } from "$lib/app/utils";
+    import r from "$lib/app/utils/reporting";
 
     const userPrefs = getUserPrefs();
 
-    let importInput = $state("");
+    let editorContent = $state(localStorage.getItem(USER_PREFS) ?? "{}");
+    let validationError = $state<string | null>(null);
+    const shiftPressed = $derived(pressedKeys.has('Shift'));
 
-    async function exportToClipboard() {
-        await ResultAsync.fromPromise(navigator.clipboard.writeText(localStorage.getItem(USER_PREFS)!), () => {})
-            .match(
-                () => toast.success("Copied to clipboard"),
-                () => toast.error("Failed to copy to clipboard")
-            );
-    }
+    $effect(() => {
+        if (!editorContent.trim()) {
+            validationError = "Input is empty";
+            return;
+        }
+        validationError = jsonParse(editorContent)
+            .mapErr((e) => e.message)
+            .andThen((parsed) => safeParse(zUserPrefs, parsed).mapErr((e) => formatZodError(e).join("\n")))
+            .match(() => null, e => e);
+    });
 
     function importFixedJson() {
-        if (!importInput.trim()) {
-            toast.error("Please paste the corrected JSON");
+        if (!editorContent.trim() && shiftPressed) {
+            userPrefs.loadError = null;
             return;
         }
 
-        userPrefs.importData(importInput).match(
-            () => {
-                localStorage.setItem(USER_PREFS, importInput);
-                toast.success("Import successful. Reloading...");
-                setTimeout(() => location.reload(), 1000);
-            },
-            (e) => toast.error(`Failed to import: ${e}`)
-        );
+        if (validationError) {
+            toast.error("Please fix validation errors first");
+            return;
+        }
+
+        const res = jsonParse(editorContent)
+            .mapErr((e) => e.message)
+            .andThen((parsed) => userPrefs.importData(parsed));
+        if (res.isErr()) {
+            r.error(res.error);
+        }
     }
 
-    function importFromClipboard() {
-        ResultAsync.fromPromise(
-            navigator.clipboard.readText(),
-            () => "Failed to read clipboard"
-        ).match(
-            (text) => {
-                importInput = text;
-                toast.success("Pasted from clipboard");
-            },
-            (e) => toast.error(e)
-        );
-    }
+    const resetOverride = $derived(!editorContent.trim() && shiftPressed);
 
-    function revertToDefaults() {
-        const warning = "This will replace your preferences with default values. Your current data will be lost.\n\nConfirm?";
-        if (!confirm(warning)) return;
-
-        userPrefs.loadError = null;
-    }
+    const importBtnText = $derived(resetOverride ? "Reset to defaults" : "Import and load");
 </script>
 
 <Dialog open={!!userPrefs.loadError} position="center" onOpenChange={() => {}}>
@@ -69,58 +63,44 @@
                     Your preferences failed to load. The app is running with default settings in read-only mode.
                 </p>
 
-                <div class="error-details">
-                    <p class="details-label">Error details:</p>
-                    <pre class="error-text">{userPrefs.loadError}</pre>
-                </div>
-
-                <div class="actions">
-                    <p class="actions-label">You can fix this by:</p>
-                    <ol class="action-list">
-                        <li>
-                            <span class="step-number">1</span>
-                            <span>Export your current preferences data:</span>
-                            <div class="step-actions">
-                                <button class="btn preset-outlined-surface-300-700" onclick={exportToClipboard}>
-                                    <Clipboard size={16} />
-                                    Copy to clipboard
-                                </button>
-                            </div>
-                        </li>
-                        <li>
-                            <span class="step-number">2</span>
-                            <span>Fix the errors in a text editor</span>
-                        </li>
-                        <li>
-                            <span class="step-number">3</span>
-                            <span>Paste the corrected JSON back and reload</span>
-                        </li>
-                    </ol>
-                </div>
-
-                <div class="revert-section">
-                    <p class="revert-label">Or, if you don't need your current preferences:</p>
-                    <button class="btn preset-tonal-error" onclick={revertToDefaults}>
-                        <RotateCcw size={16} />
-                        Revert to defaults
-                    </button>
-                </div>
-
                 <div class="import-section">
-                    <p class="import-label">After fixing the errors, paste the corrected JSON here:</p>
-                    <textarea
-                        class="import-textarea"
-                        bind:value={importInput}
-                        placeholder="Paste your corrected JSON here..."
-                    ></textarea>
+                    <p class="import-label">You may attempt to manually fix the data below <span class="note">(or get someone you trust to fix it)</span>:</p>
+                    <div class="editor-container">
+                        <CodeMirror
+                            code={editorContent}
+                            open={true}
+                            readonly={false}
+                            minHeight="200px"
+                            maxHeight="400px"
+                            onChange={(code) => editorContent = code}
+                        />
+                    </div>
+
+                    {#if validationError}
+                        <div class="validation-error">
+                            {validationError}
+                        </div>
+                    {/if}
+
+                    <p class="note whitespace-pre-line">
+                        Please note: <b>do not send this data to people you don't trust</b>.
+                        It contains data you may want to keep private, such as:
+                    </p>
+                    <ul class="note list-disc list-inside pl-4">
+                        <li>API keys</li>
+                        <li>Custom engines and their URLs/IPs</li>
+                        <li>The names of all games you've ever connected to</li>
+                    </ul>
+
                     <div class="import-actions">
-                        <button class="btn preset-tonal-surface-200-700" onclick={importFromClipboard}>
-                            <Clipboard size={16} />
-                            Paste from clipboard
-                        </button>
-                        <button class="btn preset-filled-surface-50-950" onclick={importFixedJson}>
-                            <Upload size={16} />
-                            Import and reload
+                        <p class="note">As a last resort, you can leave the text above empty and Shift-click "Import and reload" to reset to defaults.</p>
+                        <button
+                            class="btn preset-filled-surface-50-950"
+                            onclick={importFixedJson}
+                            disabled={!!validationError && !resetOverride}
+                            class:override={resetOverride}
+                        >
+                            {importBtnText}
                         </button>
                     </div>
                 </div>
@@ -155,63 +135,6 @@
         @apply font-semibold text-amber-700 dark:text-amber-300;
     }
 
-    .error-details {
-        @apply flex flex-col gap-2;
-    }
-
-    .details-label {
-        @apply font-medium text-neutral-700 dark:text-neutral-300;
-    }
-
-    .error-text {
-        @apply p-3 rounded-md;
-        @apply bg-red-50 dark:bg-red-900/30;
-        @apply border border-red-200 dark:border-red-800;
-        @apply text-red-700 dark:text-red-300;
-        @apply text-xs font-mono whitespace-pre-wrap break-all;
-        @apply max-h-48 overflow-y-auto;
-    }
-
-    .actions {
-        @apply flex flex-col gap-3;
-    }
-
-    .actions-label {
-        @apply font-medium text-neutral-700 dark:text-neutral-300;
-    }
-
-    .action-list {
-        @apply flex flex-col gap-4 ml-1;
-        @apply list-none;
-    }
-
-    .action-list li {
-        @apply flex items-start gap-3;
-    }
-
-    .step-number {
-        @apply shrink-0 flex items-center justify-center;
-        @apply w-6 h-6 rounded-full;
-        @apply bg-surface-200 dark:bg-surface-700;
-        @apply text-neutral-900 dark:text-neutral-100;
-        @apply text-xs font-bold;
-    }
-
-    .step-actions {
-        @apply flex flex-wrap gap-2 mt-2 ml-9;
-    }
-
-    .revert-section {
-        @apply flex flex-col gap-2;
-        @apply p-4 rounded-lg;
-        @apply bg-surface-50 dark:bg-surface-800;
-        @apply border border-neutral-200 dark:border-neutral-700;
-    }
-
-    .revert-label {
-        @apply text-neutral-600 dark:text-neutral-400;
-    }
-
     .import-section {
         @apply flex flex-col gap-2;
     }
@@ -220,16 +143,27 @@
         @apply font-medium text-neutral-700 dark:text-neutral-300;
     }
 
-    .import-textarea {
-        @apply w-full h-32 p-3 rounded-md;
-        @apply bg-white dark:bg-surface-800;
-        @apply border border-neutral-300 dark:border-neutral-600;
-        @apply text-neutral-900 dark:text-neutral-100;
-        @apply text-xs font-mono resize-none;
-        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
+    .note {
+        @apply text-neutral-600 dark:text-neutral-400;
+    }
+
+    .editor-container {
+        @apply h-full;
+    }
+
+    .validation-error {
+        @apply p-3 rounded-md;
+        @apply bg-red-50 dark:bg-red-900/30;
+        @apply border border-red-200 dark:border-red-800;
+        @apply text-red-700 dark:text-red-300;
+        @apply text-xs font-mono whitespace-pre-wrap;
+        @apply max-h-48 overflow-y-auto;
     }
 
     .import-actions {
-        @apply flex flex-wrap gap-2;
+        @apply flex flex-wrap gap-2 justify-between items-center;
+        & > button.override {
+            @apply bg-error-50 dark:bg-error-950;
+        }
     }
 </style>

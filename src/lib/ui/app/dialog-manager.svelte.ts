@@ -12,12 +12,22 @@ export class DialogManager {
     updateDialogOpen: boolean = $state(false);
     enginePickerOpen: boolean = $state(false);
     settingsDialogOpen: boolean = $state(false);
+    prefsLoadErrorOpen: boolean = $state(false);
 
-    anyDialogOpen = $derived(!!(this.manualSendDialog || this.rawMessageDialog || this.diagnosticsDialog || this.updateDialogOpen || this.enginePickerOpen || this.settingsDialogOpen));
+    blockingDialogOpen = $derived(!!(this.prefsLoadErrorOpen));
+    anyDialogOpen = $derived(!!(this.manualSendDialog
+        || this.rawMessageDialog
+        || this.diagnosticsDialog
+        || this.updateDialogOpen
+        || this.enginePickerOpen
+        || this.settingsDialogOpen
+        || this.prefsLoadErrorOpen
+    ));
 
     openManualSendDialog(action: Action, game: Game) {
         this.closeAllDialogs();
-        this.manualSendDialog = { action, game };
+        if (!this.prefsLoadErrorOpen)
+            this.manualSendDialog = { action, game };
     }
 
     closeManualSendDialog() {
@@ -26,7 +36,8 @@ export class DialogManager {
 
     openRawMessageDialog(game: Game) {
         this.closeAllDialogs();
-        this.rawMessageDialog = { game };
+        if (!this.prefsLoadErrorOpen)
+            this.rawMessageDialog = { game };
     }
 
     closeRawMessageDialog() {
@@ -35,7 +46,8 @@ export class DialogManager {
 
     openDiagnosticsDialog(game: Game) {
         this.closeAllDialogs();
-        this.diagnosticsDialog = { game };
+        if (!this.prefsLoadErrorOpen)
+            this.diagnosticsDialog = { game };
     }
 
     closeDiagnosticsDialog() {
@@ -44,7 +56,8 @@ export class DialogManager {
 
     openUpdateDialog() {
         this.closeAllDialogs();
-        this.updateDialogOpen = true;
+        if (!this.prefsLoadErrorOpen)
+            this.updateDialogOpen = true;
     }
 
     closeUpdateDialog() {
@@ -53,7 +66,8 @@ export class DialogManager {
 
     openEnginePicker() {
         this.closeAllDialogs();
-        this.enginePickerOpen = true;
+        if (!this.prefsLoadErrorOpen)
+            this.enginePickerOpen = true;
     }
 
     closeEnginePicker() {
@@ -62,7 +76,8 @@ export class DialogManager {
 
     openSettingsDialog() {
         this.closeAllDialogs();
-        this.settingsDialogOpen = true;
+        if (!this.prefsLoadErrorOpen)
+            this.settingsDialogOpen = true;
     }
 
     closeSettingsDialog() {

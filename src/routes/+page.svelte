@@ -42,10 +42,11 @@
 
     onMount(() => {
         const settingsHotkey = registerAppHotkey(["Control", ","], () => {
-            if (!dialogs.settingsDialogOpen)
-                dialogs.openSettingsDialog();
-            else
+            if (dialogs.settingsDialogOpen) {
                 dialogs.closeSettingsDialog();
+            } else {
+                dialogs.openSettingsDialog();
+            }
         });
 
         return () => {

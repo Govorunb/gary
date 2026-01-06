@@ -63,6 +63,11 @@ When implementing fallible operations:
 - Handle errors immediately - return the error, passing it up; or, if the caller doesn't expect a Result, send a log/toast and swallow it
 - The point of `neverthrow` is to avoid throwing. Functions returning `Result` or `ResultAsync` should **never** throw. If you see a `throw` statement inside one of those that's not paired with an extremely good justification, report it immediately as a bug.
 
+We have neverthrow utility wrappers over common commands (exported from `$lib/app/utils`):
+- `JSON.parse(text)` -> `jsonParse(text)`
+- Zod `zodSchema.safeParse(obj)` -> `safeParse(zodSchema, obj)`
+- Tauri `invoke(command, data)` -> `safeInvoke(command, data)`
+
 #### Zod
 
 Zod use should follow these conventions:

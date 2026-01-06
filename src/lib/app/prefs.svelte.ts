@@ -21,9 +21,9 @@ export class UserPrefs {
         // data gets set before effect runs (we don't save defaults over)
         if (loadRes.isErr()) {
             this.loadError = loadRes.error;
-            this.#data = zUserPrefs.decode({});
+            this.setData(zUserPrefs.decode({}));
         } else {
-            this.#data = zUserPrefs.decode(loadRes.value);
+            this.setData(zUserPrefs.decode(loadRes.value));
         }
 
         // TODO: debounce for file write (if ever)
@@ -63,6 +63,7 @@ export class UserPrefs {
 
             r.error("Failed to parse user prefs", {
                 details: errorMessage,
+                toast: false, // dialog will pop up momentarily
                 ctx: {
                     issues: zodError.issues,
                     data,
@@ -94,7 +95,7 @@ export class UserPrefs {
 
     async save() {
         if (this.loadError) {
-            r.warn("Load error: not saving");
+            r.info("Prefs have load error, aborting save");
             return;
         }
         // TODO: validation here (fatal if fails)
@@ -114,11 +115,11 @@ export class UserPrefs {
         if (typeof data !== "object") return err(`Validation failed: Must be a JSON object`);
         
         return safeParse(zUserPrefs, migrate(APP_VERSION, data, MIGRATIONS))
-            .map(d => this.set(d))
+            .map(d => this.setData(d))
             .mapErr(e => `Validation failed. Errors:\n\t${formatZodError(e).join("\n\t")}`);
     }
 
-    private set(data: UserPrefsData) {
+    private setData(data: UserPrefsData) {
         this.#data = data;
     }
 }

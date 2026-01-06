@@ -14,6 +14,9 @@ export class UIState {
         $effect(() => {
             this.selectedGameTab = clamp(this.selectedGameTab, 0, session.registry.games.length - 1);
         });
+        $effect(() => {
+            this.dialogs.prefsLoadErrorOpen = !!session.userPrefs.loadError;
+        })
     }
 
     selectGameTab(gameId: string) {
