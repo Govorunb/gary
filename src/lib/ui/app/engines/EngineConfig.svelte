@@ -4,7 +4,7 @@
     import OpenRouterConfig from './OpenRouterConfig.svelte';
     import OpenAIConfig from './OpenAIConfig.svelte';
     import RandyConfig from './RandyConfig.svelte';
-    import { type Component } from 'svelte';
+    import { onMount, type Component } from 'svelte';
     
     export type Engines = UserPrefsData["engines"];
     export type EngineId = string;
@@ -24,6 +24,9 @@
 <script lang="ts" generics="E extends EngineId">
     import { getUserPrefs } from '$lib/app/utils/di';
     import { type Snippet } from 'svelte';
+    import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
+    import { formatZodError, sleep } from '$lib/app/utils';
+    import { PressedKeys } from 'runed';
 
     type Props = ConfigProps<E> & {
         schema: ZodType<EngineConfig<E>>;
@@ -47,13 +50,13 @@
         if (result.success) {
             validationErrors = [];
         } else {
-            validationErrors = result.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`);
+            validationErrors = formatZodError(result.error);
         }
     }
     
-    $effect(() => {
-        validateConfig();
-    });
+    $effect(validateConfig);
+    const keys = new PressedKeys();
+    keys.onKeys(['Control', 'Enter'], handleSave);
 
     function handleSave() {
         if (!isValid) return;
@@ -82,6 +85,7 @@
                 class="save-button"
                 onclick={handleSave}
                 disabled={!isValid}
+                title="Ctrl+Enter"
             >
                 Save changes
             </button>

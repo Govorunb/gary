@@ -8,7 +8,7 @@
     import { getUserPrefs } from "$lib/app/utils/di";
     import { zNeuroMessage } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
-    import { jsonParse, safeParse, tooltip } from "$lib/app/utils";
+    import { formatZodError, jsonParse, safeParse, tooltip } from "$lib/app/utils";
     import { PressedKeys } from "runed";
     import { on } from "svelte/events";
 
@@ -92,10 +92,7 @@
 
         if (result.isErr()) {
             if ('issues' in result.error) {
-                const errorMessages = result.error.issues.map(err =>
-                    `${err.path.join('.') || '(root)'}: ${err.message}`
-                );
-                validationErrors = errorMessages;
+                validationErrors = formatZodError(result.error);
             } else {
                 validationErrors = [result.error.message ?? "Invalid JSON"];
             }
