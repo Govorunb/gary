@@ -88,110 +88,125 @@
             </div>
 
             <div class="dialog-body">
-                <div class="settings-section">
-                    <p class="section-title">General</p>
-
-                    <div class="field">
-                        <p class="field-label">Theme</p>
-                        <ThemePicker bind:currentTheme={userPrefs.app.theme} />
+                {#each [
+                    GeneralSection,
+                    UpdatesSection,
+                    PreferencesSection,
+                    TroubleshootingSection,
+                ] as section}
+                    <div class="settings-section">
+                        {@render section()}
                     </div>
-                </div>
-                <div class="settings-section">
-                    <p class="section-title">Preferences</p>
-                    <div class="preferences-layout">
-                        <div class="flex flex-col gap-2">
-                            <p>Backup or restore preferences via clipboard:</p>
-                            <div class="field">
-                                <div class="flex flex-row gap-2">
-                                    <button class="btn preset-outlined-surface-300-700"
-                                        onclick={exportPrefs}
-                                    >
-                                        Export
-                                    </button>
-                                    <button class="btn preset-outlined-surface-300-700"
-                                        onclick={importPrefs}
-                                    >
-                                        Import
-                                    </button>
-                                </div>
-                                <p class="field-label">Raw JSON data</p>
-                            </div>
-                            {#if prefsBackupFeedback}
-                                <div class="prefs-iex-status"
-                                    data-success={boolAttr(prefsBackupStatus === "success")}
-                                    data-error={boolAttr(prefsBackupStatus === "error")}
-                                >
-                                    <div class="status-content">
-                                        {prefsBackupFeedback}
-                                    </div>
-                                    {#if prefsBackupStatus === "error"}
-                                        <button class="dismiss-btn" onclick={dismissStatus}>
-                                            <X size={14} />
-                                        </button>
-                                    {/if}
-                                </div>
-                            {/if}
-                        </div>
-                    </div>
-                </div>
-                <div class="settings-section">
-                    <p class="section-title">Updates</p>
-
-                    <div class="flex gap-2">
-                        <p>Current version:
-                        {#await app.getVersion()}
-                            {APP_VERSION}
-                        {:then v}
-                            {v}
-                        {:catch}
-                            Big Dingus The {APP_VERSION}rd
-                        {/await}
-                        </p>
-                    </div>
-
-                    <div class="update-settings">
-                        <p class="font-light">Automatically check for updates on app launch:</p>
-                        <select class="update-select" bind:value={userPrefs.app.updates.autoCheckInterval}>
-                            <option value="everyLaunch">Every launch</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="off">Never</option>
-                        </select>
-                    </div>
-                    <div class="update-actions">
-                        <button class="btn preset-outlined-surface-300-700"
-                            onclick={checkForUpdates}
-                            disabled={updater.checkingForUpdates}
-                        >
-                            Check now
-                        </button>
-                        <p class="note">Last checked: {lastCheckedAt}</p>
-                    </div>
-                    {#if updater.skipVersion}
-                        <p class="note">
-                            You skipped updating to version {updater.skipVersion}
-                            <button onclick={resetSkipVersion}><X size="12" /></button>
-                        </p>
-                    {/if}
-                </div>
-                <div class="settings-section">
-                    <p class="section-title">Troubleshooting</p>
-
-                    <div class="flex flex-row gap-2">
-                        <button class="btn preset-outlined-surface-300-700"
-                            onclick={() => safeInvoke("open_logs_folder")}
-                        >
-                            Open logs folder <ExternalLink size=20 />
-                        </button>
-                        <button class="btn preset-tonal-error"
-                            onclick={clearLocalStorage}
-                        >
-                            Reset app preferences
-                        </button>
-                    </div>
-                </div>
+                {/each}
             </div>
+
+            {#snippet GeneralSection()}
+                <p class="section-title">General</p>
+
+                <div class="field">
+                    <p class="field-label">Theme</p>
+                    <ThemePicker bind:currentTheme={userPrefs.app.theme} />
+                </div>
+            {/snippet}
+
+            {#snippet PreferencesSection()}
+                <p class="section-title">Preferences</p>
+
+                <div class="preferences-layout">
+                    <div class="flex flex-col gap-2">
+                        <p>Backup or restore preferences via clipboard:</p>
+                        <div class="field">
+                            <div class="flex flex-row gap-2">
+                                <button class="btn preset-outlined-surface-300-700"
+                                    onclick={exportPrefs}
+                                >
+                                    Export
+                                </button>
+                                <button class="btn preset-outlined-surface-300-700"
+                                    onclick={importPrefs}
+                                >
+                                    Import
+                                </button>
+                            </div>
+                            <p class="field-label">Raw JSON data</p>
+                        </div>
+                        {#if prefsBackupFeedback}
+                            <div class="prefs-iex-status"
+                                data-success={boolAttr(prefsBackupStatus === "success")}
+                                data-error={boolAttr(prefsBackupStatus === "error")}
+                            >
+                                <div class="status-content">
+                                    {prefsBackupFeedback}
+                                </div>
+                                {#if prefsBackupStatus === "error"}
+                                    <button class="dismiss-btn" onclick={dismissStatus}>
+                                        <X size={14} />
+                                    </button>
+                                {/if}
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+            {/snippet}
+
+            {#snippet UpdatesSection()}
+                <p class="section-title">Updates</p>
+
+                <div class="flex gap-2">
+                    <p>Current version:
+                    {#await app.getVersion()}
+                        {APP_VERSION}
+                    {:then v}
+                        {v}
+                    {:catch}
+                        Big Dingus The {APP_VERSION}rd
+                    {/await}
+                    </p>
+                </div>
+
+                <div class="update-settings">
+                    <p class="font-light">Automatically check for updates on app launch:</p>
+                    <select class="update-select" bind:value={userPrefs.app.updates.autoCheckInterval}>
+                        <option value="everyLaunch">Every launch</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="off">Never</option>
+                    </select>
+                </div>
+                <div class="update-actions">
+                    <button class="btn preset-outlined-surface-300-700"
+                        onclick={checkForUpdates}
+                        disabled={updater.checkingForUpdates}
+                    >
+                        Check now
+                    </button>
+                    <p class="note">Last checked: {lastCheckedAt}</p>
+                </div>
+                {#if updater.skipVersion}
+                    <p class="note">
+                        You skipped updating to version {updater.skipVersion}
+                        <button onclick={resetSkipVersion}><X size="12" /></button>
+                    </p>
+                {/if}
+            {/snippet}
+
+            {#snippet TroubleshootingSection()}
+                <p class="section-title">Troubleshooting</p>
+
+                <div class="flex flex-row gap-2">
+                    <button class="btn preset-outlined-surface-300-700"
+                        onclick={() => safeInvoke("open_logs_folder")}
+                    >
+                        Open logs folder <ExternalLink size=20 />
+                    </button>
+                    <button class="btn preset-tonal-error"
+                        onclick={clearLocalStorage}
+                    >
+                        Reset app preferences
+                    </button>
+                </div>
+            {/snippet}
         </div>
     {/snippet}
 </Dialog>
