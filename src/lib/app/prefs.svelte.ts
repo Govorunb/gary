@@ -121,6 +121,9 @@ export class UserPrefs {
 
     private setData(data: UserPrefsData) {
         this.#data = data;
+        if (data) {
+            this.loadError = null;
+        }
     }
 }
 

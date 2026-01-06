@@ -42,6 +42,8 @@
         if (res.isErr()) {
             validationError = res.error;
             r.error(res.error);
+        } else {
+            userPrefs.loadError = null;
         }
     }
 

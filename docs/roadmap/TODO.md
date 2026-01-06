@@ -47,7 +47,6 @@ Frontend:
     - [ ] More useful tooltip/popover on status dot
     - [ ] Maybe have the status dot be the menu button
 - [ ] Allow binding to `0.0.0.0`
-- [ ] Single button (send) for schemaless actions (no dialog)
 - Onboarding (docs, first-time teaching tips)
     - [ ] First-time tip for when an engine error pauses the scheduler
 
