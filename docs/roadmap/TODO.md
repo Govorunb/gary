@@ -12,8 +12,6 @@ The project is currently in beta, adding functionality and stabilizing internals
 - Event log + granular exports (visibility presets - "user", "actor", "bug report")
 - Tool calling + reasoning/interleaved thinking (toggle "fast call"/"deep think")
     - Responses API?
-- Prefs import/export, safe mode/profiles? (on load error, load a new default profile)
-    - `$env:MY_ENV_VAR` syntax
 - Game management (user-defined list of launch commands, shutdown API)
 - Advanced context editing?
 - API compat/behavior switches (e.g. whether to send `reregister_all`)
@@ -28,6 +26,10 @@ App logic:
 - [ ] Figure out where game-specific prefs go when the game changes name
 - [ ] Scheduler scans all games' forceQueues instead of having its own (might solve an edge case where 2+ connected games could trigger prot/force/multiple on each other through no fault of their own)
 - [ ] Use force prio literally anywhere (shorten Randy l*tency/interrupt LLM gen)
+- [ ] `$env:MY_ENV_VAR` prefs syntax (for API keys and such)
+- Context trimming
+    - [ ] Token counting from inference provider responses
+    - [ ] Priority trimming (actions/results are less important)
 
 Frontend:
 - Extra context features
@@ -38,7 +40,6 @@ Frontend:
     - [ ] Keep a CodeMirror instance loaded offscreen and Portal it into dialogs (deranged)
     - [ ] Streaming reactive ctx message conversion (entirely reimplement rx it'll be funny)
 - [ ] Launch game processes (+ proposed shutdown API)
-- [x] App logs should surface to the user somewhere
 - More width-responsive UI
     - [ ] Collapse left sidebar to hamburger on small widths
     - [ ] On fullscreen, use empty right half for something
