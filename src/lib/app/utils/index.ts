@@ -1,6 +1,6 @@
 import type { Attachment } from "svelte/attachments";
 import z, { type ZodError, type core, type ZodCatch, type ZodDefault } from "zod";
-import { ok, err, ResultAsync, Result, Ok, Err } from "neverthrow";
+import { ok, err, ResultAsync, type Result, Ok, Err } from "neverthrow";
 import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
@@ -34,7 +34,7 @@ export const tauriWebkitScrollNum: Attachment<HTMLInputElement> = (el) => {
         evt.deltaY < 0 ? target.stepUp() : target.stepDown();
         target.dispatchEvent(new Event("input")); // svelte 5 targets 'input' and not 'change'
     };
-    return on(el, "wheel", listener);
+    return on(el, "wheel", listener, { passive: true });
 };
 
 export function preventDefault<T, E extends Event, F extends (evt: E, ...args: any[]) => T>(func: F) {

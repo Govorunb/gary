@@ -52,7 +52,7 @@
     const importBtnText = $derived(resetOverride ? "Reset to defaults" : "Import and load");
 </script>
 
-<Dialog open={!!userPrefs.loadError} position="center">
+<Dialog open={!!userPrefs.loadError} position="center" closeOnInteractOutside={false} closeOnEscape={false}>
     {#snippet content(props)}
         <div {...props} class="safe-mode-content">
             <div class="dialog-header">
@@ -67,14 +67,12 @@
                 </p>
 
                 <div class="import-section">
-                    <p class="import-label">You may attempt to manually fix the data below <span class="note">(or get someone you trust to fix it)</span>:</p>
+                    <p class="import-label">You may attempt to manually fix the data below: <span class="note">(or get someone you trust to fix it)</span></p>
                     <div class="editor-container">
                         <CodeMirror
                             code={editorContent}
                             open={true}
                             readonly={false}
-                            minHeight="200px"
-                            maxHeight="400px"
                             onChange={(code) => editorContent = code}
                         />
                     </div>
@@ -86,17 +84,15 @@
                     {/if}
 
                     <p class="note whitespace-pre-line">
-                        Please note: <b>do not send this text to people you don't trust</b>.
-                        It contains data you may want to keep private, such as:
+                        Please note: <b>do not send this text to people you don't trust</b>. It contains data you may want to keep private, such as:
                     </p>
                     <ul class="note list-disc list-inside pl-4">
-                        <li>API keys</li>
-                        <li>Custom engines and their URLs/IPs</li>
-                        <li>The names of all games you've ever connected to</li>
+                        <li>Custom engines (including names, URLs/IPs, and <b class="text-sm">API keys</b>)</li>
+                        <li>The names of some or all games you've ever connected to</li>
                     </ul>
 
                     <div class="import-actions">
-                        <p class="note">As a last resort, you can leave the text above empty and Shift-click the import button to reset to defaults.</p>
+                        <p class="note">As a last resort, you can reset to defaults: fully empty the above textbox and Shift-click the button to the right.</p>
                         <button
                             class="btn preset-filled-surface-50-950"
                             onclick={importFixedJson}
@@ -117,7 +113,7 @@
 
     .safe-mode-content {
         @apply flex flex-col gap-4;
-        @apply min-w-lg max-w-[95vw] max-h-[90vh] overflow-hidden;
+        @apply min-w-lg max-w-[95vw] max-h-[90vh];
         @apply bg-white dark:bg-surface-900;
         @apply rounded-2xl shadow-2xl;
         @apply p-5 text-sm;
@@ -131,7 +127,7 @@
 
     .dialog-body {
         @apply flex flex-col gap-4;
-        @apply flex-1 overflow-y-auto;
+        @apply flex-1;
     }
 
     .error-message {
@@ -140,6 +136,7 @@
 
     .import-section {
         @apply flex flex-col gap-2;
+        @apply flex-1;
     }
 
     .import-label {
@@ -151,7 +148,7 @@
     }
 
     .editor-container {
-        @apply h-full;
+        @apply flex min-h-50 max-h-100;
     }
 
     .validation-error {

@@ -116,14 +116,12 @@ export class UserPrefs {
         
         return safeParse(zUserPrefs, migrate(APP_VERSION, data, MIGRATIONS))
             .map(d => this.setData(d))
-            .mapErr(e => `Validation failed. Errors:\n\t${formatZodError(e).join("\n\t")}`);
+            .mapErr(e => `Validation failed. Errors:\n\t${formatZodError(e).join("\n\t")}`)
+            .andTee(() => this.loadError = null);
     }
 
     private setData(data: UserPrefsData) {
         this.#data = data;
-        if (data) {
-            this.loadError = null;
-        }
     }
 }
 
