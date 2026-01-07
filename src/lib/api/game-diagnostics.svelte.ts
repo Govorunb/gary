@@ -51,6 +51,11 @@ export class GameDiagnostics {
                 ctx: context ? { context } : undefined,
             });
         }
+        if (diagDef.severity >= DiagnosticSeverity.Fatal) {
+            // TODO: disconnect with error code
+            // TODO: delay next connect afterwards (mitigate instant reconnects)
+            // this.game.conn.disconnect();
+        }
         return diag;
     }
 
@@ -65,13 +70,34 @@ export class GameDiagnostics {
     public suppress(key: DiagnosticKey) {
         const diag = getDiagnosticDefinition(key);
         if (!diag) {
-            r.error(`Cannot suppress unknown diagnostic ${key}`);
+            r.error(`Cannot suppress unknown diagnostic ${key}.`, {
+                toast: {
+                    description: "This is a bug in the app, not a diagnostic for your game."
+                }
+            });
             return;
         }
         if (!this.suppressions.includes(key)) {
             this.suppressions.push(key);
         }
         this.dismiss(key);
+    }
+
+    public unsuppress(key: DiagnosticKey) {
+        const diag = getDiagnosticDefinition(key);
+        if (!diag) {
+            r.error(`Tried to unsuppress unknown diagnostic ${key}`, {
+                toast: {
+                    description: "This is a bug in the app, not a diagnostic for your game."
+                }
+            });
+            return;
+        }
+        const i = this.suppressions.indexOf(key);
+        if (i >= 0) {
+            this.suppressions.splice(i, 1);
+        }
+        this.restore(key);
     }
 
     public dismiss(key: DiagnosticKey) {

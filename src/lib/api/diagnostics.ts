@@ -37,7 +37,9 @@ export const TIMEOUTS = {
     "perf/late/startup": 500,
     "perf/late/action_result": 500,
     "perf/timeout/action_result": 5000,
-} as const;
+} as const satisfies {
+    [K in DiagnosticKey]?: number;
+};
 
 const asyncResultNag = `If the action is expected to take a long time, send a "validation" success result immediately and follow up later with a 'context' message.`;
 

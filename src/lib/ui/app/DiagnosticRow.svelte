@@ -46,7 +46,7 @@
     let ctxDetailsOpen = $state(false);
 
     const isDismissed = $derived(diag.dismissed);
-    const isSuppressed = $derived(game.diagnostics.isSuppressed(diag.key as any));
+    const isSuppressed = $derived(game.diagnostics.isSuppressed(diag.key));
 
     const Btn1Icon = $derived(isDismissed ? Undo : Check);
     const Btn2Icon = $derived(isDismissed ? Undo2 : CheckCheck);
@@ -61,23 +61,19 @@
     }
 
     function dismissDiagnostic() {
-        game.diagnostics.dismiss(diag.key as any);
+        game.diagnostics.dismiss(diag.key);
     }
 
     function restoreDiagnostic() {
-        game.diagnostics.restore(diag.key as any);
+        game.diagnostics.restore(diag.key);
     }
 
     function suppressDiagnostic() {
-        game.diagnostics.suppress(diag.key as any);
+        game.diagnostics.suppress(diag.key);
     }
 
     function unsuppressDiagnostic() {
-        const idx = game.diagnostics.suppressions.indexOf(diag.key as any);
-        if (idx !== -1) {
-            game.diagnostics.suppressions.splice(idx, 1);
-        }
-        restoreDiagnostic();
+        game.diagnostics.unsuppress(diag.key);
     }
 
     const contextJson = $derived(JSON.stringify(diag.context, null, 2));
