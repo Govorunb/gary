@@ -177,15 +177,15 @@ export class Game {
             break;
         }
         if (isEmpty) {
-            this.diagnostics.trigger("prot/schema/prefer_omit_to_empty", { action: name });
+            this.diagnostics.trigger("prot/schema/prefer_omit_to_empty", { action: name }, false);
             return;
         }
         if (schema.type !== "object") {
-            this.diagnostics.trigger("prot/schema/type_object", { action: name, schema });
+            this.diagnostics.trigger("prot/schema/type_object", { action: name, schema }, false);
         }
 
         if (!('additionalProperties' in schema)) {
-            this.diagnostics.trigger("prot/schema/additionalProperties", { action: name, schema });
+            this.diagnostics.trigger("prot/schema/additionalProperties", { action: name, schema }, false);
         }
     }
 

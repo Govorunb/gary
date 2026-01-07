@@ -188,7 +188,7 @@ This is very likely not what you want. You should register actions without a sch
     },
     {
         key: "prot/schema/type_object",
-        severity: DiagnosticSeverity.Info,
+        severity: DiagnosticSeverity.Warning,
         title: "Root schema object should contain \"type\": \"object\"",
         description: `The Neuro API spec requires top-level schemas to be constrained to objects.
 Randy supports all top-level types, so you may not experience errors; however, some LLM providers may share the requirement.

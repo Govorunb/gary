@@ -43,14 +43,13 @@ export class GameDiagnostics {
         });
         this.diagnostics.push(diag);
 
-        if (report && !suppressed) {
-            const logLevel = SeverityToLogLevel[diagDef.severity];
-            r.report(logLevel, {
-                message: `(${this.game.name}) ${diagDef.title}`,
-                details: diagDef.description,
-                ctx: context ? { context } : undefined,
-            });
-        }
+        const logLevel = SeverityToLogLevel[diagDef.severity];
+        r.report(logLevel, {
+            message: `(${this.game.name}) ${diagDef.title}`,
+            details: diagDef.description,
+            ctx: context ? { context } : undefined,
+            toast: report && !suppressed ? undefined : false,
+        });
         if (diagDef.severity >= DiagnosticSeverity.Fatal) {
             // TODO: disconnect with error code
             // TODO: delay next connect afterwards (mitigate instant reconnects)
