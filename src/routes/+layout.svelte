@@ -10,7 +10,6 @@
     import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
     import { clearLocalStorage } from '$lib/app/utils';
     import SafeModeDialog from '$lib/ui/app/SafeModeDialog.svelte';
-    import { USER_PREFS } from '$lib/app/prefs.svelte';
 
     dayjs.extend(relativeTime);
     dayjs.extend(localizedTime);
@@ -31,6 +30,8 @@
 
     // delete localstorage (dev hotkey)
     registerAppHotkey(['Backspace', 'Delete', 'Shift', 'L'], clearLocalStorage);
+    // trigger safe mode (dev hotkey)
+    registerAppHotkey(['Control', 'Shift', '+', 'S'], () => session.userPrefs.loadError = ".");
 </script>
 
 <div class="flex flex-col h-screen" role="application">

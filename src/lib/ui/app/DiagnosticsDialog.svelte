@@ -1,6 +1,7 @@
 <script lang="ts">
     import Dialog from '$lib/ui/common/Dialog.svelte';
     import TeachingTooltip from '$lib/ui/common/TeachingTooltip.svelte';
+    import ShiftIndicator from '$lib/ui/common/ShiftIndicator.svelte';
     import type { Game } from "$lib/api/game.svelte";
     import { Info, Check } from '@lucide/svelte';
     import { pressedKeys } from '$lib/app/utils/hotkeys.svelte';
@@ -46,7 +47,10 @@
     {#snippet content(props)}
         <div {...props} class="diagnostics-content">
             <div class="dialog-header">
-                <h2 class="text-lg font-bold">Diagnostics ({game.name})</h2>
+                <div class="title-area">
+                    <h2 class="text-lg font-bold">Diagnostics ({game.name})</h2>
+                    <ShiftIndicator />
+                </div>
                 <TeachingTooltip>
                     <p>Diagnostics help catch common off-spec behaviors in game integrations.</p>
                     <p><b>Dismissing</b> a diagnostic instance hides it. Future diagnostics are still visible.</p>
@@ -76,7 +80,7 @@
                 {/if}
                 <div class="diagnostics-list">
                     {#each activeDiagnostics as diag (diag.id)}
-                        <DiagnosticRow {game} {diag} {shiftPressed} />
+                        <DiagnosticRow {game} {diag} />
                     {:else}
                         {@const diagCount = diagnostics.length}
                         {@const OKIcon = diagCount ? Info : Check}
@@ -123,6 +127,10 @@
     .dialog-header {
         @apply flex items-center justify-between pb-2;
         @apply border-b border-neutral-200 dark:border-neutral-700;
+    }
+
+    .title-area {
+        @apply flex items-center gap-2;
     }
 
     .footer-actions {

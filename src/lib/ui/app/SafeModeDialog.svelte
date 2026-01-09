@@ -1,5 +1,6 @@
 <script lang="ts">
     import Dialog from "$lib/ui/common/Dialog.svelte";
+    import ShiftIndicator from "$lib/ui/common/ShiftIndicator.svelte";
     import { getUserPrefs } from "$lib/app/utils/di";
     import { toast } from "svelte-sonner";
     import CodeMirror from "$lib/ui/common/CodeMirror.svelte";
@@ -56,9 +57,12 @@
     {#snippet content(props)}
         <div {...props} class="safe-mode-content">
             <div class="dialog-header">
-                <p class="text-xl font-bold text-amber-700 dark:text-amber-300">
-                    Safe Mode Active
-                </p>
+                <div class="title-area">
+                    <p class="title">
+                        Safe Mode Active
+                    </p>
+                    <ShiftIndicator />
+                </div>
             </div>
 
             <div class="dialog-body">
@@ -122,7 +126,16 @@
     }
 
     .dialog-header {
-        @apply flex items-center gap-2 pb-3 border-b border-neutral-200 dark:border-neutral-700;
+        @apply flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-700;
+    }
+
+    .title-area {
+        @apply flex items-center gap-2;
+    }
+
+    .title {
+        @apply text-xl font-bold;
+        @apply text-amber-700 dark:text-amber-300;
     }
 
     .dialog-body {

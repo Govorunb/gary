@@ -3,6 +3,7 @@
     import type { Game } from "$lib/api/game.svelte";
     import Dialog from '$lib/ui/common/Dialog.svelte';
     import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
+    import ShiftIndicator from '$lib/ui/common/ShiftIndicator.svelte';
     import { Send, ChevronLeft, ChevronRight, Dice6 } from "@lucide/svelte";
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
@@ -100,7 +101,10 @@
     {#snippet content(props)}
         <div {...props} class="manual-send-content">
                     <div class="dialog-header">
-                        <h2 class="text-lg font-bold">Manual Send ({action.name})</h2>
+                        <div class="title-area">
+                            <h2 class="text-lg font-bold">Manual Send ({action.name})</h2>
+                            <ShiftIndicator />
+                        </div>
                         <div class="header-actions">
                             <TeachingTooltip>
                                 {#if schemaJson}
@@ -215,6 +219,10 @@
     .dialog-header {
         @apply flex items-center justify-between;
         @apply pb-2 border-b border-neutral-200 dark:border-neutral-700;
+    }
+
+    .title-area {
+        @apply flex items-center gap-2;
     }
 
     .header-actions {

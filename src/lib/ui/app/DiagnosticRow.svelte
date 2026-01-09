@@ -6,14 +6,14 @@
     import { boolAttr } from 'runed';
     import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
     import dayjs from 'dayjs';
+    import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
 
     type Props = {
         game: Game;
         diag: GameDiagnostic;
-        shiftPressed: boolean;
     };
 
-    let { game, diag, shiftPressed }: Props = $props();
+    let { game, diag }: Props = $props();
 
     const severityConfig: Record<DiagnosticSeverity, { icon: typeof CircleX; label: string; class: string }> = {
         [DiagnosticSeverity.Fatal]: {
@@ -77,6 +77,8 @@
     }
 
     const contextJson = $derived(JSON.stringify(diag.context, null, 2));
+
+    const shiftPressed = $derived(pressedKeys.has('Shift'));
 </script>
 
 <div

@@ -52,7 +52,7 @@ export class GameDiagnostics {
         });
         if (diagDef.severity >= DiagnosticSeverity.Fatal) {
             // TODO: disconnect with error code
-            // TODO: delay next connect afterwards (mitigate instant reconnects)
+            // TODO: delay next connect afterwards (if the client is *really* misbehaving, instant reconnects are a bad idea)
             // this.game.conn.disconnect();
         }
         return diag;

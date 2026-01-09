@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getSession, getUserPrefs, getUIState } from '$lib/app/utils/di';
     import Dialog from '$lib/ui/common/Dialog.svelte';
+    import ShiftIndicator from '$lib/ui/common/ShiftIndicator.svelte';
     import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
     import { getEngineConfigComponent } from './EngineConfig.svelte';
     import { PressedKeys } from 'runed';
@@ -105,7 +106,10 @@
             {#if !configEngineId}
                 <div class="view-container" in:fly={{ x: -20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
                     <div class="header">
-                        <h3>Select Engine</h3>
+                        <div class="title-area">
+                            <h3>Select Engine</h3>
+                            <ShiftIndicator />
+                        </div>
                         <TeachingTooltip>
                             <p><Hotkey>Ctrl+E</Hotkey> to open/close engine picker.</p>
                             <p><Hotkey>1..9</Hotkey> to quick-select engine.</p>
@@ -226,6 +230,10 @@
         &.with-back {
             @apply gap-2;
         }
+    }
+
+    .title-area {
+        @apply flex items-center gap-2;
     }
 
     .list {
