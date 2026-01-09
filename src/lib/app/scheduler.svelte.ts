@@ -247,8 +247,8 @@ export type Cancelled = "cancelled";
 
 export class AutoPoker {
     public autoAct = $state(false);
-    public tryInterval = $state(1000);
-    public forceInterval = $state(5000);
+    public tryInterval = $state(5000);
+    public forceInterval = $state(30000);
     public readonly tryTimer: ReturnType<typeof debounced>;
     public readonly forceTimer: ReturnType<typeof debounced>;
 
