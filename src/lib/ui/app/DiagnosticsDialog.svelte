@@ -47,16 +47,16 @@
     {#snippet content(props)}
         <div {...props} class="diagnostics-content">
             <div class="dialog-header">
-                <div class="title-area">
-                    <h2 class="text-lg font-bold">Diagnostics ({game.name})</h2>
+                <h2 class="text-lg font-bold">Diagnostics ({game.name})</h2>
+                <div class="header-actions">
                     <ShiftIndicator />
+                    <TeachingTooltip>
+                        <p>Diagnostics help catch common off-spec behaviors in game integrations.</p>
+                        <p><b>Dismissing</b> a diagnostic instance hides it. Future diagnostics are still visible.</p>
+                        <p><b>Suppressing</b> hides current and future diagnostics of the same type for this game (specifically, game <em>name</em>).</p>
+                        <p><Hotkey>Shift</Hotkey>-click "Dismiss all" to clear all diagnostics (this will <b>delete</b>, not dismiss!).</p>
+                    </TeachingTooltip>
                 </div>
-                <TeachingTooltip>
-                    <p>Diagnostics help catch common off-spec behaviors in game integrations.</p>
-                    <p><b>Dismissing</b> a diagnostic instance hides it. Future diagnostics are still visible.</p>
-                    <p><b>Suppressing</b> hides current and future diagnostics of the same type for this game (specifically, game <em>name</em>).</p>
-                    <p><Hotkey>Shift</Hotkey>-click "Dismiss all" to clear all diagnostics (this will <b>delete</b>, not dismiss!).</p>
-                </TeachingTooltip>
             </div>
 
             <div class="dialog-body">
@@ -129,7 +129,7 @@
         @apply border-b border-neutral-200 dark:border-neutral-700;
     }
 
-    .title-area {
+    .header-actions {
         @apply flex items-center gap-2;
     }
 

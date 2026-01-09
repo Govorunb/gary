@@ -101,11 +101,9 @@
     {#snippet content(props)}
         <div {...props} class="manual-send-content">
                     <div class="dialog-header">
-                        <div class="title-area">
-                            <h2 class="text-lg font-bold">Manual Send ({action.name})</h2>
-                            <ShiftIndicator />
-                        </div>
+                        <h2 class="text-lg font-bold">Manual Send ({action.name})</h2>
                         <div class="header-actions">
+                            <ShiftIndicator />
                             <TeachingTooltip>
                                 {#if schemaJson}
                                     <p><Hotkey>Alt+R</Hotkey> to use random data. (May not always be valid)</p>
@@ -219,10 +217,6 @@
     .dialog-header {
         @apply flex items-center justify-between;
         @apply pb-2 border-b border-neutral-200 dark:border-neutral-700;
-    }
-
-    .title-area {
-        @apply flex items-center gap-2;
     }
 
     .header-actions {

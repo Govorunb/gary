@@ -57,12 +57,8 @@
     {#snippet content(props)}
         <div {...props} class="safe-mode-content">
             <div class="dialog-header">
-                <div class="title-area">
-                    <p class="title">
-                        Safe Mode Active
-                    </p>
-                    <ShiftIndicator />
-                </div>
+                <p class="title">Safe Mode Active</p>
+                <ShiftIndicator />
             </div>
 
             <div class="dialog-body">
@@ -96,7 +92,7 @@
                     </ul>
 
                     <div class="import-actions">
-                        <p class="note">As a last resort, you can reset to defaults: fully empty the above textbox and Shift-click the button to the right.</p>
+                        <p class="note">As a last resort, you can reset to defaults: fully empty the above textbox and Shift-click the "Import and load" button.</p>
                         <button
                             class="btn preset-filled-surface-50-950"
                             onclick={importFixedJson}
@@ -117,7 +113,7 @@
 
     .safe-mode-content {
         @apply flex flex-col gap-4;
-        @apply min-w-lg max-w-[95vw] max-h-[90vh];
+        @apply min-w-lg max-w-[80vw] max-h-[90vh];
         @apply bg-white dark:bg-surface-900;
         @apply rounded-2xl shadow-2xl;
         @apply p-5 text-sm;
@@ -127,10 +123,6 @@
 
     .dialog-header {
         @apply flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-700;
-    }
-
-    .title-area {
-        @apply flex items-center gap-2;
     }
 
     .title {

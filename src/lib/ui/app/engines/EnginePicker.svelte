@@ -106,17 +106,17 @@
             {#if !configEngineId}
                 <div class="view-container" in:fly={{ x: -20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
                     <div class="header">
-                        <div class="title-area">
-                            <h3>Select Engine</h3>
+                        <h3>Select Engine</h3>
+                        <div class="header-actions">
                             <ShiftIndicator />
+                            <TeachingTooltip>
+                                <p><Hotkey>Ctrl+E</Hotkey> to open/close engine picker.</p>
+                                <p><Hotkey>1..9</Hotkey> to quick-select engine.</p>
+                                <p><Hotkey>Alt-click</Hotkey> an engine to quickly open config.</p>
+                                <p><Hotkey>Alt+A</Hotkey> to create a custom OpenAI-compatible engine.</p>
+                                <p>Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (OpenAI-compatible only)</p>
+                            </TeachingTooltip>
                         </div>
-                        <TeachingTooltip>
-                            <p><Hotkey>Ctrl+E</Hotkey> to open/close engine picker.</p>
-                            <p><Hotkey>1..9</Hotkey> to quick-select engine.</p>
-                            <p><Hotkey>Alt-click</Hotkey> an engine to quickly open config.</p>
-                            <p><Hotkey>Alt+A</Hotkey> to create a custom OpenAI-compatible engine.</p>
-                            <p>Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (OpenAI-compatible only)</p>
-                        </TeachingTooltip>
                     </div>
 
                     <div class="list">
@@ -232,7 +232,7 @@
         }
     }
 
-    .title-area {
+    .header-actions {
         @apply flex items-center gap-2;
     }
 
