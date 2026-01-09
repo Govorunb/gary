@@ -109,7 +109,7 @@ class DefaultReporter implements Reporter {
         }
 
         let logFunc: (message: string) => void;
-        if (!isTauri()) {
+        if (!isTauri()) { // dev only (vite dev server + browser)
             const logFuncMap: Record<LogLevel, (message: string) => void> = {
                 [LogLevel.Verbose]: console.log,
                 [LogLevel.Debug]: console.debug,
@@ -119,9 +119,9 @@ class DefaultReporter implements Reporter {
                 [LogLevel.Error]: console.error,
                 [LogLevel.Fatal]: console.error,
             };
-            // dev only
             const loc = getCallerLocation(4 + (options.ignoreStackLevels ?? 0));
-            msg = `[${LogLevel[level]}] ${msg}\nTarget: [${options.target ?? "webview"}:${loc}]`;
+            const target = [options.target ?? "webview", loc].filter(Boolean).join(':');
+            msg = `[${LogLevel[level]}] ${msg}\nTarget: [${target}]`;
             logFunc = logFuncMap[level];
         } else {
             logFunc = (message: string) => safeInvoke("gary_log", {
@@ -226,15 +226,15 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
 
         /** Matches line format above (with or without function name)
          * Breakdown:
-         * - at\s+                        | "at "
-         * - (?:                          | non-capturing group (let's call it group A)
+         *   at\s+                        | "at "
+         *   (?:                          | non-capturing group (let's call it group A)
          *      (?<fnName>\S+)            |   \S+ - non-whitespace characters
          *                    \s+\(       |   " ("
          *   )?                           | group A is optional
-         * - (?<file>[^:]+)               | everything until we hit a colon
-         * - :(?<line>\d+):(?<col>\d+)    | :(digits):(digits)
+         *   (?<file>.*)                  | everything until...
+         *   :(?<line>\d+):(?<col>\d+)    | :(digits):(digits)
          */
-        const regex = /at\s+(?:(?<fnName>\S+)\s+\()?(?<file>[^:]+):(?<line>\d+):(?<col>\d+)/;
+        const regex = /at\s+(?:(?<fnName>\S+)\s+\()?(?<file>.*):(?<line>\d+):(?<col>\d+)/;
         const match = callerLine.match(regex);
         if (!match) return;
         

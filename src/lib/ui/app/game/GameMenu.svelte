@@ -23,7 +23,10 @@
                 class="menu-item"
                 onclick={() => uiState.dialogs.openRawMessageDialog(game)}
             >
-                <Braces size={14} /> Send Raw Message
+                <span class="text-secondary-500 dark:text-secondary-200">
+                    <Braces size={14} />
+                </span>
+                 Send Raw Message
             </button>
             <button
                 class="menu-item menu-item-danger"

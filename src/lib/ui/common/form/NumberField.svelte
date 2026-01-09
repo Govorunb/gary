@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { toStepPrecision, shortId, tauriWebkitScrollNum } from '$lib/app/utils';
+    import { toStepPrecision, shortId, scrollNumInput } from '$lib/app/utils';
     import { type HTMLInputAttributes } from 'svelte/elements';
 
     interface Props extends Omit<HTMLInputAttributes, 'type' | 'value' | 'id'> {
@@ -40,7 +40,7 @@
             bind:value
             class="field-input"
             class:field-slider={slider}
-            {@attach tauriWebkitScrollNum}
+            {@attach scrollNumInput}
         />
     {/snippet}
     {#if slider}

@@ -12,18 +12,23 @@ export function pickRandom<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// on linux, tauri uses libwebkit2gtk, which is just kinda generally weird and offputting
 export function isWebkitGtk() {
-    return navigator.platform.includes("Linux"); // && isTauri();
+    return navigator.platform.includes("Linux") && navigator.vendor.includes("Apple");
 }
 
-export const tauriWebkitScrollNum: Attachment<HTMLInputElement> = (el) => {
+export const scrollNumInput: Attachment<HTMLInputElement> = (el) => {
     if (el.type !== "number" && el.type !== "range") {
-        r.warn("webkitScrollNum should only be attached to inputs of type 'number' or 'range'");
+        r.warn("scrollNumInput should only be attached to inputs of type 'number' or 'range'");
         el.style.border = "1px red dotted";
         return;
     }
-    // on linux, tauri uses libwebkit2gtk, which is just kinda generally weird and offputting
-    if (!isWebkitGtk()) return;
+    // browser vendors are so funny
+    // on chromium you have to "opt in" with a 'wheel' listener
+    // (awp you should just do the scrolling yourself inside the listener - obviating the browser implementation)
+    // what a big brain big man big beefy brain man move
+    // (also on cr it only scrolls when focused to prevent "randomly" hijacking page scroll - we don't care, our page doesn't scroll)
+    //if (!isWebkitGtk()) return on(el, "wheel", () => {});
     
     const listener = (evt: WheelEvent) => {
         const target = evt.target as HTMLInputElement;
@@ -34,7 +39,7 @@ export const tauriWebkitScrollNum: Attachment<HTMLInputElement> = (el) => {
         evt.deltaY < 0 ? target.stepUp() : target.stepDown();
         target.dispatchEvent(new Event("input")); // svelte 5 targets 'input' and not 'change'
     };
-    return on(el, "wheel", listener, { passive: true });
+    return on(el, "wheel", listener); // ignore chromium asking for { passive: true }, it's a trap (can't preventDefault)
 };
 
 export function preventDefault<T, E extends Event, F extends (evt: E, ...args: any[]) => T>(func: F) {

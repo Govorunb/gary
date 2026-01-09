@@ -78,9 +78,9 @@ Zod use should follow these conventions:
 #### Svelte + Skeleton UI
 
 Svelte scopes CSS to the component - at compile time, a class like `.my-class` is transformed into e.g. `.random-id-unique-by-component.my-class` in the generated HTML and CSS rules.
-On the other hand, props on components *are not HTML props* - `class` may eventually be applied to a real HTML element, but because of this CSS scoping the compiled selector **will not** apply to the nested component's elements. To get around this, you need to:
+On the other hand, props on components *are not HTML props* - `class` may eventually be applied to a real HTML element, but because of this CSS scoping the compiled selector will not apply to the nested component's elements. To get around this, you need to:
 1. "Consume" the CSS class in the same component by passing in a `{#snippet}` if the child component accepts one;
-2. Or, use the `:global` selector, e.g. `:global(.my-class)` (however, this pollutes the global styles, so prefer the first option).
+2. Or, use the `:global` selector, e.g. `:global(.my-class)`. To avoid polluting global styles, `:global` must be nested inside another, more specific selector. You should generally prefer option 1 if possible.
 
 ```svelte
 <!-- Incorrect -->
@@ -96,21 +96,38 @@ On the other hand, props on components *are not HTML props* - `class` may eventu
             ...
         </button>
     {/snippet}
+    <p>Tooltip content</p>
 </Tooltip.Trigger>
+
+<!-- Alternative -->
+ <div class="some-other-div">
+    ...
+    <Tooltip.Trigger class="tooltip-trigger">
+        ...
+    </Tooltip.Trigger>
+    ...
+</div>
 
 <style lang="postcss">
 @reference "global.css";
+
 .tooltip-trigger {
     ...
 }
-/* alternative - worse, prefer not doing this */
-:global(.tooltip-trigger) {
+/* alternative - make sure the selector is specific */
+.some-other-div {
     ...
+    /* CSS nesting is widely available in all browsers */
+    & :global(.tooltip-trigger) {
+        ...
+    }
 }
 </style>
 ```
 
 Additionally, Skeleton UI brings several built-in CSS classes like `btn` or `preset-tonal-surface`, so you may see them be used without a matching definition in the component's `<style>` tag. You do not need to define them separately. If in doubt, ask the user. Note: they are *not Tailwind directives*, and do not work with `@apply`. They must be placed inside the `class` property.
+
+One last thing about Skeleton UI: its theme also defines three common colors - `primary`, `secondary`, and `tertiary`. We use them to denote how "advanced" an action is - `primary` for normal flow, `secondary` for more advanced actions, and `tertiary` for cutting-edge, "you are in the weeds"-type stuff.
 
 ### Backend
 
