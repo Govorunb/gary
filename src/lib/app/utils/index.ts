@@ -239,11 +239,11 @@ export async function* createListener<T>(setup: (next: (value: T) => void, done:
     type QueueValue = T | typeof DONE;
     type Resolve = (value: QueueValue) => void;
 
-    const queue: QueueValue[] = [];
+    let queue: QueueValue[] | null = [];
     let resolve: Resolve | null = null;
 
     const tryResolve = () => {
-        if (!resolve || !queue.length) return;
+        if (!resolve || !queue?.length) return;
         
         const value = queue.shift()!;
         // reentry (just in case)
@@ -253,8 +253,8 @@ export async function* createListener<T>(setup: (next: (value: T) => void, done:
     };
 
     setup(
-        (value) => { queue.push(value); tryResolve(); },
-        () => { queue.push(DONE); tryResolve(); }
+        (value) => { queue?.push(value) && tryResolve(); },
+        () => { queue?.push(DONE) && tryResolve(); }
     );
 
     while (true) {
@@ -265,6 +265,7 @@ export async function* createListener<T>(setup: (next: (value: T) => void, done:
         if (value === DONE) break;
         yield value;
     }
+    queue = null!;
 }
 
 // you're telling me not a single programmer in the history of programming ever needed this

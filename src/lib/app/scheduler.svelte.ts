@@ -75,7 +75,8 @@ export class Scheduler {
     forceAct(actions?: Action[] | null): ResultAsync<EngineAct, ActError> {
         return new ResultAsync(this.actInner(true, actions))
             .andThen(choice => this.isAct(choice) ? ok(choice)
-                : err(new LogicError(`If you see this, DON'T tell me. This is under enough layers of "nobody will ever see this" checks that if you do, I'm NOT going to debug it. I'm just going to retrain to a plumber.`)));
+                : err(new LogicError(`If you see this, DON'T tell me. This is under enough layers of "nobody will ever see this" checks that if you do, I'm NOT going to debug it. I'm just going to retrain to a plumber.`)))
+            .finally(() => this.autoPoker.autoAct && this.autoPoker.forceTimer());
     }
 
     private isAct(choice: EngineActResult): choice is EngineAct {
@@ -159,9 +160,6 @@ export class Scheduler {
     }
 
     private performAct(act: EngineAct, forced: boolean): ResultAsync<EngineAct, ActError> {
-        if (this.autoPoker.autoAct) {
-            this.autoPoker.forceTimer();
-        }
         const game = this.registry.games.find(g => g.getAction(act.name));
         if (!game) {
             r.error("Engine selected unknown action", {
@@ -262,39 +260,36 @@ export class AutoPoker {
         this.tryTimer = useDebounce(() => {
             r.info("Engine idle, poking");
             this.scheduler.actPending = true;
-            void this.tryTimer();
+            this.tryTimer();
         }, () => this.tryInterval);
 
         this.forceTimer = useDebounce(() => {
-            r.info("Engine idle for a long time, force acting");
             if (this.scheduler.forceQueue.length === 0) {
+                r.info("Engine idle for a long time, force acting");
                 this.scheduler.forceQueue.push(null);
+            } else {
+                r.info("Engine idle but FQ non-empty");
             }
         }, () => this.forceInterval);
 
         $effect(() => {
             if (!this.autoAct) {
                 untrack(() => this.forceTimer.cancel());
-                untrack(() => this.tryTimer.cancel());
             } else {
-                untrack(() => void this.tryTimer());
                 untrack(() => void this.forceTimer());
-
-                if (this.scheduler.canAct && !this.scheduler.actPending && !this.scheduler.forceQueue.length) {
-                    untrack(() => void this.tryTimer());
-                } else {
-                    untrack(() => this.tryTimer.cancel());
-                }
+            }
+        });
+        $effect(() => {
+            if (this.autoAct && this.scheduler.canAct && !this.scheduler.actPending && !this.scheduler.forceQueue.length) {
+                untrack(() => void this.tryTimer());
+            } else {
+                untrack(() => this.tryTimer.cancel());
             }
         });
         // HMR
         session.onDispose(() => {
             this.tryTimer.cancel();
             this.forceTimer.cancel();
-            // @ts-expect-error
-            this.tryTimer = null as any;
-            // @ts-expect-error
-            this.forceTimer = null as any;
         });
     }
 }
