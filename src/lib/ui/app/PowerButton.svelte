@@ -7,6 +7,8 @@
     import { boolAttr } from "runed";
     import r from "$lib/app/utils/reporting";
     import { isTauri } from "@tauri-apps/api/core";
+    import CopyButton from "../common/CopyButton.svelte";
+    import TeachingTooltip from "../common/TeachingTooltip.svelte";
 
     const userPrefs = getUserPrefs();
     const registry = getRegistry();
@@ -61,6 +63,8 @@
             ? "stroke-green-400 dark:stroke-green-700"
             : "stroke-red-400 dark:stroke-red-700";
     }
+
+    const address = $derived(`ws://127.0.0.1:${userPrefs.api.server.port}`);
 </script>
 
 <div class="flex flex-row items-center gap-3">
@@ -92,10 +96,17 @@
             </div>
         </Popover>
     </div>
-    {#if running}
-        <p class="text-sm">Server is running on port {userPrefs.api.server.port}</p>
+    {#if isTauri()}
+        {#if running}
+            <p class="text-sm">
+                Server up on {address}
+                <CopyButton data={address} desc="URL" iconSize={13} />
+            </p>
+        {:else}
+            <p class="text-sm">Server offline</p>
+        {/if}
     {:else}
-        <p class="text-sm">Server is not running</p>
+        Server not available
     {/if}
 </div>
 <Dialog open={confirmModalOpen} onOpenChange={(d) => confirmModalOpen = d.open}>
