@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { SendHorizontal, Volume2, VolumeOff } from "@lucide/svelte";
+    import { Flag, FlagOff, SendHorizontal, Volume2, VolumeOff } from "@lucide/svelte";
     import { PressedKeys, TextareaAutosize } from "runed";
     import { tooltip } from "$lib/app/utils";
     import { getSession, getUserPrefs } from "$lib/app/utils/di";
@@ -46,9 +46,9 @@
         onclick={toggleSilent}
     >
         {#if silent}
-            <VolumeOff />
+            <FlagOff />
         {:else}
-            <Volume2 />
+            <Flag />
         {/if}
     </button>
     <button
