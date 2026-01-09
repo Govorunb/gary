@@ -4,9 +4,9 @@ import r, { LogLevel } from "$lib/app/utils/reporting";
 import { zActData, type Action } from "$lib/api/v1/spec";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
-import { useDebounce } from "runed";
 import { untrack } from "svelte";
 import { sendNotification } from "@tauri-apps/plugin-notification";
+import { debounced } from "./utils";
 
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
@@ -247,43 +247,43 @@ export type Cancelled = "cancelled";
 
 export class AutoPoker {
     public autoAct = $state(false);
-    public tryInterval = $state(5000);
-    public forceInterval = $state(30000);
-    public readonly tryTimer: ReturnType<typeof useDebounce<[], void>>;
-    public readonly forceTimer: ReturnType<typeof useDebounce<[], void>>;
+    public tryInterval = $state(1000);
+    public forceInterval = $state(5000);
+    public readonly tryTimer: ReturnType<typeof debounced>;
+    public readonly forceTimer: ReturnType<typeof debounced>;
 
     private get scheduler() {
         return this.session.scheduler;
     }
 
     constructor(private session: Session) {
-        this.tryTimer = useDebounce(() => {
+        this.tryTimer = $derived(debounced(() => untrack(() => {
             r.info("Engine idle, poking");
             this.scheduler.actPending = true;
             this.tryTimer();
-        }, () => this.tryInterval);
+        }), this.tryInterval));
 
-        this.forceTimer = useDebounce(() => {
+        this.forceTimer = $derived(debounced(() => untrack(() => {
             if (this.scheduler.forceQueue.length === 0) {
                 r.info("Engine idle for a long time, force acting");
                 this.scheduler.forceQueue.push(null);
             } else {
                 r.info("Engine idle but FQ non-empty");
             }
-        }, () => this.forceInterval);
+        }), this.forceInterval));
 
         $effect(() => {
-            if (!this.autoAct) {
-                untrack(() => this.forceTimer.cancel());
+            if (this.autoAct) {
+                void this.forceTimer();
             } else {
-                untrack(() => void this.forceTimer());
+                this.forceTimer.cancel();
             }
         });
         $effect(() => {
             if (this.autoAct && this.scheduler.canAct && !this.scheduler.actPending && !this.scheduler.forceQueue.length) {
-                untrack(() => void this.tryTimer());
+                void this.tryTimer();
             } else {
-                untrack(() => this.tryTimer.cancel());
+                this.tryTimer.cancel();
             }
         });
         // HMR
