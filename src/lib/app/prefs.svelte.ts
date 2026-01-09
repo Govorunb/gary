@@ -66,7 +66,7 @@ export class UserPrefs {
                 toast: false, // dialog will pop up momentarily
                 ctx: {
                     issues: zodError.issues,
-                    data,
+                    // data, // erm. don't log that
                 }
             });
             return err(errorMessage);
