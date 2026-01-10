@@ -47,6 +47,7 @@ You can run the project in the following ways:
 3. Tauri release build: `pnpm tauri build`
     - Bona fide release build, with everything that entails (e.g. frontend assets are bundled and minified, WebView origin is `tauri://localhost` on Linux and `https://tauri.localhost` on Windows)
     - Takes a while (full release build and bundle)
+    - Installers in `src-tauri/target/release/bundle/`, executable in `src-tauri/target/`
     - Preferences are shared with debug builds (you might need to clear them every now and then, so don't get too attached)
 
 ### Commands
