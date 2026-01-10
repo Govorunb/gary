@@ -8,7 +8,6 @@
     import r from "$lib/app/utils/reporting";
     import { isTauri } from "@tauri-apps/api/core";
     import CopyButton from "../common/CopyButton.svelte";
-    import TeachingTooltip from "../common/TeachingTooltip.svelte";
 
     const userPrefs = getUserPrefs();
     const registry = getRegistry();
@@ -57,13 +56,6 @@
         }
     })
 
-    function getBtnStroke() {
-        if (!haveTauri) return "stroke-surface-100 dark:stroke-surface-900";
-        return running
-            ? "stroke-green-400 dark:stroke-green-700"
-            : "stroke-red-400 dark:stroke-red-700";
-    }
-
     const address = $derived(`ws://127.0.0.1:${userPrefs.api.server.port}`);
 </script>
 
@@ -77,8 +69,7 @@
             title={powerBtnTooltip}
             disabled={!haveTauri}
         >
-            <!-- class is a passdown prop, not actual css -->
-            <CirclePower size={40} class={["pointer-events-none", getBtnStroke()]} />
+            <CirclePower size={40} />
         </button>
         <Popover arrow>
             {#snippet trigger(props)}
@@ -96,29 +87,29 @@
             </div>
         </Popover>
     </div>
-    {#if isTauri()}
-        {#if running}
-            <p class="text-sm">
-                Server up on {address}
-                <CopyButton data={address} desc="URL" iconSize={13} />
-            </p>
+    <p class="text-sm">
+        Server
+        {#if haveTauri}
+            {#if running}
+                up on {address}<CopyButton data={address} desc="URL" iconSize={13} />
+            {:else}
+                offline
+            {/if}
         {:else}
-            <p class="text-sm">Server offline</p>
+            not available
         {/if}
-    {:else}
-        Server not available
-    {/if}
+    </p>
 </div>
-<Dialog open={confirmModalOpen} onOpenChange={(d) => confirmModalOpen = d.open}>
+<Dialog bind:open={confirmModalOpen}>
     {#snippet content(props)}
         <div {...props} class="confirm-content preset-outlined-warning-300-700">
-                    <h2 class="text-lg font-bold">Confirm stopping server</h2>
-                    <p>Are you sure you want to stop the server? There are still open connections.</p>
-                    <p class="note">Shift-click to bypass this confirmation.</p>
-                    <div class="flex flex-row justify-end gap-2">
-                        <button class="btn preset-tonal-warning" onclick={() => togglePower(true)}>Disconnect all games</button>
-                        <button class="btn preset-tonal-surface" onclick={() => confirmModalOpen = false}>Cancel</button>
-                    </div>
+            <h3>Confirm stopping server</h3>
+            <p>Are you sure you want to stop the server? There are still open connections.</p>
+            <p class="note">Shift-click to bypass this confirmation.</p>
+            <div class="flex flex-row justify-end gap-2">
+                <button class="btn preset-tonal-warning" onclick={() => togglePower(true)}>Disconnect all games</button>
+                <button class="btn preset-tonal-surface" onclick={() => confirmModalOpen = false}>Cancel</button>
+            </div>
         </div>
     {/snippet}
 </Dialog>
@@ -141,6 +132,16 @@
         @apply disabled:cursor-not-allowed;
         &:not(:disabled) {
             @apply hover:scale-101 active:scale-99;
+        }
+        @apply text-red-400 dark:text-red-700;
+        &[data-running] {
+            @apply text-green-400 dark:text-green-700;
+        }
+        &:disabled {
+            @apply text-surface-100 dark:text-surface-900;
+        }
+        & > * {
+            @apply pointer-events-none;
         }
     }
 

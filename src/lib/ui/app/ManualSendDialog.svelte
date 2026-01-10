@@ -101,7 +101,7 @@
     {#snippet content(props)}
         <div {...props} class="manual-send-content">
                     <div class="dialog-header">
-                        <h2 class="text-lg font-bold">Manual Send ({action.name})</h2>
+                        <h3>Manual Send ({action.name})</h3>
                         <div class="header-actions">
                             <ShiftIndicator />
                             <TeachingTooltip>
@@ -173,7 +173,7 @@
                     <div class="dialog-footer">
                         <div class="flex gap-2">
                             {#if schemaJson}
-                                <button class="btn subtle-btn"
+                                <button class="btn btn-base subtle-btn"
                                     onclick={reroll}
                                     {@attach tooltip("Replace editor contents with random data (Alt+R)")}
                                 >
@@ -183,9 +183,9 @@
                             {/if}
                         </div>
                         <div class="flex gap-2">
-                            <button class="btn subtle-btn" onclick={closeDialog}>Cancel</button>
+                            <button class="btn btn-base subtle-btn" onclick={closeDialog}>Cancel</button>
                             <button
-                                class="btn send-btn"
+                                class="btn btn-base send-btn"
                                 onclick={sendAction}
                                 disabled={!isValid && !shiftPressed}
                                 data-bypass={boolAttr(!isValid && shiftPressed)}
@@ -268,7 +268,7 @@
 
     .schema-toggle {
         @apply flex items-center gap-1;
-        @apply px-2 py-1 rounded-md text-lg font-medium;
+        @apply px-2 py-1.5 rounded-md text-base font-medium;
         @apply bg-neutral-100 dark:bg-neutral-800;
         @apply text-neutral-700 dark:text-neutral-300;
         @apply border border-neutral-200 dark:border-neutral-700;
@@ -296,12 +296,6 @@
     .dialog-footer {
         @apply flex flex-row justify-between items-center w-full;
         @apply pt-2 border-t border-neutral-200 dark:border-neutral-700;
-    }
-
-    .btn {
-        @apply inline-flex items-center gap-2;
-        @apply px-3 py-1.5 rounded-md text-sm font-medium;
-        @apply transition-all;
     }
 
     .subtle-btn {

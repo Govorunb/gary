@@ -2,7 +2,7 @@
     import type { Game } from "$lib/api/game.svelte";
     import Dialog from '$lib/ui/common/Dialog.svelte';
     import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
-    import { Send } from "@lucide/svelte";
+    import { Send, TriangleAlert } from "@lucide/svelte";
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
     import { getUserPrefs } from "$lib/app/utils/di";
@@ -126,7 +126,7 @@
     {#snippet content(props)}
         <div {...props} class="raw-message-content">
             <div class="dialog-header">
-                <h2 class="text-lg font-bold">Send Raw Message ({game.name})</h2>
+                <h3>Send Raw Message ({game.name})</h3>
                 <div class="header-actions">
                     <TeachingTooltip>
                         <p>Send any arbitrary text WebSocket message.</p>
@@ -169,27 +169,30 @@
                             class="preset-select"
                             aria-label="Select message template"
                         >
-                            {#each Object.entries(messagePresets) as [key, preset]}
+                            {#each Object.entries(messagePresets) as [key, preset] (key)}
                                 {#if !preset.experimental}
                                     <option value={key}>{preset.name}</option>
                                 {/if}
                             {/each}
                             <option disabled>--- Experimental ---</option>
-                            {#each Object.entries(messagePresets) as [key, preset]}
+                            {#each Object.entries(messagePresets) as [key, preset] (key)}
                                 {#if preset.experimental}
                                     <option value={key}>{preset.name}</option>
                                 {/if}
                             {/each}
                         </select>
                         <TeachingTooltip>
+                            {#snippet icon()}
+                                <TriangleAlert />
+                            {/snippet}
                             Selecting a template will replace the contents of your editor.
                         </TeachingTooltip>
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <button class="btn preset-tonal-surface" onclick={closeDialog}>Cancel</button>
+                    <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Cancel</button>
                     <button
-                        class="btn preset-filled-primary-400-600"
+                        class="btn btn-base preset-filled-primary-400-600"
                         onclick={sendMessage}
                         {@attach tooltip("Send (Ctrl+Enter)")}
                     >
@@ -263,10 +266,5 @@
         @apply bg-white dark:bg-neutral-800;
         @apply text-neutral-900 dark:text-neutral-100;
         @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
-    }
-
-    .btn {
-        @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium;
-        @apply transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
     }
 </style>

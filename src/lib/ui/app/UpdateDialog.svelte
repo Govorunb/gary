@@ -93,14 +93,14 @@
             </div>
 
             <div class="dialog-footer">
-                <button class="btn skip-btn" onclick={skip}>
+                <button class="btn btn-base skip-btn" onclick={skip}>
                     Skip this version
                 </button>
                 <div class="flex-1 self-stretch"></div>
-                <button class="btn cancel-btn" onclick={cancel}>
+                <button class="btn btn-base cancel-btn" onclick={cancel}>
                     Cancel
                 </button>
-                <button class="btn preset-filled-primary-400-600" onclick={doUpdate} disabled={updating}>
+                <button class="btn btn-base preset-filled-primary-400-600" onclick={doUpdate} disabled={updating}>
                     {updating ? "Updating..." : "Update"}
                 </button>
             </div>
@@ -156,13 +156,6 @@
     .dialog-footer {
         @apply flex items-center justify-between w-full pt-4 gap-4;
         @apply border-t border-neutral-200 dark:border-neutral-700;
-    }
-
-    .btn {
-        @apply inline-flex items-center gap-2;
-        @apply px-3 py-1.5 rounded-md text-sm font-medium;
-        @apply transition-all;
-        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
     }
 
     .skip-btn, .cancel-btn {

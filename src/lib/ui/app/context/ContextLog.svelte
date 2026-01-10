@@ -17,12 +17,13 @@
     const logElemSize = new ElementSize(() => scrollElem);
     let pendingScroll = $state(false);
 
+    // TODO: large perf impact from measuring
     $effect(() => {
         void session.context.userView.length;
         void logElemSize.height;
         untrack(updateScroll);
     });
-    
+
     function updateScroll() {
         if (!pendingScroll && scrollElem && scrollOffset < scrollThreshold) {
             pendingScroll = true;
@@ -68,19 +69,14 @@
 <style lang="postcss">
     @reference "global.css";
 
-    h2 {
-        @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
-        @apply select-none;
-    }
     .context-log-container {
         @apply flex flex-col h-full gap-4;
-        @apply p-4 rounded-xl text-sm shadow-sm;
-        @apply bg-neutral-50 ring-1 ring-primary-200/40;
-        @apply dark:bg-neutral-900/70 dark:ring-primary-800/40;
+        @apply p-4 text-sm shadow-sm;
+        @apply bg-neutral-50 dark:bg-neutral-900/70;
+        @apply ring-1 ring-primary-200/40 dark:ring-primary-800/40;
     }
     .reverse-log {
-        /* flex-col-reverse instead of reversing the array */
-        @apply flex flex-col-reverse flex-1 min-h-0;
+        @apply flex flex-col flex-1 min-h-0;
     }
     .log {
         @apply flex flex-col gap-2;

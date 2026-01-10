@@ -114,21 +114,20 @@
 
                 <div class="preferences-layout">
                     <div class="flex flex-col gap-2">
-                        <p>Backup or restore preferences via clipboard:</p>
+                        <p>Backup/restore raw JSON data to/from clipboard:</p>
                         <div class="field">
                             <div class="flex flex-row gap-2">
                                 <button class="btn preset-outlined-surface-300-700"
                                     onclick={exportPrefs}
                                 >
-                                    Export
+                                    Export data
                                 </button>
                                 <button class="btn preset-outlined-surface-300-700"
                                     onclick={importPrefs}
                                 >
-                                    Import
+                                    Import data
                                 </button>
                             </div>
-                            <p class="field-label">Raw JSON data</p>
                         </div>
                         {#if prefsBackupFeedback}
                             <div class="prefs-iex-status"
@@ -145,6 +144,10 @@
                                 {/if}
                             </div>
                         {/if}
+                        <p class="note whitespace-pre-line">
+                            Your preferences data may contain sensitive information.
+                            Please think twice before sharing it.
+                        </p>
                     </div>
                 </div>
             {/snippet}

@@ -34,7 +34,7 @@
     }
 </script>
 
-<div class="flex h-full flex-col">
+<div class="flex h-full flex-col p-4">
     <div class="header">
         <h2>Connections</h2>
         <Popover>
@@ -84,18 +84,10 @@
         @apply px-2;
     }
 
-    h2 {
-        @apply self-center;
-        @apply text-2xl font-bold text-neutral-800 dark:text-neutral-50;
-        @apply select-none;
-    }
-
     .games-container {
         @apply flex flex-col gap-1 flex-1 overflow-y-hidden;
         @apply px-1 py-2;
     }
-
-
 
     .menu-content {
         @apply flex flex-col gap-1 px-1 py-1;
@@ -119,8 +111,7 @@
     .menu-item {
         @apply flex flex-row gap-1.5 items-center;
         @apply w-full px-3 py-2;
-        @apply rounded-sm;
-        @apply text-left text-sm;
+        @apply rounded-sm text-sm;
         @apply text-neutral-700 dark:text-neutral-300;
         @apply transition-colors duration-150;
         &:hover {

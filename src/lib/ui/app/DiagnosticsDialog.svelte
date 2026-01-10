@@ -47,7 +47,7 @@
     {#snippet content(props)}
         <div {...props} class="diagnostics-content">
             <div class="dialog-header">
-                <h2 class="text-lg font-bold">Diagnostics ({game.name})</h2>
+                <h3>Diagnostics ({game.name})</h3>
                 <div class="header-actions">
                     <ShiftIndicator />
                     <TeachingTooltip>
@@ -68,11 +68,11 @@
                         <SegmentedControl.Control>
                             <SegmentedControl.Indicator class="indicator" />
                             <SegmentedControl.Item value="active">
-                                <SegmentedControl.ItemText>Active</SegmentedControl.ItemText>
+                                <SegmentedControl.ItemText>Active ({visibleDiagnostics.length})</SegmentedControl.ItemText>
                                 <SegmentedControl.ItemHiddenInput />
                             </SegmentedControl.Item>
                             <SegmentedControl.Item value="hidden">
-                                <SegmentedControl.ItemText>Hidden</SegmentedControl.ItemText>
+                                <SegmentedControl.ItemText>Hidden ({hiddenDiagnostics.length})</SegmentedControl.ItemText>
                                 <SegmentedControl.ItemHiddenInput />
                             </SegmentedControl.Item>
                         </SegmentedControl.Control>
@@ -85,7 +85,7 @@
                         {@const diagCount = diagnostics.length}
                         {@const OKIcon = diagCount ? Info : Check}
                         <div class="empty-state">
-                            <OKIcon class="empty-icon" />
+                            <OKIcon />
                             <p>No{diagCount ? (showHidden ? ' hidden ' : ' active ') : ' '}diagnostics</p>
                             <p class="text-sm text-neutral-500">
                                 {!diagCount
@@ -100,15 +100,15 @@
             <div class="dialog-footer">
                 <div class="footer-actions">
                     <button
-                        class={['btn', showClearBtn ? "preset-tonal-warning" : "preset-tonal-surface"]}
-                        onclick={() => clearBtn()}
+                        class={['btn', 'btn-base', showClearBtn ? "preset-tonal-warning" : "preset-tonal-surface"]}
+                        onclick={clearBtn}
                         disabled={!activeDiagnostics.length}
                         {@attach tooltip(showClearBtn ? "This will permanently remove all diagnostics!" : "")}
                     >
                         {showClearBtn ? "Clear" : showHidden ? "Restore" : "Dismiss"} all
                     </button>
                 </div>
-                <button class="btn preset-tonal-surface" onclick={() => closeDialog()}>Close</button>
+                <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Close</button>
             </div>
         </div>
     {/snippet}
@@ -149,10 +149,6 @@
         @apply text-neutral-500 dark:text-neutral-400;
     }
 
-    .empty-icon {
-        @apply w-12 h-12 text-neutral-400 dark:text-neutral-600;
-    }
-
     .diagnostics-list {
         @apply flex flex-col gap-2 overflow-y-auto;
         @apply pr-1;
@@ -161,10 +157,5 @@
     .dialog-footer {
         @apply flex items-center justify-between w-full pt-2 gap-2;
         @apply border-t border-neutral-200 dark:border-neutral-700;
-    }
-
-    .btn {
-        @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium;
-        @apply transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
     }
 </style>

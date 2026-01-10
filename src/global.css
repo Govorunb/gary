@@ -51,6 +51,21 @@
     .cm-selectionBackground {
         @apply bg-primary-100/50! dark:bg-primary-400/50!;
     }
+    h2 {
+        @apply text-2xl font-bold;
+        @apply text-neutral-800 dark:text-neutral-50;
+        @apply select-none;
+    }
+    h3 {
+        @apply text-lg font-bold;
+        @apply text-neutral-800 dark:text-neutral-50;
+        @apply select-none;
+    }
+    .btn-base {
+        @apply inline-flex items-center gap-2;
+        @apply px-3! py-1.5! rounded-md! text-sm! font-medium;
+        @apply transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
+    }
 }
 
 @layer theme {

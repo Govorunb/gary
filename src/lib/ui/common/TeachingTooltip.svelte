@@ -5,19 +5,25 @@
 
     type Props = {
         interactive?: boolean;
+        icon?: Snippet;
         children: Snippet;
     };
 
     let {
         interactive = true,
+        icon = defaultIcon,
         children
     }: Props = $props();
 </script>
 
+{#snippet defaultIcon()}
+    <CircleQuestionMark />
+{/snippet}
+
 <Tooltip closeOnClick={false} {interactive}>
     {#snippet trigger(props)}
         <button {...props} class="teaching-tooltip-trigger">
-            <CircleQuestionMark />
+            {@render icon()}
         </button>
     {/snippet}
     <div class="teaching-tooltip-content">
