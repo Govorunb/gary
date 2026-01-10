@@ -70,62 +70,44 @@
 </script>
 
 <Dialog bind:open position="center">
-    {#snippet content(props)}
-        <div {...props} class="update-dialog-content">
-            <div class="dialog-header">
-                <p class="text-xl font-bold">Update Available</p>
+    {#snippet title()}
+        <p class="text-xl font-bold">Update Available</p>
+    {/snippet}
+    {#snippet body()}
+        <div class="dialog-body-scroll">
+            <p class="update-message">
+            Update from <span class="font-mono font-semibold">{update.currentVersion}</span> to 
+            <span class="font-mono font-semibold">{update.version}</span>?
+        </p>
+        {#if update.body}
+            <div class="release-notes">
+                <p class="release-notes-title">Release Notes:</p>
+                <p class="release-notes-content">{update.body}</p>
             </div>
-
-            <div class="dialog-body">
-                <p class="update-message">
-                    Update from <span class="font-mono font-semibold">{update.currentVersion}</span> to 
-                    <span class="font-mono font-semibold">{update.version}</span>?
-                </p>
-                {#if update.body}
-                    <div class="release-notes">
-                        <p class="release-notes-title">Release Notes:</p>
-                        <p class="release-notes-content">{update.body}</p>
-                    </div>
-                {/if}
-                <p>
-                    Restart the app at your convenience to finish the update.
-                </p>
-            </div>
-
-            <div class="dialog-footer">
-                <button class="btn btn-base skip-btn" onclick={skip}>
-                    Skip this version
-                </button>
-                <div class="flex-1 self-stretch"></div>
-                <button class="btn btn-base cancel-btn" onclick={cancel}>
-                    Cancel
-                </button>
-                <button class="btn btn-base preset-filled-primary-400-600" onclick={doUpdate} disabled={updating}>
-                    {updating ? "Updating..." : "Update"}
-                </button>
-            </div>
+        {/if}
+        <p>
+            Restart the app at your convenience to finish the update.
+            </p>
         </div>
+    {/snippet}
+    {#snippet footer()}
+        <button class="btn btn-base skip-btn" onclick={skip}>
+            Skip this version
+        </button>
+        <div class="flex-1 self-stretch"></div>
+        <button class="btn btn-base cancel-btn" onclick={cancel}>
+            Cancel
+        </button>
+        <button class="btn btn-base preset-filled-primary-400-600" onclick={doUpdate} disabled={updating}>
+            {updating ? "Updating..." : "Update"}
+        </button>
     {/snippet}
 </Dialog>
 
 <style lang="postcss">
     @reference "global.css";
 
-    .update-dialog-content {
-        @apply flex flex-col gap-4;
-        @apply min-w-lg max-w-[95vw] max-h-[80vh] overflow-hidden;
-        @apply bg-white dark:bg-surface-900;
-        @apply rounded-2xl shadow-2xl;
-        @apply p-5 text-sm;
-        @apply text-neutral-900 dark:text-neutral-50;
-    }
-
-    .dialog-header {
-        @apply flex items-center justify-between;
-        @apply pb-2 border-b border-neutral-200 dark:border-neutral-700;
-    }
-
-    .dialog-body {
+    .dialog-body-scroll {
         @apply flex flex-col gap-3;
         @apply flex-1 overflow-y-auto;
     }
@@ -151,11 +133,6 @@
         @apply text-sm;
         @apply text-neutral-600 dark:text-neutral-400;
         @apply whitespace-pre-wrap;
-    }
-
-    .dialog-footer {
-        @apply flex items-center justify-between w-full pt-4 gap-4;
-        @apply border-t border-neutral-200 dark:border-neutral-700;
     }
 
     .skip-btn, .cancel-btn {

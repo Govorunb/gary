@@ -10,6 +10,9 @@
         trigger?: SnippetOfHTML<'button'>,
         content?: SnippetOfHTML<'div'>,
         children?: Snippet,
+        title?: Snippet,
+        body?: Snippet,
+        footer?: Snippet,
         position?: 'center' | 'top-start',
     } & DialogRootProps;
 
@@ -18,6 +21,9 @@
         trigger,
         content,
         children,
+        title,
+        body,
+        footer,
         position = 'center',
         ...props
     }: Props = $props();
@@ -35,7 +41,22 @@
     <Portal>
         <Dialog.Backdrop class="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity" />
         <Dialog.Positioner class={positionClasses[position]}>
-            <Dialog.Content element={content}>
+            <Dialog.Content element={content} class="dialog-content">
+                {#if title}
+                    <div class="dialog-header">
+                        {@render title()}
+                    </div>
+                {/if}
+                {#if body}
+                    <div class="dialog-body">
+                        {@render body()}
+                    </div>
+                {/if}
+                {#if footer}
+                    <div class="dialog-footer">
+                        {@render footer()}
+                    </div>
+                {/if}
                 {@render children?.()}
             </Dialog.Content>
         </Dialog.Positioner>

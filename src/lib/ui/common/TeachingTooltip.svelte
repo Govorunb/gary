@@ -43,7 +43,7 @@
     }
     
     .teaching-tooltip-content {
-        @apply card flex flex-col gap-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
+        @apply flex flex-col gap-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
         @apply text-xs text-neutral-500 dark:text-neutral-300;
     }
 </style>

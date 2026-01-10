@@ -80,165 +80,143 @@
 </script>
 
 <Dialog bind:open position="center">
-    {#snippet content(props)}
-        <div {...props} class="settings-content">
-            <div class="dialog-header">
-                <p class="text-xl font-bold">Settings</p>
-                <Hotkey>Ctrl+,</Hotkey>
+    {#snippet title()}
+        <p class="text-xl font-bold">Settings</p>
+        <Hotkey>Ctrl+,</Hotkey>
+    {/snippet}
+    {#snippet body()}
+        <div class="dialog-body-scroll">
+            {#each [
+            GeneralSection,
+            UpdatesSection,
+            PreferencesSection,
+            TroubleshootingSection,
+        ] as section}
+            <div class="settings-section">
+                {@render section()}
             </div>
-
-            <div class="dialog-body">
-                {#each [
-                    GeneralSection,
-                    UpdatesSection,
-                    PreferencesSection,
-                    TroubleshootingSection,
-                ] as section}
-                    <div class="settings-section">
-                        {@render section()}
-                    </div>
-                {/each}
-            </div>
-
-            {#snippet GeneralSection()}
-                <p class="section-title">General</p>
-
-                <div class="field">
-                    <p class="field-label">Theme</p>
-                    <ThemePicker bind:currentTheme={userPrefs.app.theme} />
-                </div>
-            {/snippet}
-
-            {#snippet PreferencesSection()}
-                <p class="section-title">Preferences</p>
-
-                <div class="preferences-layout">
-                    <div class="flex flex-col gap-2">
-                        <p>Backup/restore raw JSON data to/from clipboard:</p>
-                        <div class="field">
-                            <div class="flex flex-row gap-2">
-                                <button class="btn preset-outlined-surface-300-700"
-                                    onclick={exportPrefs}
-                                >
-                                    Export data
-                                </button>
-                                <button class="btn preset-outlined-surface-300-700"
-                                    onclick={importPrefs}
-                                >
-                                    Import data
-                                </button>
-                            </div>
-                        </div>
-                        {#if prefsBackupFeedback}
-                            <div class="prefs-iex-status"
-                                data-success={boolAttr(prefsBackupStatus === "success")}
-                                data-error={boolAttr(prefsBackupStatus === "error")}
-                            >
-                                <div class="status-content">
-                                    {prefsBackupFeedback}
-                                </div>
-                                {#if prefsBackupStatus === "error"}
-                                    <button class="dismiss-btn" onclick={dismissStatus}>
-                                        <X size={14} />
-                                    </button>
-                                {/if}
-                            </div>
-                        {/if}
-                        <p class="note whitespace-pre-line">
-                            Your preferences data may contain sensitive information.
-                            Please think twice before sharing it.
-                        </p>
-                    </div>
-                </div>
-            {/snippet}
-
-            {#snippet UpdatesSection()}
-                <p class="section-title">Updates</p>
-
-                <div class="flex gap-2">
-                    <p>Current version:
-                    {#await app.getVersion()}
-                        {APP_VERSION}
-                    {:then v}
-                        {v}
-                    {:catch}
-                        Big Dingus The {APP_VERSION}rd
-                    {/await}
-                    </p>
-                </div>
-
-                <div class="update-settings">
-                    <p class="font-light">Automatically check for updates on app launch:</p>
-                    <select class="update-select" bind:value={userPrefs.app.updates.autoCheckInterval}>
-                        <option value="everyLaunch">Every launch</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="off">Never</option>
-                    </select>
-                </div>
-                <div class="update-actions">
-                    <button class="btn preset-outlined-surface-300-700"
-                        onclick={checkForUpdates}
-                        disabled={updater.checkingForUpdates}
-                    >
-                        Check now
-                    </button>
-                    <p class="note">Last checked: {lastCheckedAt}</p>
-                </div>
-                {#if updater.skipVersion}
-                    <p class="note">
-                        You skipped updating to version {updater.skipVersion}
-                        <button onclick={resetSkipVersion}><X size="12" /></button>
-                    </p>
-                {/if}
-            {/snippet}
-
-            {#snippet TroubleshootingSection()}
-                <p class="section-title">Troubleshooting</p>
-
-                <div class="flex flex-row gap-2">
-                    <button class="btn preset-outlined-surface-300-700"
-                        onclick={() => safeInvoke("open_logs_folder")}
-                    >
-                        Open logs folder <ExternalLink size=20 />
-                    </button>
-                    <button class="btn preset-tonal-error"
-                        onclick={clearLocalStorage}
-                    >
-                        Reset app preferences
-                    </button>
-                </div>
-            {/snippet}
+            {/each}
         </div>
+
+        {#snippet GeneralSection()}
+            <h2>General</h2>
+
+            <div class="field">
+                <p class="field-label">Theme</p>
+                <ThemePicker bind:currentTheme={userPrefs.app.theme} />
+            </div>
+        {/snippet}
+
+        {#snippet PreferencesSection()}
+            <h2>Preferences</h2>
+
+            <div class="preferences-layout">
+                <div class="flex flex-col gap-2">
+                    <p>Backup/restore raw JSON data to/from clipboard:</p>
+                    <div class="field">
+                        <div class="flex flex-row gap-2">
+                            <button class="btn btn-base preset-outlined-surface-300-700"
+                                onclick={exportPrefs}
+                            >
+                                Export data
+                            </button>
+                            <button class="btn btn-base preset-outlined-surface-300-700"
+                                onclick={importPrefs}
+                            >
+                                Import data
+                            </button>
+                        </div>
+                    </div>
+                    {#if prefsBackupFeedback}
+                        <div class="prefs-iex-status"
+                            data-success={boolAttr(prefsBackupStatus === "success")}
+                            data-error={boolAttr(prefsBackupStatus === "error")}
+                        >
+                            <div class="status-content">
+                                {prefsBackupFeedback}
+                            </div>
+                            {#if prefsBackupStatus === "error"}
+                                <button class="dismiss-btn" onclick={dismissStatus}>
+                                    <X size={14} />
+                                </button>
+                            {/if}
+                        </div>
+                    {/if}
+                    <p class="note whitespace-pre-line">
+                        Your preferences data may contain sensitive information.
+                        Please think twice before sharing it.
+                    </p>
+                </div>
+            </div>
+        {/snippet}
+
+        {#snippet UpdatesSection()}
+            <h2>Updates</h2>
+
+            <div class="flex gap-2">
+                <p>Current version:
+                {#await app.getVersion()}
+                    {APP_VERSION}
+                {:then v}
+                    {v}
+                {:catch}
+                    Big Dingus The {APP_VERSION}rd
+                {/await}
+                </p>
+            </div>
+
+            <div class="update-settings">
+                <p class="font-light">Automatically check for updates on app launch:</p>
+                <select class="update-select" bind:value={userPrefs.app.updates.autoCheckInterval}>
+                    <option value="everyLaunch">Every launch</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="off">Never</option>
+                </select>
+            </div>
+            <div class="update-actions">
+                <button class="btn btn-base preset-outlined-surface-300-700"
+                    onclick={checkForUpdates}
+                    disabled={updater.checkingForUpdates}
+                >
+                    Check now
+                </button>
+                <p class="note">Last checked: {lastCheckedAt}</p>
+            </div>
+            {#if updater.skipVersion}
+                <p class="note">
+                    You skipped updating to version {updater.skipVersion}
+                    <button onclick={resetSkipVersion}><X size="12" /></button>
+                </p>
+            {/if}
+        {/snippet}
+
+        {#snippet TroubleshootingSection()}
+            <h2>Troubleshooting</h2>
+
+            <div class="flex flex-row gap-2">
+                <button class="btn btn-base preset-outlined-surface-300-700"
+                    onclick={() => safeInvoke("open_logs_folder")}
+                >
+                    Open logs folder <ExternalLink size=20 />
+                </button>
+                <button class="btn btn-base preset-tonal-error"
+                    onclick={clearLocalStorage}
+                >
+                    Reset app preferences
+                </button>
+            </div>
+        {/snippet}
     {/snippet}
 </Dialog>
 
 <style lang="postcss">
     @reference "global.css";
 
-    .settings-content {
-        @apply flex flex-col gap-4;
-        @apply min-w-lg max-w-[95vw] max-h-[80vh] overflow-hidden;
-        @apply bg-white dark:bg-surface-900;
-        @apply rounded-2xl shadow-2xl;
-        @apply p-5 text-sm;
-        @apply text-neutral-900 dark:text-neutral-50;
-    }
-
-    .dialog-header {
-        @apply flex items-center justify-between;
-        @apply pb-2 border-b border-neutral-200 dark:border-neutral-700;
-    }
-
-    .dialog-body {
+    .dialog-body-scroll {
         @apply flex flex-col gap-3;
         @apply flex-1 overflow-y-auto;
-    }
-
-    .dialog-footer {
-        @apply flex items-center justify-between w-full pt-4;
-        @apply border-t border-neutral-200 dark:border-neutral-700;
     }
 
     .settings-section {
@@ -246,16 +224,6 @@
         @apply p-4 rounded-lg;
         @apply bg-surface-50 dark:bg-surface-800;
         @apply border border-neutral-200 dark:border-neutral-700;
-    }
-
-    .section-title {
-        @apply h4;
-        @apply text-neutral-900 dark:text-neutral-50;
-    }
-
-    .section-description {
-        @apply text-sm;
-        @apply text-neutral-600 dark:text-neutral-400;
     }
 
     .field {
@@ -315,11 +283,5 @@
 
     .status-content {
         @apply flex-1;
-    }
-
-    .dismiss-btn {
-        @apply shrink-0 p-0.5 rounded;
-        @apply hover:bg-black/5 dark:hover:bg-white/10;
-        @apply transition-colors;
     }
 </style>

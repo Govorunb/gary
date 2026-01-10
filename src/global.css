@@ -66,6 +66,29 @@
         @apply px-3! py-1.5! rounded-md! text-sm! font-medium;
         @apply transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
     }
+    .dialog-content {
+        @apply flex flex-col gap-4;
+        @apply min-w-lg max-w-[95vw] max-h-[80vh] overflow-hidden;
+        @apply bg-white dark:bg-surface-900;
+        @apply rounded-2xl shadow-2xl;
+        @apply p-5 text-sm;
+        @apply text-neutral-900 dark:text-neutral-50;
+    }
+    .dialog-header {
+        @apply flex items-center justify-between;
+        @apply pb-2 border-b border-neutral-200 dark:border-neutral-700;
+    }
+    .dialog-header .header-actions {
+        @apply flex items-center gap-2;
+    }
+    .dialog-body {
+        @apply flex flex-col gap-3;
+        @apply flex-1 overflow-hidden;
+    }
+    .dialog-footer {
+        @apply flex items-center justify-between w-full pt-2 gap-2;
+        @apply border-t border-neutral-200 dark:border-neutral-700;
+    }
 }
 
 @layer theme {

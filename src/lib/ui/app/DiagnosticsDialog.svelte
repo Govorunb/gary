@@ -44,104 +44,88 @@
 </script>
 
 <Dialog bind:open>
-    {#snippet content(props)}
-        <div {...props} class="diagnostics-content">
-            <div class="dialog-header">
-                <h3>Diagnostics ({game.name})</h3>
-                <div class="header-actions">
-                    <ShiftIndicator />
-                    <TeachingTooltip>
-                        <p>Diagnostics help catch common off-spec behaviors in game integrations.</p>
-                        <p><b>Dismissing</b> a diagnostic instance hides it. Future diagnostics are still visible.</p>
-                        <p><b>Suppressing</b> hides current and future diagnostics of the same type for this game (specifically, game <em>name</em>).</p>
-                        <p><Hotkey>Shift</Hotkey>-click "Dismiss all" to clear all diagnostics (this will <b>delete</b>, not dismiss!).</p>
-                    </TeachingTooltip>
-                </div>
-            </div>
-
-            <div class="dialog-body">
-                {#if diagnostics.length}
-                    <SegmentedControl
-                        value={filterValue}
-                        onValueChange={(details) => showHidden = details.value === 'hidden'}
-                    >
-                        <SegmentedControl.Control>
-                            <SegmentedControl.Indicator class="indicator" />
-                            <SegmentedControl.Item value="active">
-                                <SegmentedControl.ItemText>Active ({visibleDiagnostics.length})</SegmentedControl.ItemText>
-                                <SegmentedControl.ItemHiddenInput />
-                            </SegmentedControl.Item>
-                            <SegmentedControl.Item value="hidden">
-                                <SegmentedControl.ItemText>Hidden ({hiddenDiagnostics.length})</SegmentedControl.ItemText>
-                                <SegmentedControl.ItemHiddenInput />
-                            </SegmentedControl.Item>
-                        </SegmentedControl.Control>
-                    </SegmentedControl>
-                {/if}
-                <div class="diagnostics-list">
-                    {#each activeDiagnostics as diag (diag.id)}
-                        <DiagnosticRow {game} {diag} />
-                    {:else}
-                        {@const diagCount = diagnostics.length}
-                        {@const OKIcon = diagCount ? Info : Check}
-                        <div class="empty-state">
-                            <OKIcon />
-                            <p>No{diagCount ? (showHidden ? ' hidden ' : ' active ') : ' '}diagnostics</p>
-                            <p class="text-sm text-neutral-500">
-                                {!diagCount
-                                    ? 'This game is running without any issues.'
-                                    : `All ${diagCount} diagnostic(s) are ${showHidden ? "active" : "suppressed or dismissed"}.`}
-                            </p>
-                        </div>
-                    {/each}
-                </div>
-            </div>
-
-            <div class="dialog-footer">
-                <div class="footer-actions">
-                    <button
-                        class={['btn', 'btn-base', showClearBtn ? "preset-tonal-warning" : "preset-tonal-surface"]}
-                        onclick={clearBtn}
-                        disabled={!activeDiagnostics.length}
-                        {@attach tooltip(showClearBtn ? "This will permanently remove all diagnostics!" : "")}
-                    >
-                        {showClearBtn ? "Clear" : showHidden ? "Restore" : "Dismiss"} all
-                    </button>
-                </div>
-                <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Close</button>
-            </div>
+    {#snippet title()}
+        <h3>Diagnostics ({game.name})</h3>
+        <div class="header-actions">
+            <ShiftIndicator />
+            <TeachingTooltip>
+                <p>Diagnostics help catch common off-spec behaviors in game integrations.</p>
+                <p><b>Dismissing</b> a diagnostic instance hides it. Future diagnostics are still visible.</p>
+                <p><b>Suppressing</b> hides current and future diagnostics of the same type for this game (specifically, game <em>name</em>).</p>
+                <p><Hotkey>Shift</Hotkey>-click "Dismiss all" to clear all diagnostics (this will <b>delete</b>, not dismiss!).</p>
+            </TeachingTooltip>
         </div>
+    {/snippet}
+    {#snippet body()}
+        <div class="dialog-body-scroll">
+            {#if diagnostics.length}
+            <div class="vis-filter">
+                <SegmentedControl
+                    value={filterValue}
+                    onValueChange={(details) => showHidden = details.value === 'hidden'}
+                >
+                    <SegmentedControl.Control>
+                        <SegmentedControl.Indicator class="indicator" />
+                        <SegmentedControl.Item value="active">
+                            <SegmentedControl.ItemText>Active ({visibleDiagnostics.length})</SegmentedControl.ItemText>
+                            <SegmentedControl.ItemHiddenInput />
+                        </SegmentedControl.Item>
+                        <SegmentedControl.Item value="hidden">
+                            <SegmentedControl.ItemText>Hidden ({hiddenDiagnostics.length})</SegmentedControl.ItemText>
+                            <SegmentedControl.ItemHiddenInput />
+                        </SegmentedControl.Item>
+                    </SegmentedControl.Control>
+                </SegmentedControl>
+            </div>
+        {/if}
+        <div class="diagnostics-list">
+            {#each activeDiagnostics as diag (diag.id)}
+                <DiagnosticRow {game} {diag} />
+            {:else}
+                {@const diagCount = diagnostics.length}
+                {@const OKIcon = diagCount ? Info : Check}
+                <div class="empty-state">
+                    <OKIcon />
+                    <p>No{diagCount ? (showHidden ? ' hidden ' : ' active ') : ' '}diagnostics</p>
+                    <p class="text-sm text-neutral-500">
+                        {!diagCount
+                            ? 'This game is running without any issues.'
+                            : `All ${diagCount} diagnostic(s) are ${showHidden ? "active" : "suppressed or dismissed"}.`}
+                    </p>
+                </div>
+            {/each}
+        </div>
+        </div>
+    {/snippet}
+    {#snippet footer()}
+        <div class="footer-actions">
+            <button
+                class={['btn', 'btn-base', showClearBtn ? "preset-tonal-warning" : "preset-tonal-surface"]}
+                onclick={clearBtn}
+                disabled={!activeDiagnostics.length}
+                {@attach tooltip(showClearBtn ? "This will permanently remove all diagnostics!" : "")}
+            >
+                {showClearBtn ? "Clear" : showHidden ? "Restore" : "Dismiss"} all
+            </button>
+        </div>
+        <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Close</button>
     {/snippet}
 </Dialog>
 
 <style lang="postcss">
     @reference "global.css";
 
-    .diagnostics-content {
-        @apply flex flex-col gap-4 p-5 text-sm;
-        @apply min-w-lg max-w-[95vw] max-h-[80vh] overflow-hidden;
-        @apply bg-white dark:bg-surface-900 rounded-2xl shadow-2xl;
-        @apply text-neutral-900 dark:text-neutral-50;
-    }
-
-    .dialog-header {
-        @apply flex items-center justify-between pb-2;
-        @apply border-b border-neutral-200 dark:border-neutral-700;
-    }
-
-    .header-actions {
-        @apply flex items-center gap-2;
+    .dialog-body-scroll {
+        @apply flex flex-col gap-3;
+        @apply flex-1 overflow-y-auto;
     }
 
     .footer-actions {
         @apply flex items-center gap-2;
     }
 
-    .dialog-body {
-        @apply flex flex-col gap-3 flex-1 overflow-hidden;
-        & :global(.indicator) {
-            @apply contrast-50 dark:contrast-75;
-        }
+    .vis-filter :global(.indicator) {
+        @apply contrast-50 dark:contrast-75;
     }
 
     .empty-state {
@@ -152,10 +136,5 @@
     .diagnostics-list {
         @apply flex flex-col gap-2 overflow-y-auto;
         @apply pr-1;
-    }
-
-    .dialog-footer {
-        @apply flex items-center justify-between w-full pt-2 gap-2;
-        @apply border-t border-neutral-200 dark:border-neutral-700;
     }
 </style>

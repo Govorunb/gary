@@ -18,14 +18,15 @@ The project is currently in beta, adding functionality and stabilizing internals
 - Local web UI (to end the suffering of Linux users (if any))
 
 ### Task list grab bag
+Neuro API:
+- [ ] Use force prio literally anywhere (shorten Randy l*tency/interrupt LLM gen)
+- [ ] Ephemeral force
 
 App logic:
 - [ ] Non-silent message (from user) with no connected games still primes the scheduler (should call model if yapping is allowed?)
-- [.] [Context](./context.md)
 - [ ] 'Strict mode' that raises all diagnostic severities by 1 (warnings become errors, errors become fatal and instantly disconnect WS)
 - [ ] Figure out where game-specific prefs go when the game changes name
 - [ ] Scheduler scans all games' forceQueues instead of having its own (might solve an edge case where 2+ connected games could trigger prot/force/multiple on each other through no fault of their own)
-- [ ] Use force prio literally anywhere (shorten Randy l*tency/interrupt LLM gen)
 - [ ] `$env:MY_ENV_VAR` prefs syntax (for API keys and such)
 - Context trimming
     - [ ] Token counting from inference provider responses

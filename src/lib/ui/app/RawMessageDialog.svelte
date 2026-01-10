@@ -123,110 +123,84 @@
 </script>
 
 <Dialog bind:open>
-    {#snippet content(props)}
-        <div {...props} class="raw-message-content">
-            <div class="dialog-header">
-                <h3>Send Raw Message ({game.name})</h3>
-                <div class="header-actions">
-                    <TeachingTooltip>
-                        <p>Send any arbitrary text WebSocket message.</p>
-                        <p><b>This dialog is for debugging and won't stop you from sending invalid data.</b></p>
-                        <p><Hotkey>Ctrl+Enter</Hotkey> to send message.</p>
-                    </TeachingTooltip>
-                </div>
+    {#snippet title()}
+        <h3>Send Raw Message ({game.name})</h3>
+        <div class="header-actions">
+            <TeachingTooltip>
+                <p>Send any arbitrary text WebSocket message.</p>
+                <p><b>This dialog is for debugging and won't stop you from sending invalid data.</b></p>
+                <p><Hotkey>Ctrl+Enter</Hotkey> to send message.</p>
+            </TeachingTooltip>
+        </div>
+    {/snippet}
+    {#snippet body()}
+        <div class="editor-section">
+            <div class="editor-panel">
+                <CodeMirror
+                    code={jsonContent}
+                    {open}
+                    onChange={handleCodeChange}
+                    minHeight="12rem"
+                    maxHeight="24rem"
+                />
+                {#if validationErrors}
+                    <div class="validation-warnings">
+                        <div class="warning-header">Validation Warnings:</div>
+                        {#each validationErrors as error}
+                            <div class="warning-item">{error}</div>
+                        {/each}
+                    </div>
+                {/if}
             </div>
-            
-            <div class="dialog-body">
-                <div class="editor-section">
-                    <div class="editor-panel">
-                        <CodeMirror
-                            code={jsonContent}
-                            {open}
-                            onChange={handleCodeChange}
-                            minHeight="12rem"
-                            maxHeight="24rem"
-                        />
-                        {#if validationErrors}
-                            <div class="validation-warnings">
-                                <div class="warning-header">Validation Warnings:</div>
-                                {#each validationErrors as error}
-                                    <div class="warning-item">{error}</div>
-                                {/each}
-                            </div>
+        </div>
+    {/snippet}
+    {#snippet footer()}
+        <div class="flex gap-2">
+            <div class="preset-dropdown flex flex-row items-center gap-2.5">
+                <label for="preset-select">Template:</label>
+                <select 
+                    id="preset-select"
+                    bind:value={selectedPreset} 
+                    onchange={(e) => applyPreset((e.target as HTMLSelectElement).value)}
+                    class="preset-select"
+                    aria-label="Select message template"
+                >
+                    {#each Object.entries(messagePresets) as [key, preset] (key)}
+                        {#if !preset.experimental}
+                            <option value={key}>{preset.name}</option>
                         {/if}
-                    </div>
-                </div>
+                    {/each}
+                    <option disabled>--- Experimental ---</option>
+                    {#each Object.entries(messagePresets) as [key, preset] (key)}
+                        {#if preset.experimental}
+                            <option value={key}>{preset.name}</option>
+                        {/if}
+                    {/each}
+                </select>
+                <TeachingTooltip>
+                    {#snippet icon()}
+                        <TriangleAlert />
+                    {/snippet}
+                    Selecting a template will replace the contents of your editor.
+                </TeachingTooltip>
             </div>
-            
-            <div class="dialog-footer">
-                <div class="flex gap-2">
-                    <div class="preset-dropdown flex flex-row items-center gap-2.5">
-                        <label for="preset-select">Template:</label>
-                        <select 
-                            id="preset-select"
-                            bind:value={selectedPreset} 
-                            onchange={(e) => applyPreset((e.target as HTMLSelectElement).value)}
-                            class="preset-select"
-                            aria-label="Select message template"
-                        >
-                            {#each Object.entries(messagePresets) as [key, preset] (key)}
-                                {#if !preset.experimental}
-                                    <option value={key}>{preset.name}</option>
-                                {/if}
-                            {/each}
-                            <option disabled>--- Experimental ---</option>
-                            {#each Object.entries(messagePresets) as [key, preset] (key)}
-                                {#if preset.experimental}
-                                    <option value={key}>{preset.name}</option>
-                                {/if}
-                            {/each}
-                        </select>
-                        <TeachingTooltip>
-                            {#snippet icon()}
-                                <TriangleAlert />
-                            {/snippet}
-                            Selecting a template will replace the contents of your editor.
-                        </TeachingTooltip>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Cancel</button>
-                    <button
-                        class="btn btn-base preset-filled-primary-400-600"
-                        onclick={sendMessage}
-                        {@attach tooltip("Send (Ctrl+Enter)")}
-                    >
-                        <Send class="size-4" />
-                        Send
-                    </button>
-                </div>
-            </div>
+        </div>
+        <div class="flex gap-2">
+            <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Cancel</button>
+            <button
+                class="btn btn-base preset-filled-primary-400-600"
+                onclick={sendMessage}
+                {@attach tooltip("Send (Ctrl+Enter)")}
+            >
+                <Send class="size-4" />
+                Send
+            </button>
         </div>
     {/snippet}
 </Dialog>
 
 <style lang="postcss">
     @reference "global.css";
-
-    .raw-message-content {
-        @apply flex flex-col gap-4 p-5 text-sm;
-        @apply min-w-lg max-w-[95vw] max-h-[80vh] overflow-hidden;
-        @apply bg-white dark:bg-surface-900 rounded-2xl shadow-2xl;
-        @apply text-neutral-900 dark:text-neutral-50;
-    }
-
-    .dialog-header {
-        @apply flex items-center justify-between pb-2;
-        @apply border-b border-neutral-200 dark:border-neutral-700;
-    }
-
-    .header-actions {
-        @apply flex items-center gap-2;
-    }
-
-    .dialog-body {
-        @apply flex flex-col gap-3 flex-1 overflow-hidden;
-    }
 
     .editor-section {
         @apply flex gap-3 flex-1 overflow-hidden;
@@ -249,11 +223,6 @@
 
     .warning-item {
         @apply text-xs;
-    }
-
-    .dialog-footer {
-        @apply flex items-center justify-between w-full pt-2 gap-8;
-        @apply border-t border-neutral-200 dark:border-neutral-700;
     }
 
     .preset-dropdown {
