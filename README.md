@@ -145,6 +145,8 @@ Following [the Neuro API spec](https://github.com/VedalAI/neuro-sdk/blob/main/AP
 
 Apologies to Linux users (if any) for [webkit2gtk's terrible performance](https://github.com/tauri-apps/tauri/issues/3988). I'll look into a workaround so you don't have to suffer.
 
+Ollama on Windows requires a user workaround - see [issue #7](https://github.com/Govorunb/gary/issues/7).
+
 ### Implementation-specific behaviour
 There may be cases where other backends (including Neuro) may behave differently.
 
