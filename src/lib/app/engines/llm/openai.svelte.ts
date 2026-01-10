@@ -105,8 +105,9 @@ export class OpenAIClient {
         // it also doesn't seem to constrain generation with `text.format` at all?
         // so... `response_format` on `chat/completions` it is
         console.warn("Full request params:", params);
+        console.log("Origin:", origin);
         const res = await ResultAsync.fromPromise(
-            this.client.chat.completions.create(params, { signal }),
+            this.client.chat.completions.create(params, { signal, headers: { origin } }),
             (error) => new EngineError(`${this.name} request failed: ${error}`, error as Error, false),
         );
         if (signal?.aborted) {
