@@ -57,7 +57,7 @@ export class OpenAIClient {
             apiKey: this.options.apiKey ?? "-", // throws if key is empty
             dangerouslyAllowBrowser: true,
             baseURL: this.options.serverUrl,
-            defaultHeaders: { origin: "tauri://localhost" }
+            defaultHeaders: { Origin: "tauri://localhost" },
         });
     }
 
