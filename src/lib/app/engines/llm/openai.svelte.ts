@@ -57,6 +57,7 @@ export class OpenAIClient {
             apiKey: this.options.apiKey ?? "-", // throws if key is empty
             dangerouslyAllowBrowser: true,
             baseURL: this.options.serverUrl,
+            defaultHeaders: { origin: "tauri://localhost" }
         });
     }
 
@@ -107,7 +108,7 @@ export class OpenAIClient {
         console.warn("Full request params:", params);
         console.log("Origin:", origin);
         const res = await ResultAsync.fromPromise(
-            this.client.chat.completions.create(params, { signal, headers: { origin } }),
+            this.client.chat.completions.create(params, { signal }),
             (error) => new EngineError(`${this.name} request failed: ${error}`, error as Error, false),
         );
         if (signal?.aborted) {
