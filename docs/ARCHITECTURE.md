@@ -39,7 +39,7 @@ In this application, the actor's role may be fulfilled by different **engines**,
 
 There's also Tony, which is not an actual engine; 'Tony mode' is a term for when the user manually sends actions through the UI, superseding the active engine.
 
-A session **scheduler** is responsible for prompting engines to act, when an event (e.g. a non-silent message, or an internal timer) calls for it.
+A session **scheduler** is responsible for prompting engines to act, when an event (e.g. a non-silent message, or an idle timer) calls for it.
 
 The engine may choose not to act if not forced; or, alternatively speaking - the engine *must* act if forced. This use of the term "force" is similar in purpose to the WebSocket protocol, but is not the same thing - a scheduler may force an action without an incoming `actions/force` message, e.g. if no actions were taken for a certain amount of time.
 
@@ -48,7 +48,7 @@ The engine may choose not to act if not forced; or, alternatively speaking - the
 
 ### Architecture Overview
 
-The Tauri application is in active development and represents the future direction of the project. Tauri is a cross-platform desktop application framework that renders a web-based frontend in the system WebView while passing IPC messages to invoke calls on the Rust backend.
+Tauri is a cross-platform desktop application framework that renders a web-based frontend in the system WebView while passing IPC messages to invoke calls on the Rust backend.
 
 ### App Components
 
