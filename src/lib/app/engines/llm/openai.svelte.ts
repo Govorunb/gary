@@ -22,7 +22,8 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         super(userPrefs, engineId);
         this.name = $derived(this.options.name);
         
-        this.client = new OpenAIClient({ prefs: this.options }, engineId);
+        const self = this;
+        this.client = new OpenAIClient({get prefs() { return self.options; }}, engineId);
     }
 
     generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<Message, EngineActError> {

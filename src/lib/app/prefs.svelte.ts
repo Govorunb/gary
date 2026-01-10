@@ -17,7 +17,6 @@ export class UserPrefs {
 
     constructor(loadRes: Result<UserPrefsData, string>) {
         this.#data = $state(null!);
-        console.log(loadRes);
         // data gets set before effect runs (we don't save defaults over)
         if (loadRes.isErr()) {
             this.loadError = loadRes.error;

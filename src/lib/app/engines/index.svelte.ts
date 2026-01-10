@@ -19,12 +19,14 @@ export type EngineActResult = EngineAct | Skip | Yap;
 
 export abstract class Engine<TOptions> {
     abstract readonly name: string;
-    readonly options: TOptions;
     readonly id: string;
+
+    get options() {
+        return this.userPrefs.engines[this.id] as TOptions;
+    }
 
     constructor(public userPrefs: UserPrefs, engineId: string) {
         this.id = engineId;
-        this.options = $derived(userPrefs.engines[engineId] as TOptions);
     }
     
     abstract tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError>;
