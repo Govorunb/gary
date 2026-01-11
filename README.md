@@ -54,7 +54,13 @@ If you're coming in from the old Python app, you may have just `git pull`ed in a
 <details>
 <summary><b>I used the old Python app with my downloaded GGUFs, how do I use local models now?</b></summary>
 
-You can use a local inference provider like LMStudio/Ollama (my recommendation is LMStudio). Chances are, if you play around with local models, you probably already have a local chat app installed. And, now that local inference providers have gotten fairly okay at structured outputs, there's very little reason for me to manage inference myself. I'd much rather focus on app development. It's a win-win: I get to distribute a 5MB app, and you get to avoid compiling/downloading yet another 3 gigs of CUDA libraries to rot on your disk. Thanks for listening to my TED talk.
+You can use a local inference provider like LMStudio/Ollama (my recommendation is LMStudio).
+
+Chances are, if you play around with local models, you probably already have a local chat app installed. And, now that local inference providers have gotten fairly okay at structured outputs, there's very little reason for me to manage inference myself. I'd much rather focus on app development.
+
+It's a win-win: I get to distribute a 5MB app, and you get to avoid compiling/downloading yet another 3 gigs of CUDA libraries to rot on your disk.
+
+Thanks for listening to my TED talk.
 </details>
 
 <details>

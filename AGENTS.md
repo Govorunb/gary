@@ -22,6 +22,8 @@ Current LLMs are likely to output outdated Svelte code that uses legacy features
 
 Additionally, since this is a frontend for an entirely client-side app, no server-side code patterns will work. The app will render in the user's system WebView, which means Node is also not available, and system calls are handled through IPC messages to Tauri (e.g. filesystem access is handled through the `@tauri-apps/plugin-fs` Tauri plugin).
 
+Always read `src/global.css` when doing UI work.
+
 #### Miscellaneous Frontend Tips
 
 Explore `src/lib/app/utils/` for commonly reused functionality.

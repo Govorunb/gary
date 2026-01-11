@@ -81,20 +81,20 @@
 
 <Dialog bind:open position="center">
     {#snippet title()}
-        <p class="text-xl font-bold">Settings</p>
+        <h3>Settings</h3>
         <Hotkey>Ctrl+,</Hotkey>
     {/snippet}
     {#snippet body()}
         <div class="dialog-body-scroll">
             {#each [
-            GeneralSection,
-            UpdatesSection,
-            PreferencesSection,
-            TroubleshootingSection,
-        ] as section}
-            <div class="settings-section">
-                {@render section()}
-            </div>
+                GeneralSection,
+                UpdatesSection,
+                PreferencesSection,
+                TroubleshootingSection,
+            ] as section}
+                <div class="settings-section">
+                    {@render section()}
+                </div>
             {/each}
         </div>
 
@@ -111,10 +111,10 @@
             <h2>Preferences</h2>
 
             <div class="preferences-layout">
-                <div class="flex flex-col gap-2">
+                <div class="col">
                     <p>Backup/restore raw JSON data to/from clipboard:</p>
                     <div class="field">
-                        <div class="flex flex-row gap-2">
+                        <div class="row">
                             <button class="btn btn-base preset-outlined-surface-300-700"
                                 onclick={exportPrefs}
                             >
@@ -153,7 +153,7 @@
         {#snippet UpdatesSection()}
             <h2>Updates</h2>
 
-            <div class="flex gap-2">
+            <div class="row">
                 <p>Current version:
                 {#await app.getVersion()}
                     {APP_VERSION}
@@ -195,7 +195,7 @@
         {#snippet TroubleshootingSection()}
             <h2>Troubleshooting</h2>
 
-            <div class="flex flex-row gap-2">
+            <div class="row">
                 <button class="btn btn-base preset-outlined-surface-300-700"
                     onclick={() => safeInvoke("open_logs_folder")}
                 >

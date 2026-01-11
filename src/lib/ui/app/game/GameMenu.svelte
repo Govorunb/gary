@@ -11,14 +11,14 @@
 </script>
 
 <div class="game-tooltip">
-    <div class="flex flex-col gap-2">
+    <div class="col">
         <!-- there's only one version currently (clueless) -->
         <!-- <VersionChip version={game.conn.version} /> -->
         <div class="connection-info">
             <p class="id-text">ID: <span class="id-value">{game.conn.id}</span></p>
             <CopyButton data={game.conn.id} desc="ID" />
         </div>
-        <div class="flex flex-col gap-2">
+        <div class="col">
             <button
                 class="menu-item"
                 onclick={() => uiState.dialogs.openRawMessageDialog(game)}

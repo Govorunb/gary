@@ -54,16 +54,4 @@
             description="Let the model speak instead of acting"
         />
     {/snippet}
-</EngineConfig>
-
-<style lang="postcss">
-    @reference "global.css";
-
-    .callout {
-        @apply p-3 rounded-lg;
-        &.warn {
-            @apply bg-warning-50 dark:bg-warning-900/20;
-            @apply border border-warning-200 dark:border-warning-800;
-        }
-    }
-</style>
+ </EngineConfig>

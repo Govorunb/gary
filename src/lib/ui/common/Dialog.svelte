@@ -14,6 +14,7 @@
         body?: Snippet,
         footer?: Snippet,
         position?: 'center' | 'top-start',
+        class?: string,
     } & DialogRootProps;
 
     let {
@@ -25,6 +26,7 @@
         body,
         footer,
         position = 'center',
+        class: className,
         ...props
     }: Props = $props();
 
@@ -41,7 +43,7 @@
     <Portal>
         <Dialog.Backdrop class="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity" />
         <Dialog.Positioner class={positionClasses[position]}>
-            <Dialog.Content element={content} class="dialog-content">
+            <Dialog.Content element={content} class={["dialog-content", className]}>
                 {#if title}
                     <div class="dialog-header">
                         {@render title()}

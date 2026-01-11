@@ -68,7 +68,7 @@
     }
     .dialog-content {
         @apply flex flex-col gap-4;
-        @apply min-w-lg max-w-[95vw] max-h-[80vh] overflow-hidden;
+        @apply min-w-lg max-w-[50vw] max-h-[80vh] overflow-hidden;
         @apply bg-white dark:bg-surface-900;
         @apply rounded-2xl shadow-2xl;
         @apply p-5 text-sm;
@@ -88,6 +88,25 @@
     .dialog-footer {
         @apply flex items-center justify-between w-full pt-2 gap-2;
         @apply border-t border-neutral-200 dark:border-neutral-700;
+    }
+    .callout {
+        @apply p-3 rounded-lg;
+        @apply bg-neutral-50 dark:bg-neutral-900/20;
+        @apply border border-neutral-200 dark:border-neutral-700;
+        
+        &.warn {
+            @apply bg-warning-50 dark:bg-warning-900/20;
+            @apply border-warning-200 dark:border-warning-800;
+        }
+    }
+    div.col {
+        @apply flex flex-col gap-2;
+    }
+    div.row {
+        @apply flex flex-row gap-2;
+    }
+    .attention {
+        @apply border-2 border-amber-500 dark:border-amber-400;
     }
 }
 
