@@ -9,6 +9,7 @@
     import { APP_VERSION, clearLocalStorage, debounced, jsonParse, safeInvoke, safeParse } from "$lib/app/utils";
     import { ResultAsync } from "neverthrow";
     import { boolAttr } from "runed";
+    import OutLink from "../common/OutLink.svelte";
 
     type Props = {
         open: boolean;
@@ -162,6 +163,7 @@
                 {:catch}
                     Big Dingus The {APP_VERSION}rd
                 {/await}
+                (<OutLink href="https://github.com/Govorunb/gary/releases/v{APP_VERSION}">release notes</OutLink>)
                 </p>
             </div>
 

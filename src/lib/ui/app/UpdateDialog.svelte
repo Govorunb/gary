@@ -1,5 +1,6 @@
 <script lang="ts">
     import Dialog from "$lib/ui/common/Dialog.svelte";
+    import OutLink from "$lib/ui/common/OutLink.svelte";
     import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
     import { isTauri } from "@tauri-apps/api/core";
     import r from "$lib/app/utils/reporting";
@@ -74,8 +75,7 @@
         <p class="text-xl font-bold">Update Available</p>
     {/snippet}
     {#snippet body()}
-        <div class="dialog-body-scroll">
-            <p class="update-message">
+        <p class="update-message">
             Update from <span class="font-mono font-semibold">{update.currentVersion}</span> to 
             <span class="font-mono font-semibold">{update.version}</span>?
         </p>
@@ -84,11 +84,10 @@
                 <p class="release-notes-title">Release Notes:</p>
                 <p class="release-notes-content">{update.body}</p>
             </div>
+        {:else}
+            <OutLink href="https://github.com/Govorunb/gary/releases/v{update.version}">View release notes on GitHub</OutLink>
         {/if}
-        <p>
-            Restart the app at your convenience to finish the update.
-            </p>
-        </div>
+        <p>Restart the app at your convenience to finish the update.</p>
     {/snippet}
     {#snippet footer()}
         <button class="btn btn-base skip-btn" onclick={skip}>
@@ -106,11 +105,6 @@
 
 <style lang="postcss">
     @reference "global.css";
-
-    .dialog-body-scroll {
-        @apply flex flex-col gap-3;
-        @apply flex-1 overflow-y-auto;
-    }
 
     .update-message {
         @apply text-base;
