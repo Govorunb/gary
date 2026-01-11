@@ -67,7 +67,7 @@
         @apply transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
     }
     .dialog-content {
-        @apply flex flex-col gap-4;
+        @apply fcol-4;
         @apply min-w-lg max-w-[50vw] max-h-[80vh] overflow-hidden;
         @apply bg-white dark:bg-surface-900;
         @apply rounded-2xl shadow-2xl;
@@ -76,7 +76,7 @@
     }
     .dialog-header {
         @apply flex items-center justify-between;
-        @apply pb-2 border-b border-neutral-200 dark:border-neutral-700;
+        @apply pb-2 border-b border-neutral-200 dark:border-neutral-700 rounded;
     }
     .dialog-header .header-actions {
         @apply flex items-center gap-2;
@@ -86,8 +86,8 @@
         @apply flex-1 overflow-hidden;
     }
     .dialog-footer {
-        @apply flex items-center justify-between w-full pt-2 gap-2;
-        @apply border-t border-neutral-200 dark:border-neutral-700;
+        @apply frow-2 items-center justify-between w-full pt-2;
+        @apply border-t border-neutral-200 dark:border-neutral-700 rounded;
     }
     .callout {
         @apply p-3 rounded-lg;
@@ -99,11 +99,15 @@
             @apply border-warning-200 dark:border-warning-800;
         }
     }
-    div.col {
-        @apply flex flex-col gap-2;
+    /* flex col - see utility classes below */
+    div.fcol {
+        @apply fcol-2;
     }
-    div.row {
-        @apply flex flex-row gap-2;
+    div.fcol-scroll {
+        @apply fcol-scroll-2;
+    }
+    div.frow {
+        @apply frow-2;
     }
     .attention {
         @apply border-2 border-amber-500 dark:border-amber-400;
@@ -120,3 +124,17 @@
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+@utility fcol-* {
+    @apply flex flex-col;
+    gap: calc(var(--spacing) * --value(number));
+}
+@utility fcol-scroll-* {
+    @apply flex flex-col overflow-y-auto;
+    gap: calc(var(--spacing) * --value(number));
+}
+
+@utility frow-* {
+    @apply flex flex-row;
+    gap: calc(var(--spacing) * --value(number));
+}

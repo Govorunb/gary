@@ -84,7 +84,7 @@
                 poke(altMode);
             }
         }}
-        class="act-btn flex flex-row gap-2"
+        class="act-btn frow-2"
         disabled={scheduler.busy && !altMode}
         {@attach tooltip(
             scheduler.busy
@@ -120,12 +120,11 @@
     @reference "global.css";
 
     .engine-controls {
-        @apply flex flex-row items-center gap-3;
+        @apply frow-3 items-center;
     }
 
     .act-btn {
-        @apply flex flex-row gap-2;
-        @apply font-semibold text-base;
+        @apply frow-2 font-semibold text-base;
         @apply p-2 rounded-lg transition-all;
         @apply bg-neutral-100 dark:bg-neutral-800;
         @apply border border-neutral-200/50 dark:border-neutral-700/50;

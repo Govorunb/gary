@@ -111,8 +111,8 @@
         {#snippet PreferencesSection()}
             <h2>Preferences</h2>
 
-            <div class="preferences-layout">
-                <div class="col">
+            <div class="fcol">
+                <div class="fcol">
                     <p>Backup/restore raw JSON data to/from clipboard:</p>
                     <div class="field">
                         <div class="row">
@@ -154,7 +154,7 @@
         {#snippet UpdatesSection()}
             <h2>Updates</h2>
 
-            <div class="row">
+            <div class="frow">
                 <p>Current version:
                 {#await app.getVersion()}
                     {APP_VERSION}
@@ -167,7 +167,7 @@
                 </p>
             </div>
 
-            <div class="update-settings">
+            <div class="fcol-1">
                 <p class="font-light">Automatically check for updates on app launch:</p>
                 <select class="update-select" bind:value={userPrefs.app.updates.autoCheckInterval}>
                     <option value="everyLaunch">Every launch</option>
@@ -177,7 +177,7 @@
                     <option value="off">Never</option>
                 </select>
             </div>
-            <div class="update-actions">
+            <div class="frow items-center">
                 <button class="btn btn-base preset-outlined-surface-300-700"
                     onclick={checkForUpdates}
                     disabled={updater.checkingForUpdates}
@@ -217,12 +217,11 @@
     @reference "global.css";
 
     .dialog-body-scroll {
-        @apply flex flex-col gap-3;
-        @apply flex-1 overflow-y-auto;
+        @apply fcol-3 flex-1 overflow-y-auto;
     }
 
     .settings-section {
-        @apply flex flex-col gap-3;
+        @apply fcol-3;
         @apply p-4 rounded-lg;
         @apply bg-surface-50 dark:bg-surface-800;
         @apply border border-neutral-200 dark:border-neutral-700;
@@ -232,20 +231,9 @@
         @apply flex items-center gap-3;
     }
 
-    .preferences-layout {
-        @apply flex flex-col gap-2;
-    }
-
     .field-label {
         @apply text-sm font-medium select-none;
         @apply text-neutral-700 dark:text-neutral-300;
-    }
-    .update-settings {
-        @apply flex flex-col gap-1;
-    }
-
-    .update-actions {
-        @apply flex flex-row gap-2 items-center;
     }
 
     .update-select {

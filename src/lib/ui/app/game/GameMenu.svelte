@@ -42,7 +42,7 @@
     @reference "global.css";
 
     .game-tooltip {
-        @apply relative flex flex-col gap-3 p-3;
+        @apply relative fcol-3 p-3;
         @apply rounded-lg shadow-lg;
         @apply bg-surface-100/95 dark:bg-surface-800/95;
         @apply ring-1 ring-neutral-200/80 dark:ring-neutral-700/60;
@@ -61,7 +61,7 @@
     }
 
     .menu-item {
-        @apply flex flex-row gap-1.5 items-center;
+        @apply frow-1.5 items-center;
         @apply w-full px-3 py-2;
         @apply rounded-sm;
         @apply text-left text-sm;

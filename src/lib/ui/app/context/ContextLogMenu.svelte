@@ -51,7 +51,7 @@
         }
     }
     .menu-content {
-        @apply flex flex-col gap-1 px-1 py-1;
+        @apply fcol-1 px-1 py-1;
         @apply bg-surface-200-800 rounded-md;
         @apply border border-neutral-900/30;
         @apply min-w-40;

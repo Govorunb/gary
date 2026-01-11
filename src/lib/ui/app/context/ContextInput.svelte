@@ -65,7 +65,7 @@
     @reference "global.css";
 
     .input-container {
-        @apply flex flex-row gap-1 p-2 rounded-xl shadow-sm;
+        @apply frow-1 p-2 rounded-xl shadow-sm;
         @apply bg-neutral-50 dark:bg-neutral-900/70;
         @apply ring-1 ring-primary-200/40 dark:ring-primary-800/40;
 

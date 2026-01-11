@@ -16,8 +16,7 @@
     @reference "global.css";
 
     .section {
-        @apply flex flex-col gap-4;
-        @apply h-full overflow-hidden;
+        @apply fcol-4 h-full overflow-hidden;
         @apply bg-surface-100/90 shadow-sm ring-1 ring-neutral-200/70;
         @apply dark:bg-surface-900/80 dark:ring-neutral-700/50;
     }

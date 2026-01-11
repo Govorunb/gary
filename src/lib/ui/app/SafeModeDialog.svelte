@@ -66,7 +66,7 @@
             Your preferences failed to load. The app is running with default settings in read-only mode.
         </p>
 
-        <div class="import-section">
+        <div class="fcol">
             <p class="import-label">You may attempt to manually fix the data below: <span class="note">(or get someone you trust to fix it)</span></p>
             <div class="editor-container">
                 <CodeMirror
@@ -117,16 +117,8 @@
         @apply text-base font-semibold text-warning-700 dark:text-warning-300;
     }
 
-    .import-section {
-        @apply flex flex-col gap-2;
-    }
-
     .import-label {
         @apply font-medium text-neutral-700 dark:text-neutral-300;
-    }
-
-    .note {
-        @apply text-neutral-600 dark:text-neutral-400;
     }
 
     .editor-container {

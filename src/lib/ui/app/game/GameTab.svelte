@@ -163,6 +163,6 @@
     }
 
     .action-list {
-        @apply flex flex-col gap-1 p-2;
+        @apply fcol-1 p-2;
     }
 </style>

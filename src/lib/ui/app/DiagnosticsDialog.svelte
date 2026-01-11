@@ -57,8 +57,7 @@
         </div>
     {/snippet}
     {#snippet body()}
-        <div class="dialog-body-scroll">
-            {#if diagnostics.length}
+        {#if diagnostics.length}
             <div class="vis-filter">
                 <SegmentedControl
                     value={filterValue}
@@ -78,13 +77,13 @@
                 </SegmentedControl>
             </div>
         {/if}
-        <div class="diagnostics-list">
+        <div class="fcol-scroll">
             {#each activeDiagnostics as diag (diag.id)}
                 <DiagnosticRow {game} {diag} />
             {:else}
                 {@const diagCount = diagnostics.length}
                 {@const OKIcon = diagCount ? Info : Check}
-                <div class="empty-state">
+                <div class="fcol-3 empty-state">
                     <OKIcon />
                     <p>No{diagCount ? (showHidden ? ' hidden ' : ' active ') : ' '}diagnostics</p>
                     <p class="text-sm text-neutral-500">
@@ -94,7 +93,6 @@
                     </p>
                 </div>
             {/each}
-        </div>
         </div>
     {/snippet}
     {#snippet footer()}
@@ -115,13 +113,8 @@
 <style lang="postcss">
     @reference "global.css";
 
-    .dialog-body-scroll {
-        @apply flex flex-col gap-3;
-        @apply flex-1 overflow-y-auto;
-    }
-
     .footer-actions {
-        @apply flex items-center gap-2;
+        @apply frow-2 items-center;
     }
 
     .vis-filter :global(.indicator) {
@@ -129,12 +122,7 @@
     }
 
     .empty-state {
-        @apply flex flex-col items-center justify-center gap-3 py-12;
+        @apply items-center justify-center py-12;
         @apply text-neutral-500 dark:text-neutral-400;
-    }
-
-    .diagnostics-list {
-        @apply flex flex-col gap-2 overflow-y-auto;
-        @apply pr-1;
     }
 </style>

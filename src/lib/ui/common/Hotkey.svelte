@@ -15,7 +15,7 @@
     @reference "global.css";
 
     .hotkey {
-        @apply inline-flex flex-row gap-2 items-center justify-center;
+        @apply inline-flex frow-2 items-center justify-center;
         @apply px-1.5 py-0.5 rounded;
         @apply text-xs whitespace-nowrap;
         @apply preset-outlined-surface-200-800;

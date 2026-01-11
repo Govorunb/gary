@@ -41,7 +41,7 @@
 </script>
 
 <div class="context-log-container">
-    <div class="flex flex-row gap-4 w-full">
+    <div class="frow-4 w-full">
         <ContextLogMenu />
         <h2 class="flex-1">Context Log</h2>
         <TeachingTooltip>
@@ -70,7 +70,7 @@
     @reference "global.css";
 
     .context-log-container {
-        @apply flex flex-col h-full gap-4;
+        @apply fcol-4 h-full;
         @apply p-4 text-sm shadow-sm;
         @apply bg-neutral-50 dark:bg-neutral-900/70;
         @apply ring-1 ring-primary-200/40 dark:ring-primary-800/40;
@@ -79,7 +79,6 @@
         @apply flex flex-col flex-1 min-h-0;
     }
     .log {
-        @apply flex flex-col gap-2;
-        @apply h-full overflow-scroll;
+        @apply fcol-scroll-2 h-full;
     }
 </style>

@@ -102,7 +102,7 @@
 </div>
 <Dialog bind:open={confirmModalOpen}>
     {#snippet content(props)}
-        <div {...props} class="confirm-content preset-outlined-warning-300-700">
+        <div {...props} class="confirm-content attention">
             <h3>Confirm stopping server</h3>
             <p>Are you sure you want to stop the server? There are still open connections.</p>
             <p class="note">Shift-click to bypass this confirmation.</p>
@@ -163,7 +163,7 @@
 
     .options-content {
         @apply relative left-0 top-full z-10;
-        @apply flex min-w-fit flex-col gap-3 rounded-xl;
+        @apply min-w-fit fcol-3 rounded-xl;
         @apply p-5 text-sm;
         @apply bg-neutral-100 dark:bg-neutral-800;
         @apply text-neutral-900 dark:text-neutral-50;
@@ -172,8 +172,7 @@
     }
 
     .confirm-content {
-        @apply flex flex-col gap-2;
-        @apply min-w-[24rem] max-w-[90vw] overflow-hidden;
+        @apply fcol-2 min-w-[24rem] max-w-[90vw] overflow-hidden;
         @apply bg-white dark:bg-surface-900;
         @apply rounded-2xl shadow-2xl;
         @apply p-5 text-sm;

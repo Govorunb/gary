@@ -20,6 +20,6 @@
     @reference "global.css";
 
     .action-list {
-        @apply flex h-full flex-col gap-2 overflow-y-auto pr-1 text-sm mt-2;
+        @apply fcol-scroll-2 h-full pr-1 text-sm mt-2;
     }
 </style>

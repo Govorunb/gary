@@ -207,11 +207,11 @@
     }
 
     .editor-panel {
-        @apply flex flex-col gap-2 flex-1 overflow-hidden;
+        @apply fcol-2 flex-1 overflow-hidden;
     }
 
     .validation-warnings {
-        @apply flex flex-col gap-1 p-2 rounded-md;
+        @apply fcol-1 p-2 rounded-md;
         @apply bg-amber-50 dark:bg-amber-900/20;
         @apply text-amber-700 dark:text-amber-400;
         @apply border border-amber-200 dark:border-amber-800;

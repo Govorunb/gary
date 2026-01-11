@@ -217,7 +217,7 @@
     }
 
     .view-container {
-        @apply flex flex-col max-h-[70vh];
+        @apply fcol-0 max-h-[70vh];
     }
 
     .header {
@@ -237,7 +237,7 @@
     }
 
     .list {
-        @apply flex flex-col p-2 gap-1 overflow-y-auto;
+        @apply fcol-scroll-1 p-2;
     }
 
     .engine-row {

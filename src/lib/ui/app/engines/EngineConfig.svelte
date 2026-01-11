@@ -65,9 +65,9 @@
     }
 </script>
 
-<div class="engine-config-wrapper">
-    <div class="engine-config">
-        <div class="config-form">
+<div class="w-full">
+    <div class="fcol-4">
+        <div class="fcol-4">
             {@render configForm(dirtyConfig)}
         </div>
 
@@ -96,25 +96,13 @@
 <style lang="postcss">
     @reference "global.css";
 
-    .engine-config-wrapper {
-        @apply w-full;
-    }
-
-    .engine-config {
-        @apply flex flex-col gap-4;
-    }
-
-    .config-form {
-        @apply flex flex-col gap-4;
-    }
-
     .validation-error {
         @apply p-3 bg-red-50 border border-red-200 text-red-700 rounded-md;
         @apply dark:bg-red-900/20 dark:border-red-800 dark:text-red-300;
     }
 
     .config-actions {
-        @apply flex flex-row gap-2 justify-end pt-4 border-t border-neutral-200 dark:border-neutral-700;
+        @apply frow-2 justify-end pt-4 border-t border-neutral-200 dark:border-neutral-700;
     }
 
     .save-button {

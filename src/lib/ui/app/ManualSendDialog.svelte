@@ -206,8 +206,7 @@
     }
 
     .editor-section {
-        @apply flex flex-col gap-2;
-        @apply flex-1 overflow-hidden;
+        @apply fcol-2 flex-1 overflow-hidden;
     }
 
     .editor-header {
@@ -225,8 +224,7 @@
     }
 
     .editor-panel {
-        @apply flex flex-col gap-2;
-        @apply flex-1 overflow-hidden;
+        @apply fcol-2 flex-1 overflow-hidden;
     }
 
     .editor-split.schema-collapsed .editor-panel:first-child {
@@ -257,8 +255,7 @@
     }
 
     .error-message {
-        @apply flex flex-col gap-1;
-        @apply p-2 rounded-md;
+        @apply fcol-1 p-2 rounded-md;
         @apply bg-red-50 dark:bg-red-900/20;
         @apply text-red-700 dark:text-red-400;
         @apply border border-red-200 dark:border-red-800;

@@ -106,7 +106,7 @@
         @apply text-xs text-neutral-500 dark:text-neutral-400 cursor-default;
     }
     .message-content {
-        @apply flex flex-col gap-1 ml-6;
+        @apply fcol-1 ml-6;
     }
     .message-header {
         @apply flex items-center gap-2;

@@ -60,7 +60,7 @@
     @reference "global.css";
 
     .field-container {
-        @apply flex flex-col gap-1;
+        @apply fcol-1;
     }
 
     .field-label {

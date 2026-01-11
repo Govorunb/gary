@@ -34,12 +34,12 @@
     }
 </script>
 
-<div class="flex h-full flex-col p-4">
+<div class="h-full fcol-0 p-4">
     <div class="header">
         <h2>Connections</h2>
         <Popover>
             {#snippet trigger(props)}
-                <button {...props} class="flex flex-row gap-1 items-center">
+                <button {...props} class="frow-1 items-center">
                     <Plus class="size-6 opacity-80" />
                     <ChevronDown class="size-3 opacity-80" />
                 </button>
@@ -85,12 +85,12 @@
     }
 
     .games-container {
-        @apply flex flex-col gap-1 flex-1 overflow-y-hidden;
+        @apply fcol-1 flex-1 overflow-y-hidden;
         @apply px-1 py-2;
     }
 
     .menu-content {
-        @apply flex flex-col gap-1 px-1 py-1;
+        @apply fcol-1 px-1 py-1;
         @apply bg-surface-200-800 rounded-md;
         @apply border border-neutral-900/30;
         @apply min-w-48;
@@ -109,7 +109,7 @@
     }
 
     .menu-item {
-        @apply flex flex-row gap-1.5 items-center;
+        @apply frow-1.5 items-center;
         @apply w-full px-3 py-2;
         @apply rounded-sm text-sm;
         @apply text-neutral-700 dark:text-neutral-300;

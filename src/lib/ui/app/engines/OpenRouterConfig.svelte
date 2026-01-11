@@ -68,19 +68,17 @@
             placeholder="openrouter/auto"
         >
             {#snippet description()}
-                <div class="flex flex-col gap-1">
-                    <p class="note">
-                        Visit 
-                        <OutLink href="https://openrouter.ai/models">OpenRouter</OutLink>
-                        to pick a model.
-                        <OutLink href="https://openrouter.ai/docs/features/presets">Presets</OutLink>
-                        and
-                        <OutLink href="https://openrouter.ai/docs/faq#what-are-model-variants">variants</OutLink>
-                        are supported.
-                        <br/>
-                        To configure preferred providers or fallback models, create a preset in your OpenRouter account.
-                    </p>
-                </div>
+                <p class="note">
+                    Visit 
+                    <OutLink href="https://openrouter.ai/models">OpenRouter</OutLink>
+                    to pick a model.
+                    <OutLink href="https://openrouter.ai/docs/features/presets">Presets</OutLink>
+                    and
+                    <OutLink href="https://openrouter.ai/docs/faq#what-are-model-variants">variants</OutLink>
+                    are supported.
+                    <br/>
+                    To configure preferred providers or fallback models, create a preset in your OpenRouter account.
+                </p>
             {/snippet}
         </StringField>
         <BooleanField 
