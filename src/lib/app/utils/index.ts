@@ -6,6 +6,7 @@ import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
 import r from "./reporting";
 import type { Dayjs } from "dayjs";
+import { dev } from "$app/environment";
 // import { isTauri } from "@tauri-apps/api/core";
 
 export function pickRandom<T>(arr: T[]) {
@@ -296,4 +297,11 @@ export function debounced(func: () => void, delayMs: number): DebouncedFn {
 
 export function formatZodError<E extends ZodError>(e: E) {
     return e.issues.map(i => `${i.path.join('.') || "(root)"}: ${i.message}`);
+}
+
+export function isApril1st() {
+    if (dev) return true;
+    const today = new Date();
+    // month 0-indexed, day 1-indexed. make it make sense
+    return today.getMonth() == 3 && today.getDate() == 1;
 }

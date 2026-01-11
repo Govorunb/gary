@@ -8,6 +8,7 @@ import { OpenAIEngine, zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import r from "$lib/app/utils/reporting";
 import { Randy, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
+import { UIState } from "$lib/ui/app/ui-state.svelte";
 
 /**
  * Represents a user session within the app.
@@ -20,7 +21,8 @@ export class Session {
     readonly context: ContextManager;
     readonly registry: Registry;
     readonly scheduler: Scheduler;
-    
+    readonly uiState: UIState;
+
     engines: Record<string, Engine<unknown>> = $state({});
     activeEngine: Engine<unknown>;
 
@@ -34,6 +36,7 @@ export class Session {
         this.context = new ContextManager();
         this.registry = new Registry(this);
         this.scheduler = new Scheduler(this);
+        this.uiState = new UIState(this);
         r.debug(`Created session ${name} (${this.id})`);
         for (const id of Object.keys(this.userPrefs.engines)) {
             this.initEngine(id);

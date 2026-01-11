@@ -131,6 +131,8 @@ export const zAppPrefs = z.strictObject({
     manualSendSchemaCollapsed: z.boolean().fallback(true),
     rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
     systemPrompt: z.string().nullish(),
+    joyless: z.boolean().fallback(false),
+    garyGoldMembershipEndsAfter: z.number().nullish(),
     updates: z.strictObject({
         skipUpdateVersion: z.string().nullish(),
         autoCheckInterval: z.enum([

@@ -1,15 +1,16 @@
 <script lang="ts">
-    import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
+    import { getUIState, getUpdater, getUserPrefs } from "$lib/app/utils/di";
     import Dialog from "$lib/ui/common/Dialog.svelte";
     import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
     import { ExternalLink, X } from "@lucide/svelte";
     import Hotkey from "../common/Hotkey.svelte";
     import dayjs from "dayjs";
     import { app } from "@tauri-apps/api";
-    import { APP_VERSION, clearLocalStorage, debounced, jsonParse, safeInvoke, safeParse } from "$lib/app/utils";
+    import { APP_VERSION, clearLocalStorage, debounced, isApril1st, jsonParse, safeInvoke, safeParse } from "$lib/app/utils";
     import { ResultAsync } from "neverthrow";
     import { boolAttr } from "runed";
     import OutLink from "../common/OutLink.svelte";
+    import Switch from "$lib/ui/common/Switch.svelte";
 
     type Props = {
         open: boolean;
@@ -19,6 +20,7 @@
 
     const userPrefs = getUserPrefs();
     const updater = getUpdater();
+    const uiState = getUIState();
 
     let checking = $state(false);
 
@@ -106,6 +108,13 @@
                 <p class="field-label">Theme</p>
                 <ThemePicker bind:currentTheme={userPrefs.app.theme} />
             </div>
+            {#if isApril1st()}
+                <div class="field">
+                    <Switch bind:checked={() => !userPrefs.app.joyless, (v) => userPrefs.app.joyless = !v}>
+                        <p class="field-label">Joy and whimsy</p>
+                    </Switch>
+                </div>
+            {/if}
         {/snippet}
 
         {#snippet PreferencesSection()}
@@ -161,7 +170,11 @@
                 {:then v}
                     {v}
                 {:catch}
-                    Big Dingus The {APP_VERSION}rd
+                    {#if !userPrefs.app.joyless}
+                        Big Dingus The {APP_VERSION}{APP_VERSION.endsWith('3') ? 'th' : 'rd'}
+                    {:else}
+                        {APP_VERSION}
+                    {/if}
                 {/await}
                 (<OutLink href="https://github.com/Govorunb/gary/releases/v{APP_VERSION}">release notes</OutLink>)
                 </p>

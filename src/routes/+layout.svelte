@@ -3,7 +3,7 @@
     import { onDestroy } from 'svelte';
     import type { LayoutProps } from './$types.js';
     import { Toaster } from "svelte-sonner";
-    import { getSession, initDI } from '$lib/app/utils/di';
+    import { getSession, initDI, getUIState } from '$lib/app/utils/di';
     import dayjs from 'dayjs';
     import relativeTime from "dayjs/plugin/relativeTime";
     import localizedTime from "dayjs/plugin/localizedFormat";
@@ -19,6 +19,7 @@
     // svelte-ignore state_referenced_locally
     initDI(data.userPrefsData);
     const session = getSession();
+    const uiState = getUIState();
     onDestroy(() => session.dispose());
     // debugging
     const __global = window as any;
@@ -32,6 +33,8 @@
     registerAppHotkey(['Backspace', 'Delete', 'Shift', 'L'], clearLocalStorage);
     // trigger safe mode (dev hotkey)
     registerAppHotkey(['Control', 'Shift', '+', 'S'], () => session.userPrefs.loadError = ".");
+    // toggle april fools mode (dev hotkey)
+    registerAppHotkey(['Alt', 'Enter', 'A', '1'], () => uiState.devToggleAprilFools());
 </script>
 
 <div class="flex flex-col h-screen" role="application">

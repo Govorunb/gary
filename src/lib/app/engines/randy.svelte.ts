@@ -6,6 +6,7 @@ import type { Session } from "../session.svelte";
 import z from "zod";
 import type { UserPrefs } from "../prefs.svelte";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
+import r from "$lib/app/utils/reporting";
 
 export const ENGINE_ID = "randy";
 /** Automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
@@ -31,6 +32,9 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
                 notify: true
             });
         }
+        if (session.uiState.aprilFools) {
+            return errAsync(new EngineError("Randy API key invalid", new Error("Please re-enter the API key in Randy's engine config.")));
+        }
         if (Math.random() < this.options.chanceDoNothing) {
             return okAsync("skip");
         }
@@ -41,6 +45,9 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
             return errAsync(new EngineError("forceAct called with no available actions"));
+        }
+        if (session.uiState.aprilFools) {
+            return errAsync(new EngineError("Randy API key invalid", new Error("Please re-enter the API key in Randy's engine config.")));
         }
         return ResultAsync.fromPromise(
             sleep(this.options.latencyMs, signal),

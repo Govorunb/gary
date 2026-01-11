@@ -4,10 +4,10 @@ import type { Registry } from "$lib/api/registry.svelte";
 import { UserPrefs, type UserPrefsData } from "../prefs.svelte";
 import type { Scheduler } from "../scheduler.svelte";
 import { ServerManager } from "../server.svelte";
-import { UIState } from "$lib/ui/app/ui-state.svelte";
 import { Updater } from "../updater.svelte";
 import { ThemeManager } from "../theme.svelte";
 import type { Result } from "neverthrow";
+import type { UIState } from "$lib/ui/app/ui-state.svelte";
 
 const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
 const [ getSession, setSession ] = createContext<Session>();
@@ -35,7 +35,7 @@ export function initDI(prefsLoadRes: Result<UserPrefsData, string>) {
     const registry = session.registry;
     const scheduler = session.scheduler;
     const serverManager = new ServerManager(session, userPrefs);
-    const uiState = new UIState(session);
+    const uiState = session.uiState;
     const updater = new Updater(userPrefs, uiState);
     const themeManager = new ThemeManager(userPrefs);
 
