@@ -91,6 +91,11 @@ export const DIAGNOSTIC_ACTIONS: v1.Action[] = [
         description: "Register an action with a schema missing additionalProperties: false (WARNING)",
         schema: null,
     },
+    {
+        name: "prot/action/no_desc",
+        description: "Register an action without a description (WARNING)",
+        schema: null,
+    },
 ];
 
 export const DIAGNOSTIC_ACTIONS_MAP = new Map(

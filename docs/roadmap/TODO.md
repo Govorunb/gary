@@ -21,6 +21,7 @@ The project is currently in beta, adding functionality and stabilizing internals
 Neuro API:
 - [ ] Use force prio literally anywhere (shorten Randy l*tency/interrupt LLM gen)
 - [ ] Ephemeral force
+- [ ] Deprecate `reregister_all` and stuff it behind a compat flag
 
 App logic:
 - [ ] Non-silent message (from user) with no connected games still primes the scheduler (should call model if yapping is allowed?)

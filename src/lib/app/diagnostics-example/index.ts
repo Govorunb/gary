@@ -236,6 +236,15 @@ export class DiagnosticsExampleGame extends ClientGame {
                 break;
             }
 
+            case "prot/action/no_desc": {
+                await this.sendActionResult(id, true);
+                r.info(`[diagnostics-example] Registering action with no description`);
+                const barrenAction: v1.Action = { name: shortId() };
+                await this.registerActions([barrenAction]);
+                await this.unregisterActions([barrenAction.name]);
+                break;
+            }
+
             default:
                 await this.sendActionResult(id, false, `Unhandled action: ${name}`);
         }

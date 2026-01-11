@@ -227,6 +227,9 @@ export class Game {
             if (schemaUpdated) {
                 this.checkActionSchema(action);
             }
+            if (!action.description) {
+                this.diagnostics.trigger("prot/action/no_desc", { action: action.name });
+            }
             const storedAction = $state({ ...action, active: true });
             this.actions.set(action.name, storedAction);
         }

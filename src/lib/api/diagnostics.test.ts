@@ -80,6 +80,19 @@ describe("actions/register", () => {
 
         expect(harness.diagnosticKeys).toStrictEqual(["prot/v1/register/conflict"]);
     });
+
+    test("prot/action/no_desc", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = v1.zAction.decode({
+            name: "test_action",
+            schema: null
+        });
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/action/no_desc"]);
+        expect(harness.diagnostics[0].context).toEqual({ action: "test_action" });
+    });
 });
 
 describe("actions/unregister", () => {

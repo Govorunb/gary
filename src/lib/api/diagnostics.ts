@@ -125,7 +125,7 @@ Per v1 of the API specification, the incoming action is ignored and the existing
     },
     {
         key: "prot/v1/game_renamed",
-        severity: DiagnosticSeverity.Warning,
+        severity: DiagnosticSeverity.Error,
         title: "Do not rename game",
         description: "The protocol forbids changing your game name mid-connection."
     },
@@ -133,7 +133,7 @@ Per v1 of the API specification, the incoming action is ignored and the existing
         key: "prot/startup/missing",
         severity: DiagnosticSeverity.Warning,
         title: "Missing startup message",
-        description: "The first message sent must be a 'startup' message"
+        description: "The first message sent must be a 'startup' message."
     },
     {
         key: "prot/startup/multiple",
@@ -184,7 +184,7 @@ If you do want freeform extra fields, you should explicitly set 'additionalPrope
         title: "Prefer omitting schema field for parameterless actions",
         description: `An empty object - "{}" - is specified as valid in the API for parameterless actions. However, as a JSON Schema, it allows ANY input.
 LLMs may end up generating unconstrained, possibly filling objects with garbage random parameters and costing you time and/or money.
-This is very likely not what you want. You should register actions without a schema field instead.`
+This is very likely not what you want. You should omit the schema field entirely instead.`
     },
     {
         key: "prot/schema/type_object",
@@ -192,7 +192,13 @@ This is very likely not what you want. You should register actions without a sch
         title: "Root schema object should contain \"type\": \"object\"",
         description: `The Neuro API spec requires top-level schemas to be constrained to objects.
 Randy supports all top-level types, so you may not experience errors; however, some LLM providers may share the requirement.
-Use your judgment.`
+This will become an error in the future.`
+    },
+    {
+        key: "prot/action/no_desc",
+        severity: DiagnosticSeverity.Warning,
+        title: "Action missing description",
+        description: "Action descriptions are required by the Neuro API spec. Please add a description to let Neuro know what the action does.",
     },
     {
         key: "prot/schema/unsupported_keywords",
