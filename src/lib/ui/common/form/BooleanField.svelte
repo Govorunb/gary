@@ -6,9 +6,9 @@
         description?: string;
     }
 
-    let { 
-        value = $bindable(), 
-        label = "", 
+    let {
+        value = $bindable(),
+        label = "",
         disabled = false,
         description = ""
     }: Props = $props();
@@ -44,7 +44,7 @@
         @apply w-4 h-4 text-primary-600 border-neutral-300 rounded;
         @apply dark:border-neutral-600 dark:bg-neutral-800;
         @apply disabled:opacity-50 disabled:cursor-not-allowed;
-        
+
         &:focus {
             @apply ring-2 ring-primary-500;
         }

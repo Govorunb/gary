@@ -35,7 +35,7 @@ export class Registry {
         }
         return this.accept(req);
     }
-    
+
     async accept(req: WSConnectionRequest) {
         const channel = new Channel<ServerWSEvent>();
         const conn = new TauriServerConnection(req.id, req.version, channel);

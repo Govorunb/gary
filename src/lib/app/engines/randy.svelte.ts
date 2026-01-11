@@ -71,7 +71,7 @@ export const zRandyPrefs = z.strictObject({
     /** The chance to do nothing instead of acting.
      * Applicable when prompted to act but not forced (e.g. on non-silent context).
      * Can be used to approximate LLMs getting distracted, experiencing internal errors, etc.
-     * 
+     *
      * Number between 0 and 1.
      * */
     chanceDoNothing: z.number().min(0).max(1).fallback(0.2),

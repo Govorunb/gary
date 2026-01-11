@@ -28,22 +28,22 @@ describe("suppression", () => {
 
         diag.dismiss(INFO);
         expect(harness.diagnosticKeys).toStrictEqual([info]);
-        
+
         diag.trigger(INFO);
         expect(harness.diagnosticKeys).toStrictEqual([info, INFO]);
-        
+
         diag.trigger(WARN);
         expect(harness.diagnosticKeys).toStrictEqual([info, INFO, WARN]);
-        
+
         diag.suppress(WARN);
         expect(harness.diagnosticKeys).toStrictEqual([info, INFO, warn]);
-        
+
         diag.trigger(INFO);
         expect(harness.diagnosticKeys).toStrictEqual([info, INFO, warn, INFO]);
 
         diag.trigger(ERR, undefined, false);
         expect(harness.diagnosticKeys).toStrictEqual([info, INFO, warn, INFO, ERR]);
-        
+
         diag.suppress(INFO);
         expect(harness.diagnosticKeys).toStrictEqual([info, info, warn, info, ERR]);
     });
@@ -54,11 +54,11 @@ describe("suppression", () => {
         diag.trigger(INFO, undefined, true);
         expect(reportSpy, "report=true").toHaveBeenCalledOnce();
         reportSpy.mockClear();
-        
+
         diag.trigger(INFO, undefined, false);
         expect(reportSpy, "report=false").not.toHaveBeenCalled();
         reportSpy.mockClear();
-        
+
         diag.suppress(INFO);
         diag.trigger(INFO, undefined, true);
         expect(reportSpy, "report but suppressed").not.toHaveBeenCalled();
@@ -90,14 +90,14 @@ describe("suppression", () => {
         const diag = harness.server.diagnostics;
         diag.trigger(WARN);
         expect(harness.status).toBe("warn");
-        
+
         diag.dismiss(WARN);
         expect(harness.status, "dismiss didn't change status").toBe("ok");
-        
+
         diag.trigger(ERR, undefined, false);
         expect(harness.status).toBe("error");
         diag.suppress(ERR);
-        
+
         expect(harness.diagnosticKeys).toStrictEqual([warn, err]);
         expect(harness.status, "suppress didn't dismiss").toBe("ok");
     });
@@ -107,11 +107,11 @@ describe("suppression", () => {
         diag.trigger(INFO);
         diag.trigger(INFO);
         diag.suppress(INFO);
-        
+
         expect(harness.diagnostics).toHaveLength(2);
         diag.reset();
         expect(harness.diagnostics, "reset did not reset").toHaveLength(0);
-        
+
         expect(diag.isSuppressed(INFO), "reset should not affect suppressions").toBe(true);
     });
 });

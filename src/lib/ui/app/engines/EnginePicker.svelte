@@ -142,7 +142,7 @@
                                 </button>
 
                                 <div class="actions" data-shift={shiftPressed}>
-                                    <button 
+                                    <button
                                         class="action-btn"
                                         class:delete={del}
                                         class:config={!del}
@@ -280,7 +280,7 @@
 
     .action-btn {
         @apply p-2 rounded-md text-neutral-400 transition-colors;
-        
+
         &:hover {
             @apply text-neutral-900 dark:text-neutral-100;
             @apply bg-neutral-200 dark:bg-surface-700;
@@ -288,7 +288,7 @@
 
         &.delete {
             @apply text-error-500;
-            
+
             &:hover {
                 @apply text-error-600 bg-error-50 dark:bg-error-900/20;
             }
@@ -304,7 +304,7 @@
         @apply border border-dashed border-neutral-300 dark:border-neutral-700;
         @apply text-sm font-medium text-neutral-500 dark:text-neutral-400;
         @apply transition-all;
-        
+
         &:hover {
             @apply bg-white dark:bg-surface-800;
             @apply text-primary-500 dark:text-primary-400;
@@ -314,7 +314,7 @@
 
     .back-btn {
         @apply p-1 -ml-1 rounded-md text-neutral-500 transition-colors;
-        
+
         &:hover {
             @apply bg-neutral-100 dark:bg-surface-800;
             @apply text-neutral-900 dark:text-neutral-100;

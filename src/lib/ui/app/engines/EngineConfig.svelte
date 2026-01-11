@@ -5,7 +5,7 @@
     import OpenAIConfig from './OpenAIConfig.svelte';
     import RandyConfig from './RandyConfig.svelte';
     import { onMount, type Component } from 'svelte';
-    
+
     export type Engines = UserPrefsData["engines"];
     export type EngineId = string;
     export type EngineConfig<E extends EngineId> = Engines[E];
@@ -53,7 +53,7 @@
             validationErrors = formatZodError(result.error);
         }
     }
-    
+
     $effect(validateConfig);
     const keys = new PressedKeys();
     keys.onKeys(['Control', 'Enter'], handleSave);
@@ -81,7 +81,7 @@
             <button class="reset-button" onclick={reset}>
                 Reset
             </button>
-            <button 
+            <button
                 class="save-button"
                 onclick={handleSave}
                 disabled={!isValid}
@@ -108,11 +108,11 @@
     .save-button {
         @apply px-4 py-2 bg-primary-600 text-white rounded-md;
         @apply disabled:opacity-50 disabled:cursor-not-allowed;
-        
+
         &:hover {
             @apply bg-primary-700;
         }
-        
+
         &:focus {
             @apply outline-none ring-2 ring-primary-500;
         }
@@ -126,7 +126,7 @@
             @apply bg-neutral-100 dark:bg-neutral-800;
             @apply text-neutral-900 dark:text-neutral-100;
         }
-        
+
         &:focus {
             @apply outline-none ring-2 ring-neutral-500;
         }

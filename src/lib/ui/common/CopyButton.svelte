@@ -20,7 +20,7 @@
     }: Props = $props();
     const feedbackDuration = $state(2000);
     const description = $derived(desc ? ` ${desc}` : "");
-    
+
     let copied = $state(false);
     $effect(() => {
         if (copied) {
@@ -59,11 +59,11 @@
             @apply bg-neutral-200 dark:bg-surface-700;
             @apply text-neutral-900 dark:text-neutral-50;
         }
-        
+
         &:focus-visible {
             @apply outline-none ring-2 ring-sky-400;
         }
-    
+
         &[data-copied] {
             @apply bg-primary-200/50 dark:bg-primary-700/50 text-white;
         }

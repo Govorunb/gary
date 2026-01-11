@@ -86,17 +86,17 @@ describe("actions/unregister", () => {
     test("prot/unregister/unknown", async ({harness}) => {
         await harness.client.hello();
         await harness.client.unregisterActions(["nonexistent"]);
-    
+
         expect(harness.diagnosticKeys).toStrictEqual(["prot/unregister/unknown"]);
     });
-    
+
     test("prot/unregister/inactive", async ({harness}) => {
         await harness.client.hello();
         const action = v1.zAction.decode({ name: "test_action", schema: null });
         await harness.client.registerActions([action]);
         await harness.client.unregisterActions([action.name]);
         await harness.client.unregisterActions([action.name]);
-    
+
         expect(harness.diagnosticKeys).toStrictEqual(["prot/unregister/inactive"]);
     });
 });
@@ -109,27 +109,27 @@ describe("actions/force", () => {
             data: { query: "test", action_names: [] },
         });
         await harness.client.conn.send(force);
-    
+
         expect(harness.diagnosticKeys).toStrictEqual(["prot/force/empty"]);
         expect(harness.diagnostics[0].context).toEqual({ msgData: force.data });
     });
-    
+
     test("prot/force/some_invalid", async ({harness}) => {
         await harness.client.hello();
-    
+
         const action = v1.zAction.decode({ name: "test_action", schema: null });
         await harness.client.registerActions([action]);
-    
+
         const force: v1.ForceAction = v1.zForceAction.decode({
             game: harness.server.name,
             data: { query: "test", action_names: [action.name, "unknown"] },
         });
         await harness.client.conn.send(force);
-    
+
         expect(harness.diagnosticKeys).toStrictEqual(["prot/force/some_invalid"]);
         expect(harness.diagnostics[0].context).toEqual({ msgData: force.data, unknownActions: ["unknown"] });
     });
-    
+
     test("prot/force/all_invalid", async ({harness}) => {
         await harness.client.hello();
         const force: v1.ForceAction = v1.zForceAction.decode({
@@ -137,28 +137,28 @@ describe("actions/force", () => {
             data: { query: "test", action_names: ["unknown1", "unknown2"] },
         });
         await harness.client.conn.send(force);
-    
+
         expect(harness.diagnosticKeys).toStrictEqual(["prot/force/all_invalid"]);
         expect(harness.diagnostics[0].context).toEqual({ msgData: force.data });
     });
-    
+
     test("prot/force/multiple", async ({harness}) => {
         await harness.client.hello();
-    
+
         const action = v1.zAction.decode({ name: "test_action", schema: null });
         await harness.client.registerActions([action]);
         const fq = harness.session.scheduler.forceQueue;
         expect(fq, "erm... monsieur. you appear to be sharing state between tests again").toStrictEqual([]);
-        
+
         // manual/auto-act (should be completely ignored by the diagnostic)
         fq.push(null);
-    
+
         const force: v1.ForceAction = v1.zForceAction.decode({
             game: harness.server.name,
             data: { query: "test", action_names: [action.name] },
         });
         expect(fq).toStrictEqual([null]);
-        
+
         await harness.client.conn.send(force);
         expect(fq).toEqual([null, [{...action, active:true}]]);
         expect(harness.diagnosticKeys, "first force with non-client in queue").toStrictEqual([]);

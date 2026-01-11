@@ -221,7 +221,7 @@ export class Game {
                     }
                     const logMethod = isV1 ? r.warn : r.info;
                     logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`, { toast: false });
-                    if (isV1) continue;                    
+                    if (isV1) continue;
                 }
             }
             if (schemaUpdated) {

@@ -13,12 +13,12 @@
         description?: string | Snippet;
     }
 
-    let { 
-        value = $bindable(), 
-        label = "", 
-        placeholder = "", 
-        required = false, 
-        disabled = false, 
+    let {
+        value = $bindable(),
+        label = "",
+        placeholder = "",
+        required = false,
+        disabled = false,
         password = false,
         description = ""
     }: Props = $props();
@@ -92,7 +92,7 @@
         @apply px-3 py-2 pr-10 border border-neutral-300 rounded-md;
         @apply dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100;
         @apply disabled:opacity-50 disabled:cursor-not-allowed;
-        
+
         &:focus {
             @apply outline-none ring-2 ring-primary-500 border-transparent;
         }
@@ -116,7 +116,7 @@
         @apply bg-transparent border-none cursor-pointer;
         @apply focus:outline-2 outline-primary-500;
         @apply z-10;
-        
+
         &:hover {
             @apply text-neutral-700;
             @apply dark:text-neutral-200;

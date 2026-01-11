@@ -210,7 +210,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         return DEFAULT_SYSTEM_PROMPT
             + this.options.promptingStrategy === "json" ? SYS_PROMPT_JSON : SYS_PROMPT_TOOLS;
     }
-    
+
     // TODO: context trimming
     private convertContext(session: Session): OpenAIContext {
         const msgs = session.context.actorView.map(msg => this.convertMessage(msg));
@@ -271,10 +271,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     protected mergeUserTurns(msgs: OpenAIMessage[]): OpenAIMessage[] {
         const result: OpenAIMessage[] = [];
         const userMsgs: OpenAIMessage[] = [];
-        
+
         function flush() {
             if (userMsgs.length === 0) return;
-            
+
             const merged: OpenAIMessage = {
                 role: 'user',
                 content: userMsgs.map(m => m.content).join('\n')
@@ -282,7 +282,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             result.push(merged);
             userMsgs.length = 0;
         }
-        
+
         for (const msg of msgs) {
             if (msg.role === 'user') {
                 userMsgs.push(msg);
@@ -291,7 +291,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 result.push(msg);
             }
         }
-        
+
         flush();
         return result;
     }

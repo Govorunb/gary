@@ -50,9 +50,4 @@
 		@apply fcol-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
 		@apply text-xs text-neutral-500 dark:text-neutral-300;
 	}
-
-	.note {
-		@apply text-neutral-500 dark:text-neutral-400;
-		@apply text-xs;
-	}
 </style>

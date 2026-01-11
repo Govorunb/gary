@@ -18,7 +18,7 @@ export class ThemeManager {
                 this.setTheme(this.currentTheme);
             }
         });
-        
+
         onMount(() => on(this.systemDark, "change", this.systemThemeChanged.bind(this)));
     }
 

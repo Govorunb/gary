@@ -17,20 +17,20 @@
         }
 
         isTestingConnection = true;
-        
+
         try {
             const result = await OpenRouter.testApiKey(dirtyConfig.apiKey);
-            
+
             if (result.isOk()) {
                 toast.success("Connection successful! API key is valid.");
             } else {
-                toast.error("Connection failed", { 
-                    description: result.error.message || "Invalid API key or network error" 
+                toast.error("Connection failed", {
+                    description: result.error.message || "Invalid API key or network error"
                 });
             }
         } catch (error) {
-            toast.error("Connection failed", { 
-                description: error instanceof Error ? error.message : "Unknown error" 
+            toast.error("Connection failed", {
+                description: error instanceof Error ? error.message : "Unknown error"
             });
         } finally {
             isTestingConnection = false;
@@ -40,21 +40,21 @@
 
 <EngineConfig {engineId} {schema} {close}>
     {#snippet configForm(dirtyConfig)}
-        <StringField 
-            bind:value={dirtyConfig.apiKey} 
+        <StringField
+            bind:value={dirtyConfig.apiKey}
             label="API Key"
             password
         >
             {#snippet description()}
                 <p class="note">
-                    Visit 
+                    Visit
                     <OutLink href="https://openrouter.ai/settings/keys">OpenRouter</OutLink>
                     to create an API key.
                 </p>
             {/snippet}
         </StringField>
         {#if dirtyConfig.apiKey}
-            <button 
+            <button
                 class="btn btn-base preset-tonal-secondary rounded-md"
                 onclick={() => handleTestConnection(dirtyConfig)}
                 disabled={isTestingConnection}
@@ -62,14 +62,14 @@
                 {isTestingConnection ? "Testing..." : "Test Connection"}
             </button>
         {/if}
-        <StringField 
+        <StringField
             bind:value={dirtyConfig.model}
             label="Model"
             placeholder="openrouter/auto"
         >
             {#snippet description()}
                 <p class="note">
-                    Visit 
+                    Visit
                     <OutLink href="https://openrouter.ai/models">OpenRouter</OutLink>
                     to pick a model.
                     <OutLink href="https://openrouter.ai/docs/features/presets">Presets</OutLink>
@@ -81,14 +81,14 @@
                 </p>
             {/snippet}
         </StringField>
-        <BooleanField 
-            bind:value={dirtyConfig.allowDoNothing} 
-            label="Allow Do Nothing" 
+        <BooleanField
+            bind:value={dirtyConfig.allowDoNothing}
+            label="Allow Do Nothing"
             description="Let the model choose to skip acting"
         />
-        <BooleanField 
-            bind:value={dirtyConfig.allowYapping} 
-            label="Allow Yapping" 
+        <BooleanField
+            bind:value={dirtyConfig.allowYapping}
+            label="Allow Yapping"
             description="Let the model speak instead of acting"
         />
     {/snippet}

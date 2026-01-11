@@ -21,7 +21,7 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     constructor(userPrefs: UserPrefs, engineId: string) {
         super(userPrefs, engineId);
         this.name = $derived(this.options.name);
-        
+
         const self = this;
         this.client = new OpenAIClient({get prefs() { return self.options; }}, engineId);
     }

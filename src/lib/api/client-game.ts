@@ -110,14 +110,14 @@ export abstract class ClientGame {
         try {
             const validate = this.ajv.compile(schema);
             const valid = validate(data);
-            
+
             if (!valid && validate.errors) {
-                const errorMessages = validate.errors.map(err => 
+                const errorMessages = validate.errors.map(err =>
                     `${err.instancePath || 'root'}: ${err.message}`
                 ).join(', ');
                 return { valid: false, error: errorMessages };
             }
-            
+
             return { valid: true };
         } catch (error) {
             return { valid: false, error: `Could not validate data: ${error}` };

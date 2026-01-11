@@ -10,7 +10,7 @@ export type Migration = {
 export function migrate(toVersion: string, data: Record<string, any> | null | undefined, migrations: Migration[]): any {
     if (!data) return data;
     const result = structuredClone(data);
-    
+
     let currVersion = semverParse(data?.version);
     if (!currVersion) {
 		r.warn("Version not detected, cannot migrate");

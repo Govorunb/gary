@@ -112,7 +112,7 @@ export class UserPrefs {
 
     public importData(data: unknown) {
         if (typeof data !== "object") return err(`Validation failed: Must be a JSON object`);
-        
+
         return safeParse(zUserPrefs, migrate(APP_VERSION, data, MIGRATIONS))
             .map(d => this.setData(d))
             .mapErr(e => `Validation failed. Errors:\n\t${formatZodError(e).join("\n\t")}`)

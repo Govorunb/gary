@@ -68,7 +68,7 @@
                 Update to {updater.update?.version ?? "latest version"}
             </button>
         {/if}
-         <button 
+         <button
              class="btn p-2 hover:bg-surface-500/20"
              onclick={() => dialogs.openSettingsDialog()}
              title="Settings"

@@ -28,8 +28,8 @@
 
     const messagePresets = {
         empty: { name: '(empty)', template: '', experimental: false },
-        action: { 
-            name: 'action', 
+        action: {
+            name: 'action',
             template: JSON.stringify({
                 command: "action",
                 data: {
@@ -40,15 +40,15 @@
             }, null, 2),
             experimental: false
         },
-        'actions/reregister_all': { 
-            name: 'actions/reregister_all', 
+        'actions/reregister_all': {
+            name: 'actions/reregister_all',
             template: JSON.stringify({
                 command: "actions/reregister_all"
             }, null, 2),
             experimental: true
         },
-        'shutdown/graceful': { 
-            name: 'shutdown/graceful', 
+        'shutdown/graceful': {
+            name: 'shutdown/graceful',
             template: JSON.stringify({
                 command: "shutdown/graceful",
                 data: {
@@ -57,8 +57,8 @@
             }, null, 2),
             experimental: true
         },
-        'shutdown/immediate': { 
-            name: 'shutdown/immediate', 
+        'shutdown/immediate': {
+            name: 'shutdown/immediate',
             template: JSON.stringify({
                 command: "shutdown/immediate"
             }, null, 2),
@@ -158,9 +158,9 @@
         <div class="flex gap-2">
             <div class="preset-dropdown flex flex-row items-center gap-2.5">
                 <label for="preset-select">Template:</label>
-                <select 
+                <select
                     id="preset-select"
-                    bind:value={selectedPreset} 
+                    bind:value={selectedPreset}
                     onchange={(e) => applyPreset((e.target as HTMLSelectElement).value)}
                     class="preset-select"
                     aria-label="Select message template"

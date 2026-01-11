@@ -28,7 +28,7 @@ export abstract class Engine<TOptions> {
     constructor(public userPrefs: UserPrefs, engineId: string) {
         this.id = engineId;
     }
-    
+
     abstract tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError>;
     abstract forceAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError>;
 

@@ -12,7 +12,7 @@
     const { msg }: Props = $props();
 
     const timestamp = $derived(dayjs(msg.timestamp));
-    
+
     const registry = getRegistry();
     const uiState = getUIState();
 

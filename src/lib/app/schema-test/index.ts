@@ -68,7 +68,7 @@ export class SchemaTestGame extends ClientGame {
     private async schemaUpdateHandler(name: string, data: any): Promise<ActionResult> {
         const res = await this.defaultHandler(name, data);
         if (!res.success) return res;
-        
+
         if (!this.schemaChanged) {
             this.schemaChanged = true;
             const action = this.actions.get(name);
@@ -81,14 +81,14 @@ export class SchemaTestGame extends ClientGame {
                 await this.registerActions([updatedAction]);
             }
         }
-        
+
         return res;
     }
 
     public async hello() {
         r.info(`[schema-test] Registering ${this.actions.size} actions`);
         super.hello();
-        
+
         await this.sendContext(
             [
                 "Welcome to the JSON Schema test.",

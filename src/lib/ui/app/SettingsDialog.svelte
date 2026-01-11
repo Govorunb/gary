@@ -255,11 +255,11 @@
         @apply bg-white dark:bg-neutral-800;
         @apply text-neutral-900 dark:text-neutral-100;
         @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
-        
+
         &:hover {
             @apply border-neutral-400 dark:border-neutral-500;
         }
-        
+
         &::content, &::slotted {
             @apply rounded-lg;
         }

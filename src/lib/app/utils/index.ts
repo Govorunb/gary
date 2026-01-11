@@ -30,7 +30,7 @@ export const scrollNumInput: Attachment<HTMLInputElement> = (el) => {
     // what a big brain big man big beefy brain man move
     // (also on cr it only scrolls when focused to prevent "randomly" hijacking page scroll - we don't care, our page doesn't scroll)
     //if (!isWebkitGtk()) return on(el, "wheel", () => {});
-    
+
     const listener = (evt: WheelEvent) => {
         const target = evt.target as HTMLInputElement;
         // increment/decrement on scroll
@@ -143,7 +143,7 @@ export const horizontalScroll: Attachment<HTMLElement> = (el) => {
 
 /**
  * Format a number to at least the precision of the step.
- * 
+ *
  * Examples:
  * - `(0.5, 0.01)` -> `"0.50"`
  * - `(1234, 10)` -> `"1234"`
@@ -159,7 +159,7 @@ export function toStepPrecision(value: number, step: number): string {
 
     const stepFractionDigits = clamp(Math.ceil(-Math.log10(Math.abs(step))), 0, 20);
     if (stepFractionDigits === 0) return value.toString();
-    
+
     const valDigits = value === 0 ? 0 : -Math.floor(Math.log10(Math.abs(value)));
     if (valDigits > stepFractionDigits) return value.toString(); // already more precise than required
 
@@ -206,9 +206,9 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
         if (signal?.aborted) {
             return reject(new Error("Aborted"));
         }
-        
+
         const timeout = setTimeout(resolve, ms);
-        
+
         signal?.addEventListener('abort', () => {
             clearTimeout(timeout);
             reject(new Error("Aborted"));
@@ -245,7 +245,7 @@ export async function* createListener<T>(setup: (next: (value: T) => void, done:
 
     const tryResolve = () => {
         if (!resolve || !queue?.length) return;
-        
+
         const value = queue.shift()!;
         // reentry (just in case)
         const r = resolve;

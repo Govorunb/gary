@@ -12,7 +12,7 @@ import { UIState } from "$lib/ui/app/ui-state.svelte";
 
 /**
  * Represents a user session within the app.
- * 
+ *
  * Maybe in the future the app can save/load sessions, or run multiple at once, or something.
  * For now, it's just a "DI root"/"manager manager" kind of thing.
  */

@@ -45,13 +45,13 @@ export class SelfTestHarness {
     public client: TestClientGame;
     public server: Game;
     public readonly session: MockSession;
-    
+
     constructor(gameName: string = "test-game", version = "v1") {
         this.session = new MockSession();
-        
+
         const svConn = new InternalConnection(`${gameName}-conn`, version);
         const clConn = new ConnectionClient(svConn);
-        
+
         this.server = new Game(this.session as any, svConn);
         this.client = new TestClientGame(clConn, gameName);
     }

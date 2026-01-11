@@ -31,7 +31,7 @@
         if (!scheduler.errored) {
             scheduler.muted = !scheduler.muted;
         }
-        userInteracted();    
+        userInteracted();
     }
 
     function getState(): State {
@@ -67,7 +67,7 @@
 
 <div class="engine-controls">
     <EnginePicker />
-    <button 
+    <button
         onclick={toggleMute}
         class="act-btn mute-btn"
         data-muted={boolAttr(scheduler.muted)}
@@ -76,7 +76,7 @@
     >
         <MuteIcon /> {muteText}
     </button>
-    <button 
+    <button
         onclick={() => {
             if (scheduler.busy && altMode) {
                 scheduler.cancelAct();
@@ -139,7 +139,7 @@
         &:disabled {
             @apply opacity-60;
         }
-        
+
         &:focus-visible {
             @apply ring-2 ring-primary-500 outline-none;
         }
@@ -147,7 +147,7 @@
 
     .mute-btn[data-muted] {
         @apply text-warning-600 dark:text-warning-400;
-        
+
         &:hover {
             @apply text-warning-700 dark:text-warning-300;
         }
@@ -155,7 +155,7 @@
     .mute-btn[data-errored] {
         @apply text-error-600 dark:text-error-400;
         @apply ring-2 ring-error-200 dark:ring-error-800;
-        
+
         &:hover {
             @apply text-error-700 dark:text-error-300;
             @apply ring-error-400 dark:ring-error-600;

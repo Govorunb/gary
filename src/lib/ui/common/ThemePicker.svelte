@@ -10,7 +10,7 @@
         currentTheme?: Theme;
     };
     let { currentTheme = $bindable("system") }: Props = $props();
-    
+
     let selectedIndex = $derived(Math.max(0, THEMES.indexOf(currentTheme)));
 
     $effect(() => {
@@ -39,6 +39,6 @@
     @reference "global.css";
 
     .radio-item {
-        @apply flex items-center size-full gap-2;
+        @apply frow-2 items-center size-full;
     }
 </style>

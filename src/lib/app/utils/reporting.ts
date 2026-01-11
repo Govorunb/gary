@@ -9,9 +9,9 @@ export interface Reporter {
     /** Minimum log level to auto-show toasts for. */
     autoToastLevel: LogLevel;
     defaultToastOptions: ToastOptions;
-    
+
     report: (level: LogLevel, options: ReportOptions) => Promise<void>;
-    
+
     verbose: ReportFunc;
     debug: ReportFunc;
     info: ReportFunc;
@@ -19,7 +19,7 @@ export interface Reporter {
     warn: ReportFunc;
     error: ReportFunc;
     fatal: ReportFunc; // TODO: modal for fatal
-    
+
     /** @deprecated use verbose */
     trace: ReportFunc;
     /** @deprecated use warn */
@@ -237,14 +237,14 @@ function getCallerLocation(targetStackDepth: number = 5): string | undefined {
         const regex = /at\s+(?:(?<fnName>\S+)\s+\()?(?<file>.*):(?<line>\d+):(?<col>\d+)/;
         const match = callerLine.match(regex);
         if (!match) return;
-        
+
         const {fnName, file, line, col} = match.groups as {
             fnName?: string; // e.g. closure
             file: string;
             line: string;
             col: string;
         };
-        
+
         // before: initDI@http://localhost:1420/src/lib/app/session.svelte.ts:44:19
         // after: initDI@src/lib/app/session.svelte.ts:44:19
         const srcPath = file.substring(Math.max(filePathStart, file.indexOf("src/")));

@@ -56,23 +56,23 @@
         <span>{action.name}</span>
         <div class="actions">
             {#if hasSchema}
-                <button 
-                    class="action-btn" 
+                <button
+                    class="action-btn"
                     onclick={preventDefault(send)}
                     {@attach tooltip("Send (manual)")}
                 >
                     <Send class="size-4" />
                 </button>
-                <button 
-                    class="action-btn" 
+                <button
+                    class="action-btn"
                     onclick={preventDefault(sendRandom)}
                     {@attach tooltip("Send (random data)")}
                 >
                     <Dices class="size-4" />
                 </button>
             {:else}
-                <button 
-                    class="action-btn" 
+                <button
+                    class="action-btn"
                     onclick={preventDefault(sendImmediate)}
                     {@attach tooltip("Send")}
                 >

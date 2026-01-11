@@ -11,7 +11,7 @@
     };
 
     let { open = $bindable() }: Props = $props();
-    
+
     const updater = getUpdater();
     const userPrefs = getUserPrefs();
     const update = $derived(updater.update!);
@@ -28,7 +28,7 @@
         // you're either updating to the previously skipped version or to an even newer version
         // in both cases, keeping this makes no sense
         userPrefs.app.updates.skipUpdateVersion = undefined;
-        
+
         if (isTauri()) {
             await update.downloadAndInstall();
         }
@@ -55,7 +55,7 @@
                 }
             }
         });
-        
+
         updating = false;
         open = false;
     }
@@ -76,7 +76,7 @@
     {/snippet}
     {#snippet body()}
         <p class="update-message">
-            Update from <span class="font-mono font-semibold">{update.currentVersion}</span> to 
+            Update from <span class="font-mono font-semibold">{update.currentVersion}</span> to
             <span class="font-mono font-semibold">{update.version}</span>?
         </p>
         {#if update.body}

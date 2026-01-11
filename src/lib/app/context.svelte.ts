@@ -70,11 +70,11 @@ export const zMessage = z.strictObject({
     source: zSource, // aka "role"
     text: z.string(),
     /** If `true`, the message will show de-emphasized in the UI.
-     * 
+     *
      * `false` will prompt the scheduler to act, `true` and `"noAct"` won't.
 
      * Defaults to `false`.
-     * 
+     *
      * ---
      * Actor messages don't prompt acting even if non-silent.
      */

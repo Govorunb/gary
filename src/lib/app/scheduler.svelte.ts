@@ -119,7 +119,7 @@ export class Scheduler {
             .asyncAndThrough(act => this.perform(act, force, engine))
             .orTee(e => e instanceof EngineError && this.onError(e));
     }
-    
+
     private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>): ResultAsync<EngineActResult, ActError> {
         if (typeof choice === 'object' && 'name' in choice) {
             return this.performAct(choice, force);
@@ -183,7 +183,7 @@ export class Scheduler {
             },
             customData: { actData, game: game.name },
         }, false);
-        return ResultAsync.fromPromise(game.sendAction(actData), 
+        return ResultAsync.fromPromise(game.sendAction(actData),
             (e) => (LogicError.sendErr(e as Error))
         )
         .map(() => act);

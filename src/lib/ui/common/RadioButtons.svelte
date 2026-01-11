@@ -22,7 +22,7 @@
 
     function handleChange(event: Event & { currentTarget: EventTarget & HTMLInputElement; }) {
         if (!event.currentTarget.checked) return;
-        
+
         const iStr = event.currentTarget.attributes.getNamedItem('data-index')!.value;
         const i = parseInt(iStr);
         selectIndex(i);
@@ -75,7 +75,7 @@ radio-picker {
         @apply size-full;
         @apply first:rounded-l-full last:rounded-r-full;
         @apply dark:active:bg-neutral-800/80;
-        
+
         &:hover {
             @apply bg-neutral-200;
             @apply dark:bg-neutral-700;

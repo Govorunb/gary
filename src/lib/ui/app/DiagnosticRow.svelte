@@ -217,10 +217,6 @@
         @apply text-sky-600 dark:text-sky-400;
     }
 
-    .note {
-        @apply text-xs text-neutral-400 dark:text-neutral-500;
-    }
-
     .action-btn {
         @apply p-1.5 rounded-md transition-colors text-neutral-400;
         &:hover {

@@ -121,7 +121,7 @@
             <div class="editor-section">
                 <div class="editor-header">
                     <div class="editor-label">Action Data</div>
-                    <button 
+                    <button
                         class="schema-toggle"
                         onclick={toggleCollapsed}
                         {@attach tooltip(schemaCollapsed ? "Show schema" : "Hide schema")}

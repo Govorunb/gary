@@ -10,11 +10,11 @@
         description?: string;
     }
 
-    let { 
-        value = $bindable(), 
-        label = "", 
-        placeholder = "", 
-        required = false, 
+    let {
+        value = $bindable(),
+        label = "",
+        placeholder = "",
+        required = false,
         disabled = false,
         description = ""
     }: Props = $props();
@@ -64,7 +64,7 @@
         @apply px-3 py-2 border border-neutral-300 rounded-md;
         @apply dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100;
         @apply disabled:opacity-50 disabled:cursor-not-allowed;
-        
+
         &:focus {
             @apply outline-none ring-2 ring-primary-500 border-transparent;
         }
