@@ -37,7 +37,7 @@
     registerAppHotkey(['Alt', 'Enter', 'A', '1'], () => uiState.devToggleAprilFools());
 </script>
 
-<div class="flex flex-col h-screen" role="application">
+<div class="fcol-2 h-screen" role="application">
     {@render children()}
 </div>
 

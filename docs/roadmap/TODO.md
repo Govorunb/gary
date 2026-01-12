@@ -1,12 +1,5 @@
 # Project roadmap
 
-## Current development
-
-The project is currently in beta, adding functionality and stabilizing internals.
-
-- `src/` - Svelte 5 frontend and application logic. Nearly all development will happen here.
-- `src-tauri/` - Rust backend. Only edit if explicitly asked to.
-
 ### Candidates for next major
 
 - Event log + granular exports (visibility presets - "user", "actor", "bug report")
@@ -20,19 +13,30 @@ The project is currently in beta, adding functionality and stabilizing internals
 ### Task list grab bag
 Neuro API:
 - [ ] Use force prio literally anywhere (shorten Randy l*tency/interrupt LLM gen)
+    - We don't wait for TTS so `low`-`high` are useless - `critical` should interrupt
+    - Should this interrupt other forces?
 - [ ] Ephemeral force
+    - "Parallel processing", context merging headache - I really don't think Gary should have to deal with this
 - [ ] Deprecate `reregister_all` and stuff it behind a compat flag
 
 App logic:
 - [ ] Non-silent message (from user) with no connected games still primes the scheduler (should call model if yapping is allowed?)
 - [ ] 'Strict mode' that raises all diagnostic severities by 1 (warnings become errors, errors become fatal and instantly disconnect WS)
 - [ ] Figure out where game-specific prefs go when the game changes name
-- [ ] Scheduler scans all games' forceQueues instead of having its own (might solve an edge case where 2+ connected games could trigger prot/force/multiple on each other through no fault of their own)
+- [ ] Scheduler takes from games' forceQueues instead of games pushing to its "central" FQ
+    - Might solve an edge case where 2+ connected games could trigger `prot/force/multiple` on each other through no fault of their own
 - [ ] `$env:MY_ENV_VAR` prefs syntax (for API keys and such)
+    - Was thinking about external providers/plugins but it's too much work for single-digit count of devs+users
 - Context trimming
     - [ ] Token counting from inference provider responses
     - [ ] Priority trimming (actions/results are less important)
-- [ ] Holding Esc+F1 on app launch forces safe mode (in case it ever becomes possible to softlock with weird prefs)
+    - User should define context limit (we can't know it automatically) which is awkward/a hassle
+- [ ] Option to force safe mode on launch (in case someone manages to softlock with weird prefs)
+    - e.g. holding Esc+F1 on launch, or a `--safe-mode` arg
+- Diagnostics
+    - [ ] `perf/spam/*` - e.g. context too big, send rate too fast, etc.
+    - [ ] `perf/schema/confusing` - weird/unhinged schema behavior e.g. array/object literals in `enum`s
+    - Come up with more
 
 Frontend:
 - Extra context features
@@ -44,8 +48,8 @@ Frontend:
     - [ ] Streaming reactive ctx message conversion (entirely reimplement rx it'll be funny)
 - [ ] Launch game processes (+ proposed shutdown API)
 - More width-responsive UI
-    - [ ] Collapse left sidebar to hamburger on small widths
-    - [ ] On fullscreen, use empty right half for something
+    - [ ] Collapse left sidebar to slide-out on small widths
+    - [ ] On fullscreen, use empty right half for something (event log?)
 - Diagnostics
     - [ ] Filtering/sorting (errors first, only warnings, regex etc.)
     - [ ] More useful tooltip/popover on status dot
@@ -53,6 +57,8 @@ Frontend:
 - [ ] Allow binding to `0.0.0.0`
 - Onboarding (docs, first-time teaching tips)
     - [ ] First-time tip for when an engine error pauses the scheduler
+- Spamming toasts seriously hurts performance
+- Context log height gets recalculated a lot
 
 ### Miscellaneous wishlist/musings
 

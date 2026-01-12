@@ -46,8 +46,6 @@ The engine may choose not to act if not forced; or, alternatively speaking - the
 
 ## Tauri Application
 
-### Architecture Overview
-
 Tauri is a cross-platform desktop application framework that renders a web-based frontend in the system WebView while passing IPC messages to invoke calls on the Rust backend.
 
 ### App Components
