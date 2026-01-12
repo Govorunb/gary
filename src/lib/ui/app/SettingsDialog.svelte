@@ -120,8 +120,8 @@
         {#snippet PreferencesSection()}
             <h2>Preferences</h2>
 
-            <div class="fcol">
-                <div class="fcol">
+            <div class="fcol-2">
+                <div class="fcol-2">
                     <p>Backup/restore raw JSON data to/from clipboard:</p>
                     <div class="field">
                         <div class="row">
@@ -163,7 +163,7 @@
         {#snippet UpdatesSection()}
             <h2>Updates</h2>
 
-            <div class="frow">
+            <div class="frow-2">
                 <p>Current version:
                 {#await app.getVersion()}
                     {APP_VERSION}
@@ -190,7 +190,7 @@
                     <option value="off">Never</option>
                 </select>
             </div>
-            <div class="frow items-center">
+            <div class="frow-2 items-center">
                 <button class="btn btn-base preset-outlined-surface-300-700"
                     onclick={checkForUpdates}
                     disabled={updater.checkingForUpdates}

@@ -212,11 +212,10 @@ Clients should always validate action data.`,
     {
         // TODO for things like complex enum members
         // (`"enum": ["str", 5, {"object": "yep that's allowed"}, ["arrays", "too"]])`)
-        key: "prot/schema/confusing",
-        severity: DiagnosticSeverity.Warning,
+        key: "perf/schema/confusing",
+        severity: DiagnosticSeverity.Info,
         title: "Confusing action schema",
-        description: `Action schemas should be easy to understand. Please avoid uncommon and confusing patterns.
-`,
+        description: `Action schemas should be easy to understand. Please avoid uncommon and confusing patterns.`,
     }
 ] as const satisfies DiagnosticDef[];
 

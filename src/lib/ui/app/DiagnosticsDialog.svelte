@@ -77,7 +77,7 @@
                 </SegmentedControl>
             </div>
         {/if}
-        <div class="fcol-scroll">
+        <div class="fcol-scroll-2">
             {#each activeDiagnostics as diag (diag.id)}
                 <DiagnosticRow {game} {diag} />
             {:else}

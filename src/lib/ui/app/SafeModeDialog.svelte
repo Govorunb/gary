@@ -66,7 +66,7 @@
             Your preferences failed to load. The app is running with default settings in read-only mode.
         </p>
 
-        <div class="fcol">
+        <div class="fcol-2">
             <p class="import-label">You may attempt to manually fix the data below: <span class="note">(or get someone you trust to fix it)</span></p>
             <div class="editor-container">
                 <CodeMirror

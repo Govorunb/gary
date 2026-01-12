@@ -99,16 +99,6 @@
             @apply border-warning-200 dark:border-warning-800;
         }
     }
-    /* flex col - see utility classes below */
-    div.fcol {
-        @apply fcol-2;
-    }
-    div.fcol-scroll {
-        @apply fcol-scroll-2;
-    }
-    div.frow {
-        @apply frow-2;
-    }
     .attention {
         @apply border-2 border-amber-500 dark:border-amber-400;
     }
@@ -125,6 +115,7 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* shorthand for "flex column/row with gap X" */
 @utility fcol-* {
     @apply flex flex-col;
     gap: calc(var(--spacing) * --value(number));
