@@ -9,6 +9,8 @@ import type { BaseConnection } from "./connection";
 import dayjs from "dayjs";
 import { dequal } from "dequal/lite";
 import type { Message } from "$lib/app/context.svelte";
+import { findUnsupportedSchemaKeywords } from "./helpers";
+import type { JSONSchema } from "openai/lib/jsonschema";
 
 export type GameAction = v1.Action & { active: boolean };
 export type PendingAction = {
@@ -179,6 +181,13 @@ export class Game {
         if (isEmpty) {
             this.diagnostics.trigger("prot/schema/prefer_omit_to_empty", { action: name }, false);
             return;
+        }
+        const unsupportedKeywords = new Set(findUnsupportedSchemaKeywords(schema as JSONSchema));
+        if (unsupportedKeywords.size > 0) {
+            this.diagnostics.trigger("prot/schema/unsupported_keywords", {
+                action: name,
+                keywords: Array.from(unsupportedKeywords),
+            }, false);
         }
         if (schema.type !== "object") {
             this.diagnostics.trigger("prot/schema/type_object", { action: name, schema }, false);

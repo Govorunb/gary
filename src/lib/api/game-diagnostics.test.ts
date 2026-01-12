@@ -56,12 +56,20 @@ describe("suppression", () => {
         reportSpy.mockClear();
 
         diag.trigger(INFO, undefined, false);
-        expect(reportSpy, "report=false").not.toHaveBeenCalled();
+        expect(reportSpy, "report=false").toHaveBeenCalledOnce();
+        expect(reportSpy).toHaveBeenCalledWith(
+            expect.any(Number),
+            expect.objectContaining({ toast: false })
+        );
         reportSpy.mockClear();
 
         diag.suppress(INFO);
         diag.trigger(INFO, undefined, true);
-        expect(reportSpy, "report but suppressed").not.toHaveBeenCalled();
+        expect(reportSpy, "report but suppressed").toHaveBeenCalledOnce();
+        expect(reportSpy).toHaveBeenCalledWith(
+            expect.any(Number),
+            expect.objectContaining({ toast: false })
+        );
     });
 
     test("dismiss by key", ({harness}) => {

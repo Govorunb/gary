@@ -6,7 +6,6 @@ import type { Session } from "../session.svelte";
 import z from "zod";
 import type { UserPrefs } from "../prefs.svelte";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
-import r from "$lib/app/utils/reporting";
 
 export const ENGINE_ID = "randy";
 /** Automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).

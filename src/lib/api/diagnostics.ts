@@ -204,7 +204,19 @@ This will become an error in the future.`
         key: "prot/schema/unsupported_keywords",
         severity: DiagnosticSeverity.Warning,
         title: "Unsupported keywords in action schema",
-        description: "TODO"
+        description: `Complex and uncommon keywords may make Neuro perform worse.
+In Gary, unsupported keywords may be rejected (or worse, ignored) by inference providers during constrained generation.
+This can be insidious, as the LLM may sometimes happen to comply with the schema - but it will likely be inconsistent.
+Clients should always validate action data.`,
+    },
+    {
+        // TODO for things like complex enum members
+        // (`"enum": ["str", 5, {"object": "yep that's allowed"}, ["arrays", "too"]])`)
+        key: "prot/schema/confusing",
+        severity: DiagnosticSeverity.Warning,
+        title: "Confusing action schema",
+        description: `Action schemas should be easy to understand. Please avoid uncommon and confusing patterns.
+`,
     }
 ] as const satisfies DiagnosticDef[];
 

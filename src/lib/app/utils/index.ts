@@ -303,5 +303,37 @@ export function isApril1st() {
     if (dev) return true;
     const today = new Date();
     // month 0-indexed, day 1-indexed. make it make sense
-    return today.getMonth() == 3 && today.getDate() == 1;
+    return today.getMonth() === 3 && today.getDate() === 1;
+}
+
+export function binarySearch<T>(sortedArr: T[], target: any): number {
+    let left = 0, right = sortedArr.length - 1;
+    while (left <= right) {
+        const mid = (left + right) >>> 1;
+        if (sortedArr[mid] === target) return mid;
+        if (sortedArr[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+}
+
+export function sortedIncludes<T>(sortedArr: T[], target: any): target is T {
+    return binarySearch(sortedArr, target) >= 0;
+}
+
+declare global {
+    interface Array<T> {
+        binarySearch(item: any): number;
+        sortedIncludes(item: any): item is T;
+    }
+    interface ReadonlyArray<T> {
+        binarySearch(item: any): (number & keyof this) | -1;
+        sortedIncludes(item: any): item is T;
+    }
+}
+Array.prototype.binarySearch = function<T>(this: T[], item: any) {
+    return binarySearch(this, item);
+}
+Array.prototype.sortedIncludes = function<T>(this: T[], item: any): item is T {
+    return sortedIncludes(this, item);
 }

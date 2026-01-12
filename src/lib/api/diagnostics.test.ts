@@ -3,6 +3,8 @@ import * as v1 from "$lib/api/v1/spec";
 import { test } from "$lib/testing";
 import { TIMEOUTS } from "$lib/api/diagnostics";
 
+const ACTION = v1.zAction.decode({ name: "test_action", description: "test" });
+
 describe("startup", () => {
     test("perf/late/startup", async ({harness}) => {
         vi.advanceTimersByTime(TIMEOUTS["perf/late/startup"] + 100);
@@ -64,19 +66,16 @@ describe("prot/invalid_message", () => {
 describe("actions/register", () => {
     test("perf/register/identical_duplicate - identical action", async ({harness}) => {
         await harness.client.hello();
-        const action = v1.zAction.decode({ name: "test_action", schema: null });
-        await harness.client.registerActions([action]);
-        await harness.client.registerActions([action]);
+        await harness.client.registerActions([ACTION]);
+        await harness.client.registerActions([ACTION]);
 
         expect(harness.diagnosticKeys).toStrictEqual(["perf/register/identical_duplicate"]);
     });
 
     test("prot/v1/register/conflict - different action", async ({harness}) => {
         await harness.client.hello();
-        const action1 = v1.zAction.decode({ name: "test_action", description: "first", schema: null });
-        const action2 = v1.zAction.decode({ name: "test_action", description: "second", schema: null });
-        await harness.client.registerActions([action1]);
-        await harness.client.registerActions([action2]);
+        await harness.client.registerActions([ACTION]);
+        await harness.client.registerActions([{...ACTION, description: "second"}]);
 
         expect(harness.diagnosticKeys).toStrictEqual(["prot/v1/register/conflict"]);
     });
@@ -84,14 +83,10 @@ describe("actions/register", () => {
     test("prot/action/no_desc", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
-            schema: null
-        });
-        await harness.client.registerActions([action]);
+        await harness.client.registerActions([{...ACTION, description: undefined}]);
 
         expect(harness.diagnosticKeys).toStrictEqual(["prot/action/no_desc"]);
-        expect(harness.diagnostics[0].context).toEqual({ action: "test_action" });
+        expect(harness.diagnostics[0].context).toEqual({ action: ACTION.name });
     });
 });
 
@@ -105,10 +100,9 @@ describe("actions/unregister", () => {
 
     test("prot/unregister/inactive", async ({harness}) => {
         await harness.client.hello();
-        const action = v1.zAction.decode({ name: "test_action", schema: null });
-        await harness.client.registerActions([action]);
-        await harness.client.unregisterActions([action.name]);
-        await harness.client.unregisterActions([action.name]);
+        await harness.client.registerActions([ACTION]);
+        await harness.client.unregisterActions([ACTION.name]);
+        await harness.client.unregisterActions([ACTION.name]);
 
         expect(harness.diagnosticKeys).toStrictEqual(["prot/unregister/inactive"]);
     });
@@ -130,12 +124,11 @@ describe("actions/force", () => {
     test("prot/force/some_invalid", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({ name: "test_action", schema: null });
-        await harness.client.registerActions([action]);
+        await harness.client.registerActions([ACTION]);
 
         const force: v1.ForceAction = v1.zForceAction.decode({
             game: harness.server.name,
-            data: { query: "test", action_names: [action.name, "unknown"] },
+            data: { query: "test", action_names: [ACTION.name, "unknown"] },
         });
         await harness.client.conn.send(force);
 
@@ -158,8 +151,7 @@ describe("actions/force", () => {
     test("prot/force/multiple", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({ name: "test_action", schema: null });
-        await harness.client.registerActions([action]);
+        await harness.client.registerActions([ACTION]);
         const fq = harness.session.scheduler.forceQueue;
         expect(fq, "erm... monsieur. you appear to be sharing state between tests again").toStrictEqual([]);
 
@@ -168,12 +160,12 @@ describe("actions/force", () => {
 
         const force: v1.ForceAction = v1.zForceAction.decode({
             game: harness.server.name,
-            data: { query: "test", action_names: [action.name] },
+            data: { query: "test", action_names: [ACTION.name] },
         });
         expect(fq).toStrictEqual([null]);
 
         await harness.client.conn.send(force);
-        expect(fq).toEqual([null, [{...action, active:true}]]);
+        expect(fq).toEqual([null, [{...ACTION, active:true}]]);
         expect(harness.diagnosticKeys, "first force with non-client in queue").toStrictEqual([]);
 
         await harness.client.conn.send(force);
@@ -248,20 +240,21 @@ describe("prot/schema/additionalProperties", () => {
     test("trigger when not defined", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
+        const action = {
+            ...ACTION,
             schema: {
                 type: "object",
                 properties: {
                     foo: { type: "string" }
                 }
             }
-        });
+        } satisfies v1.Action;
+
         await harness.client.registerActions([action]);
 
         expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/additionalProperties"]);
         expect(harness.diagnostics[0].context).toEqual({
-            action: "test_action",
+            action: ACTION.name,
             schema: action.schema,
         });
     });
@@ -269,8 +262,8 @@ describe("prot/schema/additionalProperties", () => {
     test("ignore additionalProperties: true", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
+        const action = {
+            ...ACTION,
             schema: {
                 type: "object",
                 properties: {
@@ -278,7 +271,7 @@ describe("prot/schema/additionalProperties", () => {
                 },
                 additionalProperties: true
             }
-        });
+        } satisfies v1.Action;
         await harness.client.registerActions([action]);
 
         expect(harness.diagnosticKeys).toStrictEqual([]);
@@ -287,8 +280,8 @@ describe("prot/schema/additionalProperties", () => {
     test("ignore additionalProperties: false", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
+        const action = {
+            ...ACTION,
             schema: {
                 type: "object",
                 properties: {
@@ -296,7 +289,7 @@ describe("prot/schema/additionalProperties", () => {
                 },
                 additionalProperties: false
             }
-        });
+        } satisfies v1.Action;
         await harness.client.registerActions([action]);
 
         expect(harness.diagnosticKeys).toStrictEqual([]);
@@ -305,11 +298,7 @@ describe("prot/schema/additionalProperties", () => {
     test("ignore null schema", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
-            schema: null
-        });
-        await harness.client.registerActions([action]);
+        await harness.client.registerActions([ACTION]);
 
         expect(harness.diagnosticKeys).toStrictEqual([]);
     });
@@ -319,23 +308,23 @@ describe("prot/schema/prefer_omit_to_empty", () => {
     test("trigger for empty object schema", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
+        const action = {
+            ...ACTION,
             schema: {}
-        });
+        } satisfies v1.Action;
         await harness.client.registerActions([action]);
 
         expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/prefer_omit_to_empty"]);
         expect(harness.diagnostics[0].context).toEqual({
-            action: "test_action",
+            action: ACTION.name,
         });
     });
 
     test("ignore non-empty object schema", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
+        const action = {
+            ...ACTION,
             schema: {
                 type: "object",
                 properties: {
@@ -343,7 +332,7 @@ describe("prot/schema/prefer_omit_to_empty", () => {
                 },
                 additionalProperties: false
             }
-        });
+        } satisfies v1.Action;
         await harness.client.registerActions([action]);
 
         expect(harness.diagnosticKeys).toStrictEqual([]);
@@ -352,11 +341,7 @@ describe("prot/schema/prefer_omit_to_empty", () => {
     test("ignore null schema", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
-            schema: null
-        });
-        await harness.client.registerActions([action]);
+        await harness.client.registerActions([ACTION]);
 
         expect(harness.diagnosticKeys).toStrictEqual([]);
     });
@@ -366,19 +351,19 @@ describe("prot/schema/type_object", () => {
     test("trigger when type is not object", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
+        const action = {
+            ...ACTION,
             schema: {
                 type: "array",
                 items: { type: "string" },
                 additionalProperties: false
             }
-        });
+        } satisfies v1.Action;
         await harness.client.registerActions([action]);
 
         expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/type_object"]);
         expect(harness.diagnostics[0].context).toEqual({
-            action: "test_action",
+            action: ACTION.name,
             schema: action.schema,
         });
     });
@@ -386,20 +371,20 @@ describe("prot/schema/type_object", () => {
     test("trigger when type is missing", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
+        const action = {
+            ...ACTION,
             schema: {
                 properties: {
                     foo: { type: "string" }
                 },
                 additionalProperties: false
             }
-        });
+        } satisfies v1.Action;
         await harness.client.registerActions([action]);
 
         expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/type_object"]);
         expect(harness.diagnostics[0].context).toEqual({
-            action: "test_action",
+            action: ACTION.name,
             schema: action.schema,
         });
     });
@@ -407,8 +392,8 @@ describe("prot/schema/type_object", () => {
     test("ignore when type is object", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
+        const action = {
+            ...ACTION,
             schema: {
                 type: "object",
                 properties: {
@@ -416,7 +401,7 @@ describe("prot/schema/type_object", () => {
                 },
                 additionalProperties: false
             }
-        });
+        } satisfies v1.Action;
         await harness.client.registerActions([action]);
 
         expect(harness.diagnosticKeys).toStrictEqual([]);
@@ -425,12 +410,256 @@ describe("prot/schema/type_object", () => {
     test("ignore null schema", async ({harness}) => {
         await harness.client.hello();
 
-        const action = v1.zAction.decode({
-            name: "test_action",
-            schema: null
+        await harness.client.registerActions([ACTION]);
+
+        expect(harness.diagnosticKeys).toStrictEqual([]);
+    });
+});
+
+describe("prot/schema/unsupported_keywords", () => {
+    test("oneOf keyword", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { oneOf: [{ type: "string" }, { type: "number" }] }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/unsupported_keywords"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: ACTION.name,
+            keywords: ["oneOf"],
         });
+    });
+
+    test("$ref keyword", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { $ref: "#/definitions/MyType" }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/unsupported_keywords"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: ACTION.name,
+            keywords: ["$ref"],
+        });
+    });
+
+    test("uniqueItems keyword", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    items: { type: "array", items: { type: "string" }, uniqueItems: true }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/unsupported_keywords"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: ACTION.name,
+            keywords: ["uniqueItems"],
+        });
+    });
+
+    test("multiple unsupported keywords", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { oneOf: [{ type: "string" }], anyOf: [{ type: "number" }] }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/unsupported_keywords"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: ACTION.name,
+            keywords: ["oneOf", "anyOf"],
+        });
+    });
+
+    test("ignore all supported keywords", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { type: "string", minLength: 1, maxLength: 100, pattern: "^[a-z]+$" },
+                    bar: { type: "number", minimum: 0, maximum: 100, exclusiveMinimum: true }
+                },
+                required: ["foo"],
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
         await harness.client.registerActions([action]);
 
         expect(harness.diagnosticKeys).toStrictEqual([]);
+    });
+
+    test("properties - property name matching keyword is ignored", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    anyOf: { type: "string" },
+                    oneOf: { type: "number" }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual([]);
+    });
+
+    test("properties - property name ignored, value keyword detected", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    anyOf: { oneOf: [{ type: "string" }] }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/unsupported_keywords"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: ACTION.name,
+            keywords: ["oneOf"],
+        });
+    });
+
+    test("properties - property value with unsupported keyword", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    foo: { oneOf: [{ type: "string" }] }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/unsupported_keywords"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: ACTION.name,
+            keywords: ["oneOf"],
+        });
+    });
+
+    test("enum - object literal value is not checked", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    status: {
+                        type: "string",
+                        enum: ["active", { oneOf: [{ type: "string" }] }, ["$ref", "$def"]]
+                    }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual([]);
+    });
+
+    test("array - tuple item with unsupported keyword", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    tuple: {
+                        type: "array",
+                        prefixItems: [
+                            { type: "string" },
+                            { oneOf: [{ type: "number" }] }
+                        ],
+                        items: false
+                    }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/unsupported_keywords"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: ACTION.name,
+            keywords: ["oneOf"],
+        });
+    });
+
+    test("array - items object with unsupported keyword", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                properties: {
+                    list: {
+                        type: "array",
+                        items: { anyOf: [{ type: "string" }] }
+                    }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual(["prot/schema/unsupported_keywords"]);
+        expect(harness.diagnostics[0].context).toEqual({
+            action: ACTION.name,
+            keywords: ["anyOf"],
+        });
     });
 });

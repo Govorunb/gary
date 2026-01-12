@@ -32,6 +32,7 @@ App logic:
 - Context trimming
     - [ ] Token counting from inference provider responses
     - [ ] Priority trimming (actions/results are less important)
+- [ ] Holding Esc+F1 on app launch forces safe mode (in case it ever becomes possible to softlock with weird prefs)
 
 Frontend:
 - Extra context features
