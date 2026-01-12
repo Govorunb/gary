@@ -25,7 +25,7 @@
             case "user":
                 return "👤";
             case "actor":
-                return msg.source.manual ? "👤" : "🤖";
+                return "🤖";
             default:
                 return "❓";
         }

@@ -182,7 +182,7 @@ export class Scheduler {
                 user: true,
             },
             customData: { actData, game: game.name },
-        }, false);
+        });
         return ResultAsync.fromPromise(game.sendAction(actData),
             (e) => (LogicError.sendErr(e as Error))
         )
