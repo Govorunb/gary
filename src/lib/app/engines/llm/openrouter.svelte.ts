@@ -7,6 +7,7 @@ import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
 import { OpenAIClient } from "./openai.svelte";
+import { parseError } from "$lib/app/utils";
 
 export const ENGINE_ID = "openRouter";
 
@@ -54,9 +55,13 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 
         const res = await ResultAsync.fromPromise(fetch("https://openrouter.ai/api/v1/key", {
             headers: { Authorization: `Bearer ${apiKey}` }
-        }), x => x as Error);
+        }), parseError);
         if (!res.isOk()) {
-            return err(new EngineError("Invalid API key", res.error, false));
+            return err(new EngineError("Could not check API key", res.error, false));
+        }
+        if (!res.value.ok) {
+            const text = await res.value.text();
+            return err(new EngineError("Invalid API key", new Error(text)));
         }
 
         return ok();

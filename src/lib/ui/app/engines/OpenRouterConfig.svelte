@@ -5,36 +5,31 @@
     import { toast } from 'svelte-sonner';
     import OutLink from '$lib/ui/common/OutLink.svelte';
     import EngineConfig from './EngineConfig.svelte';
+    import { LoaderCircle } from '@lucide/svelte';
 
-    let isTestingConnection: boolean = $state(false);
+    let isTestingApiKey: boolean = $state(false);
     let { engineId, close }: ConfigProps<typeof ENGINE_ID> = $props();
     const schema = zOpenRouterPrefs;
 
-    async function handleTestConnection(dirtyConfig: OpenRouterPrefs) {
+    async function testApiKey(dirtyConfig: OpenRouterPrefs) {
         if (!dirtyConfig.apiKey) {
             toast.error("API key is required to test connection");
             return;
         }
+        if (isTestingApiKey) return ;
 
-        isTestingConnection = true;
+        isTestingApiKey = true;
 
-        try {
-            const result = await OpenRouter.testApiKey(dirtyConfig.apiKey);
+        const result = await OpenRouter.testApiKey(dirtyConfig.apiKey);
 
-            if (result.isOk()) {
-                toast.success("Connection successful! API key is valid.");
-            } else {
-                toast.error("Connection failed", {
-                    description: result.error.message || "Invalid API key or network error"
-                });
-            }
-        } catch (error) {
-            toast.error("Connection failed", {
-                description: error instanceof Error ? error.message : "Unknown error"
+        if (result.isOk()) {
+            toast.success("Connection successful! API key is valid.");
+        } else {
+            toast.error(result.error.message, {
+                description: (result.error.cause as Error).message
             });
-        } finally {
-            isTestingConnection = false;
         }
+        isTestingApiKey = false;
     }
 </script>
 
@@ -55,11 +50,16 @@
         </StringField>
         {#if dirtyConfig.apiKey}
             <button
-                class="btn btn-base preset-tonal-secondary rounded-md"
-                onclick={() => handleTestConnection(dirtyConfig)}
-                disabled={isTestingConnection}
+                class="btn btn-base preset-filled-secondary-100-900"
+                onclick={() => testApiKey(dirtyConfig)}
+                disabled={isTestingApiKey}
             >
-                {isTestingConnection ? "Testing..." : "Test Connection"}
+                {#if isTestingApiKey}
+                    <LoaderCircle class="animate-spin" />
+                    <span>Testing...</span>
+                {:else}
+                    Test API key
+                {/if}
             </button>
         {/if}
         <StringField

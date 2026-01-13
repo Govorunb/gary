@@ -16,19 +16,15 @@
     const registry = getRegistry();
     const uiState = getUIState();
 
+    const sourceIcons = {
+        system: "⚙️",
+        client: "🎮",
+        user: "👤",
+        actor: "🤖",
+    };
+
     function getSourceIcon(msg: Message): string {
-        switch (msg.source.type) {
-            case "system":
-                return "⚙️";
-            case "client":
-                return "🎮";
-            case "user":
-                return "👤";
-            case "actor":
-                return "🤖";
-            default:
-                return "❓";
-        }
+        return sourceIcons[msg.source.type] ?? "❓";
     }
 </script>
 
