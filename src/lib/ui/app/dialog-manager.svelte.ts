@@ -1,5 +1,6 @@
 import type { Action } from "$lib/api/v1/spec";
 import type { Game } from "$lib/api/game.svelte";
+import type { EngineId } from "./engines/EngineConfig.svelte";
 
 export type ManualSendDialogState = null | { action: Action, game: Game };
 export type RawMessageDialogState = null | { game: Game };
@@ -10,7 +11,7 @@ export class DialogManager {
     rawMessageDialog: RawMessageDialogState = $state(null);
     diagnosticsDialog: DiagnosticsDialogState = $state(null);
     updateDialogOpen: boolean = $state(false);
-    enginePickerOpen: boolean = $state(false);
+    enginePickerState: boolean | string = $state(false); // false -> closed, open -> picker (no engine selected), string (engine id) -> config
     settingsDialogOpen: boolean = $state(false);
     prefsLoadErrorOpen: boolean = $state(false);
 
@@ -19,14 +20,14 @@ export class DialogManager {
         || this.rawMessageDialog
         || this.diagnosticsDialog
         || this.updateDialogOpen
-        || this.enginePickerOpen
+        || this.enginePickerState
         || this.settingsDialogOpen
         || this.prefsLoadErrorOpen
     ));
 
     openManualSendDialog(action: Action, game: Game) {
         this.closeAllDialogs();
-        if (!this.prefsLoadErrorOpen)
+        if (!this.blockingDialogOpen)
             this.manualSendDialog = { action, game };
     }
 
@@ -36,7 +37,7 @@ export class DialogManager {
 
     openRawMessageDialog(game: Game) {
         this.closeAllDialogs();
-        if (!this.prefsLoadErrorOpen)
+        if (!this.blockingDialogOpen)
             this.rawMessageDialog = { game };
     }
 
@@ -46,7 +47,7 @@ export class DialogManager {
 
     openDiagnosticsDialog(game: Game) {
         this.closeAllDialogs();
-        if (!this.prefsLoadErrorOpen)
+        if (!this.blockingDialogOpen)
             this.diagnosticsDialog = { game };
     }
 
@@ -56,7 +57,7 @@ export class DialogManager {
 
     openUpdateDialog() {
         this.closeAllDialogs();
-        if (!this.prefsLoadErrorOpen)
+        if (!this.blockingDialogOpen)
             this.updateDialogOpen = true;
     }
 
@@ -66,17 +67,23 @@ export class DialogManager {
 
     openEnginePicker() {
         this.closeAllDialogs();
-        if (!this.prefsLoadErrorOpen)
-            this.enginePickerOpen = true;
+        if (!this.blockingDialogOpen)
+            this.enginePickerState = true;
+    }
+
+    openEngineConfig(engineId: EngineId) {
+        this.closeAllDialogs();
+        if (!this.blockingDialogOpen)
+            this.enginePickerState = engineId;
     }
 
     closeEnginePicker() {
-        this.enginePickerOpen = false;
+        this.enginePickerState = false;
     }
 
     openSettingsDialog() {
         this.closeAllDialogs();
-        if (!this.prefsLoadErrorOpen)
+        if (!this.blockingDialogOpen)
             this.settingsDialogOpen = true;
     }
 
@@ -89,7 +96,7 @@ export class DialogManager {
         this.rawMessageDialog = null;
         this.diagnosticsDialog = null;
         this.updateDialogOpen = false;
-        this.enginePickerOpen = false;
+        this.enginePickerState = false;
         this.settingsDialogOpen = false;
     }
 }

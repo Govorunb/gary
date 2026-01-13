@@ -101,7 +101,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         }
         const genMsg = gen.value;
         // shown only to LLM -> preserves prior example for in-context learning or something
-        session.context.actor({...genMsg, visibilityOverrides: { user: false }});
+        session.context.actor({...genMsg, visibilityOverrides: { user: false }}, this.id);
         const commandRes = jsonParse(genMsg.text)
                 .map(p => p.command)
                 .mapErr(e => new EngineError(`Failed to parse JSON: ${e}`, e));

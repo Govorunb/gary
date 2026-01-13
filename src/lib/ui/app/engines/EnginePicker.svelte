@@ -17,18 +17,18 @@
     const userPrefs = getUserPrefs();
     const uiState = getUIState();
 
+    const dialogs = uiState.dialogs;
+    const showingEngineList = $derived(dialogs.enginePickerState === true);
     // UI state machine - null shows engine list
-    let configEngineId: string | null = $state(null);
-    const showingEngineList = $derived(uiState.dialogs.enginePickerOpen && !configEngineId);
+    const configEngineId: string | null = $derived(
+        typeof dialogs.enginePickerState === "string"
+            ? dialogs.enginePickerState
+            : null
+    );
     const engines = $derived(Object.entries(session.engines));
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has('Shift'));
 
-    $effect(() => {
-        if (!uiState.dialogs.enginePickerOpen) {
-            closeConfig();
-        }
-    });
     registerAppHotkey(['Control', 'E'], () => toggleOpen());
     // quick select
     for (let i = 1; i <= 9; i++) {
@@ -36,7 +36,7 @@
             if (!showingEngineList) return;
             if (i > engines.length) return;
             selectEngine(engines[i - 1][0]);
-            uiState.dialogs.closeEnginePicker();
+            dialogs.closeEnginePicker();
         });
     }
     keys.onKeys(['Alt', 'a'], () => {
@@ -55,19 +55,19 @@
     }
 
     function toggleOpen() {
-        if (uiState.dialogs.enginePickerOpen) {
-            uiState.dialogs.closeEnginePicker();
+        if (dialogs.enginePickerState) {
+            dialogs.closeEnginePicker();
         } else {
-            uiState.dialogs.openEnginePicker();
+            dialogs.openEnginePicker();
         }
     }
 
     function openConfig(engineId: string) {
-        configEngineId = engineId;
+        dialogs.enginePickerState = engineId;
     }
 
     function closeConfig() {
-        configEngineId = null;
+        dialogs.enginePickerState = true;
     }
 
     function canDelete(id: string) {
@@ -94,7 +94,7 @@
     }
 </script>
 
-<Dialog bind:open={uiState.dialogs.enginePickerOpen} position="top-start">
+<Dialog bind:open={() => Boolean(dialogs.enginePickerState), (v) => dialogs.enginePickerState = v} position="top-start">
     {#snippet trigger(props)}
         <button {...props} class="trigger">
             <span class="truncate max-w-96">{session.activeEngine.name}</span>

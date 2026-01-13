@@ -44,14 +44,14 @@ export class ContextManager {
         return this.push({ source: zUserSource.decode({}), ...partialMsg });
     }
 
-    actor(partialMsg: SourcelessMessageInput) {
-        return this.push({ source: zActorSource.decode({}), silent: true, ...partialMsg });
+    actor(partialMsg: SourcelessMessageInput, engineId: string) {
+        return this.push({ source: zActorSource.decode({engineId}), silent: true, ...partialMsg });
     }
 }
 
 export const zSystemSource = z.strictObject({type: zConst("system")});
 export const zClientSource = z.strictObject({type: zConst("client"), name: z.string(), id: z.string()});
-export const zActorSource = z.strictObject({type: zConst("actor")});
+export const zActorSource = z.strictObject({type: zConst("actor"), engineId: z.string()});
 export const zUserSource = z.strictObject({type: zConst("user")});
 
 export const zSource = z.discriminatedUnion("type", [

@@ -3,7 +3,7 @@
 The [message](/src/lib/app/context.svelte.ts#L52-L93) architecture was fine enough at first, but it's now starting to get in the way of future features.  
 For example, putting "Act (forced)"/"Gary wants attention" in the message header so we can leave the message text to be the actual content is actually kind of a pain.
 
-It requires us to store the "kind" of "actor message" it is (act/forced/say/notify):
+It requires us to differentiate the "kind" of "actor message" (act/forced/say/notify):
 - `customData` can store but it's completely untyped
 - Can just match `string.startsWith` but that's mega scuffed
 
@@ -16,7 +16,7 @@ Also, trawling through raw text logs kind of sucks, to be perfectly honest. Stru
 
 **Events** are fired when things happen. Each event kind has a unique **key** (e.g. `api/client/connected` - composed like a tree path) akin to diagnostics.
 
-There will be a central **event stream** ("firehose") in the app, and consumers will be able to **subscribe** and filter for the event keys they're interested in. For example, the context log UI would filter for `api/client/*` (`connected`/`disconnected`/`context`/`renamed` etc), `user/ctx_msg`, `api/actor/*` (`act`/`force_act`/`skip_act`/`say`/`say_notify` etc), and so on.
+There should be a central **event stream** ("firehose") in the app, and consumers should be able to **subscribe** and filter for the event keys they're interested in. For example, the context log UI would filter for `api/client/*` (`connected`/`disconnected`/`context`/`renamed` etc), `user/ctx_msg`, `api/actor/*` (`act`/`force_act`/`skip_act`/`say`/`say_notify` etc), and so on.
 
 Undecided on whether events should be declared centrally (like diagnostics) or vertically (owned by the relevant module).
 

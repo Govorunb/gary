@@ -137,7 +137,7 @@ export class OpenAIClient {
         }
         const msg = zMessage.decode({
             text: textOutput,
-            source: zActorSource.decode({}),
+            source: zActorSource.decode({engineId: this.id}),
             silent: true,
             customData: {
                 [this.id]: { response, reasoning, },

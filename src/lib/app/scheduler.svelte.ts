@@ -121,7 +121,7 @@ export class Scheduler {
 
     private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>): ResultAsync<EngineActResult, ActError> {
         if (typeof choice === 'object' && 'name' in choice) {
-            return this.performAct(choice, force);
+            return this.performAct(choice, force, engine);
         }
         if (force) {
             return errAsync(new LogicError(`Engine chose to ${choice === "skip" ? choice : "yap"} in forced act. Please don't tell developer or I will cry`));
@@ -133,7 +133,7 @@ export class Scheduler {
                 silent: true,
                 visibilityOverrides: { engine: false },
                 customData: { engine: engine.name },
-            });
+            }, engine.id);
             return okAsync(choice);
         }
         if ('say' in choice) {
@@ -142,7 +142,7 @@ export class Scheduler {
                 text: `Gary ${choice.notify ? "wants attention" : "says"}: ${choice.say}`,
                 silent: !choice.notify,
                 visibilityOverrides: { engine: false }
-            });
+            }, engine.id);
             if (choice.notify) {
                 r.info("Gary wants attention", {
                     details: choice.say,
@@ -154,7 +154,7 @@ export class Scheduler {
         return errAsync(new LogicError(`Reached unreachable fallthrough in 'perform': Did you add a new engine return option?`));
     }
 
-    private performAct(act: EngineAct, forced: boolean): ResultAsync<EngineAct, ActError> {
+    private performAct(act: EngineAct, forced: boolean, engine: Engine<unknown>): ResultAsync<EngineAct, ActError> {
         const game = this.registry.games.find(g => g.getAction(act.name));
         if (!game) {
             r.error("Engine selected unknown action", {
@@ -177,7 +177,7 @@ export class Scheduler {
                 user: true,
             },
             customData: { actData, game: game.name },
-        });
+        }, engine.id);
         return ResultAsync.fromPromise(game.sendAction(actData),
             (e) => (LogicError.sendErr(e as Error))
         )

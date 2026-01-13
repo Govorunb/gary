@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Message } from "$lib/app/context.svelte";
-    import { getRegistry, getUIState } from "$lib/app/utils/di";
+    import { getRegistry, getSession, getUIState } from "$lib/app/utils/di";
     import { tooltip } from "$lib/app/utils";
     import { boolAttr } from "runed";
     import dayjs from "dayjs";
@@ -13,6 +13,7 @@
 
     const timestamp = $derived(dayjs(msg.timestamp));
 
+    const session = getSession();
     const registry = getRegistry();
     const uiState = getUIState();
 
@@ -44,13 +45,27 @@
                 {timestamp.format("LTS")}
             </span>
             {#if msg.source.type === 'client'}
-                <button class="client-name"
+                {@const id = msg.source.id}
+                {@const game = registry.getGame(id)}
+                <button class="message-title"
                     tabindex="-1"
-                    data-gone={boolAttr(msg.source.type === 'client' && !registry.getGame(msg.source.id))}
-                    onclick={() => uiState.selectGameTab((msg.source.type === 'client' && msg.source.id) as string)}
-                    title="ID: {msg.source.id}"
+                    data-gone={boolAttr(!game)}
+                    onclick={() => game && uiState.selectGameTab(id)}
+                    title={`ID: ${id}\nClick to focus game tab`}
                 >
                     {msg.source.name}
+                </button>
+            {/if}
+            {#if msg.source.type === 'actor'}
+                {@const id = msg.source.engineId}
+                {@const engine = session.engines[id]}
+                <button class="message-title"
+                    tabindex="-1"
+                    data-gone={boolAttr(!engine)}
+                    onclick={() => engine && uiState.dialogs.openEngineConfig(id)}
+                    title={`ID: ${id}\nClick to open engine config`}
+                >
+                    {engine.name}
                 </button>
             {/if}
         </div>
@@ -110,7 +125,7 @@
     .message-text {
         @apply whitespace-pre-wrap text-neutral-700 dark:text-neutral-100;
     }
-    .client-name {
+    .message-title {
         @apply font-semibold text-neutral-700 dark:text-neutral-100;
         &[data-gone] {
             @apply line-through opacity-60 cursor-default;
