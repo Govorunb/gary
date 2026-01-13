@@ -96,7 +96,7 @@
         {#if altMode}
             <Square /> Stop
         {:else}
-            <Hourglass /> Busy
+            <Hourglass class="animate-[spin_2s_ease-in-out_infinite,pulse_4s_linear_infinite]" /> Busy
         {/if}
     {:else}
         {#if altMode}
@@ -172,5 +172,4 @@
             @apply ring-2 ring-inset ring-primary-300 dark:ring-primary-700;
         }
     }
-
 </style>
