@@ -42,7 +42,7 @@ Avoid Tailwind class soup (long class strings) and prefer explicit CSS classes w
     .my-component {
         /* group directives by layout, bg/text colors, border/shadow/ring, etc */
         @apply px-4 py-2 rounded-md; /* self layout */
-        @apply flex items-center gap-2; /* children layout */
+        @apply frow-2 items-center; /* children layout */
         @apply border border-neutral-200 dark:border-neutral-700;
         @apply bg-neutral-100 dark:bg-neutral-900/70;
         /* instead of soup like `hover:a1 hover:b1 hover:dark:a2 hover:dark:b2`, use a nested CSS selector */

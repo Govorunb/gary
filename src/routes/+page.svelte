@@ -62,7 +62,7 @@
     <div class="justify-self-center">
         <EngineControls />
     </div>
-    <div class="justify-self-end flex flex-row gap-4">
+    <div class="justify-self-end frow-4">
         {#if updater.hasPendingUpdate}
             <button class="btn preset-outlined-primary-200-800 align-top" onclick={() => updater.promptForUpdate()}>
                 Update to {updater.update?.version ?? "latest version"}

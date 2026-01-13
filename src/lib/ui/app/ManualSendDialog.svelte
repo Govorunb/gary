@@ -167,7 +167,7 @@
         {/if}
     {/snippet}
     {#snippet footer()}
-        <div class="flex gap-2">
+        <div class="frow-2">
             {#if schemaJson}
                 <button class="btn btn-base subtle-btn"
                     onclick={reroll}
@@ -178,7 +178,7 @@
                 </button>
             {/if}
         </div>
-        <div class="flex gap-2">
+        <div class="frow-2">
             <button class="btn btn-base subtle-btn" onclick={closeDialog}>Cancel</button>
             <button
                 class="btn btn-base send-btn"
@@ -215,7 +215,7 @@
     }
 
     .editor-split {
-        @apply flex gap-3;
+        @apply frow-3;
         @apply flex-1 overflow-hidden;
     }
 
@@ -236,7 +236,7 @@
     }
 
     .schema-toggle {
-        @apply flex items-center gap-1;
+        @apply frow-1 items-center;
         @apply px-2 py-1.5 rounded-md text-base font-medium;
         @apply bg-neutral-100 dark:bg-neutral-800;
         @apply text-neutral-700 dark:text-neutral-300;

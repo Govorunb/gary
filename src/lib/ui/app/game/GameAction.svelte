@@ -108,7 +108,7 @@
         @apply bg-white/80 shadow-sm transition;
         @apply dark:border-neutral-700 dark:bg-neutral-900/60;
         & > summary {
-            @apply flex cursor-pointer items-center justify-between gap-2;
+            @apply frow-2 cursor-pointer items-center justify-between;
             @apply px-4 py-1.5 text-sm font-medium text-neutral-700 transition;
             & > span:first-child {
                 @apply flex-1;

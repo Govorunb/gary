@@ -49,7 +49,7 @@
     }
 
     .connection-info {
-        @apply flex items-center justify-between gap-2;
+        @apply frow-2 items-center justify-between;
     }
 
     .id-text {

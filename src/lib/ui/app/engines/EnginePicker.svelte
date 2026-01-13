@@ -190,7 +190,7 @@
     @reference "global.css";
 
     .trigger {
-        @apply flex items-center gap-2 px-3 py-1.5 rounded-lg;
+        @apply frow-2 items-center px-3 py-1.5 rounded-lg;
         @apply text-lg font-medium text-neutral-900 dark:text-neutral-100;
         @apply transition-all shadow-sm border border-neutral-200/50 dark:border-neutral-700/50;
         @apply bg-neutral-100 active:bg-neutral-300;
@@ -233,7 +233,7 @@
     }
 
     .header-actions {
-        @apply flex items-center gap-2;
+        @apply frow-2 items-center;
     }
 
     .list {
@@ -246,7 +246,7 @@
     }
 
     .engine-select {
-        @apply flex-1 flex items-center gap-3 px-2 py-1.5 rounded-md text-left;
+        @apply flex-1 frow-3 items-center px-2 py-1.5 rounded-md text-left;
         @apply text-sm font-medium text-neutral-700 dark:text-neutral-300 outline-none;
 
         &.active {
@@ -300,7 +300,7 @@
     }
 
     .add-button {
-        @apply w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg;
+        @apply w-full frow-2 items-center justify-center px-3 py-2 rounded-lg;
         @apply border border-dashed border-neutral-300 dark:border-neutral-700;
         @apply text-sm font-medium text-neutral-500 dark:text-neutral-400;
         @apply transition-all;

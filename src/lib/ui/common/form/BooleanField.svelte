@@ -37,7 +37,7 @@
     }
 
     .checkbox-label {
-        @apply flex items-center gap-2 cursor-pointer;
+        @apply frow-2 items-center cursor-pointer;
     }
 
     .checkbox-input {

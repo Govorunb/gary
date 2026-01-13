@@ -241,7 +241,7 @@
     }
 
     .field {
-        @apply flex items-center gap-3;
+        @apply frow-3 items-center;
     }
 
     .field-label {
@@ -269,7 +269,7 @@
         @apply text-xs rounded-md px-3 py-2;
         @apply border whitespace-pre-line;
         @apply transition-all duration-200;
-        @apply flex items-start justify-between gap-2;
+        @apply frow-2 items-start justify-between;
 
         &[data-error] {
             @apply bg-red-50 dark:bg-red-900/30;

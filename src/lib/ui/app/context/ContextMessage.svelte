@@ -109,7 +109,7 @@
         @apply fcol-1 ml-6;
     }
     .message-header {
-        @apply flex items-center gap-2;
+        @apply frow-2 items-center;
     }
     .message-text {
         @apply whitespace-pre-wrap text-neutral-700 dark:text-neutral-100;

@@ -76,7 +76,7 @@
     @reference "global.css";
 
     details.game-tab {
-        @apply flex flex-col overflow-y-hidden;
+        @apply fcol-0 overflow-y-hidden;
         @apply rounded-lg shadow-sm transition-all;
         @apply border border-neutral-200/70 dark:border-neutral-700;
         @apply bg-white/80 dark:bg-neutral-900/60;
@@ -91,7 +91,7 @@
         }
 
         summary.game-tab-header {
-            @apply flex cursor-pointer items-center justify-between gap-2;
+            @apply frow-2 cursor-pointer items-center justify-between;
             @apply px-3 py-2 text-sm font-medium text-neutral-700 transition;
             @apply focus:outline-none;
             &:focus-visible {
@@ -107,7 +107,7 @@
     }
 
     .game-info {
-        @apply flex items-center gap-2 flex-1 min-w-0 text-lg font-medium;
+        @apply frow-2 items-center flex-1 min-w-0 text-lg font-medium;
     }
 
     .game-name {
@@ -115,7 +115,7 @@
     }
 
     .game-controls {
-        @apply flex items-center gap-2 shrink-0;
+        @apply frow-2 items-center shrink-0;
     }
 
     .status-indicator {

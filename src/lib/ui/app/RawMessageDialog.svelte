@@ -155,8 +155,8 @@
         </div>
     {/snippet}
     {#snippet footer()}
-        <div class="flex gap-2">
-            <div class="preset-dropdown flex flex-row items-center gap-2.5">
+        <div class="frow-2">
+            <div class="preset-dropdown frow-2.5 items-center">
                 <label for="preset-select">Template:</label>
                 <select
                     id="preset-select"
@@ -185,7 +185,7 @@
                 </TeachingTooltip>
             </div>
         </div>
-        <div class="flex gap-2">
+        <div class="frow-2">
             <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Cancel</button>
             <button
                 class="btn btn-base preset-filled-primary-400-600"
@@ -203,7 +203,7 @@
     @reference "global.css";
 
     .editor-section {
-        @apply flex gap-3 flex-1 overflow-hidden;
+        @apply frow-3 flex-1 overflow-hidden;
     }
 
     .editor-panel {

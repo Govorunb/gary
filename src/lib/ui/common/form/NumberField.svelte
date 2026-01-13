@@ -44,7 +44,7 @@
         />
     {/snippet}
     {#if slider}
-        <div class="w-full flex items-center gap-2">
+        <div class="w-full frow-2 items-center">
             {@render input()}
             <span class="min-w-6">{toStepPrecision(value, step)}</span>
         </div>

@@ -64,7 +64,7 @@
             {/each}
         </div>
     {:else}
-        <div class="flex flex-col items-center justify-center w-full flex-1">
+        <div class="fcol-0 items-center justify-center w-full flex-1">
             <p class="text-md p-4 text-center text-neutral-600 dark:text-neutral-300">No games connected.</p>
             <button
                 class="schema-test-button"
@@ -130,7 +130,7 @@
     }
 
     .schema-test-button {
-        @apply flex flex-row items-center gap-2;
+        @apply frow-2 items-center;
         @apply rounded-lg;
         @apply bg-sky-600 px-3 py-2;
         @apply text-sm font-medium text-white shadow-sm transition;

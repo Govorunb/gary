@@ -183,7 +183,7 @@
         }
 
         .actions {
-            @apply absolute top-2 right-2 flex items-center gap-1 transition-opacity;
+            @apply absolute top-2 right-2 frow-1 items-center transition-opacity;
             @apply opacity-0 group-hover:opacity-100 focus-within:opacity-100;
             @apply group-data-shift:opacity-100;
         }
@@ -244,7 +244,7 @@
             @apply pb-2;
         }
         & summary {
-            @apply flex items-center gap-1.5 cursor-pointer select-none;
+            @apply frow-1.5 items-center cursor-pointer select-none;
             @apply text-xs font-medium text-sky-700 dark:text-sky-300;
             @apply hover:text-sky-800 dark:hover:text-sky-200;
         }

@@ -59,7 +59,7 @@
     const address = $derived(`ws://127.0.0.1:${userPrefs.api.server.port}`);
 </script>
 
-<div class="flex flex-row items-center gap-3">
+<div class="frow-3 items-center">
     <div class="power-button-container">
         <button
             class="power-button"
@@ -106,7 +106,7 @@
             <h3>Confirm stopping server</h3>
             <p>Are you sure you want to stop the server? There are still open connections.</p>
             <p class="note">Shift-click to bypass this confirmation.</p>
-            <div class="flex flex-row justify-end gap-2">
+            <div class="frow-2 justify-end">
                 <button class="btn preset-tonal-warning" onclick={() => togglePower(true)}>Disconnect all games</button>
                 <button class="btn preset-tonal-surface" onclick={() => confirmModalOpen = false}>Cancel</button>
             </div>
@@ -118,14 +118,14 @@
     @reference "global.css";
 
     .power-button-container {
-        @apply relative flex items-center gap-2;
+        @apply relative items-center frow-2;
         @apply rounded-xl px-2 py-0.5;
         @apply max-h-10;
         @apply bg-neutral-100 dark:bg-neutral-800/80;
     }
 
     .power-button {
-        @apply flex items-center justify-center rounded-full;
+        @apply frow-0 items-center justify-center rounded-full;
         @apply size-13;
         @apply shadow-inner transition-all duration-150;
         @apply bg-neutral-100 dark:bg-neutral-800;
@@ -146,7 +146,7 @@
     }
 
     .options-button {
-        @apply flex size-8 items-center justify-center rounded-full;
+        @apply frow-0 size-8 items-center justify-center rounded-full;
         @apply border border-transparent;
         @apply text-neutral-700 shadow-sm transition;
         @apply disabled:cursor-not-allowed;

@@ -42,6 +42,7 @@ Frontend:
 - Extra context features
     - [ ] Menu (buttons to copy message text, ID, etc)
     - [ ] Editing the log - edit message text, remove message
+    - [ ] "Act (forced)"/"Gary wants attention" should be a heading (like game name for client msgs)
 - Performance (because WebKit is ngmi)
     - [ ] Virtualize context log https://tanstack.com/virtual/latest/docs/introduction
     - [ ] Keep a CodeMirror instance loaded offscreen and Portal it into dialogs (deranged)

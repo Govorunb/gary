@@ -76,7 +76,7 @@
         @apply ring-1 ring-primary-200/40 dark:ring-primary-800/40;
     }
     .reverse-log {
-        @apply flex flex-col flex-1 min-h-0;
+        @apply fcol-0 flex-1 min-h-0;
     }
     .log {
         @apply fcol-scroll-2 h-full;

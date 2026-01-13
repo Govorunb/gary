@@ -53,7 +53,7 @@
                 checked={selectedIndex === i}
                 onchange={handleChange}
                 class="sr-only">
-            <div class="flex items-center gap-2 size-full">
+            <div class="frow-2 items-center size-full">
                 {@render renderItem(item, i)}
             </div>
         </label>
@@ -70,7 +70,7 @@ radio-picker {
     @apply dark:border-surface-800/80 dark:bg-surface-900 dark:text-surface-200;
 
     & label {
-        @apply relative flex cursor-pointer select-none items-center gap-2 font-medium;
+        @apply relative frow-2 cursor-pointer select-none items-center font-medium;
         @apply px-2.5 py-1;
         @apply size-full;
         @apply first:rounded-l-full last:rounded-r-full;
