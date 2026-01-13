@@ -5,7 +5,6 @@ import { zActData, type Action } from "$lib/api/v1/spec";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { untrack } from "svelte";
-import { sendNotification } from "@tauri-apps/plugin-notification";
 import { debounced } from "./utils";
 
 export class Scheduler {
@@ -148,10 +147,6 @@ export class Scheduler {
                 r.info("Gary wants attention", {
                     details: choice.say,
                     toast: true
-                });
-                sendNotification({
-                    title: "Gary wants attention",
-                    body: choice.say,
                 });
             }
             return okAsync(choice);

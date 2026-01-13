@@ -21,7 +21,6 @@ pub fn run() {
             app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap();
             Ok(())
         })
-        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_log::Builder::new()
             .rotation_strategy(RotationStrategy::KeepSome(5))
             .level(LevelFilter::Trace)
