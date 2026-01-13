@@ -4,4 +4,6 @@ The old Python app is **not supported**. Please use the new [Tauri app](https://
 
 ## Reporting a Vulnerability
 
-Please note this is a *local-only app*. Thus, the threat model is low-level browser/Tauri bugs (please report those upstream) or someone that already has access to your user data folder (and can read all the API keys you put in `.bashrc`).
+Please note this is a *local-only app*. Thus, the threat model is low-level browser/Tauri bugs (please report those upstream) or someone that already has local access (and can read all the API keys you put in `.bashrc`).
+
+Otherwise, please report security issues privately through GitHub's [Security tab](https://github.com/Govorunb/gary/security/advisories/new).

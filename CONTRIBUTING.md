@@ -4,18 +4,19 @@ Thanks for your interest! Want to contribute to Gary?
 
 ## Yes! Where? How?
 
-Use the app and give feedback! Let me know about any snags or unpolished parts of the experience.
+Use the app and share your thoughts! Let me know what works well and tell me about any snags or rough corners.
 
 Please strongly consider filing issues for API misbehavior and UI bugs/UX jank.
 
-The second best way to contribute right now is actually to help me streamline the contribution process - the project isn't really optimized for multiple contributors currently.  
-So, if you have some spare time and want to help iron out the kinks, clone the repository and try to build/run the app. Then, share your feedback.
+A great way to contribute right now is actually to help me streamline the contribution process itself - the project isn't really optimized for multiple contributors currently.  
+So, if you have some spare time, try cloning the repository and building/running the app, and let me know of any undocumented steps/requirements that tripped you up.
 
 Past that, feel free to check out [issues](https://github.com/Govorunb/gary/issues/) and [TODOs](./docs/roadmap/TODO.md).
 The app is currently in beta - the goal is to fill out the feature space and then polish to a 1.0.
 
-Start by reading through [`ARCHITECTURE.md`](./docs/ARCHITECTURE.md) and the [unofficial docs for the Neuro SDK](https://ktrain5169.github.io/neuro-sdk-docs/overview/).
-Then, if you haven't already, bookmark the [Tauri](https://tauri.app/start/) and [Svelte](https://svelte.dev/docs/svelte/overview) docs.
+If you want to contribute code:
+- Start by reading through [`ARCHITECTURE.md`](./docs/ARCHITECTURE.md) and the [unofficial docs for the Neuro SDK](https://ktrain5169.github.io/neuro-sdk-docs/overview/).  
+- Then, if you're not familiar with Tauri/Svelte, bookmark the [Tauri](https://tauri.app/start/) and [Svelte](https://svelte.dev/docs/svelte/overview) docs.
 
 ### Dev environment setup
 

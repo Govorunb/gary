@@ -35,7 +35,7 @@ Head over to [Releases](https://github.com/Govorunb/gary/releases/latest), downl
 
 Out of the box, you can use Randy, send actions manually a-la Tony, or connect to an OpenAI-compatible API.
 
-If you're not familiar with the Neuro SDK, you should read a bit from the [architecture docs](docs/ARCHITECTURE.md) to get a quick rundown. Otherwise, the basics of using the app are as follows:
+If you're not familiar with the Neuro SDK, you should read a bit from the [architecture docs](docs/ARCHITECTURE.md) and [the unofficial SDK docs](https://ktrain5169.github.io/neuro-sdk-docs/overview/) to get a quick rundown. Otherwise, the basics of using the app are as follows:
 
 1. Start the server and connect a game integration
 2. Select and configure the engine that will choose and perform actions automatically
@@ -101,7 +101,7 @@ Models have context windows that are limited in capacity. The more text in the c
 #### Models
 Success will largely depend on model size - with larger models generally more intelligent than smaller ones - which, for local models, depends on your hardware. For example, models under 8B parameters may not be able to perform logical leaps or multi-step actions in your game, placing a soft requirement of at least 6-8GB of VRAM to do useful LLM testing.
 
-Because of this, Gary might turn out to be dumber than a rock <sub><sup>(which is ironic because it's made of rock)</sup></sub> - maybe even *worse than Randy*. If so, you either need to use a larger model (probably through a remote provider) or fall back to [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md)/[Tony](https://github.com/Pasu4/neuro-api-tony)/[Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
+Because of this, Gary might turn out to be dumber than a rock <sub><sup>(which is ironic because it's made of rock)</sup></sub> - maybe even *worse than Randy*. If so, you either need to use a larger model (probably through a remote provider) or fall back to Randy/[Tony](https://github.com/Pasu4/neuro-api-tony)/[Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
 Getting a less intelligent model to successfully play your game will help more intelligent models make even smarter decisions.

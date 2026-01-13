@@ -102,10 +102,12 @@ myErr.unwrapOr(10) // 10
 myResult.unwrapOr(10) // { myData: 'test' }
 
 // Create from function
-Result.fromThrowable(() => {
-  JSON.parse("{"),
-  (e) => e as Error // The second argument is a function that maps the error to a known type
-}) // err(...)
+Result.fromThrowable(
+  // Function that can throw
+  () => JSON.parse("{"), // () => T
+  // Function that maps the error to a known type
+  (e) => e as Error // (e: unknown) => E
+) // Result<T, E> (in this case, err(...))
 
 Result.fromThrowable(() => 0, _ => _ as never) // ok(0)
 
