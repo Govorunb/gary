@@ -206,7 +206,6 @@ export class Scheduler {
 
     private onError(err: EngineActError) {
         if (err === "cancelled") {
-            // this.muted = true; // TODO: figure out which is the better default
             r.info("Cancelled acting", { toast: true });
             return;
         }
