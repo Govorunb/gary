@@ -23,10 +23,10 @@
     {#snippet configForm(dirtyConfig)}
         <NumberField
             bind:value={dirtyConfig.chanceDoNothing}
-            label="Chance to Do Nothing"
+            label="Chance to skip acting"
             min={0} max={1} step={0.01}
             slider
-            description="Probability (0-1) of skipping an action. Keep this above 0 or Randy might get stuck in a retry loop for some actions."
+            description="Probability (0-1) of skipping an action if not forced. Keep this above 0 or Randy might get stuck in a retry loop for some actions."
         />
         <NumberField
             bind:value={dirtyConfig.latencyMs}

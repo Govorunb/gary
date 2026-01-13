@@ -45,13 +45,13 @@
         />
         <BooleanField
             bind:value={dirtyConfig.allowDoNothing}
-            label="Allow Do Nothing"
-            description="Let the model choose to skip acting"
+            label="Allow to do nothing"
+            description="Let the model choose to skip acting (if not forced)"
         />
         <BooleanField
             bind:value={dirtyConfig.allowYapping}
-            label="Allow Yapping"
-            description="Let the model speak instead of acting"
+            label="Allow yapping"
+            description="Let the model choose to speak instead of acting (unless forced)"
         />
     {/snippet}
  </EngineConfig>
