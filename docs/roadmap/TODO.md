@@ -68,6 +68,7 @@
 - Spamming toasts seriously hurts performance
 - Context log height gets recalculated a lot
 - Hide safe mode editor behind a toggle so it doesn't flashbang you with API keys
+- LLM instructions editor (in settings)
 
 ## Miscellaneous wishlist/musings
 

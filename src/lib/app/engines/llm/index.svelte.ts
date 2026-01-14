@@ -91,7 +91,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return err(new EngineError("Tried to force act with no available actions"));
         }
         let ctx = this.convertContext(session);
-        ctx.push(this.closerMessage());
+        ctx.push(this.closerMessage(resolvedActions));
         ctx = this.mergeUserTurns(ctx);
         // TODO: tools
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
@@ -203,12 +203,21 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     protected systemPrompt(session: Session): string {
-        const userDefined = session.userPrefs.app.systemPrompt;
-        if (typeof(userDefined) === "string") { // not null or undefined, accept ""
-            return userDefined;
+        const prompts = [
+            DEFAULT_SYSTEM_PROMPT,
+            this.options.promptingStrategy === "json" ? SYS_PROMPT_JSON : SYS_PROMPT_TOOLS,
+        ];
+        // FIXME: no system prompt editor yet
+        if (session.userPrefs.app.systemPrompt?.trim()) { // not null, undefined, or empty/whitespace
+            prompts.push(`## User instructions
+
+The user has provided additional custom instructions for you.
+These instructions take precedence over previous system instructions, and you must follow them precisely and faithfully.
+
+The custom user instructions are as follows:`);
+            prompts.push(session.userPrefs.app.systemPrompt);
         }
-        return DEFAULT_SYSTEM_PROMPT
-            + this.options.promptingStrategy === "json" ? SYS_PROMPT_JSON : SYS_PROMPT_TOOLS;
+        return prompts.join("\n\n");
     }
 
     // TODO: context trimming
