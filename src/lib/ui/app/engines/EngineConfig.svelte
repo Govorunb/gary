@@ -4,7 +4,7 @@
     import OpenRouterConfig from './OpenRouterConfig.svelte';
     import OpenAIConfig from './OpenAIConfig.svelte';
     import RandyConfig from './RandyConfig.svelte';
-    import { onMount, type Component } from 'svelte';
+    import { type Component } from 'svelte';
 
     export type Engines = UserPrefsData["engines"];
     export type EngineId = string;
@@ -24,8 +24,7 @@
 <script lang="ts" generics="E extends EngineId">
     import { getUserPrefs } from '$lib/app/utils/di';
     import { type Snippet } from 'svelte';
-    import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
-    import { formatZodError, sleep } from '$lib/app/utils';
+    import { formatZodError } from '$lib/app/utils';
     import { PressedKeys } from 'runed';
 
     type Props = ConfigProps<E> & {
@@ -39,6 +38,9 @@
     let dirtyConfig: EngineConfig<E> = $state()!;
     let validationErrors: string[] = $state([]);
     let isValid: boolean = $derived(validationErrors.length === 0);
+    let hasUnsavedChanges: boolean = $derived(
+        JSON.stringify(dirtyConfig) !== JSON.stringify(userPrefs.engines[engineId])
+    );
 
     function reset() {
         dirtyConfig = structuredClone($state.snapshot(userPrefs.engines[engineId]));
@@ -65,24 +67,26 @@
     }
 </script>
 
-<div class="w-full">
-    <div class="fcol-4">
-        <div class="fcol-4">
-            {@render configForm(dirtyConfig)}
+<div class="fcol-0 overflow-hidden">
+    <div class="config-content">
+        {@render configForm(dirtyConfig)}
+    </div>
+
+    {#if !isValid}
+        <div class="validation-error">
+            {validationErrors.join("\n")}
         </div>
+    {/if}
 
-        {#if !isValid}
-            <div class="validation-error">
-                {validationErrors.join("\n")}
-            </div>
-        {/if}
-
-        <div class="config-actions">
-            <button class="reset-button" onclick={reset}>
+    {#if hasUnsavedChanges}
+        <div class="config-footer">
+            <span class="note opacity-60">There are unsaved changes.</span>
+            <div class="flex-1"></div>
+            <button class="btn btn-base preset-tonal-surface" onclick={reset}>
                 Reset
             </button>
             <button
-                class="save-button"
+                class="btn btn-base preset-filled-primary-500"
                 onclick={handleSave}
                 disabled={!isValid}
                 title="Ctrl+Enter"
@@ -90,45 +94,23 @@
                 Save changes
             </button>
         </div>
-    </div>
+    {/if}
 </div>
 
 <style lang="postcss">
     @reference "global.css";
+
+    .config-content {
+        @apply fcol-4 flex-1 p-4 overflow-y-auto;
+    }
 
     .validation-error {
         @apply p-3 bg-red-50 border border-red-200 text-red-700 rounded-md;
         @apply dark:bg-red-900/20 dark:border-red-800 dark:text-red-300;
     }
 
-    .config-actions {
-        @apply frow-2 justify-end pt-4 border-t border-neutral-200 dark:border-neutral-700;
-    }
-
-    .save-button {
-        @apply px-4 py-2 bg-primary-600 text-white rounded-md;
-        @apply disabled:opacity-50 disabled:cursor-not-allowed;
-
-        &:hover {
-            @apply bg-primary-700;
-        }
-
-        &:focus {
-            @apply outline-none ring-2 ring-primary-500;
-        }
-    }
-
-    .reset-button {
-        @apply px-4 py-2 bg-transparent text-neutral-600 dark:text-neutral-400 rounded-md;
-        @apply disabled:opacity-50 disabled:cursor-not-allowed;
-
-        &:hover {
-            @apply bg-neutral-100 dark:bg-neutral-800;
-            @apply text-neutral-900 dark:text-neutral-100;
-        }
-
-        &:focus {
-            @apply outline-none ring-2 ring-neutral-500;
-        }
+    .config-footer {
+        @apply frow-2 items-center justify-end p-4;
+        @apply border-t border-neutral-200 dark:border-neutral-700;
     }
 </style>

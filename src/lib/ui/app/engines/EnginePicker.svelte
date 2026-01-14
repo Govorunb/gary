@@ -322,6 +322,6 @@
     }
 
     .config-body {
-        @apply p-4 overflow-y-auto;
+        @apply fcol-2 flex-1 overflow-hidden;
     }
 </style>

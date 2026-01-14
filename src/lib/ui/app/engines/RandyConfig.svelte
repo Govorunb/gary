@@ -32,7 +32,7 @@
             bind:value={dirtyConfig.latencyMs}
             min={1} max={864000000}
             label="L*tency"
-            description="Optional delay for Randy's responses (in milliseconds). If you set this too low and Randy gets stuck in a retry loop, your app will hang. You have been sufficiently informed and thus warned."
+            description="Optional delay for Randy's responses (in milliseconds). If you set this too low and Randy gets stuck in a retry loop, the app will hang. You have been sufficiently informed and thus warned."
         />
         {#if uiState.aprilFools}
             <div class="callout warn">
