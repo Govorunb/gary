@@ -49,6 +49,10 @@ The app will check for updates via [GitHub Releases](https://github.com/Govorunb
 
 If you're coming in from the old Python app, you may have just `git pull`ed in an update that removed your whole app - uhhh, sorry. You can run `git switch python-app` to return to the old branch. Otherwise, if you want to update to the new Tauri app, you don't need to clone the repo anymore - just download and install from Releases.
 
+> [!Note]
+> `.deb` installs currently don't support auto-installing updates. Sorry, it's an [issue upstream](https://github.com/tauri-apps/plugins-workspace/issues/3108).
+> The app will still notify you if an update is available, but you'll have to manually go to Releases and download/install it.
+
 ### FAQ <sub><sup>(nobody asked any of these so it's neither F nor A)</sup></sub>
 
 <details>

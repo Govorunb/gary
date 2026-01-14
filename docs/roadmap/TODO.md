@@ -69,6 +69,7 @@
 - Context log height gets recalculated a lot
 - Hide safe mode editor behind a toggle so it doesn't flashbang you with API keys
 - LLM instructions editor (in settings)
+- On `.deb` installs, updater should redirect to release in browser ([can't autoupdate .deb currently](https://github.com/tauri-apps/plugins-workspace/issues/3108))
 
 ## Miscellaneous wishlist/musings
 
