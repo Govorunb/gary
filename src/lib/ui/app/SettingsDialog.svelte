@@ -124,7 +124,7 @@
                 <div class="fcol-2">
                     <p>Backup/restore raw JSON data to/from clipboard:</p>
                     <div class="field">
-                        <div class="row">
+                        <div class="frow-2">
                             <button class="btn btn-base preset-outlined-surface-300-700"
                                 onclick={exportPrefs}
                             >

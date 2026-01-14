@@ -4,6 +4,7 @@
     import { getUserPrefs } from "$lib/app/utils/di";
     import { toast } from "svelte-sonner";
     import CodeMirror from "$lib/ui/common/CodeMirror.svelte";
+    import { Eye, EyeOff } from "@lucide/svelte";
     import { USER_PREFS, zUserPrefs } from "$lib/app/prefs.svelte";
     import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
     import { formatZodError, jsonParse, safeParse } from "$lib/app/utils";
@@ -12,7 +13,10 @@
     const userPrefs = getUserPrefs();
 
     let editorContent = $state(localStorage.getItem(USER_PREFS) ?? "{}");
+    // svelte-ignore state_referenced_locally
+    const originalData = $state.snapshot(editorContent);
     let validationError = $state<string | null>(null);
+    let editorOpen = $state(false);
     const shiftPressed = $derived(pressedKeys.has('Shift'));
 
     $effect(() => {
@@ -27,7 +31,7 @@
     });
 
     function importFixedJson() {
-        if (!editorContent.trim() && shiftPressed) {
+        if (resetOverride) {
             userPrefs.loadError = null;
             return;
         }
@@ -48,7 +52,7 @@
         }
     }
 
-    const resetOverride = $derived(!editorContent.trim() && shiftPressed);
+    const resetOverride = $derived(editorContent.trim().toLowerCase() === "reset" && shiftPressed);
 
     const importBtnText = $derived(resetOverride ? "Reset to defaults" : "Import and load");
 </script>
@@ -62,19 +66,59 @@
         <ShiftIndicator />
     {/snippet}
     {#snippet body()}
-        <p class="error-message">
-            Your preferences failed to load. The app is running with default settings in read-only mode.
-        </p>
-
-        <div class="fcol-2">
+        <div class="fcol-scroll-2">
+            <p class="error-message">
+                Your preferences failed to load. The app is running with default settings in read-only mode.
+            </p>
+            
             <p class="import-label">You may attempt to manually fix the data below: <span class="note">(or get someone you trust to fix it)</span></p>
-            <div class="editor-container">
-                <CodeMirror
-                    code={editorContent}
-                    open={true}
-                    readonly={false}
-                    onChange={(code) => editorContent = code}
-                />
+
+
+            <p class="note whitespace-pre-line">
+                Please note: <b class="text-warning-900-100">do not share this text with people you don't trust</b>. It contains data you may want to keep private, such as:
+            </p>
+            <ul class="note list-disc list-inside pl-4">
+                <li>Custom engines (including names, URLs/IPs, and <b class="text-sm">API keys</b>)</li>
+                <li>The names of some or all games you've ever connected to</li>
+            </ul>
+
+            <details class="editor-details" bind:open={editorOpen}>
+                <summary>
+                    {#if editorOpen}
+                        <EyeOff />
+                    {:else}
+                        <Eye />
+                    {/if}
+                    {!editorOpen ? "Show" : "Hide"} editor
+                </summary>
+                {#if editorOpen}
+                    <div class="editor-container">
+                        <CodeMirror
+                            code={editorContent}
+                            open={true}
+                            readonly={false}
+                            onChange={(code) => editorContent = code}
+                        />
+                    </div>
+                {/if}
+            </details>
+
+            <div class="frow-2">
+                <button class="btn btn-base preset-outlined-surface-300-700"
+                    onclick={() => navigator.clipboard.writeText(editorContent)}
+                >
+                    Copy to clipboard
+                </button>
+                <button class="btn btn-base preset-outlined-surface-300-700"
+                    onclick={async () => editorContent = await navigator.clipboard.readText()}
+                >
+                    Paste from clipboard
+                </button>
+                <button class="btn btn-base preset-outlined-warning-300-700"
+                    onclick={async () => editorContent = originalData}
+                >
+                    Revert changes
+                </button>
             </div>
 
             {#if validationError}
@@ -82,18 +126,10 @@
                     {validationError}
                 </div>
             {/if}
-
-            <p class="note whitespace-pre-line">
-                Please note: <b>do not send this text to people you don't trust</b>. It contains data you may want to keep private, such as:
-            </p>
-            <ul class="note list-disc list-inside pl-4">
-                <li>Custom engines (including names, URLs/IPs, and <b class="text-sm">API keys</b>)</li>
-                <li>The names of some or all games you've ever connected to</li>
-            </ul>
         </div>
     {/snippet}
     {#snippet footer()}
-        <p class="note">As a last resort, you can reset to defaults: fully empty the above textbox and Shift-click the "Import and load" button.</p>
+        <p class="note">As a last resort, you can reset to defaults: type "RESET" in the editor above and Shift-click the "Import and load" button.</p>
         <div class="flex-1 self-stretch"></div>
         <button
             class="btn preset-filled-surface-50-950"
@@ -123,6 +159,22 @@
 
     .editor-container {
         @apply flex min-h-50 max-h-100;
+    }
+
+    .editor-details {
+        @apply mt-1 border border-neutral-200 dark:border-neutral-700 rounded-md;
+        padding: 0.5rem;
+        &[open] summary {
+            @apply pb-2;
+        }
+        & summary {
+            @apply frow-1.5 items-center cursor-pointer select-none;
+            @apply text-sm font-semibold;
+            @apply transition-[filter];
+            &:hover {
+                @apply brightness-125 dark:brightness-75;
+            }
+        }
     }
 
     .validation-error {
