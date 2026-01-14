@@ -68,7 +68,6 @@
 - Spamming toasts seriously hurts performance
 - Context log height gets recalculated a lot
 - LLM instructions editor (in settings)
-- On `.deb` installs, updater should redirect to release in browser ([can't autoupdate .deb currently](https://github.com/tauri-apps/plugins-workspace/issues/3108))
 
 ## Miscellaneous wishlist/musings
 

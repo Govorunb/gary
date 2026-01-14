@@ -5,6 +5,10 @@
     import { isTauri } from "@tauri-apps/api/core";
     import r from "$lib/app/utils/reporting";
     import { safeInvoke, sleep } from "$lib/app/utils";
+    import { BundleType, getBundleType } from "@tauri-apps/api/app";
+    import Hotkey from "../common/Hotkey.svelte";
+    import { dev } from "$app/environment";
+    import { onMount } from "svelte";
 
     type Props = {
         open: boolean;
@@ -68,6 +72,11 @@
     function cancel() {
         open = false;
     }
+
+    let isDebBundle = $state(false);
+    if (isTauri()) {
+        getBundleType().then(b => isDebBundle = b === BundleType.Deb);
+    }
 </script>
 
 <Dialog bind:open position="center">
@@ -84,22 +93,31 @@
                 <p class="release-notes-title">Release Notes:</p>
                 <p class="release-notes-content">{update.body}</p>
             </div>
-        {:else}
-            <OutLink href="https://github.com/Govorunb/gary/releases/v{update.version}">View release notes on GitHub</OutLink>
         {/if}
+        <OutLink href="https://github.com/Govorunb/gary/releases/v{update.version}">View release notes on GitHub</OutLink>
         <p>Restart the app at your convenience to finish the update.</p>
     {/snippet}
     {#snippet footer()}
-        <button class="btn btn-base skip-btn" onclick={skip}>
-            Skip this version
-        </button>
-        <div class="flex-1 self-stretch"></div>
-        <button class="btn btn-base cancel-btn" onclick={cancel}>
-            Cancel
-        </button>
-        <button class="btn btn-base preset-filled-primary-400-600" onclick={doUpdate} disabled={updating}>
-            {updating ? "Updating..." : "Update"}
-        </button>
+        <div class="fcol-2 flex-1">
+            <div class="frow-2">
+                <button class="btn btn-base skip-btn" onclick={skip}>
+                    Skip this version
+                </button>
+                <div class="flex-1 self-stretch"></div>
+                <button class="btn btn-base cancel-btn" onclick={cancel}>
+                    Cancel
+                </button>
+                <button class="btn btn-base preset-filled-primary-400-600" onclick={doUpdate} disabled={isDebBundle || updating}>
+                    {updating ? "Updating..." : "Update"}
+                </button>
+            </div>
+            {#if isDebBundle}
+                <span class="whitespace-pre-line">
+                    Sorry, <Hotkey>.deb</Hotkey> installs currently don't support auto-installation.
+                    Please install the update manually from <OutLink href="https://github.com/Govorunb/gary/releases/v{update.version}">GitHub releases</OutLink>.
+                </span>
+            {/if}
+        </div>
     {/snippet}
 </Dialog>
 
