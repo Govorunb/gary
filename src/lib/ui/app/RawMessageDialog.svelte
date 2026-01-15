@@ -188,7 +188,7 @@
         <div class="frow-2">
             <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Cancel</button>
             <button
-                class="btn btn-base preset-filled-primary-400-600"
+                class="btn btn-base preset-filled-primary-500"
                 onclick={sendMessage}
                 {@attach tooltip("Send (Ctrl+Enter)")}
             >
