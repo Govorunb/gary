@@ -1,10 +1,11 @@
 import { check as tauriCheckUpdate, type Update } from "@tauri-apps/plugin-updater";
 import r from "$lib/app/utils/reporting";
-import { ok, type Result, ResultAsync } from "neverthrow";
-import dayjs from "dayjs";
+import { err, ok, type Result, ResultAsync } from "neverthrow";
+import dayjs, { type OpUnitType } from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
 import type { UIState } from "$lib/ui/app/ui-state.svelte";
 import { isTauri } from "@tauri-apps/api/core";
+import { sleep } from "./utils";
 
 const simUpdate: Update = {
     available: true,
@@ -14,15 +15,29 @@ const simUpdate: Update = {
 } as any as Update;
 
 export class Updater {
-    public update?: Update | null = $state();
-    public skipVersion?: string | null;
+    public readonly update: Update | null;
     public hasPendingUpdate: boolean;
-    public checkingForUpdates = $state(false);
-    private readonly prefs;
+    #checkingForUpdates = $state(false);
+    #lastCheckResult: Result<Update | null, string> | null = $state(null);
+
+    private get prefs() {
+        return this.userPrefs.app.updates;
+    }
+
+    public get skipVersion() {
+        return this.prefs.skipUpdateVersion;
+    }
+
+    public get checkingForUpdates() {
+        return this.#checkingForUpdates;
+    }
+
+    public get lastCheckResult() {
+        return this.#lastCheckResult;
+    }
 
     constructor(private readonly userPrefs: UserPrefs, private readonly uiState: UIState) {
-        this.prefs = $derived(this.userPrefs.app.updates);
-        this.skipVersion = $derived(this.prefs.skipUpdateVersion);
+        this.update = $derived(this.#lastCheckResult?.unwrapOr(null) ?? null);
         this.hasPendingUpdate = $derived(!!this.update && this.skipVersion !== this.update.version);
         if (this.shouldAutoCheck()) {
             void this.checkForUpdates(false);
@@ -34,57 +49,56 @@ export class Updater {
 
         if (checkFreq === "everyLaunch") return true;
         if (checkFreq === "off") return false;
-        // from here, autocheck interval is periodic (daily/weekly/monthly)
+        // from here, checkFreq is periodic (daily/weekly/monthly)
 
         const lastCheckedAt = this.prefs.lastCheckedAt;
         if (!lastCheckedAt) return true; // never checked
 
-        const now = dayjs();
-        const lastChecked = dayjs(lastCheckedAt);
+        const units = {
+            'daily': 'd',
+            'weekly': 'w',
+            'monthly': 'M'
+        } as const satisfies Record<typeof checkFreq, OpUnitType>;
+        const unit = units[checkFreq];
 
-        switch (checkFreq) {
-            case "daily":
-                return now.diff(lastChecked, 'day') >= 1;
-            case "weekly":
-                return now.diff(lastChecked, 'day') >= 7;
-            case "monthly":
-                return now.diff(lastChecked, 'month') >= 1;
-            default:
-                r.error(`Unknown value for prefs.app.updates.autoCheckInterval: ${checkFreq}`);
-                return false;
-        }
+        // with invalid values, unit defaults to milliseconds (equivalent to "everyLaunch")
+        return dayjs().isAfter(dayjs(lastCheckedAt), unit);
     }
 
-    async checkForUpdates(isCheckManual = false): Promise<boolean> {
-        this.prefs.lastCheckedAt = Date.now();
-        this.checkingForUpdates = true;
+    async checkForUpdates(isCheckManual = false): Promise<Result<Update | null, string>> {
+        this.#checkingForUpdates = true;
+
         let updateRes: Result<Update | null, string>;
-        r.debug(`Checking for updates${isCheckManual ? " (manual)" : ""}`);
-        updateRes = !isTauri() ? ok(simUpdate)
-            : await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
-        this.checkingForUpdates = false;
-        if (updateRes.isErr()) {
+        r.debug(`Checking for updates (${isCheckManual ? "manual" : "auto"})`);
+        if (isTauri()) {
+            updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
+        } else {
+            // vite dev
+            await sleep(500);
+            updateRes = [ok(simUpdate), ok(null), err("failed the vibe check")][Math.floor(3 * Math.random())];
+        }
+        this.#lastCheckResult = updateRes;
+        this.#checkingForUpdates = false;
+
+        if (updateRes.isOk()) {
+            this.prefs.lastCheckedAt = Date.now();
+            if (this.update) {
+                const skipped = this.skipVersion === this.update.version;
+                if (skipped) {
+                    r.info("Update skipped", `Version ${this.update.version} was previously set as skipped`);
+                } else if (!isCheckManual) {
+                    await this.notifyUpdateAvailable();
+                }
+            } else {
+                r.info("No update available");
+            }
+        } else {
             r.error("Could not check for updates", {
-                details: `${updateRes.error}`,
-                toast: isCheckManual,
+                details: updateRes.error,
+                toast: false,
             });
-            return false;
         }
-        this.update = updateRes.value;
-        if (!this.update) {
-            r.info("No update available", { toast: isCheckManual });
-            return false;
-        }
-        const skipped = this.skipVersion === this.update.version;
-        if (skipped) {
-            r.info("Update skipped", {
-                details: `Version ${this.update.version} was previously set as skipped`,
-                toast: true,
-            })
-        } else if (!isCheckManual) { // manual checks will show ui in settings
-            await this.notifyUpdateAvailable();
-        }
-        return true;
+        return updateRes;
     }
 
     async notifyUpdateAvailable() {
@@ -96,7 +110,7 @@ export class Updater {
             toast: {
                 closeButton: true,
                 action: {
-                    label: "Update",
+                    label: "See more",
                     onClick: () => this.promptForUpdate(),
                 }
             }

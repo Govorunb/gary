@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { getUIState, getUpdater, getUserPrefs } from "$lib/app/utils/di";
+    import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
     import Dialog from "$lib/ui/common/Dialog.svelte";
     import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
     import { ExternalLink, X } from "@lucide/svelte";
     import Hotkey from "../common/Hotkey.svelte";
     import dayjs from "dayjs";
     import { app } from "@tauri-apps/api";
-    import { APP_VERSION, clearLocalStorage, debounced, isApril1st, jsonParse, safeInvoke, safeParse } from "$lib/app/utils";
+    import { APP_VERSION, clearLocalStorage, debounced, isApril1st, jsonParse, safeInvoke } from "$lib/app/utils";
     import { ResultAsync } from "neverthrow";
     import { boolAttr } from "runed";
     import OutLink from "../common/OutLink.svelte";
@@ -20,18 +20,10 @@
 
     const userPrefs = getUserPrefs();
     const updater = getUpdater();
-    const uiState = getUIState();
-
-    let checking = $state(false);
 
     async function checkForUpdates() {
-        if (checking) return;
-        checking = true;
+        if (updater.checkingForUpdates) return;
         await updater.checkForUpdates(true);
-        checking = false;
-        if (updater.hasPendingUpdate) {
-            void updater.promptForUpdate();
-        }
     }
 
     const lastCheckedAt = $derived.by(() => {
@@ -43,7 +35,6 @@
 
     function resetSkipVersion() {
         userPrefs.app.updates.skipUpdateVersion = undefined;
-        void checkForUpdates();
     }
 
     async function exportPrefs() {
@@ -195,15 +186,51 @@
                     onclick={checkForUpdates}
                     disabled={updater.checkingForUpdates}
                 >
-                    Check now
+                    {#if updater.checkingForUpdates}
+                        Checking...
+                    {:else}
+                        Check now
+                    {/if}
                 </button>
                 <p class="note">Last checked: {lastCheckedAt}</p>
             </div>
             {#if updater.skipVersion}
                 <p class="note">
                     You skipped updating to version {updater.skipVersion}
-                    <button onclick={resetSkipVersion}><X size="12" /></button>
+                    <button onclick={resetSkipVersion} title="Remove skip"><X size="12" /></button>
                 </p>
+            {/if}
+            {#if updater.lastCheckResult}
+                {@const update = updater.update}
+                {@const err = updater.lastCheckResult.isErr() && updater.lastCheckResult.error}
+                {@const skipped = update && update.version === updater.skipVersion}
+                <div class="callout" class:warn={err} class:success={update} class:note={skipped}>
+                    <p class="text-xs">
+                        {#if update}
+                            {#if skipped}
+                                Version {update.version} is available, but it was previously skipped.
+                            {:else}
+                                <span class="text-sm frow-2 items-center">
+                                    Version {update.version} is available!
+                                    <button class="btn btn-base preset-outlined-surface-300-700"
+                                        onclick={() => updater.promptForUpdate()}
+                                    >
+                                        See more
+                                    </button>
+                                </span>
+                            {/if}
+                        {:else}
+                            {#if err}
+                                <span class="fcol-1">
+                                    <b class="text-sm">Failed to check for updates</b>
+                                    {err}
+                                </span>
+                            {:else}
+                                No update found.
+                            {/if}
+                        {/if}
+                    </p>
+                </div>
             {/if}
         {/snippet}
 

@@ -107,7 +107,7 @@
                 <button class="btn btn-base cancel-btn" onclick={cancel}>
                     Cancel
                 </button>
-                <button class="btn btn-base preset-filled-primary-400-600" onclick={doUpdate} disabled={isDebBundle || updating}>
+                <button class="btn btn-base preset-filled-primary-500" onclick={doUpdate} disabled={isDebBundle || updating}>
                     {updating ? "Updating..." : "Update"}
                 </button>
             </div>

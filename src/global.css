@@ -98,6 +98,14 @@
             @apply bg-warning-50 dark:bg-warning-900/20;
             @apply border-warning-200 dark:border-warning-800;
         }
+        &.success {
+            @apply bg-success-50/40 dark:bg-success-800/20;
+            @apply border-success-200 dark:border-success-800;
+        }
+        &.note {
+            @apply bg-sky-50 dark:bg-sky-900/20;
+            @apply border-sky-200 dark:border-sky-800;
+        }
     }
     .attention {
         @apply border-2 border-amber-500 dark:border-amber-400;
