@@ -8,10 +8,6 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "fs:default",
-    "store:default",
-    "websocket:default",
-    "http:default",
     "log:default",
     "updater:default",
     "updater:allow-check",
