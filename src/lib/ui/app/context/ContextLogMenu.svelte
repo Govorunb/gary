@@ -27,14 +27,12 @@
             <EllipsisVertical />
         </button>
     {/snippet}
-    <div class="menu-content">
-        <button class="menu-item" onclick={copyContext}>
-            Copy as JSON
-        </button>
-        <button class="menu-item menu-item-danger" onclick={clearContext}>
-            Reset Context
-        </button>
-    </div>
+    <button class="menu-item" onclick={copyContext}>
+        Copy as JSON
+    </button>
+    <button class="menu-item menu-item-danger" onclick={clearContext}>
+        Reset Context
+    </button>
 </Popover>
 
 <style lang="postcss">
@@ -49,12 +47,6 @@
             @apply bg-neutral-100;
             @apply dark:bg-neutral-800/50;
         }
-    }
-    .menu-content {
-        @apply fcol-1 px-1 py-1;
-        @apply bg-surface-200-800 rounded-md;
-        @apply border border-neutral-900/30;
-        @apply min-w-40;
     }
 
     .menu-item {

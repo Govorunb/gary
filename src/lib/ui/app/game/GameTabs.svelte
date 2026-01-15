@@ -44,8 +44,8 @@
                     <ChevronDown class="size-3 opacity-80" />
                 </button>
             {/snippet}
-            <div class="menu-content">
-                <div class="menu-header">Connect Client</div>
+            <div class="fcol-0.5">
+                <h3 class="pl-2">Connect Client</h3>
                 <div class="menu-divider"></div>
                 <button class="menu-item" onclick={startSchemaTest}>
                     Schema Test
@@ -87,13 +87,6 @@
     .games-container {
         @apply fcol-1 flex-1 overflow-y-hidden;
         @apply px-1 py-2;
-    }
-
-    .menu-content {
-        @apply fcol-1 px-1 py-1;
-        @apply bg-surface-200-800 rounded-md;
-        @apply border border-neutral-900/30;
-        @apply min-w-48;
     }
 
     .menu-header {

@@ -16,11 +16,6 @@
         @apply bg-surface-100 dark:bg-surface-900;
         @apply text-neutral-900 dark:text-neutral-100;
     }
-    .global-popover-arrow {
-        z-index: -1;
-        --arrow-size: calc(var(--spacing) * 4);
-        --arrow-background: light-dark(var(--color-neutral-100), var(--color-neutral-800));
-    }
     .note {
         @apply text-xs text-neutral-500 dark:text-neutral-300;
     }
@@ -109,6 +104,17 @@
     }
     .attention {
         @apply border-2 border-amber-500 dark:border-amber-400;
+    }
+    .popover-content {
+        @apply fcol-0 p-2;
+        @apply bg-neutral-100 dark:bg-surface-800 rounded-lg;
+        @apply shadow-xl ring-1 ring-neutral-200 dark:ring-neutral-800;
+        @apply min-w-fit;
+    }
+    .global-popover-arrow {
+        @apply -z-1;
+        --arrow-size: calc(var(--spacing) * 4);
+        --arrow-background: light-dark(var(--color-surface-100), var(--color-surface-800));
     }
 }
 

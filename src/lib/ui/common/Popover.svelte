@@ -10,6 +10,7 @@
         content?: SnippetOfHTML<'div'>,
         children?: Snippet,
         arrow?: boolean,
+        class?: string,
     } & PopoverRootProps;
 
     let {
@@ -17,6 +18,7 @@
         content,
         children,
         arrow = false,
+        class: className,
         ...props
     }: Props = $props();
 </script>
@@ -25,7 +27,7 @@
     <Popover.Trigger element={trigger} />
     <Portal>
         <Popover.Positioner>
-            <Popover.Content element={content}>
+            <Popover.Content element={content} class={["popover-content", className]}>
                 {@render children?.()}
                 {#if arrow}
                     <Popover.Arrow class="global-popover-arrow">

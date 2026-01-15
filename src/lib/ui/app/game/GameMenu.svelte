@@ -10,43 +10,35 @@
     const uiState = getUIState();
 </script>
 
-<div class="game-tooltip">
-    <div class="col">
-        <!-- there's only one version currently (clueless) -->
-        <!-- <VersionChip version={game.conn.version} /> -->
-        <div class="connection-info">
-            <p class="id-text">ID: <span class="id-value">{game.conn.id}</span></p>
-            <CopyButton data={game.conn.id} desc="ID" />
-        </div>
-        <div class="col">
-            <button
-                class="menu-item"
-                onclick={() => uiState.dialogs.openRawMessageDialog(game)}
-            >
-                <span class="text-secondary-500 dark:text-secondary-200">
-                    <Braces size={14} />
-                </span>
-                 Send Raw Message
-            </button>
-            <button
-                class="menu-item menu-item-danger"
-                onclick={() => game.conn.disconnect()}
-            >
-                <Unplug size={14} /> Disconnect
-            </button>
-        </div>
+<div class="fcol-2">
+    <!-- there's only one version currently (clueless) -->
+    <!-- <VersionChip version={game.conn.version} /> -->
+    <div class="connection-info">
+        <p class="id-text">ID: <span class="id-value">{game.conn.id}</span></p>
+        <CopyButton data={game.conn.id} desc="ID" />
+    </div>
+    <div class="fcol-0.5">
+        <button
+            class="menu-item"
+            onclick={() => uiState.dialogs.openRawMessageDialog(game)}
+        >
+            <span class="text-secondary-500 dark:text-secondary-200">
+                <Braces size={14} />
+            </span>
+                Send Raw Message
+        </button>
+        <button
+            class="menu-item menu-item-danger"
+            onclick={() => game.conn.disconnect()}
+        >
+            <Unplug size={14} /> Disconnect
+        </button>
     </div>
 </div>
 
+
 <style lang="postcss">
     @reference "global.css";
-
-    .game-tooltip {
-        @apply relative fcol-3 p-3;
-        @apply rounded-lg shadow-lg;
-        @apply bg-surface-100/95 dark:bg-surface-800/95;
-        @apply ring-1 ring-neutral-200/80 dark:ring-neutral-700/60;
-    }
 
     .connection-info {
         @apply frow-2 items-center justify-between;

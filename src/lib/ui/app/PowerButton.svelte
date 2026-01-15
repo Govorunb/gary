@@ -71,7 +71,7 @@
         >
             <CirclePower size={40} />
         </button>
-        <Popover arrow>
+        <Popover>
             {#snippet trigger(props)}
                 <button {...props}
                     class="options-button"
@@ -82,7 +82,7 @@
                     <SlidersHorizontal size=20 class="pointer-events-none" />
                 </button>
             {/snippet}
-            <div class="options-content">
+            <div class="fcol-2 p-2">
                 <ServerConfig />
             </div>
         </Popover>
@@ -159,16 +159,6 @@
             @apply bg-neutral-200/80 dark:bg-neutral-800/70;
             @apply dark:ring-primary-400/40;
         }
-    }
-
-    .options-content {
-        @apply relative left-0 top-full z-10;
-        @apply min-w-fit fcol-3 rounded-xl;
-        @apply p-5 text-sm;
-        @apply bg-neutral-100 dark:bg-neutral-800;
-        @apply text-neutral-900 dark:text-neutral-50;
-        @apply shadow-xl ring-1 ring-neutral-200 dark:ring-neutral-800;
-        @apply dark:border dark:border-neutral-700;
     }
 
     .confirm-content {

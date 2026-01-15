@@ -102,7 +102,7 @@
         </button>
     {/snippet}
     {#snippet content(props)}
-        <div {...props} class="popover-content" in:fly={{ y: 10, duration: 200 }} out:fade={{ duration: 150 }}>
+        <div {...props} class="engine-picker-content">
             {#if !configEngineId}
                 <div class="view-container" in:fly={{ x: -20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
                     <div class="header">
@@ -205,8 +205,8 @@
         }
     }
 
-    .popover-content {
-        @apply w-md max-w-[90vw] overflow-hidden;
+    .engine-picker-content {
+        @apply w-md overflow-hidden;
         @apply bg-white dark:bg-surface-900;
         @apply rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800;
         @apply grid; /* Stack children */
