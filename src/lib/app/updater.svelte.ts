@@ -59,16 +59,13 @@ export class Updater {
         this.prefs.lastCheckedAt = Date.now();
         this.checkingForUpdates = true;
         let updateRes: Result<Update | null, string>;
-        if (isTauri()) {
-            updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
-        } else {
-            updateRes = ok(simUpdate);
-        }
+        r.debug(`Checking for updates${isCheckManual ? " (manual)" : ""}`);
+        updateRes = !isTauri() ? ok(simUpdate)
+            : await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
         this.checkingForUpdates = false;
         if (updateRes.isErr()) {
             r.error("Could not check for updates", {
                 details: `${updateRes.error}`,
-                target: "updater",
                 toast: isCheckManual,
             });
             return false;
@@ -81,7 +78,7 @@ export class Updater {
         const skipped = this.skipVersion === this.update.version;
         if (skipped) {
             r.info("Update skipped", {
-                details: `You previously skipped updating to ${this.update.version}`,
+                details: `Version ${this.update.version} was previously set as skipped`,
                 toast: true,
             })
         } else if (!isCheckManual) { // manual checks will show ui in settings

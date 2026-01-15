@@ -17,7 +17,7 @@ export function migrate(toVersion: string, data: Record<string, any> | null | un
 		return data;
 	}
 	if (currVersion > toVersion) {
-		r.warn(`Cannot migrate downwards (currently ${currVersion}, target ${toVersion}`);
+		r.warn(`Cannot migrate downwards (currently ${currVersion}, target ${toVersion})`);
 		return data;
 	}
 
