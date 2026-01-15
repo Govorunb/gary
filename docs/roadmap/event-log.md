@@ -14,7 +14,7 @@ Also, trawling through raw text logs kind of sucks, to be perfectly honest. Stru
 
 ## Outline
 
-**Events** are fired when things happen. Each event kind has a unique **key** (e.g. `api/client/connected` - composed like a tree path) akin to diagnostics.
+**Events** are fired when things happen. Each event has a **type** key (e.g. `api/client/connected` - composed like a tree path) and event **instances** have unique IDs - akin to diagnostics.
 
 There should be a central **event stream** ("firehose") in the app, and consumers should be able to **subscribe** and filter for the event keys they're interested in. For example, the context log UI would filter for `api/client/*` (`connected`/`disconnected`/`context`/`renamed` etc), `user/ctx_msg`, `api/actor/*` (`act`/`force_act`/`skip_act`/`say`/`say_notify` etc), and so on.
 
