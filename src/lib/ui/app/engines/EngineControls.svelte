@@ -74,7 +74,8 @@
         data-errored={boolAttr(scheduler.errored)}
         {@attach tooltip(muteTooltip)}
     >
-        <MuteIcon /> {muteText}
+        <MuteIcon />
+        <span class="not-md:hidden">{muteText}</span>
     </button>
     <button
         onclick={() => {
@@ -94,15 +95,17 @@
     >
     {#if scheduler.busy}
         {#if altMode}
-            <Square /> Stop
+            <Square /> <span class="not-md:hidden">Stop</span>
         {:else}
-            <Hourglass class="animate-[spin_2s_ease-in-out_infinite,pulse_4s_linear_infinite]" /> Busy
+            <Hourglass class="animate-[spin_2s_ease-in-out_infinite,pulse_4s_linear_infinite]" />
+            <span class="not-md:hidden">Busy</span>
         {/if}
     {:else}
         {#if altMode}
-            <HandFist /> Force act
+            <HandFist /> <span class="not-md:hidden">Force act</span>
         {:else}
-            <Pointer /> Act
+            <Pointer /> 
+            <span class="not-md:hidden">Act</span>
         {/if}
     {/if}
     </button>
@@ -112,7 +115,8 @@
         {@attach tooltip("Act automatically")}
         data-checked={boolAttr(scheduler.autoPoker.autoAct)}
     >
-        <Infinity /> Auto-act
+        <Infinity />
+        <span class="not-md:hidden">Auto-act</span>
     </button>
 </div>
 

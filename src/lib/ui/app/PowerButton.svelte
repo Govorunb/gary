@@ -87,11 +87,14 @@
             </div>
         </Popover>
     </div>
-    <p class="text-sm">
+    <p class="text-sm not-lg:hidden">
         Server
         {#if haveTauri}
             {#if running}
-                up on {address}<CopyButton data={address} desc="URL" iconSize={13} />
+                up on
+                <span class="whitespace-nowrap">
+                    {address}<CopyButton data={address} desc="URL" iconSize={13} />
+                </span>
             {:else}
                 offline
             {/if}
