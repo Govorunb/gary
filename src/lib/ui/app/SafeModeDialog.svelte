@@ -114,11 +114,13 @@
                 >
                     Paste from clipboard
                 </button>
-                <button class="btn btn-base preset-outlined-warning-300-700"
-                    onclick={async () => editorContent = originalData}
-                >
-                    Revert changes
-                </button>
+                {#if originalData !== editorContent}
+                    <button class="btn btn-base preset-outlined-warning-300-700"
+                        onclick={async () => editorContent = originalData}
+                    >
+                        Revert changes
+                    </button>
+                {/if}
             </div>
 
             {#if validationError}

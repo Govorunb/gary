@@ -222,7 +222,7 @@
                         {:else}
                             {#if err}
                                 <span class="fcol-1">
-                                    <b class="text-sm">Failed to check for updates</b>
+                                    <b class="text-sm">Could not check for updates</b>
                                     {err}
                                 </span>
                             {:else}
