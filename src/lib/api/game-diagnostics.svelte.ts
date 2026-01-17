@@ -1,5 +1,7 @@
+import type { EventDef } from "$lib/app/events";
 import { shortId } from "$lib/app/utils";
 import r from "$lib/app/utils/reporting";
+import z from "zod";
 import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, SeverityToLogLevel, DIAGNOSTICS_BY_KEY } from "./diagnostics";
 import type { Game } from "./game.svelte";
 
@@ -119,3 +121,47 @@ export class GameDiagnostics {
         this.diagnostics.length = 0;
     }
 }
+
+const EVENT_DATA = {
+    key: z.object({
+        key: z.custom<DiagnosticKey>(),
+    }),
+    inst: z.object({
+        diag: z.custom<GameDiagnostic>(),
+    }),
+} as const;
+
+export const EVENTS = [
+    {
+        key: 'app/diagnostics/triggered',
+        dataSchema: EVENT_DATA.inst,
+    },
+    {
+        key: 'app/diagnostics/dismissed',
+        dataSchema: EVENT_DATA.inst,
+    },
+    {
+        key: 'app/diagnostics/restored',
+        dataSchema: EVENT_DATA.inst,
+    },
+    {
+        key: 'app/diagnostics/suppressed',
+        dataSchema: EVENT_DATA.key,
+    },
+    {
+        key: 'app/diagnostics/unsuppressed',
+        dataSchema: EVENT_DATA.key,
+    },
+    {
+        key: 'app/diagnostics/unknown/trigger',
+        dataSchema: EVENT_DATA.key,
+    },
+    {
+        key: 'app/diagnostics/unknown/suppress',
+        dataSchema: EVENT_DATA.key,
+    },
+    {
+        key: 'app/diagnostics/unknown/unsuppress',
+        dataSchema: EVENT_DATA.key,
+    },
+] as const satisfies EventDef<'app/diagnostics'>[];

@@ -2,7 +2,7 @@
 
 The [`Message`](/src/lib/app/context.svelte.ts#L52-L93) architecture was fine enough at first, but it's now starting to get in the way of future features. It worked as a general store of *text*, but since `customData` is untyped the options for expansion are limited.
 
-In addition, though the "user context" and "LLM context" overlap a lot, real usage has revealed that the LLM context is not a strict subset of the user context - i.e., there are some things the LLM should see that the user shouldn't (normally). Right now, a place just has to "know" to send two separate messages with different visibilities - the decision is made locally at the producer. Events move this decision to the consumer.
+In addition, though the "user context" and "LLM context" overlap a lot, real usage has revealed that the LLM context is not a strict subset of the user context - i.e., there are some things the LLM should see that the user shouldn't (normally). Right now, a place just has to "know" to send two separate messages with different visibilities - the decision is made locally at the producer. Events move this responsibility to the consumer (where it should be). For an aggregator of state like ContextManager, this means collecting the logic of "what adds to the context" inside the module rather than having it be distributed across the whole app.
 
 Also, trawling through raw text logs kind of sucks, to be perfectly honest. Structured logging should be the default in (current year).
 

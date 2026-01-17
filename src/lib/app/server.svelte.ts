@@ -6,6 +6,9 @@ import r from "$lib/app/utils/reporting";
 import type { Session } from "./session.svelte";
 import type { UserPrefs } from "./prefs.svelte";
 import { listenSub, safeInvoke } from "./utils";
+import type { EventDef } from "./events";
+import z from "zod";
+import { BUS } from "./events/bus";
 
 type ServerConnections = string[] | null;
 
@@ -73,10 +76,14 @@ export class ServerManager {
             return;
         }
 
+        // FIXME: some reg-only games aren't an issue (internal e.g. schema-test)
+
         const serverConns = new Set(this.connections);
         const regConns = new Set(this.registry.games.map(game => game.conn.id));
-        const serverOnly = serverConns.difference(regConns);
-        const regOnly = regConns.difference(serverConns);
+        const serverOnly = Array.from(serverConns.difference(regConns));
+        const regOnly = Array.from(regConns.difference(serverConns));
+
+        BUS.send('app/server/reconcile', { serverOnly, regOnly });
 
         for (const id of serverOnly) {
             r.warn(`Closing server-only connection ${id}`);
@@ -86,7 +93,7 @@ export class ServerManager {
         for (const id of regOnly) {
             const game = this.registry.games.find(g => g.conn.id === id);
             if (game === undefined) {
-                r.error(`Registry-only connection ${id} doesn't exist`, "???");
+                r.debug(`Registry-only connection ${id} doesn't exist`, "TOCTOU - whatever");
             } else {
                 r.warn(`Closing registry-only connection`, `ID: ${id} (game ${game.name})`);
                 this.registry.games.splice(this.registry.games.indexOf(game), 1);
@@ -102,3 +109,20 @@ export class ServerManager {
         this.subscriptions.length = 0;
     }
 }
+
+export const EVENTS = [
+    { key: 'app/server/no-tauri', },
+    {
+        key: 'app/server/stopped',
+        dataSchema: z.object({
+            disconnectedGames: z.array(z.string()),
+        })
+    },
+    {
+        key: 'app/server/reconcile',
+        dataSchema: z.object({
+            serverOnly: z.array(z.string()),
+            regOnly: z.array(z.string()),
+        }),
+    }
+] as const satisfies EventDef<'app/server'>[];

@@ -1,19 +1,27 @@
 import z from "zod";
 import { LogLevel } from "../utils/reporting";
 import { MY_EVENTS as BUS_EVENTS } from "./bus";
+import { EVENTS as WS_SERVER_EVENTS } from "$lib/app/server.svelte";
+import { EVENTS as PREFS_EVENTS } from "$lib/app/prefs.svelte";
+import { EVENTS as SESSION_EVENTS } from "$lib/app/session.svelte";
+import { EVENTS as CONN_EVENTS } from "$lib/api/connection";
+import { EVENTS as DIAG_EVENTS } from "$lib/api/game-diagnostics.svelte";
 
-export interface EventDef {
-    key: string;
+export interface EventDef<Prefix extends string = ''> {
+    key: Prefix extends '' ? string : `${Prefix}/${string}`;
     dataSchema?: z.ZodType;
-    description?: string;
+    description?: string | ((data: z.infer<this['dataSchema']>) => string);
     level?: LogLevel; // default Info
 }
 
 export const EVENTS = [
     {
-        key: 'log',
+        key: 'i_have_no_event_and_i_must_log',
         dataSchema: z.strictObject({
-            logMsg: z.string(),
+            msg: z.string(),
+            details: z.string().optional(),
+            ctx: z.any(),
+            levelOverride: z.enum(LogLevel).optional(),
         }),
         level: LogLevel.Debug,
     },
@@ -32,6 +40,11 @@ export const EVENTS = [
         level: LogLevel.Verbose,
     },
     ...BUS_EVENTS,
+    ...WS_SERVER_EVENTS,
+    ...PREFS_EVENTS,
+    ...SESSION_EVENTS,
+    ...CONN_EVENTS,
+    ...DIAG_EVENTS,
 ] as const satisfies EventDef[];
 
 export type Events = typeof EVENTS[number];

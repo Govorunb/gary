@@ -9,6 +9,8 @@ import r from "$lib/app/utils/reporting";
 import { Randy, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 import { UIState } from "$lib/ui/app/ui-state.svelte";
+import type { EventDef } from "./events";
+import z from "zod";
 
 /**
  * Represents a user session within the app.
@@ -120,3 +122,42 @@ export class Session {
         return id;
     }
 }
+
+export const EVENTS = [
+    {
+        key: 'app/session/created',
+        dataSchema: z.object({
+            session: z.instanceof(Session),
+        }),
+    },
+    {
+        key: 'app/session/disposed',
+        dataSchema: z.object({
+            session: z.instanceof(Session),
+        }),
+    },
+    {
+        key: 'app/session/engine/not_found',
+        dataSchema: z.object({
+            id: z.string(),
+        })
+    },
+    {
+        key: 'app/session/engine/no_delete_system',
+        dataSchema: z.object({
+            id: z.string(),
+        }),
+    },
+    {
+        key: 'app/session/engine/created',
+        dataSchema: z.object({
+            id: z.string(),
+        }),
+    },
+    {
+        key: 'app/session/engine/initialized',
+        dataSchema: z.object({
+            id: z.string(),
+        }),
+    },
+] as const satisfies EventDef<'app/session'>[];

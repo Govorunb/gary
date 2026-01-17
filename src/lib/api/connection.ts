@@ -3,6 +3,8 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import r from "$lib/app/utils/reporting";
 import type { NeuroMessage, GameMessage } from "./v1/spec";
 import { listenSub, safeInvoke, type Awaitable, createListener } from "$lib/app/utils";
+import type { EventDef } from "$lib/app/events";
+import z from "zod";
 
 type OnMessageHandler = (msg: string) => Awaitable;
 type OnCloseHandler = (clientDisconnected?: CloseFrame) => Awaitable;
@@ -290,3 +292,41 @@ type SendArgs = ConnMsgBase & {
 }
 
 type CloseArgs = ConnMsgBase & Partial<CloseFrame>;
+
+const commonData = z.object({ id: z.string() });
+const tauriData = z.object({
+    ...commonData.shape,
+    err: z.string(),
+});
+
+export const EVENTS = [
+    {
+        key: 'api/conn/assert_not_disposed',
+        dataSchema: commonData,
+    },
+    {
+        key: 'api/conn/no_onmessage_handlers',
+        dataSchema: commonData,
+    },
+    {
+        key: 'api/conn/ws_tauri/send_failed',
+        dataSchema: tauriData,
+    },
+    {
+        key: 'api/conn/ws_tauri/close_failed',
+        dataSchema: tauriData,
+    },
+    {
+        key: 'api/conn/client_disconnected',
+        dataSchema: commonData,
+    },
+    {
+        key: 'api/conn/internal/send',
+        dataSchema: commonData,
+    },
+    {
+        key: 'api/conn/internal/disconnect',
+        dataSchema: commonData,
+    },
+    // TODO: events for send/recv
+] as const satisfies EventDef<'api/conn'>[];
