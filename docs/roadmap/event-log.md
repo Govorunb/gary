@@ -1,20 +1,14 @@
 # Event log
 
-The [message](/src/lib/app/context.svelte.ts#L52-L93) architecture was fine enough at first, but it's now starting to get in the way of future features.  
-For example, putting "Act (forced)"/"Gary wants attention" in the message header so we can leave the message text to be the actual content is actually kind of a pain.
+The [`Message`](/src/lib/app/context.svelte.ts#L52-L93) architecture was fine enough at first, but it's now starting to get in the way of future features. It worked as a general store of *text*, but since `customData` is untyped the options for expansion are limited.
 
-It requires us to differentiate the "kind" of "actor message" (act/forced/say/notify):
-- `customData` can store but it's completely untyped
-- Can just match `string.startsWith` but that's mega scuffed
-
-We also need to store and surface app messages that are relevant to the user but not to the LLM and vice versa.  
-It was silly to think a unified context (where actor and user care about and see exactly the same things) was the right solution.
+In addition, though the "user context" and "LLM context" overlap a lot, real usage has revealed that the LLM context is not a strict subset of the user context - i.e., there are some things the LLM should see that the user shouldn't (normally). Right now, a place just has to "know" to send two separate messages with different visibilities - the decision is made locally at the producer. Events move this decision to the consumer.
 
 Also, trawling through raw text logs kind of sucks, to be perfectly honest. Structured logging should be the default in (current year).
 
 ## Outline
 
-**Events** are fired when things happen. Each event has a **type** key (e.g. `api/client/connected` - composed like a tree path) and event **instances** have unique IDs - akin to diagnostics.
+**Events** are fired when things happen. Each event has a **key** (e.g. `api/client/connected` - composed like a tree path) and event **instances** have unique IDs - akin to diagnostics.
 
 There should be a central **event stream** ("firehose") in the app, and consumers should be able to **subscribe** and filter for the event keys they're interested in. For example, the context log UI would filter for `api/client/*` (`connected`/`disconnected`/`context`/`renamed` etc), `user/ctx_msg`, `api/actor/*` (`act`/`force_act`/`skip_act`/`say`/`say_notify` etc), and so on.
 
@@ -24,7 +18,7 @@ Events with data should be typed (not sure how to reconcile this with easy decla
 
 There would be a unified display (**event log**) to show events to the user. With it, we can finally let the user adjust logging verbosity and so on.
 
-The [reporting](/src/lib/app/utils/reporting.ts) module would be co-opted into this. It'll only accept events (with a general `lazy_dev/uncategorized` event for arbitrary logs) and pipe them to the firehose.
+The [reporting](/src/lib/app/utils/reporting.ts) module would be co-opted into this. It'll only accept events (with a temporary escape hatch "arbitrary log" event with an annoying name) and pipe them to the firehose.
 
 Also, zod metadata for sensitive fields (blur).
 

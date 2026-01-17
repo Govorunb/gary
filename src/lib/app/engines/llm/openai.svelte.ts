@@ -39,8 +39,8 @@ export const zOpenAIPrefs = z.looseObject({
     name: z.string().nonempty(),
     ...zLLMOptions.shape,
     /** Leave empty if your server doesn't need authentication. (e.g. local) */
-    apiKey: z.string().default(""),
-    serverUrl: z.url().default("https://api.openai.com/v1"),
+    apiKey: z.string().default("").sensitive(),
+    serverUrl: z.url().default("https://api.openai.com/v1").sensitive(),
     modelId: z.string().optional(),
 });
 

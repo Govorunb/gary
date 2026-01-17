@@ -7,8 +7,8 @@ An implementation of the LLM side of the [Neuro-sama game SDK](https://github.co
 ## Features
 
 A wide range of tools and environments to test your game integration, in one app.
-- A [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md)-like random generator;
-- Tony-like manual action sending, with an option to send raw WebSocket messages for low-level testing (e.g. SDK compliance);
+- A [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md)-like random generator
+- Tony-like manual action sending, with an option to send raw WebSocket messages for low-level testing (e.g. SDK compliance)
 - Use a real LLM through an OpenAI-compatible inference provider:
     - Local models are supported through local server hosts like [LMStudio](https://lmstudio.ai) or [Ollama](https://ollama.com)
     - Remote OpenAI-compatible services are available as an option but are officially unsupported.

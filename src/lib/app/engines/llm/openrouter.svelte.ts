@@ -70,7 +70,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 
 export const zOpenRouterPrefs = z.strictObject({
     ...zLLMOptions.shape,
-    apiKey: z.string().default(""),
+    apiKey: z.string().default("").sensitive(),
     /** OpenRouter model identifier.
      * Can be:
      * - Empty or "openrouter/auto" for auto routing
