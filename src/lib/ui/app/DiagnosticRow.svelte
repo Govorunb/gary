@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Game } from "$lib/api/game.svelte";
     import { CircleX, Info, Skull, TriangleAlert, Check, CheckCheck, EyeOff, Eye, Undo, Undo2, ChevronDown } from '@lucide/svelte';
-    import { DiagnosticSeverity, getDiagnosticDefinition, type GameDiagnostic } from '$lib/api/diagnostics';
+    import { DIAGNOSTICS_BY_KEY, DiagnosticSeverity, type GameDiagnostic } from '$lib/api/diagnostics';
     import { tooltip } from '$lib/app/utils';
     import { boolAttr } from 'runed';
     import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
@@ -38,12 +38,11 @@
         }
     };
 
-    const def = $derived(getDiagnosticDefinition(diag.key)!);
+    const def = $derived(DIAGNOSTICS_BY_KEY[diag.key]);
     const config = $derived(severityConfig[def.severity]);
     const Icon = $derived(config.icon);
     const hasContext = $derived(!!diag.context);
     let ctxOpen = $state(false);
-    let ctxDetailsOpen = $state(false);
 
     const isDismissed = $derived(diag.dismissed);
     const isSuppressed = $derived(game.diagnostics.isSuppressed(diag.key));

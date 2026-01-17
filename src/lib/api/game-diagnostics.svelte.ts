@@ -1,6 +1,6 @@
 import { shortId } from "$lib/app/utils";
 import r from "$lib/app/utils/reporting";
-import { type GameDiagnostic, getDiagnosticDefinition, DiagnosticSeverity, type DiagnosticKey, SeverityToLogLevel } from "./diagnostics";
+import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, SeverityToLogLevel, DIAGNOSTICS_BY_KEY } from "./diagnostics";
 import type { Game } from "./game.svelte";
 
 
@@ -14,7 +14,7 @@ export class GameDiagnostics {
         for (const { key, dismissed } of this.diagnostics) {
             if (dismissed) continue;
 
-            const diag = getDiagnosticDefinition(key);
+            const diag = DIAGNOSTICS_BY_KEY[key];
             if (!diag) continue;
 
             if (diag.severity >= DiagnosticSeverity.Error) {
@@ -27,7 +27,7 @@ export class GameDiagnostics {
     }
 
     public trigger(key: DiagnosticKey, context?: any, report: boolean = true): GameDiagnostic | null {
-        const diagDef = getDiagnosticDefinition(key);
+        const diagDef = DIAGNOSTICS_BY_KEY[key];
         if (!diagDef) {
             r.error(`Unknown diagnostic ${key}`, { ctx: context });
             return null;
@@ -67,7 +67,7 @@ export class GameDiagnostics {
     }
 
     public suppress(key: DiagnosticKey) {
-        const diag = getDiagnosticDefinition(key);
+        const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
             r.error(`Cannot suppress unknown diagnostic ${key}.`, {
                 toast: {
@@ -83,7 +83,7 @@ export class GameDiagnostics {
     }
 
     public unsuppress(key: DiagnosticKey) {
-        const diag = getDiagnosticDefinition(key);
+        const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
             r.error(`Tried to unsuppress unknown diagnostic ${key}`, {
                 toast: {

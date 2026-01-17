@@ -14,7 +14,7 @@ There should be a central **event stream** ("firehose") in the app, and consumer
 
 Undecided on whether events should be declared centrally (like diagnostics) or vertically (owned by the relevant module).
 
-Events with data should be typed (not sure how to reconcile this with easy declaration).
+Events with data should be typed ~~(not sure how to reconcile this with easy declaration)~~.
 
 There would be a unified display (**event log**) to show events to the user. With it, we can finally let the user adjust logging verbosity and so on.
 

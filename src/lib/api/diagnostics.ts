@@ -219,15 +219,14 @@ Clients should always validate action data.`,
     }
 ] as const satisfies DiagnosticDef[];
 
-export type DiagnosticKey = (typeof DIAGNOSTICS)[number]["key"];
+export type Diagnostics = typeof DIAGNOSTICS[number];
+export type DiagnosticKey = Diagnostics["key"];
+
+export type DiagnosticByKey<K extends DiagnosticKey> = Extract<Diagnostics, { key: K }>;
 
 export const DIAGNOSTICS_BY_KEY = Object.fromEntries(
     DIAGNOSTICS.map(d => [d.key, d]) as [DiagnosticKey, DiagnosticDef][]
-) as Record<DiagnosticKey, DiagnosticDef>;
-
-export function getDiagnosticDefinition(key: string): DiagnosticDef | undefined {
-    return DIAGNOSTICS_BY_KEY[key as DiagnosticKey];
-}
+) as { [K in DiagnosticKey]: DiagnosticByKey<K> };
 
 export const SeverityToLogLevel: Record<DiagnosticSeverity, LogLevel> = {
     [DiagnosticSeverity.Info]: LogLevel.Info,

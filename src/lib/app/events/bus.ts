@@ -1,12 +1,14 @@
 import { v4 as uuid } from "uuid";
-import type { EventByKey, EventData, EventInstance, EventKey } from ".";
-import { DefaultMap } from "../utils";
+import type { EventData, EventDef, EventInstance, EventKey, DatalessKey, HasDataKey } from ".";
+import { createListener, DefaultMap } from "../utils";
 
 export class EventBus {
     #allSubs: Set<EventSub<EventKey>> = new Set();
     #subs: DefaultMap<EventKey, Set<EventSub<any>>> = new DefaultMap(() => new Set());
 
-    send<K extends EventKey>(key: K, data: EventData<K>) {
+    send<K extends DatalessKey>(key: K): void;
+    send<K extends HasDataKey>(key: K, data: EventData<K>): void;
+    send<K extends EventKey>(key: K, data?: EventData<K>) {
         const e = {
             id: uuid(),
             timestamp: Date.now(),
@@ -17,11 +19,11 @@ export class EventBus {
         this.#subs.get(key).forEach(sub => sub.next(e));
     }
 
-    subscribe(keys: []): EventSub<EventKey>;
+    subscribe(): EventSub<EventKey>;
     subscribe<Ks extends readonly EventKey[]>(keys: Ks): EventSub<Ks[number]>;
-    subscribe<Ks extends readonly EventKey[]>(keys: Ks) {
-        if (keys.length === 0) {
-            const sub = new EventSub(() => this.#unsub(sub, keys));
+    subscribe<Ks extends readonly EventKey[]>(keys?: Ks) {
+        if (keys === undefined) {
+            const sub = new EventSub(() => this.#unsub(sub));
             this.#allSubs.add(sub);
             return sub;
         }
@@ -32,9 +34,8 @@ export class EventBus {
         return sub;
     }
 
-    #unsub(sub: EventSub<any>, keys: readonly EventKey[]) {
-        sub.callback = null;
-        if (keys.length === 0) {
+    #unsub(sub: EventSub<any>, keys?: readonly EventKey[]) {
+        if (keys === undefined) {
             this.#allSubs.delete(sub);
         } else {
             keys.forEach(k => this.#subs.get(k).delete(sub));
@@ -43,17 +44,73 @@ export class EventBus {
 }
 
 export class EventSub<K extends EventKey> {
-    callback: ((e: EventInstance<K>) => void) | null = null;
+    #onnext: ((e: EventInstance<K>) => void)[] = [];
+    #ondestroy: (() => void)[];
 
-    constructor(public readonly unsubscribe: () => void) { }
+    constructor(unsubscribe: () => void) {
+        this.#ondestroy = [unsubscribe];
+    }
 
-    async* listen(): AsyncGenerator<EventByKey<K>> {
-
+    listen(): AsyncGenerator<EventInstance<K>> {
+        return createListener((n, d) => {
+            this.onnext(n);
+            this.ondestroy(d);
+        });
     }
 
     next(e: EventInstance<K>) {
-        this.callback?.(e);
+        this.#onnext.forEach(cb => cb(e));
+    }
+
+    onnext(cb: (e: EventInstance<K>) => void) {
+        this.#onnext.push(cb);
+    }
+
+    ondestroy(cb: () => void) {
+        this.#ondestroy.push(cb);
+    }
+
+    destroy() {
+        this.#onnext.length = 0;
+        this.#ondestroy.forEach(cb => cb());
+        this.#ondestroy.length = 0;
     }
 }
 
 export const BUS = new EventBus();
+
+export const MY_EVENTS = [
+    {
+        key: 'thank_the_bus_driver',
+    },
+] as const satisfies EventDef[];
+
+BUS.send("thank_the_bus_driver");
+// BUS.send("thank_the_bus_driver", undefined);
+// BUS.send("test1");
+BUS.send("test1", null);
+
+
+const all = BUS.subscribe();
+const some = BUS.subscribe(['test1', "thank_the_bus_driver"]);
+for await (const e of all.listen()) {
+    switch (e.key) {
+        case "log":
+            const a = e.data;
+            break;
+        case "test1":
+        case "test2":
+        case "test3":
+        case "thank_the_bus_driver":
+    }
+}
+
+for await (const e of some.listen()) {
+    switch (e.key) {
+        case "test1":
+        case "thank_the_bus_driver":
+    }
+}
+
+all.destroy();
+some.destroy();
