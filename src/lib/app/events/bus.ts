@@ -14,7 +14,7 @@ export class EventBus {
             timestamp: Date.now(),
             key,
             data
-        } as const satisfies EventInstance<K>;
+        } as EventInstance<K>; // can't `satisfies` :(
         this.#allSubs.forEach(sub => sub.next(e));
         this.#subs.get(key).forEach(sub => sub.next(e));
     }
@@ -89,6 +89,7 @@ BUS.send("thank_the_bus_driver");
 // BUS.send("thank_the_bus_driver", undefined);
 // BUS.send("test1");
 BUS.send("test1", null);
+BUS.send("test2");
 
 
 const all = BUS.subscribe();
@@ -96,8 +97,6 @@ const some = BUS.subscribe(['test1', "thank_the_bus_driver"]);
 for await (const e of all.listen()) {
     switch (e.key) {
         case "log":
-            const a = e.data;
-            break;
         case "test1":
         case "test2":
         case "test3":

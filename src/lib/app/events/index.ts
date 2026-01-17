@@ -24,12 +24,11 @@ export const EVENTS = [
     },
     {
         key: 'test2',
-        dataSchema: z.null(),
         level: LogLevel.Verbose,
     },
     {
         key: 'test3',
-        dataSchema: z.null(),
+        dataSchema: z.never(),
         level: LogLevel.Verbose,
     },
     ...BUS_EVENTS,
@@ -46,14 +45,18 @@ export type EventByKey<K extends EventKey> = Extract<Events, { key: K }>;
 
 export type EventData<K extends EventKey> = 'dataSchema' extends keyof EventByKey<K>
     ? z.infer<EventByKey<K>['dataSchema']>
-    : unknown; // 'undefined' causes inference issues
+    : never;
 
 export type DatalessKey = Extract<Events, { key: EventKey, dataSchema?: never }>['key'];
 export type HasDataKey = Exclude<EventKey, DatalessKey>;
 
-export interface EventInstance<K extends EventKey> {
-    readonly id: string,
-    readonly timestamp: number,
-    readonly key: K,
-    readonly data: EventData<K>,
-}
+export type EventInstances = {
+    [K in EventKey]: {
+        readonly id: string,
+        readonly timestamp: number,
+        readonly key: K,
+        readonly data: EventData<K>,
+    }
+}[EventKey];
+
+export type EventInstance<K extends EventKey> = Extract<EventInstances, { key: K }>;
