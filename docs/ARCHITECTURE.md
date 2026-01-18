@@ -64,9 +64,8 @@ There are Tauri plugins to extend the frontend with some common operations:
 - Logging (`@tauri-apps/plugin-log`)
 - Self-updating (`@tauri-apps/plugin-updater`)
 - Opening a file/folder in the default registered application (`@tauri-apps/plugin-opener`)
-- Self-restarting (`@tauri-apps/plugin-process`)
 
-There are more out there (e.g. file system access in `@tauri-apps/plugin-fs`), but we only use these four currently.
+There are more out there (e.g. file system access in `@tauri-apps/plugin-fs`), but we only use these three currently.
 
 For Gary specifically, Rust hosts the WebSocket server, relaying messages to the frontend. Rust use in general is preferably kept to a minimum (for various reasons).
 
