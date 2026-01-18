@@ -28,7 +28,7 @@ Compared to the previous Python app:
 That said...
 > [!Note]
 > The app is currently in beta. Some areas or systems may change their behavior and/or internals (especially internals).
-> The project is in active development so ~~don't be mean please 🥺👉👈~~ PRs are welcome. It's mostly for fun but I'm open to feedback and contributions.
+> The project is in active development so ~~don't be mean please 🥺👉👈~~ I'm open to feedback and contributions.
 
 ## Quick start
 Head over to [Releases](https://github.com/Govorunb/gary/releases/latest), download an installer appropriate for your platform/architecture, and install the app.
