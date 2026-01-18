@@ -102,6 +102,20 @@ export abstract class ClientGame {
         await this.conn.send(context);
     }
 
+    public async sendForce(actionNames: string[], query: string, state?: string, ephemeralContext?: boolean, priority?: "low" | "medium" | "high" | "critical") {
+        const force: v1.ForceAction = v1.zForceAction.decode({
+            game: this.name,
+            data: {
+                action_names: actionNames,
+                query,
+                state,
+                ephemeral_context: ephemeralContext,
+                priority
+            }
+        });
+        await this.conn.send(force);
+    }
+
     public validateData(schema: any, data: any): { valid: boolean; error?: string } {
         if (!schema) {
             return { valid: true };
