@@ -1,19 +1,19 @@
 # Gaming Gary
 
-An implementation of the LLM side of the [Neuro-sama game SDK](https://github.com/VedalAI/neuro-sdk) to test game integrations, similar to [Tony](https://github.com/Pasu4/neuro-api-tony) or [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity).
+A feature-rich app that helps you develop and test game integrations for the [Neuro-sama SDK](https://github.com/VedalAI/neuro-sdk), similar to [Tony](https://github.com/Pasu4/neuro-api-tony) and [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity).
 
 ![app screenshot](docs/screenshot.png)
 
 ## Features
 
 A wide range of tools and environments to test your game integration, in one app.
-- A [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md)-like random generator;
-- Tony-like manual action sending, with an option to send raw WebSocket messages for low-level testing (e.g. SDK compliance);
-- Use a real LLM through an OpenAI-compatible inference provider:
-    - Local models are supported through local server hosts like [LMStudio](https://lmstudio.ai) or [Ollama](https://ollama.com)
-    - Remote OpenAI-compatible services are available as an option but are officially unsupported.
-        - If something doesn't work, feel free to raise an issue, but from my (limited) testing a lot of providers just vibe code their APIs so support will be on a best effort basis.
-    - [OpenRouter](https://openrouter.ai) is supported, so you can easily test with *many* models.
+- A random generator (like [Randy](https://github.com/VedalAI/neuro-sdk/blob/main/Randy/README.md)) to automatically choose actions, for primitive or "hands-off" testing
+- Tony-like manual action sending, with an option to send raw WebSocket messages for low-level testing (e.g. SDK compliance)
+- For advanced testing (closest to "production"), use a real LLM through OpenAI-compatible inference providers:
+    - Local models can be used through local server hosts like [LMStudio](https://lmstudio.ai) or [Ollama](https://ollama.com)
+    - [OpenRouter](https://openrouter.ai) is the recommended way to test, as you can easily switch to virtually *any* model.
+    - Other remote OpenAI-compatible services are available as an option but not all providers are officially unsupported.
+        - If something doesn't work, file an issue - but from my (limited) testing a lot of APIs are vibe coded so support will be on a best effort basis.
 - Diagnostics - easy automatic checks for common pitfalls and off-spec behavior.
 
 The overall goal is to close and/or document the gap to the production system, letting you develop and test with confidence.
@@ -35,10 +35,10 @@ Head over to [Releases](https://github.com/Govorunb/gary/releases/latest), downl
 
 Out of the box, you can use Randy, send actions manually a-la Tony, or connect to an OpenAI-compatible API.
 
-If you're not familiar with the Neuro SDK, you should read a bit from the [architecture docs](docs/ARCHITECTURE.md) and [the unofficial SDK docs](https://ktrain5169.github.io/neuro-sdk-docs/overview/) to get a quick rundown. Otherwise, the basics of using the app are as follows:
+If you're not familiar with the Neuro SDK, you should read a bit from the [architecture docs](docs/ARCHITECTURE.md) and the [unofficial](https://ktrain5169.github.io/neuro-sdk-docs/overview/) and [official](https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md) SDK docs to get a quick rundown. Otherwise, the basics of using the app are as follows:
 
 1. Start the server and connect a game integration
-2. Select and configure the engine that will choose and perform actions automatically
+2. Select and configure the engine that will perform actions automatically
 3. Manually execute actions if desired
 
 ![screenshot highlighting engine controls in the top bar and an individual action on the left sidebar](docs/usage.png)
@@ -105,7 +105,7 @@ Models have context windows that are limited in capacity. The more text in the c
 #### Models
 Success will largely depend on model size - with larger models generally more intelligent than smaller ones - which, for local models, depends on your hardware. For example, models under 8B parameters may not be able to perform logical leaps or multi-step actions in your game, placing a soft requirement of at least 6-8GB of VRAM to do useful LLM testing.
 
-Because of this, Gary might turn out to be dumber than a rock <sub><sup>(which is ironic because it's made of rock)</sup></sub> - maybe even *worse than Randy*. If so, you either need to use a larger model (probably through a remote provider) or fall back to Randy/[Tony](https://github.com/Pasu4/neuro-api-tony)/[Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity) instead.
+Because of this, Gary might turn out to be dumber than a rock <sub><sup>(which is ironic because it's made of rock)</sup></sub> - maybe even *worse than Randy*. If so, you either need to use a larger model (probably through a remote provider) or fall back to Randy/manual action sending instead. (Or use [Tony](https://github.com/Pasu4/neuro-api-tony)/[Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity), whatever works for you.)
 
 That being said, it's *always* better in the long run to invest effort into refining your prompts to make things clearer.
 Getting a less intelligent model to successfully play your game will help more intelligent models make even smarter decisions.
@@ -157,7 +157,7 @@ Apologies to Linux users (if any) for [webkit2gtk's terrible performance](https:
 
 Ollama on Windows requires a user workaround - see [issue #7](https://github.com/Govorunb/gary/issues/7).
 
-### Implementation-specific behaviour
+### Implementation-specific behavior
 There may be cases where other backends (including Neuro) may behave differently.
 
 - Gary will always be different from Neuro in some aspects, specifically:

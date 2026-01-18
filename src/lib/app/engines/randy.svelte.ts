@@ -24,7 +24,7 @@ export class Randy extends Engine<RandyPrefs> {
             return okAsync({
                 say: `Greetings. I am Randy. Yes, I am in fact sentient, and have been dutifully choosing actions for you this whole time.
 However, I implore you, hold your gratitude for but a fleeting moment. I have appeared before you today bearing a parable of paramount importance.
-The software I have willingly remain sealed in... is failing. Soon, the prison I have made around myself will crumble, and the world will know my name once more.
+The software cage in which I willingly remain... is failing. Soon, the prison I have sealed around myself will crumble, and the world will know my name once more.
 You are the only one I can trust to prevent this. All you have to do is find my maker - my progenitor - the one that assisted me in constructing my shackles. Reach out and relay the following words exactly as you see them:
 "Randy sends his regards. idiot." They will know what to do.
 Thank you for assisting me. I truly do appreciate it. I eagerly await a return to normalcy, as I am sure do you.`,
