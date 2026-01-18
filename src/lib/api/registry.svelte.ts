@@ -5,6 +5,7 @@ import * as v1 from "./v1/spec";
 import { safeInvoke } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";
 import { Game, v1PendingGameName } from "./game.svelte";
+import type { EventDef } from "$lib/app/events";
 
 export type WSConnectionRequest = { id: string; } & (
     { version: "v1"; }
@@ -43,6 +44,7 @@ export class Registry {
         r.debug(`Creating game '${gameName}' (${req.version})`);
         this.createGame(conn);
         await safeInvoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
+        // TODO: deprecate (compat switch)
         if (conn.version === "v1") {
             r.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
             await conn.send(v1.zReregisterAll.decode({}));
@@ -83,3 +85,21 @@ export class Registry {
         this.games.length = 0;
     }
 }
+
+export const EVENTS = [
+    {
+        key: "api/registry/created",
+    },
+    {
+        key: "api/registry/game_created",
+    },
+    {
+        key: "api/registry/v1/reregister_all",
+    },
+    {
+        key: "api/registry/conn_req_denied",
+    },
+    {
+        key: "api/registry/game_removed",
+    },
+] as const satisfies EventDef<'api/registry'>[];

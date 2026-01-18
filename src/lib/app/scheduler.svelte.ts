@@ -6,6 +6,8 @@ import { EngineError, type Engine, type EngineAct, type EngineActError, type Eng
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { untrack } from "svelte";
 import { debounced } from "./utils";
+import type { EventDef } from "./events";
+import z from "zod";
 
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
@@ -287,3 +289,57 @@ export class AutoPoker {
         });
     }
 }
+
+const EVENT_DATA = {
+    act: z.object({
+        force: z.boolean(),
+    }),
+}
+
+export const EVENTS = [
+    {
+        key: 'app/scheduler/act/cancelled',
+    },
+    {
+        key: 'app/scheduler/act/logic_exit',
+        dataSchema: z.object({
+            ...EVENT_DATA.act.shape,
+            reason: z.enum(["ignored", "noActions", "actionNotFound", "failedToSend"]),
+        }),
+    },
+    {
+        key: 'app/scheduler/act/error',
+    },
+    {
+        key: 'app/scheduler/idle/try',
+    },
+    {
+        key: 'app/scheduler/idle/force',
+    },
+    {
+        key: 'app/scheduler/idle/no_force_fq_non_empty',
+    },
+    {
+        key: 'app/scheduler/act/performing',
+    },
+] as const satisfies EventDef<'app/scheduler'>[];
+
+export const ACT_EVENTS = [
+    {
+        key: 'api/actor/skip',
+    },
+    {
+        key: 'api/actor/say',
+        dataSchema: z.object({
+            msg: z.string(),
+            notify: z.boolean(),
+        }),
+    },
+    {
+        key: 'api/actor/act',
+        dataSchema: z.object({
+            action: z.string(),
+            data: z.any(),
+        }),
+    }
+] as const satisfies EventDef<'api/actor'>[];

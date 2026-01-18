@@ -8,7 +8,7 @@ import { APP_VERSION, formatZodError, jsonParse, safeParse } from "./utils";
 import { migrate, moveField, type Migration } from "./utils/migrations";
 import { err, ok, type Result } from "neverthrow";
 import type { EventDef } from "./events";
-import { BUS } from "./events/bus";
+import { EVENT_BUS } from "./events/bus";
 
 export const USER_PREFS = "userPrefs";
 
@@ -63,7 +63,7 @@ export class UserPrefs {
             const zodError = parsed.error;
             const errorMessage = `Validation failed:\n${formatZodError(zodError).join("\n")}`;
 
-            BUS.send("app/prefs/load/parse_failed", { error: zodError });
+            EVENT_BUS.emit("app/prefs/load/parse_failed", { error: zodError });
 
             r.error("Failed to parse user prefs", {
                 details: errorMessage,
@@ -99,7 +99,7 @@ export class UserPrefs {
 
     async save() {
         if (this.loadError) {
-            BUS.send('app/prefs/save/cancelled_due_to_load_error');
+            EVENT_BUS.emit('app/prefs/save/cancelled_due_to_load_error');
             r.info("Prefs have load error, aborting save");
             return;
         }

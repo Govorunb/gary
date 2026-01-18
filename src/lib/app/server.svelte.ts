@@ -8,7 +8,7 @@ import type { UserPrefs } from "./prefs.svelte";
 import { listenSub, safeInvoke } from "./utils";
 import type { EventDef } from "./events";
 import z from "zod";
-import { BUS } from "./events/bus";
+import { EVENT_BUS } from "./events/bus";
 
 type ServerConnections = string[] | null;
 
@@ -83,7 +83,7 @@ export class ServerManager {
         const serverOnly = Array.from(serverConns.difference(regConns));
         const regOnly = Array.from(regConns.difference(serverConns));
 
-        BUS.send('app/server/reconcile', { serverOnly, regOnly });
+        EVENT_BUS.emit('app/server/reconcile', { serverOnly, regOnly });
 
         for (const id of serverOnly) {
             r.warn(`Closing server-only connection ${id}`);

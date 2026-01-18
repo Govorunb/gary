@@ -6,9 +6,9 @@ export class EventBus {
     #allSubs: Set<EventSub<EventKey>> = new Set();
     #subs: DefaultMap<EventKey, Set<EventSub<any>>> = new DefaultMap(() => new Set());
 
-    send<K extends DatalessKey>(key: K): void;
-    send<K extends HasDataKey>(key: K, data: EventData<K>): void;
-    send<K extends EventKey>(key: K, data?: EventData<K>) {
+    emit<K extends DatalessKey>(key: K): void;
+    emit<K extends HasDataKey>(key: K, data: EventData<K>): void;
+    emit<K extends EventKey>(key: K, data?: EventData<K>) {
         const e = {
             id: uuid(),
             timestamp: Date.now(),
@@ -77,7 +77,7 @@ export class EventSub<K extends EventKey> {
     }
 }
 
-export const BUS = new EventBus();
+export const EVENT_BUS = new EventBus();
 
 export const MY_EVENTS = [
     {
@@ -85,7 +85,7 @@ export const MY_EVENTS = [
     },
 ] as const satisfies EventDef[];
 
-BUS.send("thank_the_bus_driver");
+EVENT_BUS.emit("thank_the_bus_driver");
 // BUS.send("thank_the_bus_driver", undefined);
 // BUS.send("test1");
-BUS.send("test1", null);
+EVENT_BUS.emit("test1", null);

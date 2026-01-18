@@ -11,6 +11,8 @@ import { dequal } from "dequal/lite";
 import type { Message } from "$lib/app/context.svelte";
 import { findUnsupportedSchemaKeywords } from "./helpers";
 import type { JSONSchema } from "openai/lib/jsonschema";
+import type { EventDef } from "$lib/app/events";
+import z from "zod";
 
 export type GameAction = v1.Action & { active: boolean };
 export type PendingAction = {
@@ -388,3 +390,55 @@ function prettyPending(p: PendingAction) {
         sentAt: localeTimeWithMs(dayjs(p.sentAt))
     };
 }
+
+
+export const EVENTS = [
+    {
+        key: 'api/game/connected',
+    },
+    {
+        key: 'api/game/disconnected',
+    },
+    {
+        key: 'api/game/conn_error',
+    },
+    {
+        key: 'api/game/recv',
+        dataSchema: z.object({
+            msg: v1.zNeuroMessage,
+        }),
+    },
+    {
+        key: 'api/game/assert_unimplemented_command',
+        dataSchema: z.object({
+            command: z.string(),
+        }),
+    },
+    {
+        key: 'api/game/startup',
+    },
+    {
+        key: 'api/game/context',
+    },
+    {
+        key: 'api/game/register',
+    },
+    {
+        key: 'api/game/unregister',
+    },
+    {
+        key: 'api/game/force',
+    },
+    {
+        key: 'api/game/v1/name',
+    },
+    {
+        key: 'api/game/register/duplicate',
+    },
+    {
+        key: 'api/game/actor_act',
+    },
+    {
+        key: 'api/game/user_act',
+    },
+] as const satisfies EventDef<'api/game'>[];

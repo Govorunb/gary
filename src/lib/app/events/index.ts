@@ -6,6 +6,11 @@ import { EVENTS as PREFS_EVENTS } from "$lib/app/prefs.svelte";
 import { EVENTS as SESSION_EVENTS } from "$lib/app/session.svelte";
 import { EVENTS as CONN_EVENTS } from "$lib/api/connection";
 import { EVENTS as DIAG_EVENTS } from "$lib/api/game-diagnostics.svelte";
+import { EVENTS as GAME_EVENTS } from "$lib/api/game.svelte";
+import { EVENTS as SCHEMA_TEST_EVENTS } from "../schema-test";
+import { EVENTS as REGISTRY_EVENTS } from "$lib/api/registry.svelte";
+import { EVENTS as MIGRATIONS_EVENTS } from "../utils/migrations";
+import { EVENTS as SCHED_EVENTS, ACT_EVENTS } from "$lib/app/scheduler.svelte";
 
 export interface EventDef<Prefix extends string = ''> {
     key: Prefix extends '' ? string : `${Prefix}/${string}`;
@@ -45,6 +50,12 @@ export const EVENTS = [
     ...SESSION_EVENTS,
     ...CONN_EVENTS,
     ...DIAG_EVENTS,
+    ...GAME_EVENTS,
+    ...SCHEMA_TEST_EVENTS,
+    ...REGISTRY_EVENTS,
+    ...MIGRATIONS_EVENTS,
+    ...SCHED_EVENTS,
+    ...ACT_EVENTS,
 ] as const satisfies EventDef[];
 
 export type Events = typeof EVENTS[number];
