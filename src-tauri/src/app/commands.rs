@@ -63,3 +63,8 @@ pub fn open_logs_folder(app: AppHandle) -> Result<(), String> {
         .open_path(path.to_str().unwrap(), None::<&str>)
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn restart(app: AppHandle) -> Result<(), String> {
+  app.request_restart()
+}

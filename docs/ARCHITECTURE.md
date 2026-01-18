@@ -35,7 +35,7 @@ If the connection drops, on reconnect, the server *may* send a message prompting
 In this application, the actor's role may be fulfilled by different **engines**, such as:
 - Randy (a random generator)
 - OpenRouter (a multiplexer/router for LLM inference providers)
-- Any OpenAI-compatible service, including local LLM hosts like LMStudio/Ollama (not officially supported; on a best-effort basis)
+- Any OpenAI-compatible service, including local LLM hosts like LMStudio/Ollama (services supported on a best-effort basis)
 
 There's also Tony, which is not an actual engine; 'Tony mode' is a term for when the user manually sends actions through the UI, superseding the active engine.
 
@@ -46,7 +46,7 @@ The engine may choose not to act if not forced; or, alternatively speaking - the
 
 ## Tauri Application
 
-Tauri is a cross-platform desktop application framework that renders a web-based frontend in the system WebView while passing IPC messages to invoke calls on the Rust backend.
+Tauri is a cross-platform desktop application framework that renders a web-based frontend in the system webview (browser) while passing IPC messages to invoke calls on the Rust backend.
 
 ### App Components
 
@@ -61,14 +61,13 @@ Tauri is a cross-platform desktop application framework that renders a web-based
 The Rust backend for the application. Essentially, it's the layer connecting the frontend to the OS. Since the frontend is basically just a website, when it needs to do desktop things, it passes system calls to the backend through an IPC channel.
 
 There are Tauri plugins to extend the frontend with some common operations:
-- File system access (`@tauri-apps/plugin-fs`)
-- HTTP client (`@tauri-apps/plugin-http`)
 - Logging (`@tauri-apps/plugin-log`)
-- Notifications (`@tauri-apps/plugin-notification`)
-- Store API (`@tauri-apps/plugin-store`)
 - Self-updating (`@tauri-apps/plugin-updater`)
+- Opening a file/folder in the default registered application (`@tauri-apps/plugin-opener`)
 
-For Gary specifically, it hosts the WebSocket server, relaying messages to the frontend. Rust use in general is preferably kept to a minimum (for various reasons).
+There are more out there (e.g. file system access in `@tauri-apps/plugin-fs`), but we only use these three currently.
+
+For Gary specifically, Rust hosts the WebSocket server, relaying messages to the frontend. Rust use in general is preferably kept to a minimum (for various reasons).
 
 #### Frontend Structure (`src/`)
 - Application code in `src/lib/`
