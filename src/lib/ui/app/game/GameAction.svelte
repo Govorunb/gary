@@ -9,6 +9,7 @@
     import { preventDefault, tooltip } from "$lib/app/utils";
     import type { Game, GameAction } from "$lib/api/game.svelte";
     import { boolAttr } from "runed";
+    import { EVENT_BUS } from "$lib/app/events/bus";
 
     type Props = {
         action: GameAction;
@@ -31,8 +32,12 @@
     }
 
     function sendImmediate() {
+        EVENT_BUS.emit('ui/game/user_act/send', { gameId: game.conn.id, actionName: action.name, hasData: false });
         game.manualSend(action.name, undefined)
-            .catch(e => r.error(`Failed to send action ${action.name}`, `${e}`));
+            .catch(e => {
+                EVENT_BUS.emit('ui/game/user_act/send_error', { gameId: game.conn.id, actionName: action.name, error: e instanceof Error ? e : new Error(`${e}`) });
+                r.error(`Failed to send action ${action.name}`, `${e}`);
+            });
     }
 
     function sendRandom() {
@@ -42,12 +47,17 @@
                 const genObj = JSONSchemaFaker.generate(action.schema);
                 generatedData = JSON.stringify(genObj);
             } catch (e) {
+                EVENT_BUS.emit('ui/game/user_act/generate_error', { gameId: game.conn.id, actionName: action.name, error: e instanceof Error ? e : new Error(`${e}`) });
                 r.error(`Failed to generate random data for ${action.name}`, `${e}`);
                 return;
             }
         }
+        EVENT_BUS.emit('ui/game/user_act/send', { gameId: game.conn.id, actionName: action.name, hasData: !!generatedData });
         game.manualSend(action.name, generatedData)
-            .catch(e => r.error(`Failed to send action ${action.name}`, `${e}`));
+            .catch(e => {
+                EVENT_BUS.emit('ui/game/user_act/send_error', { gameId: game.conn.id, actionName: action.name, error: e instanceof Error ? e : new Error(`${e}`) });
+                r.error(`Failed to send action ${action.name}`, `${e}`);
+            });
     }
 </script>
 

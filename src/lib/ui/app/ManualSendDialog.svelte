@@ -14,6 +14,7 @@
     import { tooltip } from "$lib/app/utils";
     import { JSONSchemaFaker } from "json-schema-faker";
     import { boolAttr, PressedKeys } from "runed";
+    import { EVENT_BUS } from "$lib/app/events/bus";
 
     type Props = {
         open: boolean;
@@ -91,8 +92,12 @@
     async function sendAction() {
         if (!isValid && !shiftPressed) return;
 
+        EVENT_BUS.emit('ui/game/user_act/send', { gameId: game.conn.id, actionName: action.name, hasData: !!jsonContent });
         game.manualSend(action.name, jsonContent)
-            .catch(e => r.error(`Failed to send action ${action.name}`, `${e}`))
+            .catch(e => {
+                EVENT_BUS.emit('ui/game/user_act/send_error', { gameId: game.conn.id, actionName: action.name, error: e instanceof Error ? e : new Error(`${e}`) });
+                r.error(`Failed to send action ${action.name}`, `${e}`);
+            })
             .finally(closeDialog);
     }
 </script>

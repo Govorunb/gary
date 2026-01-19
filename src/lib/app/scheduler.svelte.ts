@@ -308,6 +308,13 @@ export const EVENTS = [
         }),
     },
     {
+        key: 'app/scheduler/act/performing',
+        dataSchema: z.object({
+            ...EVENT_DATA.act.shape,
+            result: z.custom<EngineActResult>(),
+        }),
+    },
+    {
         key: 'app/scheduler/act/error',
     },
     {
@@ -319,11 +326,9 @@ export const EVENTS = [
     {
         key: 'app/scheduler/idle/no_force_fq_non_empty',
     },
-    {
-        key: 'app/scheduler/act/performing',
-    },
 ] as const satisfies EventDef<'app/scheduler'>[];
 
+// FIXME: move to lib/app/engines
 export const ACT_EVENTS = [
     {
         key: 'api/actor/skip',

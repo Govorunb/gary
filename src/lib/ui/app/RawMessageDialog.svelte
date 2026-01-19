@@ -11,6 +11,7 @@
     import { formatZodError, jsonParse, safeParse, tooltip } from "$lib/app/utils";
     import { PressedKeys } from "runed";
     import { on } from "svelte/events";
+    import { EVENT_BUS } from "$lib/app/events/bus";
 
     type Props = {
         open: boolean;
@@ -113,8 +114,10 @@
     async function sendMessage() {
         try {
             await game.conn.sendRaw(jsonContent);
+            EVENT_BUS.emit('ui/game/send_raw/sent', { gameId: game.conn.id });
             r.success("Sent raw WebSocket message", {toast: true});
         } catch (e) {
+            EVENT_BUS.emit('ui/game/send_raw/error', { gameId: game.conn.id, error: e instanceof Error ? e : new Error(`${e}`) });
             r.error(`Failed to send raw message to ${game.name}`, `${e}`);
         } finally {
             closeDialog();

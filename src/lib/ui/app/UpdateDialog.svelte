@@ -9,6 +9,7 @@
     import Hotkey from "../common/Hotkey.svelte";
     import { dev } from "$app/environment";
     import { onMount } from "svelte";
+    import { EVENT_BUS } from "$lib/app/events/bus";
 
     type Props = {
         open: boolean;
@@ -36,6 +37,7 @@
         if (isTauri()) {
             await update.downloadAndInstall();
         }
+        EVENT_BUS.emit('ui/update/installed', { version: update.version });
         r.success("Update successful", {
             toast: {
                 description: "Restart the app at your convenience to finish the update.",

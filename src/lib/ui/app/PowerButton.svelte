@@ -8,6 +8,7 @@
     import r from "$lib/app/utils/reporting";
     import { isTauri } from "@tauri-apps/api/core";
     import CopyButton from "../common/CopyButton.svelte";
+    import { EVENT_BUS } from "$lib/app/events/bus";
 
     const userPrefs = getUserPrefs();
     const registry = getRegistry();
@@ -38,6 +39,7 @@
             } else if (err_msg.includes("in use")) {
                 err_msg = `The port ${userPrefs.api.server.port} is already in use. Check for other instances of Gary, Tony, etc.`;
             }
+            EVENT_BUS.emit('ui/server/toggle_failed', { wasRunning: running, error: err_msg });
             r.error({
                 message: err_title,
                 toast: {

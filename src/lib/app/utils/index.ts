@@ -7,6 +7,9 @@ import r from "./reporting";
 import type { Dayjs } from "dayjs";
 import { dev } from "$app/environment";
 // import { isTauri } from "@tauri-apps/api/core";
+import type { EventDef } from "../events";
+import { EVENT_BUS } from "../events/bus";
+import z from "zod";
 export * from "./zod";
 export * from "./default-map";
 
@@ -23,6 +26,7 @@ export function isWebkitGtk() {
 
 export const scrollNumInput: Attachment<HTMLInputElement> = (el) => {
     if (el.type !== "number" && el.type !== "range") {
+        EVENT_BUS.emit('dev/assert/scroll_num_invalid', { el });
         r.warn("scrollNumInput should only be attached to inputs of type 'number' or 'range'");
         el.style.border = "1px red dotted";
         return;
@@ -276,3 +280,13 @@ export function isApril1st() {
     // month 0-indexed, day 1-indexed. make it make sense
     return today.getMonth() === 3 && today.getDate() === 1;
 }
+
+export const EVENTS = [
+    {
+        key: 'dev/assert/scroll_num_invalid',
+        dataSchema: z.object({
+            el: z.custom<HTMLElement>(),
+        }),
+    },
+] as const satisfies EventDef<'dev/assert'>[];
+

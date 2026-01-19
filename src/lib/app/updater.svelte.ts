@@ -6,6 +6,9 @@ import type { UserPrefs } from "./prefs.svelte";
 import type { UIState } from "$lib/ui/app/ui-state.svelte";
 import { isTauri } from "@tauri-apps/api/core";
 import { sleep } from "./utils";
+import type { EventDef } from "./events";
+import { EVENT_BUS } from "./events/bus";
+import z from "zod";
 
 const simUpdate: Update = {
     available: true,
@@ -69,6 +72,7 @@ export class Updater {
         this.#checkingForUpdates = true;
 
         let updateRes: Result<Update | null, string>;
+        EVENT_BUS.emit('app/update/check', { isManual: isCheckManual });
         r.debug(`Checking for updates (${isCheckManual ? "manual" : "auto"})`);
         if (isTauri()) {
             updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
@@ -85,14 +89,17 @@ export class Updater {
             if (this.update) {
                 const skipped = this.skipVersion === this.update.version;
                 if (skipped) {
+                    EVENT_BUS.emit('app/update/skipped', { version: this.update.version });
                     r.info("Update skipped", `Version ${this.update.version} was previously set as skipped`);
                 } else if (!isCheckManual) {
                     await this.notifyUpdateAvailable();
                 }
             } else {
+                EVENT_BUS.emit('app/update/none_available');
                 r.info("No update available");
             }
         } else {
+            EVENT_BUS.emit('app/update/check_error', { error: updateRes.error });
             r.error("Could not check for updates", {
                 details: updateRes.error,
                 toast: false,
@@ -105,6 +112,7 @@ export class Updater {
         if (!this.update) return;
         if (this.skipVersion === this.update.version) return;
 
+        EVENT_BUS.emit('app/update/available', { version: this.update.version });
         r.success("Update available!", {
             details: `Version ${this.update.version} is available`,
             toast: {
@@ -123,3 +131,39 @@ export class Updater {
         this.uiState.dialogs.openUpdateDialog();
     }
 }
+
+export const EVENTS = [
+    {
+        key: 'app/update/check',
+        dataSchema: z.object({
+            isManual: z.boolean(),
+        }),
+    },
+    {
+        key: 'app/update/check_error',
+        dataSchema: z.object({
+            error: z.string(),
+        }),
+    },
+    {
+        key: 'app/update/available',
+        dataSchema: z.object({
+            version: z.string(),
+        }),
+    },
+    {
+        key: 'app/update/skipped',
+        dataSchema: z.object({
+            version: z.string(),
+        }),
+    },
+    {
+        key: 'app/update/none_available',
+    },
+    {
+        key: 'app/update/restart_failed',
+        dataSchema: z.object({
+            error: z.custom<Error>(),
+        }),
+    },
+] as const satisfies EventDef<''>[];

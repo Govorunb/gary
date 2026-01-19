@@ -10,6 +10,7 @@ import { EngineError, type EngineActError, type EngineActResult } from "../index
 import type { Action } from "$lib/api/v1/spec";
 import r from "$lib/app/utils/reporting";
 import { parseError } from "$lib/app/utils";
+import type { EventDef } from "$lib/app/events";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
@@ -146,3 +147,18 @@ export class OpenAIClient {
         return ok(msg);
     }
 }
+
+export const EVENTS = [
+    {
+        key: 'app/engines/llm/network_error',
+    },
+    {
+        key: 'app/engines/llm/error_result',
+    },
+    {
+        key: 'app/engines/llm/assert', // e.g. "empty response" or "unexpected finish_reason"
+    },
+    {
+        key: 'app/engines/llm/',
+    },
+] as const satisfies EventDef<'app/engines/llm'>[];

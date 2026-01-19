@@ -57,6 +57,7 @@ export abstract class BaseConnection {
 
     public async sendRaw(text: string) {
         if (this.#disposed) return;
+        // TODO: uh. was this meant to await (git blame for this line is scaring me)
         void this.protocolSend(text);
         for (const cbSend of this.#onsend) {
             await cbSend(text);

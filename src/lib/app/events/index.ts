@@ -1,5 +1,5 @@
 import z from "zod";
-import { LogLevel } from "../utils/reporting";
+import { LogLevel } from "$lib/app/utils/reporting";
 import { MY_EVENTS as BUS_EVENTS } from "./bus";
 import { EVENTS as WS_SERVER_EVENTS } from "$lib/app/server.svelte";
 import { EVENTS as PREFS_EVENTS } from "$lib/app/prefs.svelte";
@@ -7,10 +7,13 @@ import { EVENTS as SESSION_EVENTS } from "$lib/app/session.svelte";
 import { EVENTS as CONN_EVENTS } from "$lib/api/connection";
 import { EVENTS as DIAG_EVENTS } from "$lib/api/game-diagnostics.svelte";
 import { EVENTS as GAME_EVENTS } from "$lib/api/game.svelte";
-import { EVENTS as SCHEMA_TEST_EVENTS } from "../schema-test";
+import { EVENTS as SCHEMA_TEST_EVENTS } from "$lib/app/schema-test";
 import { EVENTS as REGISTRY_EVENTS } from "$lib/api/registry.svelte";
-import { EVENTS as MIGRATIONS_EVENTS } from "../utils/migrations";
+import { EVENTS as MIGRATIONS_EVENTS } from "$lib/app/utils/migrations";
 import { EVENTS as SCHED_EVENTS, ACT_EVENTS } from "$lib/app/scheduler.svelte";
+import { EVENTS as UPDATER_EVENTS } from "$lib/app/updater.svelte";
+import { EVENTS as UTILS_EVENTS } from "$lib/app/utils";
+import { EVENTS as UI_EVENTS } from "./ui";
 
 export interface EventDef<Prefix extends string = ''> {
     key: Prefix extends '' ? string : `${Prefix}/${string}`;
@@ -56,6 +59,9 @@ export const EVENTS = [
     ...MIGRATIONS_EVENTS,
     ...SCHED_EVENTS,
     ...ACT_EVENTS,
+    ...UPDATER_EVENTS,
+    ...UTILS_EVENTS,
+    ...UI_EVENTS,
 ] as const satisfies EventDef[];
 
 export type Events = typeof EVENTS[number];

@@ -124,5 +124,5 @@ export const EVENTS = [
             serverOnly: z.array(z.string()),
             regOnly: z.array(z.string()),
         }),
-    }
+    },
 ] as const satisfies EventDef<'app/server'>[];
