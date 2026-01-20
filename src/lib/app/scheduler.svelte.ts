@@ -256,7 +256,6 @@ export class AutoPoker {
     constructor(private session: Session) {
         this.tryTimer = $derived(debounced(() => untrack(() => {
             EVENT_BUS.emit('app/scheduler/idle/try');
-            r.info("Engine idle, poking");
             this.scheduler.actPending = true;
             this.tryTimer();
         }), this.tryInterval));
@@ -264,11 +263,9 @@ export class AutoPoker {
         this.forceTimer = $derived(debounced(() => untrack(() => {
             if (this.scheduler.forceQueue.length === 0) {
                 EVENT_BUS.emit('app/scheduler/idle/force');
-                r.info("Engine idle for a long time, force acting");
                 this.scheduler.forceQueue.push(null);
             } else {
                 EVENT_BUS.emit('app/scheduler/idle/no_fq');
-                r.info("Engine idle but already force acting (stalled?)");
             }
         }), this.forceInterval));
 

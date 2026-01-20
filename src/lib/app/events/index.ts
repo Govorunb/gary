@@ -17,7 +17,7 @@ import { EVENTS as UI_EVENTS } from "$lib/ui/events";
 export interface EventDef<Prefix extends string = ''> {
     key: Prefix extends '' ? string : `${Prefix}/${string}`;
     // TODO: {} as MyType (then no zod)
-    dataSchema?: z.ZodType;
+    dataSchema?: any;
     description?: string;
     /** Default log level for the event. Used for toasts. */
     level?: LogLevel; // default Info
@@ -36,17 +36,17 @@ export type PresentDefs<K extends EventKey> = {
 export const EVENTS = [
     {
         key: 'i_have_no_event_and_i_must_log',
-        dataSchema: z.strictObject({
-            msg: z.string(),
-            details: z.string().optional(),
-            ctx: z.any(),
-            levelOverride: z.enum(LogLevel).optional(),
-        }),
+        dataSchema: {} as {
+            msg: string,
+            details?: string,
+            ctx?: any,
+            levelOverride?: LogLevel,
+        },
         level: LogLevel.Debug,
     },
     {
         key: 'test1',
-        dataSchema: z.null(),
+        dataSchema: null,
         level: LogLevel.Verbose,
     },
     {
@@ -55,7 +55,7 @@ export const EVENTS = [
     },
     {
         key: 'test3',
-        dataSchema: z.never(),
+        dataSchema: {} as never,
         level: LogLevel.Verbose,
     },
     ...BUS_EVENTS,
@@ -84,11 +84,12 @@ export const EVENTS_BY_KEY = Object.fromEntries(
 export type EventByKey<K extends EventKey> = Extract<Events, { key: K }>;
 
 export type EventData<K extends EventKey> = 'dataSchema' extends keyof EventByKey<K>
-    ? z.infer<EventByKey<K>['dataSchema']>
+    ? UnwrapZod<EventByKey<K>['dataSchema']>
     : never;
 
 export type DatalessKey = Extract<Events, { key: EventKey, dataSchema?: never }>['key'];
 export type HasDataKey = Exclude<EventKey, DatalessKey>;
+export type UnwrapZod<T> = T extends z.ZodType ? z.infer<T> : T;
 
 export type EventInstances = {
     [K in EventKey]: {
@@ -96,6 +97,7 @@ export type EventInstances = {
         readonly timestamp: number,
         readonly key: K,
         readonly data: EventData<K>,
+        readonly levelOverride?: LogLevel,
     }
 }[EventKey];
 

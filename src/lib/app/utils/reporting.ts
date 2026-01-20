@@ -18,12 +18,19 @@ export interface Reporter {
 
     report: (level: LogLevel, options: ReportOptions) => Promise<void>;
 
+    /** @deprecated */
     verbose: ReportFunc;
+    /** @deprecated */
     debug: ReportFunc;
+    /** @deprecated */
     info: ReportFunc;
+    /** @deprecated */
     success: ReportFunc;
+    /** @deprecated */
     warn: ReportFunc;
+    /** @deprecated */
     error: ReportFunc;
+    /** @deprecated */
     fatal: ReportFunc; // TODO: modal for fatal
 
     /** @deprecated use verbose */
@@ -81,7 +88,7 @@ class DefaultReporter implements Reporter {
 
     reportEvent(e: EventInstance<EventKey>) {
         const def = EVENTS_BY_KEY[e.key] as EventDef;
-        const level = def.level ?? LogLevel.Info;
+        const level = e.levelOverride ?? def.level ?? LogLevel.Info;
 
         this.log({
             message: JSON.stringify({
@@ -105,35 +112,28 @@ class DefaultReporter implements Reporter {
             ? { title: display }
             : display;
         const combined = { level, ...opts } satisfies ToastOptions;
-        if (combined.level < this.autoToastLevel) return;
+        if (level < this.autoToastLevel) return;
         this.toast(combined);
     }
 
-    /** @deprecated */
     verbose(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Verbose, args);
     }
-    /** @deprecated */
     debug(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Debug, args);
     }
-    /** @deprecated */
     info(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Info, args);
     }
-    /** @deprecated */
     success(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Success, args);
     }
-    /** @deprecated */
     warn(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Warning, args);
     }
-    /** @deprecated */
     error(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Error, args);
     }
-    /** @deprecated */
     fatal(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Fatal, args);
     }
