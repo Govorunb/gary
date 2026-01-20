@@ -1,4 +1,4 @@
-# Event log
+# Events
 
 The [`Message`](/src/lib/app/context.svelte.ts#L52-L93) architecture was fine enough at first, but it's now starting to get in the way of future features. It worked as a general store of *text*, but since `customData` is untyped the options for expansion are limited.
 

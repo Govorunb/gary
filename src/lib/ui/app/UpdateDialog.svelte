@@ -45,6 +45,7 @@
                     label: "Restart now",
                     async onClick() {
                         if (isTauri()) {
+                            // FIXME: .orTee
                             const res = await safeInvoke('plugin:process|restart');
                             if (res.isErr()) {
                                 r.error("Failed to restart", res.error);

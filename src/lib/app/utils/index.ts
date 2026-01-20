@@ -3,13 +3,10 @@ import { ok, err, ResultAsync, type Result, Ok, Err } from "neverthrow";
 import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
-import r from "./reporting";
 import type { Dayjs } from "dayjs";
 import { dev } from "$app/environment";
 // import { isTauri } from "@tauri-apps/api/core";
-import type { EventDef } from "../events";
-import { EVENT_BUS } from "../events/bus";
-import z from "zod";
+import { toast } from "svelte-sonner";
 export * from "./zod";
 export * from "./default-map";
 
@@ -26,8 +23,9 @@ export function isWebkitGtk() {
 
 export const scrollNumInput: Attachment<HTMLInputElement> = (el) => {
     if (el.type !== "number" && el.type !== "range") {
-        EVENT_BUS.emit('dev/assert/scroll_num_invalid', { el });
-        r.warn("scrollNumInput should only be attached to inputs of type 'number' or 'range'");
+        const err = "scrollNumInput should only be attached to inputs of type 'number' or 'range'";
+        console.error(el, '\n', err);
+        toast.error(err);
         el.style.border = "1px red dotted";
         return;
     }
@@ -281,12 +279,4 @@ export function isApril1st() {
     return today.getMonth() === 3 && today.getDate() === 1;
 }
 
-export const EVENTS = [
-    {
-        key: 'dev/assert/scroll_num_invalid',
-        dataSchema: z.object({
-            el: z.custom<HTMLElement>(),
-        }),
-    },
-] as const satisfies EventDef<'dev/assert'>[];
-
+export type Await<T> = T extends Promise<infer R> ? R : T;

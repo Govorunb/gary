@@ -1,5 +1,5 @@
 import z from "zod";
-import type { EventDef } from "./";
+import type { EventDef } from "$lib/app/events";
 
 export const EVENTS = [
     {

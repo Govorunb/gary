@@ -5,7 +5,7 @@ import dayjs, { type OpUnitType } from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
 import type { UIState } from "$lib/ui/app/ui-state.svelte";
 import { isTauri } from "@tauri-apps/api/core";
-import { sleep } from "./utils";
+import { pickRandom, sleep, type Await } from "./utils";
 import type { EventDef } from "./events";
 import { EVENT_BUS } from "./events/bus";
 import z from "zod";
@@ -79,10 +79,12 @@ export class Updater {
         } else {
             // vite dev
             await sleep(500);
-            updateRes = [ok(simUpdate), ok(null), err("failed the vibe check")][Math.floor(3 * Math.random())];
+            updateRes = pickRandom([ok(simUpdate), ok(null), err("failed the vibe check")]);
         }
         this.#lastCheckResult = updateRes;
         this.#checkingForUpdates = false;
+
+        EVENT_BUS.emit('app/update/check/result', { result: updateRes, isManual: isCheckManual, skipVersion: this.skipVersion });
 
         if (updateRes.isOk()) {
             this.prefs.lastCheckedAt = Date.now();
@@ -112,7 +114,7 @@ export class Updater {
         if (!this.update) return;
         if (this.skipVersion === this.update.version) return;
 
-        EVENT_BUS.emit('app/update/available', { version: this.update.version });
+        EVENT_BUS.emit('app/update/notify_available', { version: this.update.version });
         r.success("Update available!", {
             details: `Version ${this.update.version} is available`,
             toast: {
@@ -140,13 +142,21 @@ export const EVENTS = [
         }),
     },
     {
+        key: 'app/update/check/result',
+        dataSchema: z.object({
+            result: z.custom<Await<ReturnType<Updater['checkForUpdates']>>>(),
+            isManual: z.boolean(),
+            skipVersion: z.string().nullish(),
+        }),
+    },
+    {
         key: 'app/update/check_error',
         dataSchema: z.object({
             error: z.string(),
         }),
     },
     {
-        key: 'app/update/available',
+        key: 'app/update/notify_available',
         dataSchema: z.object({
             version: z.string(),
         }),
@@ -166,4 +176,4 @@ export const EVENTS = [
             error: z.custom<Error>(),
         }),
     },
-] as const satisfies EventDef<''>[];
+] as const satisfies EventDef<'app/update'>[];

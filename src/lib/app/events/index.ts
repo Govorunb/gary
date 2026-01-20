@@ -1,5 +1,5 @@
 import z from "zod";
-import { LogLevel } from "$lib/app/utils/reporting";
+import { LogLevel, type ToastOptions } from "$lib/app/utils/reporting";
 import { MY_EVENTS as BUS_EVENTS } from "./bus";
 import { EVENTS as WS_SERVER_EVENTS } from "$lib/app/server.svelte";
 import { EVENTS as PREFS_EVENTS } from "$lib/app/prefs.svelte";
@@ -10,17 +10,28 @@ import { EVENTS as GAME_EVENTS } from "$lib/api/game.svelte";
 import { EVENTS as SCHEMA_TEST_EVENTS } from "$lib/app/schema-test";
 import { EVENTS as REGISTRY_EVENTS } from "$lib/api/registry.svelte";
 import { EVENTS as MIGRATIONS_EVENTS } from "$lib/app/utils/migrations";
-import { EVENTS as SCHED_EVENTS, ACT_EVENTS } from "$lib/app/scheduler.svelte";
+import { EVENTS as SCHED_EVENTS, ACT_EVENTS, DISPLAY as SCHED_PRESENT } from "$lib/app/scheduler.svelte";
 import { EVENTS as UPDATER_EVENTS } from "$lib/app/updater.svelte";
-import { EVENTS as UTILS_EVENTS } from "$lib/app/utils";
-import { EVENTS as UI_EVENTS } from "./ui";
+import { EVENTS as UI_EVENTS } from "$lib/ui/events";
 
 export interface EventDef<Prefix extends string = ''> {
     key: Prefix extends '' ? string : `${Prefix}/${string}`;
+    // TODO: {} as MyType (then no zod)
     dataSchema?: z.ZodType;
-    description?: string | ((data: z.infer<this['dataSchema']>) => string);
+    description?: string;
+    /** Default log level for the event. Used for toasts. */
     level?: LogLevel; // default Info
 }
+
+// if not defined, defaults to eventDescription
+export type EventPresent<K extends EventKey> = 
+    | string // title only
+    | ((data: EventData<K>) => string | ToastOptions);
+
+export type Keys<E extends EventDef[]> = E[number]['key'];
+export type PresentDefs<K extends EventKey> = {
+    [k in K]?: EventPresent<k>
+};
 
 export const EVENTS = [
     {
@@ -60,7 +71,6 @@ export const EVENTS = [
     ...SCHED_EVENTS,
     ...ACT_EVENTS,
     ...UPDATER_EVENTS,
-    ...UTILS_EVENTS,
     ...UI_EVENTS,
 ] as const satisfies EventDef[];
 
@@ -90,3 +100,7 @@ export type EventInstances = {
 }[EventKey];
 
 export type EventInstance<K extends EventKey> = Extract<EventInstances, { key: K }>;
+
+export const EVENTS_DISPLAY = {
+    ...SCHED_PRESENT,
+} as PresentDefs<EventKey>;

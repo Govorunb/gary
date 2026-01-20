@@ -6,8 +6,9 @@ import { EngineError, type Engine, type EngineAct, type EngineActError, type Eng
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { untrack } from "svelte";
 import { debounced } from "./utils";
-import type { EventDef } from "./events";
+import type { EventDef, Keys, PresentDefs } from "./events";
 import z from "zod";
+import { EVENT_BUS } from "./events/bus";
 
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
@@ -254,17 +255,20 @@ export class AutoPoker {
 
     constructor(private session: Session) {
         this.tryTimer = $derived(debounced(() => untrack(() => {
+            EVENT_BUS.emit('app/scheduler/idle/try');
             r.info("Engine idle, poking");
             this.scheduler.actPending = true;
             this.tryTimer();
         }), this.tryInterval));
-
+        
         this.forceTimer = $derived(debounced(() => untrack(() => {
             if (this.scheduler.forceQueue.length === 0) {
+                EVENT_BUS.emit('app/scheduler/idle/force');
                 r.info("Engine idle for a long time, force acting");
                 this.scheduler.forceQueue.push(null);
             } else {
-                r.info("Engine idle but FQ non-empty");
+                EVENT_BUS.emit('app/scheduler/idle/no_fq');
+                r.info("Engine idle but already force acting (stalled?)");
             }
         }), this.forceInterval));
 
@@ -319,14 +323,20 @@ export const EVENTS = [
     },
     {
         key: 'app/scheduler/idle/try',
+        description: "Engine idle, poking",
     },
     {
         key: 'app/scheduler/idle/force',
+        description: "Engine idle for a while, force acting",
     },
     {
-        key: 'app/scheduler/idle/no_force_fq_non_empty',
+        key: 'app/scheduler/idle/no_fq',
+        description: "Engine idle but force already queued (stalled?)",
     },
 ] as const satisfies EventDef<'app/scheduler'>[];
+
+export const DISPLAY = {
+} as PresentDefs<Keys<typeof EVENTS>>;
 
 // FIXME: move to lib/app/engines
 export const ACT_EVENTS = [

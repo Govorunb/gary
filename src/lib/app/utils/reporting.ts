@@ -1,7 +1,13 @@
+/**
+ * OLD system for logging. In the process of being replaced by events (docs/roadmap/events.md, src/lib/app/events/)
+ */
+
 import { toast, type ExternalToast } from "svelte-sonner";
 import { isTauri } from "@tauri-apps/api/core";
 import { safeInvoke } from ".";
 import { dev } from "$app/environment";
+import { EVENT_BUS } from "../events/bus";
+import { EVENTS_BY_KEY, EVENTS_DISPLAY, type EventDef, type EventInstance, type EventKey } from "../events";
 
 export interface Reporter {
     /** Minimum log level. */
@@ -50,7 +56,7 @@ export type ReportOptions = {
 export type ToastOptions = ExternalToast & {
     title?: string; // override for toast title
     level?: LogLevel; // override for toast type (use it to e.g. show warning toasts on info/success events)
-}
+};
 
 export type ReportFunc = {
     /** Shorthand for simple logging. */
@@ -69,29 +75,77 @@ class DefaultReporter implements Reporter {
         this.trace = this.verbose;
         this.warning = this.warn;
         this.critical = this.fatal;
+        const sub = EVENT_BUS.subscribe();
+        sub.onnext(e => this.reportEvent(e));
     }
 
+    reportEvent(e: EventInstance<EventKey>) {
+        const def = EVENTS_BY_KEY[e.key] as EventDef;
+        const presenter = EVENTS_DISPLAY[e.key] ?? def.description;
+        if (!presenter) {
+            const err = `No event presenter or description for ${e.key}!`;
+            console.error(err);
+            toast.error(err);
+            return;
+        }
+        const display = typeof presenter === "function"
+            ? presenter(e.data as never)
+            : presenter;
+        const opts: ToastOptions = typeof display === "string"
+            ? { title: display }
+            : display;
+        const combined = {
+            level: def.level ?? LogLevel.Info,
+            ...opts,
+        } satisfies ToastOptions;
+        if (combined.level < this.autoToastLevel) return;
+        this.toast(combined);
+    }
+
+    private toast(opts: ToastOptions) {
+        const toastFuncMap = {
+            [LogLevel.Verbose]: toast.message,
+            [LogLevel.Debug]: toast.message,
+            [LogLevel.Info]: toast.info,
+            [LogLevel.Success]: toast.success,
+            [LogLevel.Warning]: toast.warning,
+            [LogLevel.Error]: toast.error,
+            [LogLevel.Fatal]: toast.error,
+        };
+        // console.log(options, opts);
+        const toastFunc = toastFuncMap[opts.level!];
+        toastFunc(opts.title!, opts);
+    }
+
+    /** @deprecated */
     verbose(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Verbose, args);
     }
+    /** @deprecated */
     debug(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Debug, args);
     }
+    /** @deprecated */
     info(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Info, args);
     }
+    /** @deprecated */
     success(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Success, args);
     }
+    /** @deprecated */
     warn(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Warning, args);
     }
+    /** @deprecated */
     error(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Error, args);
     }
+    /** @deprecated */
     fatal(...args: any[]): Promise<void> {
         return this.gatherOptsAndReport(LogLevel.Fatal, args);
     }
+    /** @deprecated */
     async report(level: LogLevel, options: ReportOptions): Promise<void> {
         if (level < this.level) {
             return;
@@ -141,23 +195,12 @@ class DefaultReporter implements Reporter {
         }
         logFunc(msg);
         if (options.toast) {
-            const toastFuncMap = {
-                [LogLevel.Verbose]: toast.message,
-                [LogLevel.Debug]: toast.message,
-                [LogLevel.Info]: toast.info,
-                [LogLevel.Success]: toast.success,
-                [LogLevel.Warning]: toast.warning,
-                [LogLevel.Error]: toast.error,
-                [LogLevel.Fatal]: toast.error,
-            };
             const toastOptions: ToastOptions = {
                 ...this.defaultToastOptions,
                 description: options.details,
                 ...(typeof(options.toast) === "boolean" ? {} : options.toast),
             };
-            // console.log(options, toastOptions);
-            const toastFunc = toastFuncMap[toastOptions.level ?? level];
-            toastFunc(toastOptions.title ?? options.message, toastOptions);
+            this.toast(toastOptions);
         }
     }
 

@@ -11,6 +11,7 @@ import type { Action } from "$lib/api/v1/spec";
 import r from "$lib/app/utils/reporting";
 import { parseError } from "$lib/app/utils";
 import type { EventDef } from "$lib/app/events";
+import { v4 as uuid } from "uuid";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
@@ -159,6 +160,17 @@ export const EVENTS = [
         key: 'app/engines/llm/assert', // e.g. "empty response" or "unexpected finish_reason"
     },
     {
-        key: 'app/engines/llm/',
+        key: 'app/engines/llm/request',
+        dataSchema: z.object({
+            reqId: z.string().prefault(uuid),
+            // TODO: request data
+        }),
+    },
+    {
+        key: 'app/engines/llm/response',
+        dataSchema: z.object({
+            reqId: z.string(),
+            // TODO: response data
+        }),
     },
 ] as const satisfies EventDef<'app/engines/llm'>[];
