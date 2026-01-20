@@ -81,6 +81,16 @@ class DefaultReporter implements Reporter {
 
     reportEvent(e: EventInstance<EventKey>) {
         const def = EVENTS_BY_KEY[e.key] as EventDef;
+        const level = def.level ?? LogLevel.Info;
+
+        this.log({
+            message: JSON.stringify({
+                timestamp: e.timestamp,
+                event: e.key,
+                data: e.data
+            }),
+        }, level);
+
         const presenter = EVENTS_DISPLAY[e.key] ?? def.description;
         if (!presenter) {
             const err = `No event presenter or description for ${e.key}!`;
@@ -94,27 +104,9 @@ class DefaultReporter implements Reporter {
         const opts: ToastOptions = typeof display === "string"
             ? { title: display }
             : display;
-        const combined = {
-            level: def.level ?? LogLevel.Info,
-            ...opts,
-        } satisfies ToastOptions;
+        const combined = { level, ...opts } satisfies ToastOptions;
         if (combined.level < this.autoToastLevel) return;
         this.toast(combined);
-    }
-
-    private toast(opts: ToastOptions) {
-        const toastFuncMap = {
-            [LogLevel.Verbose]: toast.message,
-            [LogLevel.Debug]: toast.message,
-            [LogLevel.Info]: toast.info,
-            [LogLevel.Success]: toast.success,
-            [LogLevel.Warning]: toast.warning,
-            [LogLevel.Error]: toast.error,
-            [LogLevel.Fatal]: toast.error,
-        };
-        // console.log(options, opts);
-        const toastFunc = toastFuncMap[opts.level!];
-        toastFunc(opts.title!, opts);
     }
 
     /** @deprecated */
@@ -150,50 +142,13 @@ class DefaultReporter implements Reporter {
         if (level < this.level) {
             return;
         }
-        let msg = options.message;
-        if (options.details) {
-            msg += `\nDetails: ${options.details}`;
-        }
-        if (options.ctx) {
-            msg += `\nContext: ${JSON.stringify(options.ctx)}`;
-        }
         // TODO: user configurable
         if (level >= this.autoToastLevel && options.toast === undefined) {
             options.toast = true;
         }
 
-        let logFunc: (message: string) => void;
-        if (!isTauri()) { // dev only (vite dev server + browser)
-            const logFuncMap: Record<LogLevel, (message: string) => void> = {
-                [LogLevel.Verbose]: console.log,
-                [LogLevel.Debug]: console.debug,
-                [LogLevel.Info]: console.info,
-                [LogLevel.Success]: console.info,
-                [LogLevel.Warning]: console.warn,
-                [LogLevel.Error]: console.error,
-                [LogLevel.Fatal]: console.error,
-            };
-            const loc = getCallerLocation(4 + (options.ignoreStackLevels ?? 0));
-            const target = [options.target ?? "webview", loc].filter(Boolean).join(':');
-            msg = `[${LogLevel[level]}] ${msg}\nTarget: [${target}]`;
-            logFunc = logFuncMap[level];
-        } else {
-            logFunc = (message: string) => safeInvoke("gary_log", {
-                level,
-                message,
-                target: options.target,
-                // stack depth:
-                //      0 getCallerLocation
-                //      1 <closure>
-                //      2 report
-                //      3 gatherOptsAndReport
-                //      4 trace
-                //      5 actual_caller
-                // jfc
-                location: getCallerLocation(5 + (options.ignoreStackLevels ?? 0)),
-            }).orTee(err => toast.error("Failed to log!", { description: err }));
-        }
-        logFunc(msg);
+        const ignoreStackLevels = 1 + (options.ignoreStackLevels ?? 0);
+        this.log(options, level, getCallerLocation(ignoreStackLevels));
         if (options.toast) {
             const toastOptions: ToastOptions = {
                 ...this.defaultToastOptions,
@@ -227,7 +182,55 @@ class DefaultReporter implements Reporter {
         if (!opts.message) {
             throw new Error("No message provided", { cause: args });
         }
+        opts.ignoreStackLevels ??= 0;
+        opts.ignoreStackLevels += 2; // gatherOptsAndReport && trace/info/etc
         return this.report(level, opts);
+    }
+
+    private log(options: ReportOptions, level: LogLevel, loc?: string) {
+        let msg = options.message;
+
+        if (options.details) msg += `\nDetails: ${options.details}`;
+        if (options.ctx) msg += `\nContext: ${JSON.stringify(options.ctx)}`;
+
+        let logFunc: (message: string) => void;
+        if (!isTauri()) { // dev only (vite dev server + browser)
+            const logFuncMap: Record<LogLevel, (message: string) => void> = {
+                [LogLevel.Verbose]: console.log,
+                [LogLevel.Debug]: console.debug,
+                [LogLevel.Info]: console.info,
+                [LogLevel.Success]: console.info,
+                [LogLevel.Warning]: console.warn,
+                [LogLevel.Error]: console.error,
+                [LogLevel.Fatal]: console.error,
+            };
+            const target = [options.target ?? "webview", loc].filter(Boolean).join(':');
+            msg = `[${LogLevel[level]}] ${msg}\nTarget: [${target}]`;
+            logFunc = logFuncMap[level];
+        } else {
+            logFunc = (message: string) => safeInvoke("gary_log", {
+                level,
+                message,
+                target: options.target,
+                location: loc,
+            }).orTee(err => toast.error("Failed to log!", { description: err }));
+        }
+        logFunc(msg);
+    }
+
+    private toast(opts: ToastOptions) {
+        const toastFuncMap = {
+            [LogLevel.Verbose]: toast.message,
+            [LogLevel.Debug]: toast.message,
+            [LogLevel.Info]: toast.info,
+            [LogLevel.Success]: toast.success,
+            [LogLevel.Warning]: toast.warning,
+            [LogLevel.Error]: toast.error,
+            [LogLevel.Fatal]: toast.error,
+        };
+        // console.log(options, opts);
+        const toastFunc = toastFuncMap[opts.level!];
+        toastFunc(opts.title!, opts);
     }
 }
 
@@ -241,6 +244,13 @@ function removeBundledPaths(func: string | undefined, path: string): string {
     return parts.join('@');
 }
 
+// stack depth:
+//   0 getCallerLocation
+//   1 report
+//   2 gatherOptsAndReport
+//   3 trace/info/etc
+//   4 actual_caller
+// jfc
 // adapted from https://github.com/tauri-apps/plugins-workspace/blob/ce6835d50ff7800dcfb8508a98e9ee83771fb283/plugins/log/guest-js/index.ts#L47
 function getCallerLocation(targetStackDepth: number = 5): string | undefined {
     const stack = new Error().stack;
