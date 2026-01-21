@@ -1,5 +1,5 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from "./index.svelte";
+import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from ".";
 import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";
@@ -17,12 +17,14 @@ import { v4 as uuid } from "uuid";
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
  */
 export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
-    readonly name: string;
     private readonly client: OpenAIClient;
+
+    public get name() {
+        return this.options.name;
+    }
 
     constructor(userPrefs: UserPrefs, engineId: string) {
         super(userPrefs, engineId);
-        this.name = $derived(this.options.name);
 
         const self = this;
         this.client = new OpenAIClient({get prefs() { return self.options; }}, engineId);
