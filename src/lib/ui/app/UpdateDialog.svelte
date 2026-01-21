@@ -43,7 +43,7 @@
                     label: "Restart now",
                     async onClick() {
                         if (isTauri()) {
-                            const res = await safeInvoke('plugin:process|restart');
+                            const res = await safeInvoke('restart');
                             if (res.isErr()) {
                                 r.error("Failed to restart", res.error);
                             }
