@@ -2,13 +2,13 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import { isTauri } from "@tauri-apps/api/core";
 import { settled } from "svelte";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
-import r from "$lib/app/utils/reporting";
 import type { Session } from "./session.svelte";
 import type { UserPrefs } from "./prefs.svelte";
 import { listenSub, safeInvoke } from "./utils";
 import type { EventDef } from "./events";
-import z from "zod";
 import { EVENT_BUS } from "./events/bus";
+import { TauriServerConnection } from "$lib/api/connection";
+import { toast } from "svelte-sonner";
 
 type ServerConnections = string[] | null;
 
@@ -31,20 +31,21 @@ export class ServerManager {
             listenSub<ServerConnections>("server-state", (evt) => this.doSync(evt.payload), this.subscriptions);
             void this.sync();
         } else {
+            EVENT_BUS.emit('app/server/no_tauri');
             // we're called before toasts init (so they can't show until settled)
-            settled().then(() => r.warn("No Tauri backend on browser (vite dev)", "Some app features disabled."));
+            settled().then(() => toast.warning("No Tauri backend on browser (vite dev)", {description: "Some app features disabled."}));
         }
     }
 
     async start() {
         return safeInvoke("start_server", { port: this.userPrefs.api.server.port })
-            // .orTee(e => r.error(`Failed to start server`, `${e}`))
+            .orTee(e => isTauri() && toast.error(`Failed to start server`, { description: e }))
             .finally(() => this.sync());
-    }
-
-    async stop() {
-        return safeInvoke("stop_server")
-            // .orTee(e => r.error(`Failed to stop server`, `${e}`))
+        }
+        
+        async stop() {
+            return safeInvoke("stop_server")
+            .orTee(e => isTauri() && toast.error(`Failed to stop server`, { description: e }))
             .finally(() => this.sync());
     }
 
@@ -54,7 +55,7 @@ export class ServerManager {
 
     async sync() {
         const conns = await safeInvoke<ServerConnections>("server_state")
-            // .orTee(e => r.error(`Failed to sync server state`, `${e}`))
+            .orTee(e => isTauri() && toast.error(`Failed to sync server state`, { description: e }))
             .unwrapOr(null);
         this.doSync(conns);
     }
@@ -66,39 +67,36 @@ export class ServerManager {
 
     private async reconcileConnections() {
         if (this.connections == null) {
-            if (this.registry.games.length > 0) {
-                r.warn("Server stopped, removing all games");
-                for (const game of this.registry.games) {
-                    game.conn.dispose();
-                }
-                this.registry.games.length = 0;
+            const wsGames = this.registry.games.filter(g => g.conn instanceof TauriServerConnection);
+            
+            toast.warning("Server stopped, disconnecting games");
+            
+            for (const game of wsGames) {
+                this.registry.removeGame(game.id);
+                game.conn.dispose();
             }
+            EVENT_BUS.emit('app/server/stopped', { disconnectedGames: wsGames.map(g => ({id: g.id, name: g.name}))});
             return;
         }
-
-        // FIXME: some reg-only games aren't an issue (internal e.g. schema-test)
 
         const serverConns = new Set(this.connections);
         const regConns = new Set(this.registry.games.map(game => game.conn.id));
         const serverOnly = Array.from(serverConns.difference(regConns));
-        const regOnly = Array.from(regConns.difference(serverConns));
+        const regOnly = Iterator.from(regConns.difference(serverConns))
+            .map(c => this.registry.getGame(c)!)
+            // only tauri conns (internal e.g. schema-test are fine)
+            .filter(g => g.conn instanceof TauriServerConnection)
+            .toArray();
 
-        EVENT_BUS.emit('app/server/reconcile', { serverOnly, regOnly });
+        EVENT_BUS.emit('app/server/reconcile', { serverOnly, regOnly: regOnly.map(g => g.conn.id) });
 
         for (const id of serverOnly) {
-            r.warn(`Closing server-only connection ${id}`);
             await safeInvoke("ws_close", { id, code: 1000, reason: "UI out of sync, please reconnect" });
         }
 
-        for (const id of regOnly) {
-            const game = this.registry.games.find(g => g.conn.id === id);
-            if (game === undefined) {
-                r.debug(`Registry-only connection ${id} doesn't exist`, "TOCTOU - whatever");
-            } else {
-                r.warn(`Closing registry-only connection`, `ID: ${id} (game ${game.name})`);
-                this.registry.games.splice(this.registry.games.indexOf(game), 1);
-                game.conn.dispose();
-            }
+        for (const game of regOnly) {
+            this.registry.removeGame(game.conn.id);
+            game.conn.dispose();
         }
     }
 
@@ -111,18 +109,13 @@ export class ServerManager {
 }
 
 export const EVENTS = [
-    { key: 'app/server/no-tauri', },
+    { key: 'app/server/no_tauri', },
     {
         key: 'app/server/stopped',
-        dataSchema: z.object({
-            disconnectedGames: z.array(z.string()),
-        })
+        dataSchema: {} as {disconnectedGames: {id: string, name: string}[]}
     },
     {
         key: 'app/server/reconcile',
-        dataSchema: z.object({
-            serverOnly: z.array(z.string()),
-            regOnly: z.array(z.string()),
-        }),
+        dataSchema: {} as {serverOnly: string[], regOnly: string[]},
     },
 ] as const satisfies EventDef<'app/server'>[];

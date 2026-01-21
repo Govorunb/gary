@@ -1,14 +1,13 @@
 import type { Session } from "./session.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
-import r, { LogLevel } from "$lib/app/utils/reporting";
 import { zActData, type Action } from "$lib/api/v1/spec";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { untrack } from "svelte";
 import { debounced } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";
-import z from "zod";
 import { EVENT_BUS } from "./events/bus";
+import { toast } from "svelte-sonner";
 
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
@@ -63,10 +62,8 @@ export class Scheduler {
             return false;
         }
         this.#abort.abort();
-        r.info("Cancelled acting", {
-            toast: true,
-            ignoreStackLevels: 1 // log msg is unique, more useful to know who called us
-        });
+        EVENT_BUS.emit('app/scheduler/act/cancelled');
+        toast.success("Cancelled acting");
         return true;
     }
 
@@ -88,21 +85,18 @@ export class Scheduler {
     private async actInner(force: boolean, actions?: Action[] | null) {
         this.actPending = false;
         const ignores = this.checkIgnored();
-        const type = force ? "force" : "try";
         if (ignores.length) {
-            r.report(force ? LogLevel.Warning : LogLevel.Info, {
-                message: `Scheduler ignored act (${type})`,
-                details: ignores.join("; "),
-            });
+            EVENT_BUS.emit('app/scheduler/act/fail/ignored', { force, ignores });
             return err(LogicError.ignored(ignores));
         }
 
         const actionsProvided = actions !== undefined;
         actions ??= this.registry.games.flatMap(g => g.getActiveActions());
         if (actions.length === 0) {
-            r.report(actionsProvided ? LogLevel.Error : LogLevel.Info, {
-                message: `Scheduler act (${type}): no actions ${actionsProvided ? "provided" : "registered"}`
-            });
+            EVENT_BUS.emit('app/scheduler/act/fail/no_actions', { force, actionsProvided });
+            if (actionsProvided) {
+                toast.error("No actions provided");
+            }
             return err(LogicError.noActions());
         }
 
@@ -127,7 +121,7 @@ export class Scheduler {
             return this.performAct(choice, force, engine);
         }
         if (force) {
-            return errAsync(new LogicError(`Engine chose to ${choice === "skip" ? choice : "yap"} in forced act. Please don't tell developer or I will cry`));
+            return errAsync(new LogicError(`Engine chose to ${choice === "skip" ? choice : "yap"} in forced act. Please don't tell the developer. I will cry`));
         }
         if (choice === "skip") {
             // for user display only
@@ -141,16 +135,14 @@ export class Scheduler {
         }
         if ('say' in choice) {
             // for user display only
+            EVENT_BUS.emit('app/scheduler/act/say', { ...choice });
             this.session.context.actor({
                 text: `Gary ${choice.notify ? "wants attention" : "says"}: ${choice.say}`,
                 silent: !choice.notify,
                 visibilityOverrides: { engine: false }
             }, engine.id);
             if (choice.notify) {
-                r.info("Gary wants attention", {
-                    details: choice.say,
-                    toast: true
-                });
+                toast.info(`Gary says: ${choice.say}`);
             }
             return okAsync(choice);
         }
@@ -160,17 +152,12 @@ export class Scheduler {
     private performAct(act: EngineAct, forced: boolean, engine: Engine<unknown>): ResultAsync<EngineAct, ActError> {
         const game = this.registry.games.find(g => g.getAction(act.name));
         if (!game) {
-            r.error("Engine selected unknown action", {
-                toast: {
-                    description: `Action: ${act.name}\nThis action was not registered by any game`,
-                },
-                ctx: {act}
-            });
+            EVENT_BUS.emit('app/scheduler/act/fail/action_not_found', { force: forced, act });
+            toast.error(`Engine selected unknown action: ${act.name}\nThis action was not registered by any game`);
             return errAsync(LogicError.notFound(act.name));
         }
-        r.info(`Engine acting ${forced ? "(forced)" : ""}: ${act.name}`);
+        EVENT_BUS.emit('app/scheduler/act/perform', { force: forced, action: act.name });
         const actData = zActData.decode({...act});
-        // FIXME: just do events mannnnnnnnnnnnnnn
         this.session.context.actor({
             text: `Act${forced ? " (forced)" : ""}: ${actData.name} (ID ${actData.id.substring(0, 8)})`
                 + (actData.data ? `\nData: ${actData.data}` : " (no data)"),
@@ -181,10 +168,9 @@ export class Scheduler {
             },
             customData: { actData, game: game.name },
         }, engine.id);
-        return ResultAsync.fromPromise(game.sendAction(actData),
-            (e) => (LogicError.sendErr(e as Error))
-        )
-        .map(() => act);
+        return ResultAsync.fromPromise(game.sendAction(actData), (e) => LogicError.sendErr(e as Error))
+            .orTee(() => EVENT_BUS.emit('app/scheduler/act/fail/failed_to_send', { force: forced }))
+            .map(() => act);
     }
 
     private checkIgnored() {
@@ -204,17 +190,13 @@ export class Scheduler {
 
     private onError(err: EngineActError) {
         if (err === "cancelled") {
-            r.info("Cancelled acting", { toast: true });
+            EVENT_BUS.emit('app/scheduler/act/cancelled');
+            toast.success("Cancelled acting");
             return;
         }
         const errMsg = (err.cause as Error)?.message;
-        r.error({
-            message: `Engine error: ${err.message}`,
-            toast: {
-                description: errMsg,
-            },
-            ctx: {err}
-        });
+        EVENT_BUS.emit('app/scheduler/act/error', { message: err.message, cause: errMsg });
+        toast.error(`Engine error: ${err.message}`, { description: errMsg });
         this.errored = true;
     }
 
@@ -291,32 +273,44 @@ export class AutoPoker {
     }
 }
 
-const EVENT_DATA = {
-    act: z.object({
-        force: z.boolean(),
-    }),
-}
-
 export const EVENTS = [
     {
         key: 'app/scheduler/act/cancelled',
     },
     {
-        key: 'app/scheduler/act/logic_exit',
-        dataSchema: z.object({
-            ...EVENT_DATA.act.shape,
-            reason: z.enum(["ignored", "noActions", "actionNotFound", "failedToSend"]),
-        }),
+        key: 'app/scheduler/act/fail/ignored',
+        dataSchema: {} as { force: boolean; ignores: string[]; },
+    },
+    {
+        key: 'app/scheduler/act/fail/no_actions',
+        dataSchema: {} as { force: boolean; actionsProvided?: boolean; },
+    },
+    {
+        key: 'app/scheduler/act/fail/action_not_found',
+        dataSchema: {} as { force: boolean; act: EngineAct; },
+    },
+    {
+        key: 'app/scheduler/act/fail/failed_to_send',
+        dataSchema: {} as { force: boolean; },
+    },
+    {
+        key: 'app/scheduler/act/say',
+        dataSchema: {} as { say: string; notify: boolean; },
+        description: "Actor decided to speak",
+    },
+    {
+        key: 'app/scheduler/act/perform',
+        dataSchema: {} as { force: boolean; action: string; },
+        description: "Engine acting",
     },
     {
         key: 'app/scheduler/act/performing',
-        dataSchema: z.object({
-            ...EVENT_DATA.act.shape,
-            result: z.custom<EngineActResult>(),
-        }),
+        dataSchema: {} as { force: boolean; result: EngineActResult; },
     },
     {
         key: 'app/scheduler/act/error',
+        dataSchema: {} as { message: string; cause?: string; },
+        description: "Engine error during acting",
     },
     {
         key: 'app/scheduler/idle/try',
@@ -342,16 +336,10 @@ export const ACT_EVENTS = [
     },
     {
         key: 'api/actor/say',
-        dataSchema: z.object({
-            msg: z.string(),
-            notify: z.boolean(),
-        }),
+        dataSchema: {} as { msg: string; notify: boolean; },
     },
     {
         key: 'api/actor/act',
-        dataSchema: z.object({
-            action: z.string(),
-            data: z.any(),
-        }),
+        dataSchema: {} as { action: string; data: unknown; },
     }
 ] as const satisfies EventDef<'api/actor'>[];

@@ -5,10 +5,10 @@
     import Dialog from '$lib/ui/common/Dialog.svelte';
     import Popover from "$lib/ui/common/Popover.svelte";
     import { boolAttr } from "runed";
-    import r from "$lib/app/utils/reporting";
     import { isTauri } from "@tauri-apps/api/core";
     import CopyButton from "../common/CopyButton.svelte";
     import { EVENT_BUS } from "$lib/app/events/bus";
+    import { toast } from "svelte-sonner";
 
     const userPrefs = getUserPrefs();
     const registry = getRegistry();
@@ -40,13 +40,9 @@
                 err_msg = `The port ${userPrefs.api.server.port} is already in use. Check for other instances of Gary, Tony, etc.`;
             }
             EVENT_BUS.emit('ui/server/toggle_failed', { wasRunning: running, error: err_msg });
-            r.error({
-                message: err_title,
-                toast: {
-                    description: err_msg,
-                    id: "server-start-error",
-                },
-                ctx: {error: res.error}
+            toast.error(err_title, {
+                description: err_msg,
+                id: "server-start-error",
             });
         }
     }

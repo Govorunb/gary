@@ -1,10 +1,10 @@
 import type { Channel } from "@tauri-apps/api/core";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import r from "$lib/app/utils/reporting";
+import { toast } from "svelte-sonner";
 import type { NeuroMessage, GameMessage } from "./v1/spec";
 import { listenSub, safeInvoke, type Awaitable, createListener } from "$lib/app/utils";
+import { EVENT_BUS } from "$lib/app/events/bus";
 import type { EventDef } from "$lib/app/events";
-import z from "zod";
 
 type OnMessageHandler = (msg: string) => Awaitable;
 type OnCloseHandler = (clientDisconnected?: CloseFrame) => Awaitable;
@@ -50,7 +50,7 @@ export abstract class BaseConnection {
 
     devAssertNotDisposed() {
         if (!this.#disposed) return;
-        r.fatal(`Connection id '${this.shortId}' is closed`);
+        EVENT_BUS.emit('api/conn/assert_not_disposed', { id: this.id });
     }
 
     protected abstract protocolSend(text: string): Promise<void>;
@@ -67,7 +67,8 @@ export abstract class BaseConnection {
     public async receiveRaw(text: string) {
         if (this.#disposed) return;
         if (!this.#onmessage.length) {
-            r.warn(`Connection ${this.shortId} has no onmessage handlers!`, `Text: ${text}`);
+            toast.warning(`Connection ${this.shortId} has no onmessage handlers!`);
+            EVENT_BUS.emit('api/conn/no_onmessage_handlers', { id: this.id, text });
         }
         for (const cbMessage of this.#onmessage) {
             await cbMessage(text);
@@ -184,20 +185,26 @@ export class TauriServerConnection extends BaseConnection {
     protected async protocolSend(text: string) {
         this.devAssertNotDisposed();
         await safeInvoke('ws_send', { id: this.id, text } satisfies SendArgs)
-            .orTee(e => r.error(`Tauri failed to send WS text`, e));
+            .orTee(e => {
+                toast.error("Failed to send WS message", { description: e });
+                EVENT_BUS.emit('api/conn/ws_tauri/send_failed', { id: this.id, text, err: e });
+            });
     }
 
     public async disconnect(code?: number, reason?: string) {
         if (this.closed) return;
 
         await safeInvoke('ws_close', { id: this.id, code, reason } satisfies CloseArgs)
-            .orTee(e => r.error(`Tauri failed to close WS`, e));
+            .orTee(e => {
+                toast.error("Failed to close WS", { description: e});
+                EVENT_BUS.emit('api/conn/ws_tauri/close_failed', { id: this.id, err: e });
+            });
         this.dispose();
     }
 
     protected clientDisconnect(clientDisconnected?: CloseFrame) {
         if (this.closed) return;
-        r.info(`client ${this.shortId} disconnected`);
+        EVENT_BUS.emit('api/conn/client_disconnected', { id: this.id });
         this.dispose(clientDisconnected);
     }
 }
@@ -213,12 +220,12 @@ export class InternalConnection extends BaseConnection {
 
     protected async protocolSend(text: string) {
         this.devAssertNotDisposed();
-        r.verbose(`Internal connection ${this.shortId} sent: ${text} (should be listening with onsend)`);
+        EVENT_BUS.emit('api/conn/internal/send', { id: this.id, text });
     }
 
     public async disconnect() {
         if (this.closed) return;
-        r.verbose(`Internal connection ${this.shortId} disconnecting`);
+        EVENT_BUS.emit('api/conn/internal/disconnect', { id: this.id });
         this.dispose();
     }
 }
@@ -294,40 +301,47 @@ type SendArgs = ConnMsgBase & {
 
 type CloseArgs = ConnMsgBase & Partial<CloseFrame>;
 
-const commonData = z.object({ id: z.string() });
-const tauriData = z.object({
-    ...commonData.shape,
-    err: z.string(),
-});
+type CommonData = { id: string };
+type TextData = CommonData & { text: string };
+type TauriData = CommonData & { err: string };
+type TauriTextData = TextData & TauriData;
 
 export const EVENTS = [
     {
+        // FIXME: dev/assert/
         key: 'api/conn/assert_not_disposed',
-        dataSchema: commonData,
+        dataSchema: {} as CommonData,
+        description: 'Dev assertion: attempted to use disposed connection',
     },
     {
+        // FIXME: dev/assert/
         key: 'api/conn/no_onmessage_handlers',
-        dataSchema: commonData,
+        dataSchema: {} as TextData,
+        description: 'Dev assertion: Message received but no handlers registered',
     },
     {
         key: 'api/conn/ws_tauri/send_failed',
-        dataSchema: tauriData,
+        dataSchema: {} as TauriTextData,
+        description: 'Tauri failed to send WebSocket text',
     },
     {
         key: 'api/conn/ws_tauri/close_failed',
-        dataSchema: tauriData,
+        dataSchema: {} as TauriData,
+        description: 'Tauri failed to close WebSocket',
     },
     {
         key: 'api/conn/client_disconnected',
-        dataSchema: commonData,
+        dataSchema: {} as CommonData,
+        description: 'Client disconnected from connection',
     },
     {
         key: 'api/conn/internal/send',
-        dataSchema: commonData,
+        dataSchema: {} as TextData,
+        description: 'Internal connection sent text',
     },
     {
         key: 'api/conn/internal/disconnect',
-        dataSchema: commonData,
+        dataSchema: {} as CommonData,
+        description: 'Internal connection disconnected',
     },
-    // TODO: events for send/recv
 ] as const satisfies EventDef<'api/conn'>[];

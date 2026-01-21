@@ -5,12 +5,12 @@ import type { Engine } from "./engines/index.svelte";
 import { Registry } from "$lib/api/registry.svelte";
 import type { UserPrefs } from "./prefs.svelte";
 import { OpenAIEngine, zOpenAIPrefs } from "./engines/llm/openai.svelte";
-import r from "$lib/app/utils/reporting";
+import { EVENT_BUS } from "./events/bus";
+import { toast } from "svelte-sonner";
 import { Randy, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 import { UIState } from "$lib/ui/app/ui-state.svelte";
 import type { EventDef } from "./events";
-import z from "zod";
 
 /**
  * Represents a user session within the app.
@@ -39,7 +39,7 @@ export class Session {
         this.registry = new Registry(this);
         this.scheduler = new Scheduler(this);
         this.uiState = new UIState(this);
-        r.debug(`Created session ${name} (${this.id})`);
+        EVENT_BUS.emit('app/session/created', { session: this });
         for (const id of Object.keys(this.userPrefs.engines)) {
             this.initEngine(id);
         }
@@ -61,7 +61,8 @@ export class Session {
 
     private getEngine(id: string): Engine<unknown> {
         if (!this.engines[id]) {
-            r.error(`Tried to get engine ${id} but it doesn't exist, reverting to Randy`);
+            EVENT_BUS.emit('app/session/engine/not_found', { id });
+            toast.error(`Engine ${id} not found, reverting to Randy`);
             id = RANDY_ID;
         }
         return this.engines[id];
@@ -69,7 +70,8 @@ export class Session {
 
     public deleteEngine(id: string) {
         if (id === RANDY_ID || id === OPENROUTER_ID) {
-            r.error(`Cannot delete system engine ${id}`);
+            EVENT_BUS.emit('app/session/engine/no_delete_system', { id });
+            toast.error(`Cannot delete system engine ${id}`);
             return;
         }
         if (this.activeEngine.id === id) {
@@ -96,16 +98,15 @@ export class Session {
         }
         this.ondispose.length = 0;
         this.engines = {};
-        r.info(`Disposed session ${this.name} (${this.id})`);
+        EVENT_BUS.emit('app/session/disposed', { session: this });
     }
 
     public initEngine(id?: string): string {
         if (!id) {
             id = uuidv4();
-            this.userPrefs.engines[id] = zOpenAIPrefs.decode({
-                name: "New engine",
-            });
-            r.success(`Created engine ${id.substring(0, 8)}`);
+            this.userPrefs.engines[id] = zOpenAIPrefs.decode({ name: "New engine" });
+            EVENT_BUS.emit('app/session/engine/created', { id });
+            toast.success(`Created engine ${id.substring(0, 8)}`);
         }
         switch (id) {
             case RANDY_ID:
@@ -118,7 +119,7 @@ export class Session {
                 this.engines[id] = new OpenAIEngine(this.userPrefs, id);
                 break;
         }
-        r.debug(`Initialized engine ${id}`);
+        EVENT_BUS.emit('app/session/engine/initialized', { id });
         return id;
     }
 }
@@ -126,38 +127,32 @@ export class Session {
 export const EVENTS = [
     {
         key: 'app/session/created',
-        dataSchema: z.object({
-            session: z.instanceof(Session),
-        }),
+        dataSchema: {} as { session: { id: string, name: string } },
+        description: "Created session",
     },
     {
         key: 'app/session/disposed',
-        dataSchema: z.object({
-            session: z.instanceof(Session),
-        }),
+        dataSchema: {} as { session: { id: string, name: string } },
+        description: "Disposed session",
     },
     {
         key: 'app/session/engine/not_found',
-        dataSchema: z.object({
-            id: z.string(),
-        })
+        dataSchema: {} as { id: string },
+        description: "Tried to get engine but it doesn't exist, reverting to Randy",
     },
     {
         key: 'app/session/engine/no_delete_system',
-        dataSchema: z.object({
-            id: z.string(),
-        }),
+        dataSchema: {} as { id: string },
+        description: "Cannot delete system engine",
     },
     {
         key: 'app/session/engine/created',
-        dataSchema: z.object({
-            id: z.string(),
-        }),
+        dataSchema: {} as { id: string },
+        description: "Created new engine",
     },
     {
         key: 'app/session/engine/initialized',
-        dataSchema: z.object({
-            id: z.string(),
-        }),
+        dataSchema: {} as { id: string },
+        description: "Initialized engine",
     },
 ] as const satisfies EventDef<'app/session'>[];

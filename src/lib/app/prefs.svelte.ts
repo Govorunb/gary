@@ -1,5 +1,4 @@
 import z, { ZodError } from "zod";
-import r from "$lib/app/utils/reporting";
 import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
@@ -65,31 +64,25 @@ export class UserPrefs {
 
             EVENT_BUS.emit("app/prefs/load/parse_failed", { error: zodError });
 
-            r.error("Failed to parse user prefs", {
-                details: errorMessage,
-                toast: false, // dialog will pop up momentarily
-                ctx: {
-                    issues: zodError.issues,
-                    // data, // erm. don't log that
-                }
-            });
             return err(errorMessage);
         }
-        r.debug("loaded prefs");
+
+        EVENT_BUS.emit("app/prefs/load/success");
+
         // TODO: dedicated thing for fixups
         if (!Reflect.has(parsed.data.engines, parsed.data.app.selectedEngine)) {
+            EVENT_BUS.emit("app/prefs/fixups/selected_engine_not_found", { engineId: parsed.data.app.selectedEngine });
+
             parsed.data.app.selectedEngine = RANDY_ID;
-            r.warn("Selected engine not found, defaulting to Randy", {
-                toast: {
-                    dismissable: true,
-                    closeButton: true,
-                    id: "prefs-selected-engine-not-found",
-                    position: "top-center",
-                    action: {
-                        label: "OK",
-                        onClick: () => {
-                            toast.dismiss("prefs-selected-engine-not-found");
-                        }
+            toast.warning("Selected engine not found, defaulting to Randy", {
+                dismissable: true,
+                closeButton: true,
+                id: "prefs-selected-engine-not-found",
+                position: "top-center",
+                action: {
+                    label: "OK",
+                    onClick: () => {
+                        toast.dismiss("prefs-selected-engine-not-found");
                     }
                 }
             });
@@ -100,12 +93,11 @@ export class UserPrefs {
     async save() {
         if (this.loadError) {
             EVENT_BUS.emit('app/prefs/save/cancelled_due_to_load_error');
-            r.info("Prefs have load error, aborting save");
             return;
         }
         // TODO: validation here (fatal if fails)
         this.write(JSON.stringify(this.#data));
-        r.debug("saved prefs");
+        EVENT_BUS.emit('app/prefs/save/success');
     }
 
     private async write(contents: string) {
@@ -210,23 +202,29 @@ export const EVENTS = [
         dataSchema: z.object({
             error: z.instanceof(ZodError).transform(e => e as ZodError<UserPrefsData>),
         }),
+        description: "User prefs failed validation during load",
     },
     {
         key: 'app/prefs/load/success',
+        description: "User prefs loaded successfully",
     },
     {
         key: 'app/prefs/fixups/selected_engine_not_found',
         dataSchema: z.object({
             engineId: z.string(),
         }),
+        description: "Saved 'selected engine ID' not found, defaulting to Randy",
     },
     {
         key: 'app/prefs/save/cancelled_due_to_load_error',
+        description: "Backed out of saving due to current load error",
     },
     {
         key: 'app/prefs/save/success',
+        description: "User prefs saved successfully",
     },
     {
         key: 'app/prefs/import/failed',
+        description: "User prefs import failed",
     },
 ] as const satisfies EventDef<'app/prefs'>[];

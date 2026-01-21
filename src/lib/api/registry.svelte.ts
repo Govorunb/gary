@@ -1,26 +1,24 @@
 import { Channel } from "@tauri-apps/api/core";
-import r from "$lib/app/utils/reporting";
 import { TauriServerConnection, type ServerWSEvent, type AcceptArgs, type BaseConnection } from "./connection";
 import * as v1 from "./v1/spec";
 import { safeInvoke } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";
-import { Game, v1PendingGameName } from "./game.svelte";
+import { Game } from "./game.svelte";
 import type { EventDef } from "$lib/app/events";
+import { EVENT_BUS } from "$lib/app/events/bus";
+import { toast } from "svelte-sonner";
 
 export type WSConnectionRequest = { id: string; } & (
-    { version: "v1"; }
+    { version: "v1"; game: undefined; }
     | { version: "v2"; game: string; }
 );
 
 export class Registry {
     public games: Game[] = $state([]);
 
-    private readonly session: Session;
-
-    constructor(session: Session) {
-        this.session = session;
+    constructor(private readonly session: Session) {
         this.session.onDispose(() => this.dispose());
-        r.info(`Created registry for session '${session.name}' (${session.id})`);
+        EVENT_BUS.emit('api/registry/created', { session: {id: session.id, name: session.name} });
     }
 
     tryConnect(req: WSConnectionRequest) {
@@ -40,19 +38,19 @@ export class Registry {
     async accept(req: WSConnectionRequest) {
         const channel = new Channel<ServerWSEvent>();
         const conn = new TauriServerConnection(req.id, req.version, channel);
-        const gameName = req.version === "v1" ? v1PendingGameName(conn.id) : req.game;
-        r.debug(`Creating game '${gameName}' (${req.version})`);
-        this.createGame(conn);
+        EVENT_BUS.emit('api/registry/conn_req/accepted', {...req});
+        this.createGame(conn, req.game);
         await safeInvoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
         // TODO: deprecate (compat switch)
         if (conn.version === "v1") {
-            r.debug(`${conn.shortId} is v1; sending 'actions/reregister_all' to get game and actions`);
+            EVENT_BUS.emit('api/registry/v1/reregister_all', {gameId: conn.id});
             await conn.send(v1.zReregisterAll.decode({}));
         }
     }
 
     async deny(req: WSConnectionRequest, reason: string) {
-        r.warn("Denied connection request", { details: reason, ctx: { req } });
+        EVENT_BUS.emit('api/registry/conn_req/denied', {req, reason});
+        toast.warning("Denied connection request", { description: reason });
         await safeInvoke('ws_deny', { id: req.id, reason });
     }
 
@@ -60,17 +58,28 @@ export class Registry {
         const game = new Game(this.session, conn, name);
         this.games.push(game);
         conn.onclose(() => {
-            r.info(`${game.name} disconnected`, { toast: true });
-            // each connection is a new game
+            EVENT_BUS.emit('api/game/disconnected', { game: { id: game.id, name: game.name }});
+            toast.info(`${game.name} disconnected`);
             // TODO: keeping disconnected games in UI (for action list/diagnostics) is undecided
-            const i = this.games.indexOf(game);
-            this.games.splice(i, 1);
+            this.removeGame(game.conn.id);
         });
         return game;
     }
 
-    getGame(id: string) {
-        return this.games.find(g => g.conn.id === id || g.conn.shortId === id);
+    getGame(idLikeOrPrefix: string) {
+        return this.games.find(g =>
+            g.conn.id === idLikeOrPrefix
+            || g.conn.shortId === idLikeOrPrefix
+            || g.conn.id.startsWith(idLikeOrPrefix)
+        );
+    }
+
+    removeGame(fullId: string) {
+        const i = this.games.findIndex(g => g.conn.id === fullId);
+        if (i >= 0) {
+            this.games.splice(i, 1);
+            EVENT_BUS.emit('api/registry/game_removed', {id: fullId});
+        }
     }
 
     validateGameName(_name: string): boolean {
@@ -89,17 +98,27 @@ export class Registry {
 export const EVENTS = [
     {
         key: "api/registry/created",
+        dataSchema: {} as {session: {id: string, name: string}},
+        description: "Created registry",
     },
     {
-        key: "api/registry/game_created",
+        key: "api/registry/conn_req/accepted",
+        dataSchema: {} as WSConnectionRequest, // matches desired shape
+        description: "Accepted connection request",
     },
     {
         key: "api/registry/v1/reregister_all",
+        dataSchema: {} as {gameId: string},
+        description: "Connection is v1; sending 'actions/reregister_all' to get game and actions",
     },
     {
-        key: "api/registry/conn_req_denied",
+        key: "api/registry/conn_req/denied",
+        dataSchema: {} as {req: WSConnectionRequest, reason: string},
+        description: "Denied connection request"
     },
     {
         key: "api/registry/game_removed",
+        dataSchema: {} as {id: string},
+        description: "Game removed from registry"
     },
 ] as const satisfies EventDef<'api/registry'>[];

@@ -1,6 +1,6 @@
 import type { Attachment } from "svelte/attachments";
-import { ok, err, ResultAsync, type Result, Ok, Err } from "neverthrow";
-import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
+import { ok, err, ResultAsync, type Result, Ok, Err, errAsync } from "neverthrow";
+import { invoke, isTauri, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
 import type { Dayjs } from "dayjs";
@@ -84,7 +84,9 @@ export function jsonParse(s: string): Result<any, Error> {
 }
 
 export function safeInvoke<TRet = void>(cmd: string, args?: InvokeArgs, options?: InvokeOptions): ResultAsync<TRet, string> {
-    return ResultAsync.fromPromise(invoke(cmd, args, options), s => s as string);
+    return isTauri()
+        ? ResultAsync.fromPromise(invoke(cmd, args, options), s => s as string)
+        : errAsync("Tauri not available");
 }
 
 declare module "neverthrow" {

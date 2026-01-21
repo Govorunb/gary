@@ -1,14 +1,20 @@
-import r from "$lib/app/utils/reporting";
 import Ajv from "ajv";
 import type { ConnectionClient } from "$lib/api/connection";
 import * as v1 from "$lib/api/v1/spec";
-import { jsonParse, safeParse } from "../app/utils";
+import { formatZodError, jsonParse, safeParse } from "../app/utils";
+import { EVENT_BUS } from "$lib/app/events/bus";
+import type { EventDef } from "$lib/app/events";
+import { toast } from "svelte-sonner";
 
 export type ActionResult = Omit<v1.ActionResult['data'], 'id'>;
 
 export abstract class ClientGame {
     protected readonly ajv = new Ajv({ validateFormats: false });
     public readonly registeredActions = new Map<string, v1.Action>();
+
+    public get id() {
+        return this.conn.conn.id;
+    }
 
     constructor(
         public readonly name: string,
@@ -18,16 +24,18 @@ export abstract class ClientGame {
     }
 
     public async recvRaw(text: string) {
-        const msg = jsonParse(text)
-            .andThen(m => safeParse(v1.zNeuroMessage, m))
-            .orTee(e => r.error(`Failed to parse message`, String(e)));
+        const msg = jsonParse(text).mapErr(e => `Invalid JSON: ${e}`)
+            .andThen(m => safeParse(v1.zNeuroMessage, m).mapErr(e => formatZodError(e).join("\n")));
         if (msg.isOk()) {
             await this.recv(msg.value);
+        } else {
+            EVENT_BUS.emit('api/client/parse_failed', {game: {id: this.id, name: this.name}, error: msg.error});
         }
     }
 
     public async recv(msg: v1.NeuroMessage) {
-        switch (msg.command) {
+        const command = msg.command;
+        switch (command) {
             case "action":
                 await this.action(msg.data);
                 break;
@@ -35,7 +43,8 @@ export abstract class ClientGame {
                 await this.reregisterAll();
                 break;
             default:
-                r.warn(`Unhandled message type: ${(msg as any).command}`);
+                toast.warning(`Unhandled message type: ${command}`);
+                EVENT_BUS.emit('api/client/unhandled_command', {game: {id: this.id, name: this.name}, command});
         }
     }
 
@@ -140,3 +149,21 @@ export abstract class ClientGame {
 
     dispose() {}
 }
+
+type ClientEventData = {
+    game: {id: string, name: string}
+};
+
+export const EVENTS = [
+    {
+        key: 'api/client/parse_failed',
+        dataSchema: {} as ClientEventData & { error: string },
+        description: "Failed to parse message",
+    },
+    {
+        key: 'api/client/unhandled_command',
+        dataSchema: {} as ClientEventData & { command: string },
+        description: "Unexpected message type",
+    },
+] as const satisfies EventDef<'api/client'>[];
+

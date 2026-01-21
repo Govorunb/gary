@@ -8,9 +8,9 @@ import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
-import r from "$lib/app/utils/reporting";
 import { parseError } from "$lib/app/utils";
 import type { EventDef } from "$lib/app/events";
+import { EVENT_BUS } from "$lib/app/events/bus";
 import { v4 as uuid } from "uuid";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
@@ -106,8 +106,8 @@ export class OpenAIClient {
         // lmstudio has responses (allegedly stateful) but doesn't support `strict` in tool definitions (ouch)
         // it also doesn't seem to constrain generation with `text.format` at all?
         // so... `response_format` on `chat/completions` it is
-        console.warn("Full request params:", params);
-        console.log("Origin:", origin);
+        const reqId = uuid();
+        EVENT_BUS.emit('app/engines/llm/request', { reqId, params });
         const res = await ResultAsync.fromPromise(
             this.client.chat.completions.create(params, { signal }),
             (error) => new EngineError(`${this.name} request failed: ${error}`, error as Error, false),
@@ -115,7 +115,7 @@ export class OpenAIClient {
         if (signal?.aborted) {
             return err("cancelled");
         }
-        console.log("Response:", res);
+        EVENT_BUS.emit('app/engines/llm/response', { reqId, response: res });
         if (res.isErr()) {
             return err(res.error);
         }
@@ -131,10 +131,7 @@ export class OpenAIClient {
         const textOutput = resp?.message?.content;
         const reasoning = (resp.message as any)?.reasoning;
         if (!textOutput) {
-            r.error(`Empty response from '${this.name}'`, {
-                toast: false,
-                ctx: { response },
-            });
+            EVENT_BUS.emit('app/engines/llm/assert', { assertion: 'empty_response', response });
             return err(new EngineError(`${this.name} returned no text`, undefined, true));
         }
         const msg = zMessage.decode({
@@ -157,20 +154,24 @@ export const EVENTS = [
         key: 'app/engines/llm/error_result',
     },
     {
-        key: 'app/engines/llm/assert', // e.g. "empty response" or "unexpected finish_reason"
+        key: 'app/engines/llm/assert',
+        dataSchema: z.object({
+            assertion: z.string(),
+            response: z.any().sensitive(),
+        }),
     },
     {
         key: 'app/engines/llm/request',
         dataSchema: z.object({
-            reqId: z.string().prefault(uuid),
-            // TODO: request data
+            reqId: z.string(),
+            params: z.any().sensitive(),
         }),
     },
     {
         key: 'app/engines/llm/response',
         dataSchema: z.object({
             reqId: z.string(),
-            // TODO: response data
+            response: z.any().sensitive(),
         }),
     },
 ] as const satisfies EventDef<'app/engines/llm'>[];

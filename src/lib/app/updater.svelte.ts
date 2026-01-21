@@ -1,5 +1,4 @@
 import { check as tauriCheckUpdate, type Update } from "@tauri-apps/plugin-updater";
-import r from "$lib/app/utils/reporting";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import dayjs, { type OpUnitType } from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
@@ -8,6 +7,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { pickRandom, sleep, type Await } from "./utils";
 import type { EventDef } from "./events";
 import { EVENT_BUS } from "./events/bus";
+import { toast } from "svelte-sonner";
 import z from "zod";
 
 const simUpdate: Update = {
@@ -73,7 +73,6 @@ export class Updater {
 
         let updateRes: Result<Update | null, string>;
         EVENT_BUS.emit('app/update/check', { isManual: isCheckManual });
-        r.debug(`Checking for updates (${isCheckManual ? "manual" : "auto"})`);
         if (isTauri()) {
             updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
         } else {
@@ -92,20 +91,14 @@ export class Updater {
                 const skipped = this.skipVersion === this.update.version;
                 if (skipped) {
                     EVENT_BUS.emit('app/update/skipped', { version: this.update.version });
-                    r.info("Update skipped", `Version ${this.update.version} was previously set as skipped`);
                 } else if (!isCheckManual) {
                     await this.notifyUpdateAvailable();
                 }
             } else {
                 EVENT_BUS.emit('app/update/none_available');
-                r.info("No update available");
             }
         } else {
             EVENT_BUS.emit('app/update/check_error', { error: updateRes.error });
-            r.error("Could not check for updates", {
-                details: updateRes.error,
-                toast: false,
-            });
         }
         return updateRes;
     }
@@ -115,14 +108,11 @@ export class Updater {
         if (this.skipVersion === this.update.version) return;
 
         EVENT_BUS.emit('app/update/notify_available', { version: this.update.version });
-        r.success("Update available!", {
-            details: `Version ${this.update.version} is available`,
-            toast: {
-                closeButton: true,
-                action: {
-                    label: "See more",
-                    onClick: () => this.promptForUpdate(),
-                }
+        toast.success("Update available!", {
+            description: `Version ${this.update.version} is available`,
+            action: {
+                label: "See more",
+                onClick: () => this.promptForUpdate(),
             }
         });
     }

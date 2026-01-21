@@ -1,10 +1,11 @@
+import { EVENT_BUS } from "$lib/app/events/bus";
 import type { EventDef } from "$lib/app/events";
 import { shortId } from "$lib/app/utils";
-import r from "$lib/app/utils/reporting";
-import z from "zod";
-import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, SeverityToLogLevel, DIAGNOSTICS_BY_KEY } from "./diagnostics";
+import { toast } from "svelte-sonner";
+import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, DIAGNOSTICS_BY_KEY } from "./diagnostics";
 import type { Game } from "./game.svelte";
 
+const bugToast = { description: "This is a bug in the app, not a diagnostic for your game." };
 
 export class GameDiagnostics {
     public diagnostics: GameDiagnostic[] = $state([]);
@@ -31,7 +32,8 @@ export class GameDiagnostics {
     public trigger(key: DiagnosticKey, context?: any, report: boolean = true): GameDiagnostic | null {
         const diagDef = DIAGNOSTICS_BY_KEY[key];
         if (!diagDef) {
-            r.error(`Unknown diagnostic ${key}`, { ctx: context });
+            EVENT_BUS.emit('app/diagnostics/unknown/trigger', { key, context });
+            toast.error(`Failed to trigger diagnostic '${key}' - unknown diagnostic`, bugToast);
             return null;
         }
 
@@ -45,13 +47,15 @@ export class GameDiagnostics {
         });
         this.diagnostics.push(diag);
 
-        const logLevel = SeverityToLogLevel[diagDef.severity];
-        r.report(logLevel, {
-            message: `(${this.game.name}) ${diagDef.title}`,
-            details: diagDef.description,
-            ctx: context ? { context } : undefined,
-            toast: report && !suppressed ? undefined : false,
-        });
+        EVENT_BUS.emit('app/diagnostics/triggered', { diag, severity: diagDef.severity, report, suppressed });
+
+        if (report && !suppressed) {
+            if (diagDef.severity >= DiagnosticSeverity.Error) {
+                toast.error(`(${this.game.name}) ${diagDef.title}`);
+            } else if (diagDef.severity === DiagnosticSeverity.Warning) {
+                toast.warning(`(${this.game.name}) ${diagDef.title}`);
+            }
+        }
         if (diagDef.severity >= DiagnosticSeverity.Fatal) {
             // TODO: disconnect with error code
             // TODO: delay next connect afterwards (if the client is *really* misbehaving, instant reconnects are a bad idea)
@@ -71,11 +75,8 @@ export class GameDiagnostics {
     public suppress(key: DiagnosticKey) {
         const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
-            r.error(`Cannot suppress unknown diagnostic ${key}.`, {
-                toast: {
-                    description: "This is a bug in the app, not a diagnostic for your game."
-                }
-            });
+            EVENT_BUS.emit('app/diagnostics/unknown/suppress', { key });
+            toast.error(`Cannot suppress unknown diagnostic ${key}`, bugToast);
             return;
         }
         if (!this.suppressions.includes(key)) {
@@ -87,11 +88,8 @@ export class GameDiagnostics {
     public unsuppress(key: DiagnosticKey) {
         const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
-            r.error(`Tried to unsuppress unknown diagnostic ${key}`, {
-                toast: {
-                    description: "This is a bug in the app, not a diagnostic for your game."
-                }
-            });
+            EVENT_BUS.emit('app/diagnostics/unknown/unsuppress', { key });
+            toast.error(`Tried to unsuppress unknown diagnostic ${key}`, bugToast);
             return;
         }
         const i = this.suppressions.indexOf(key);
@@ -123,12 +121,8 @@ export class GameDiagnostics {
 }
 
 const EVENT_DATA = {
-    key: z.object({
-        key: z.custom<DiagnosticKey>(),
-    }),
-    inst: z.object({
-        diag: z.custom<GameDiagnostic>(),
-    }),
+    key: {} as { key: DiagnosticKey; context?: any },
+    inst: {} as { diag: GameDiagnostic; severity: DiagnosticSeverity; report: boolean; suppressed: boolean },
 } as const;
 
 export const EVENTS = [

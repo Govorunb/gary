@@ -1,6 +1,5 @@
-import z from "zod";
 import type { EventDef } from "../events";
-import r from "./reporting";
+import { LogLevel } from "./reporting";
 import { compare as semverCompare, valid as semverParse } from "semver";
 import { EVENT_BUS } from "../events/bus";
 
@@ -22,28 +21,22 @@ export function migrate(toVersion: string, data: Record<string, any> | null | un
 
     let currVersion = semverParse(data.version);
     if (!currVersion) {
-        r.warn("Version not detected, cannot migrate");
+        EVENT_BUS.emit('app/migrations/cannot_migrate', { reason: "version_not_found" });
         return data;
     }
     if (semverCompare(currVersion, toVersion) > 0) {
-        r.warn(`Cannot migrate downwards (currently ${currVersion}, target ${toVersion})`);
+        EVENT_BUS.emit('app/migrations/cannot_migrate', { reason: "downwards", from: currVersion, to: toVersion });
         return data;
     }
 
     for (const migration of migrations.sort((a,b) => semverCompare(a.version, b.version))) {
-        if (semverCompare(migration.version, currVersion) <= 0) {
-            r.debug(`Skipping migration to ${migration.version} as ${currVersion} is same or newer`);
-            continue;
-        } else if (semverCompare(migration.version, toVersion) > 0) {
-            EVENT_BUS.emit('app/migrations/apply', {
-                from: currVersion,
-                to: migration.version,
-                migration,
-            });
-            r.debug(`Finished migrating, ${migration.version} > ${toVersion}`);
-            break;
-        }
-        r.debug(`Migrating ${currVersion} to ${migration.version}`, migration.description);
+        const evtData = { from: currVersion, to: migration.version, migration };
+        EVENT_BUS.emit('app/migrations/check', evtData);
+        
+        if (semverCompare(migration.version, currVersion) <= 0) continue;
+        if (semverCompare(migration.version, toVersion) > 0) break;
+        
+        EVENT_BUS.emit('app/migrations/apply', evtData);
         migration.migrate(result);
         currVersion = migration.version;
     }
@@ -71,11 +64,17 @@ export function moveField(
     const toParts = toPath.split(".");
     const fromKey = fromParts.pop()!;
     const toKey = toParts.pop()!;
-    r.verbose(`Moving .${fromPath} to .${toPath}`);
+    EVENT_BUS.emit('i_have_no_event_and_i_must_log', {
+        message: `Moving .${fromPath} to .${toPath}`,
+        level: LogLevel.Verbose,
+    });
 
     const fromParent = navigate(data, fromParts);
     if (!fromParent || !(fromKey in fromParent)) {
-        r.debug(`Rename field skipped: source path '${fromPath}' not found`);
+        EVENT_BUS.emit('i_have_no_event_and_i_must_log', {
+            message: `Rename field skipped: source path '${fromPath}' not found`,
+            level: LogLevel.Debug,
+        });
         return;
     }
 
@@ -103,7 +102,10 @@ export function deleteField(data: Record<string, any>, path: FieldPath): void {
 
     const parent = navigate(data, parts);
     if (!parent || !(key in parent)) {
-        r.debug(`Delete field skipped: path '${path}' not found`);
+        EVENT_BUS.emit('i_have_no_event_and_i_must_log', {
+            message: `Delete field skipped: path '${path}' not found`,
+            level: LogLevel.Debug,
+        });
         return;
     }
 
@@ -135,20 +137,26 @@ function ensurePath(obj: any, pathParts: string[]): Record<string, any> {
     return current;
 }
 
+type CommonData = {from: string, to: string};
+
 export const EVENTS = [
     {
+        key: 'app/migrations/cannot_migrate',
+        dataSchema: {} as { reason: "version_not_found" } | (CommonData & { reason: "downwards" }),
+    },
+    {
         key: 'app/migrations/migrated',
-        dataSchema: z.object({
-            from: z.string(),
-            to: z.string(),
-        }),
+        dataSchema: {} as CommonData,
+        description: 'Finished migrating',
+    },
+    {
+        key: 'app/migrations/check',
+        dataSchema: {} as CommonData & { migration: Migration },
+        description: 'Checking migration',
     },
     {
         key: 'app/migrations/apply',
-        dataSchema: z.object({
-            from: z.string(),
-            to: z.string(),
-            migration: z.custom<Migration>(),
-        }),
+        dataSchema: {} as CommonData & { migration: Migration },
+        description: 'Applying migration',
     },
 ] as const satisfies EventDef<'app/migrations'>[];

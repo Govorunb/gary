@@ -8,7 +8,6 @@
     import { USER_PREFS, zUserPrefs } from "$lib/app/prefs.svelte";
     import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
     import { formatZodError, jsonParse, safeParse } from "$lib/app/utils";
-    import r from "$lib/app/utils/reporting";
 
     const userPrefs = getUserPrefs();
 
@@ -24,8 +23,7 @@
             validationError = "Input is empty";
             return;
         }
-        const res = jsonParse(editorContent)
-            .mapErr((e) => e.message)
+        const res = jsonParse(editorContent).mapErr((e) => e.message)
             .andThen((parsed) => safeParse(zUserPrefs, parsed).mapErr((e) => formatZodError(e).join("\n")));
         validationError = res.flip().unwrapOr(null);
     });
@@ -46,7 +44,7 @@
             .andThen((parsed) => userPrefs.importData(parsed));
         if (res.isErr()) {
             validationError = res.error;
-            r.error(res.error);
+            toast.error(res.error);
         } else {
             userPrefs.loadError = null;
         }

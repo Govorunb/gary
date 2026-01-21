@@ -3,13 +3,11 @@
     import OutLink from "$lib/ui/common/OutLink.svelte";
     import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
     import { isTauri } from "@tauri-apps/api/core";
-    import r from "$lib/app/utils/reporting";
     import { safeInvoke, sleep } from "$lib/app/utils";
     import { BundleType, getBundleType } from "@tauri-apps/api/app";
     import Hotkey from "../common/Hotkey.svelte";
-    import { dev } from "$app/environment";
-    import { onMount } from "svelte";
     import { EVENT_BUS } from "$lib/app/events/bus";
+    import { toast } from "svelte-sonner";
 
     type Props = {
         open: boolean;
@@ -38,26 +36,20 @@
             await update.downloadAndInstall();
         }
         EVENT_BUS.emit('ui/update/installed', { version: update.version });
-        r.success("Update successful", {
-            toast: {
-                description: "Restart the app at your convenience to finish the update.",
-                action: {
-                    label: "Restart now",
-                    async onClick() {
-                        if (isTauri()) {
-                            // FIXME: .orTee
-                            const res = await safeInvoke('plugin:process|restart');
-                            if (res.isErr()) {
-                                r.error("Failed to restart", res.error);
-                            }
-                            await sleep(2500);
-                            r.success("Erm... awkward...", {
-                                details: `Couldn't restart. Um... You'll have to do it manually. My bad.`,
-                                toast: true,
-                            });
-                        } else {
-                            location.reload(); // pretend to relaunch (the app never updates on dev web server obviously)
-                        }
+        toast.success("Update successful", {
+            description: "Restart the app at your convenience to finish the update.",
+            action: {
+                label: "Restart now",
+                async onClick() {
+                    if (isTauri()) {
+                        await safeInvoke('plugin:process|restart')
+                            .orTee((e) => toast.error("Failed to restart", { description: e }));
+                        await sleep(2500);
+                        toast.success("Erm... awkward...", {
+                            description: `Couldn't restart. Um... You'll have to do it manually. My bad.`,
+                        });
+                    } else {
+                        location.reload(); // pretend to relaunch (the app never updates on dev web server obviously)
                     }
                 }
             }

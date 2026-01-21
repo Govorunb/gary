@@ -8,13 +8,12 @@
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
     import { getSession, getUserPrefs } from "$lib/app/utils/di";
-    import { zAct, zActData } from "$lib/api/v1/spec";
-    import r from "$lib/app/utils/reporting";
     import Ajv, { type ValidateFunction } from "ajv";
-    import { tooltip } from "$lib/app/utils";
+    import { parseError, tooltip } from "$lib/app/utils";
     import { JSONSchemaFaker } from "json-schema-faker";
     import { boolAttr, PressedKeys } from "runed";
     import { EVENT_BUS } from "$lib/app/events/bus";
+    import { toast } from "svelte-sonner";
 
     type Props = {
         open: boolean;
@@ -23,13 +22,14 @@
     };
 
     let { open = $bindable(), action, game }: Props = $props();
-    const session = getSession();
     const userPrefs = getUserPrefs();
     const ajv = new Ajv({ validateFormats: false, allErrors: true });
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
     keys.onKeys(["Control", "Enter"], sendAction);
     keys.onKeys(["Alt", "R"], reroll);
+
+    const evtData = $derived({gameId: game.id, actionName: action.name});
 
     let jsonContent = $state(genJson());
     let validationErrors = $state<string[] | null>(null);
@@ -92,11 +92,11 @@
     async function sendAction() {
         if (!isValid && !shiftPressed) return;
 
-        EVENT_BUS.emit('ui/game/user_act/send', { gameId: game.conn.id, actionName: action.name, hasData: !!jsonContent });
+        EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!jsonContent });
         game.manualSend(action.name, jsonContent)
             .catch(e => {
-                EVENT_BUS.emit('ui/game/user_act/send_error', { gameId: game.conn.id, actionName: action.name, error: e instanceof Error ? e : new Error(`${e}`) });
-                r.error(`Failed to send action ${action.name}`, `${e}`);
+                EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) });
+                toast.error(`Failed to send action ${action.name}`, { description: `${e}` });
             })
             .finally(closeDialog);
     }
