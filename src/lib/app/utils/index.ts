@@ -12,6 +12,16 @@ export * from "./default-map";
 
 export type NoUndefined<T> = T extends undefined ? never : T;
 
+export enum LogLevel {
+    Verbose,
+    Debug,
+    Info,
+    Success, // behaves like info log level (but toasts have a 'success' type)
+    Warning,
+    Error,
+    Fatal // behaves like 'error' (but ideally there should be a modal for a GH issue flow and such)
+}
+
 export function pickRandom<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
 }

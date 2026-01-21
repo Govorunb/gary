@@ -1,5 +1,5 @@
 import type z from "zod";
-import { LogLevel } from "$lib/app/utils/reporting";
+import { LogLevel } from "$lib/app/utils";
 import type { ReportOptions, ToastOptions } from "$lib/app/utils/reporting";
 import { MY_EVENTS as BUS_EVENTS } from "./bus";
 import { EVENTS as WS_SERVER_EVENTS } from "$lib/app/server.svelte";

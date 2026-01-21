@@ -1,5 +1,3 @@
-import { LogLevel } from "$lib/app/utils/reporting";
-
 export enum DiagnosticSeverity {
     Info = 0,
     Warning = 1,
@@ -227,10 +225,3 @@ export type DiagnosticByKey<K extends DiagnosticKey> = Extract<Diagnostics, { ke
 export const DIAGNOSTICS_BY_KEY = Object.fromEntries(
     DIAGNOSTICS.map(d => [d.key, d]) as [DiagnosticKey, DiagnosticDef][]
 ) as { [K in DiagnosticKey]: DiagnosticByKey<K> };
-
-export const SeverityToLogLevel: Record<DiagnosticSeverity, LogLevel> = {
-    [DiagnosticSeverity.Info]: LogLevel.Info,
-    [DiagnosticSeverity.Warning]: LogLevel.Warning,
-    [DiagnosticSeverity.Error]: LogLevel.Error,
-    [DiagnosticSeverity.Fatal]: LogLevel.Fatal,
-}

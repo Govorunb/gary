@@ -39,7 +39,7 @@ export class Session {
         this.registry = new Registry(this);
         this.scheduler = new Scheduler(this);
         this.uiState = new UIState(this);
-        EVENT_BUS.emit('app/session/created', { session: this });
+        EVENT_BUS.emit('app/session/created', { session: {id: this.id, name: this.name} });
         for (const id of Object.keys(this.userPrefs.engines)) {
             this.initEngine(id);
         }
@@ -98,7 +98,7 @@ export class Session {
         }
         this.ondispose.length = 0;
         this.engines = {};
-        EVENT_BUS.emit('app/session/disposed', { session: this });
+        EVENT_BUS.emit('app/session/disposed', { session: {id: this.id, name: this.name} });
     }
 
     public initEngine(id?: string): string {

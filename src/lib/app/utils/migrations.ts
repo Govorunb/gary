@@ -1,5 +1,5 @@
 import type { EventDef } from "../events";
-import { LogLevel } from "./reporting";
+import { LogLevel } from ".";
 import { compare as semverCompare, valid as semverParse } from "semver";
 import { EVENT_BUS } from "../events/bus";
 

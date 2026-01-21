@@ -35,19 +35,24 @@ Mock/direction/pseudocode declaration pattern:
 export const MY_EVENTS = [
     {
         key: 'app/subsys/doohickey',
-        dataSchema: z.object({
+        // simple types for simple data
+        dataSchema: {} as {
+            game: { id: string, name: string },
+            reason: string,
             // ...
-        }),
+        }
         // ...
     },
     {
         key: 'app/subsys/finagle',
+        // zod for schemas that need metadata
         dataSchema: z.strictObject({
             // ...
+            superSecretPassword: z.string().sensitive(),
         }),
         // ...
     }
-] as const satisfies EventDef[];
+] as const satisfies EventDef<'app/subsys'>[]; // key prefix
 
 /// events.ts (central declaration)
 import { MY_EVENTS as SUBSYS_EVENTS } from '$lib/app/some_subsystem';
@@ -60,15 +65,15 @@ export const EVENTS = [
 
 Usage:
 ```ts
-const myEvents = firehose.filter(['app/subsys/doohickey', 'app/subsys/finagle']);
-// inferred as EventStream<'app/subsys/doohickey' | 'app/subsys/finagle'>
-// which will contain (typeof EVENTS)['app/subsys/doohickey' | 'app/subsys/finagle']
-// i.e. (Event<SomeData> | Event<OtherData>)
+const myEvents = EVENT_BUS.subscribe([A, B]);
+// returns EventSub<A | B>
+// which will contain EventInstance<A | B>
+// i.e. (EventInstance<A> | EventInstance<B>)
 ```
 
 ### Reactivity 
 
-Not sure if Svelte was made with pipelines in mind, afaik `$derived` arrays just recompute the whole thing:
+Svelte wasn't made with pipelines in mind - `$derived` arrays just recompute the whole thing:
 
 ```ts
 const myState = $state([1,2,3,4,5]);
