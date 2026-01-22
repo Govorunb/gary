@@ -4,7 +4,7 @@ import dayjs, { type OpUnitType } from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
 import type { UIState } from "$lib/ui/app/ui-state.svelte";
 import { isTauri } from "@tauri-apps/api/core";
-import { pickRandom, sleep, type Await } from "./utils";
+import { pickRandom, sleep, type Await, LogLevel } from "./utils";
 import type { EventDef } from "./events";
 import { EVENT_BUS } from "./events/bus";
 import { toast } from "svelte-sonner";
@@ -130,6 +130,7 @@ export const EVENTS = [
         dataSchema: z.object({
             isManual: z.boolean(),
         }),
+        level: LogLevel.Debug,
     },
     {
         key: 'app/update/check/result',
@@ -138,32 +139,38 @@ export const EVENTS = [
             isManual: z.boolean(),
             skipVersion: z.string().nullish(),
         }),
+        level: LogLevel.Info,
     },
     {
         key: 'app/update/check_error',
         dataSchema: z.object({
             error: z.string(),
         }),
+        level: LogLevel.Error,
     },
     {
         key: 'app/update/notify_available',
         dataSchema: z.object({
             version: z.string(),
         }),
+        level: LogLevel.Success,
     },
     {
         key: 'app/update/skipped',
         dataSchema: z.object({
             version: z.string(),
         }),
+        level: LogLevel.Info,
     },
     {
         key: 'app/update/none_available',
+        level: LogLevel.Info,
     },
     {
         key: 'app/update/restart_failed',
         dataSchema: z.object({
             error: z.custom<Error>(),
         }),
+        level: LogLevel.Error,
     },
 ] as const satisfies EventDef<'app/update'>[];

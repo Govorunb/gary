@@ -143,20 +143,24 @@ export const EVENTS = [
     {
         key: 'app/migrations/cannot_migrate',
         dataSchema: {} as { reason: "version_not_found" } | (CommonData & { reason: "downwards" }),
+        level: LogLevel.Warning,
     },
     {
         key: 'app/migrations/migrated',
         dataSchema: {} as CommonData,
         description: 'Finished migrating',
+        level: LogLevel.Debug,
     },
     {
         key: 'app/migrations/check',
         dataSchema: {} as CommonData & { migration: Migration },
         description: 'Checking migration',
+        level: LogLevel.Debug,
     },
     {
         key: 'app/migrations/apply',
         dataSchema: {} as CommonData & { migration: Migration },
         description: 'Applying migration',
+        level: LogLevel.Debug,
     },
 ] as const satisfies EventDef<'app/migrations'>[];

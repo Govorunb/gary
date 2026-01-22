@@ -1,5 +1,5 @@
 import type { Session } from "$lib/app/session.svelte";
-import { formatZodError, jsonParse, localeTimeWithMs, safeParse } from "$lib/app/utils";
+import { formatZodError, jsonParse, localeTimeWithMs, safeParse, LogLevel } from "$lib/app/utils";
 import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
 import { TIMEOUTS } from "./diagnostics";
@@ -403,60 +403,74 @@ export const EVENTS = [
     {
         key: 'api/game/connected',
         dataSchema: {} as GameEventData,
+        level: LogLevel.Info,
     },
     {
         key: 'api/game/disconnected',
         dataSchema: {} as GameEventData,
+        level: LogLevel.Info,
     },
     {
         key: 'api/game/conn_error',
         dataSchema: {} as GameEventData,
+        level: LogLevel.Error,
     },
     {
         key: 'api/game/recv',
         dataSchema: {} as GameEventData & { msg: v1.GameMessage },
         description: "Processing game message",
+        level: LogLevel.Debug,
     },
     {
         // FIXME: dev/assert/
         key: 'api/game/assert_unimplemented_command',
         dataSchema: {} as GameEventData & { command: string },
+        level: LogLevel.Warning,
     },
     {
         key: 'api/game/startup',
         dataSchema: {} as GameEventData & { startupStateWas: Game['startupState'] },
+        level: LogLevel.Info,
     },
     {
         key: 'api/game/context',
         dataSchema: {} as GameEventData & v1.Context['data'],
+        level: LogLevel.Info,
     },
     {
         key: 'api/game/register',
         dataSchema: {} as GameEventData & v1.RegisterActions['data'] & { newActions: string[] },
+        level: LogLevel.Debug,
     },
     {
         key: 'api/game/unregister',
         dataSchema: {} as GameEventData & v1.UnregisterActions['data'],
+        level: LogLevel.Debug,
     },
     {
         key: 'api/game/force',
         dataSchema: {} as GameEventData & v1.ForceAction['data'],
+        level: LogLevel.Info,
     },
     {
         key: 'api/game/v1/name',
         dataSchema: {} as GameEventData,
         description: "First message for v1 game - taking game name from WS msg",
+        level: LogLevel.Debug,
     },
     {
         key: 'api/game/register/duplicate',
         dataSchema: {} as GameEventData & { game: {version: Game['version']}, old: v1.Action, new: v1.Action },
+        level: LogLevel.Info,
     },
     {
         key: 'api/game/act/actor',
         dataSchema: {} as GameEventData & { act: v1.ActData },
+        level: LogLevel.Info,
     },
     {
         key: 'api/game/act/user',
         dataSchema: {} as GameEventData & { act: v1.ActData },
+        level: LogLevel.Debug,
     },
 ] as const satisfies EventDef<'api/game'>[];

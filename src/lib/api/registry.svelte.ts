@@ -1,7 +1,7 @@
 import { Channel } from "@tauri-apps/api/core";
 import { TauriServerConnection, type ServerWSEvent, type AcceptArgs, type BaseConnection } from "./connection";
 import * as v1 from "./v1/spec";
-import { safeInvoke } from "$lib/app/utils";
+import { safeInvoke, LogLevel } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";
 import { Game } from "./game.svelte";
 import type { EventDef } from "$lib/app/events";
@@ -100,25 +100,30 @@ export const EVENTS = [
         key: "api/registry/created",
         dataSchema: {} as {session: {id: string, name: string}},
         description: "Created registry",
+        level: LogLevel.Info,
     },
     {
         key: "api/registry/conn_req/accepted",
         dataSchema: {} as WSConnectionRequest, // matches desired shape
         description: "Accepted connection request",
+        level: LogLevel.Debug,
     },
     {
         key: "api/registry/v1/reregister_all",
         dataSchema: {} as {gameId: string},
         description: "Connection is v1; sending 'actions/reregister_all' to get game and actions",
+        level: LogLevel.Debug,
     },
     {
         key: "api/registry/conn_req/denied",
         dataSchema: {} as {req: WSConnectionRequest, reason: string},
-        description: "Denied connection request"
+        description: "Denied connection request",
+        level: LogLevel.Warning,
     },
     {
         key: "api/registry/game_removed",
         dataSchema: {} as {id: string},
-        description: "Game removed from registry"
+        description: "Game removed from registry",
+        level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'api/registry'>[];

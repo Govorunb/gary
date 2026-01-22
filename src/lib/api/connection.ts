@@ -2,7 +2,7 @@ import type { Channel } from "@tauri-apps/api/core";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { toast } from "svelte-sonner";
 import type { NeuroMessage, GameMessage } from "./v1/spec";
-import { listenSub, safeInvoke, type Awaitable, createListener } from "$lib/app/utils";
+import { listenSub, safeInvoke, type Awaitable, createListener, LogLevel } from "$lib/app/utils";
 import { EVENT_BUS } from "$lib/app/events/bus";
 import type { EventDef } from "$lib/app/events";
 
@@ -312,36 +312,43 @@ export const EVENTS = [
         key: 'api/conn/assert_not_disposed',
         dataSchema: {} as CommonData,
         description: 'Dev assertion: attempted to use disposed connection',
+        level: LogLevel.Fatal,
     },
     {
         // FIXME: dev/assert/
         key: 'api/conn/no_onmessage_handlers',
         dataSchema: {} as TextData,
         description: 'Dev assertion: Message received but no handlers registered',
+        level: LogLevel.Warning,
     },
     {
         key: 'api/conn/ws_tauri/send_failed',
         dataSchema: {} as TauriTextData,
         description: 'Tauri failed to send WebSocket text',
+        level: LogLevel.Error,
     },
     {
         key: 'api/conn/ws_tauri/close_failed',
         dataSchema: {} as TauriData,
         description: 'Tauri failed to close WebSocket',
+        level: LogLevel.Error,
     },
     {
         key: 'api/conn/client_disconnected',
         dataSchema: {} as CommonData,
         description: 'Client disconnected from connection',
+        level: LogLevel.Info,
     },
     {
         key: 'api/conn/internal/send',
         dataSchema: {} as TextData,
         description: 'Internal connection sent text',
+        level: LogLevel.Verbose,
     },
     {
         key: 'api/conn/internal/disconnect',
         dataSchema: {} as CommonData,
         description: 'Internal connection disconnected',
+        level: LogLevel.Verbose,
     },
 ] as const satisfies EventDef<'api/conn'>[];

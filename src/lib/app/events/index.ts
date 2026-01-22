@@ -1,7 +1,6 @@
 import type z from "zod";
 import { LogLevel, type UnwrapZod } from "$lib/app/utils";
 import type { ReportOptions, ToastOptions } from "$lib/app/utils/reporting";
-import { MY_EVENTS as BUS_EVENTS } from "./bus";
 import { EVENTS as WS_SERVER_EVENTS } from "$lib/app/server.svelte";
 import { EVENTS as PREFS_EVENTS } from "$lib/app/prefs.svelte";
 import { EVENTS as SESSION_EVENTS } from "$lib/app/session.svelte";
@@ -9,7 +8,6 @@ import { EVENTS as CONN_EVENTS } from "$lib/api/connection";
 import { EVENTS as CLIENT_GAME_EVENTS } from "$lib/api/client-game";
 import { EVENTS as DIAG_EVENTS } from "$lib/api/game-diagnostics.svelte";
 import { EVENTS as GAME_EVENTS } from "$lib/api/game.svelte";
-import { EVENTS as SCHEMA_TEST_EVENTS } from "$lib/app/schema-test";
 import { EVENTS as REGISTRY_EVENTS } from "$lib/api/registry.svelte";
 import { EVENTS as MIGRATIONS_EVENTS } from "$lib/app/utils/migrations";
 import { EVENTS as SCHED_EVENTS, ACT_EVENTS, DISPLAY as SCHED_PRESENT } from "$lib/app/scheduler.svelte";
@@ -64,7 +62,6 @@ export const EVENTS = [
         dataSchema: {} as never,
         level: LogLevel.Verbose,
     },
-    ...BUS_EVENTS,
     ...WS_SERVER_EVENTS,
     ...PREFS_EVENTS,
     ...SESSION_EVENTS,
@@ -72,7 +69,6 @@ export const EVENTS = [
     ...CLIENT_GAME_EVENTS,
     ...DIAG_EVENTS,
     ...GAME_EVENTS,
-    ...SCHEMA_TEST_EVENTS,
     ...REGISTRY_EVENTS,
     ...MIGRATIONS_EVENTS,
     ...SCHED_EVENTS,

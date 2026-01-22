@@ -1,7 +1,7 @@
 import Ajv from "ajv";
 import type { ConnectionClient } from "$lib/api/connection";
 import * as v1 from "$lib/api/v1/spec";
-import { formatZodError, jsonParse, safeParse } from "../app/utils";
+import { formatZodError, jsonParse, safeParse, LogLevel } from "../app/utils";
 import { EVENT_BUS } from "$lib/app/events/bus";
 import type { EventDef } from "$lib/app/events";
 import { toast } from "svelte-sonner";
@@ -159,11 +159,13 @@ export const EVENTS = [
         key: 'api/client/parse_failed',
         dataSchema: {} as ClientEventData & { error: string },
         description: "Failed to parse message",
+        level: LogLevel.Error,
     },
     {
         key: 'api/client/unhandled_command',
         dataSchema: {} as ClientEventData & { command: string },
         description: "Unexpected message type",
+        level: LogLevel.Warning,
     },
 ] as const satisfies EventDef<'api/client'>[];
 

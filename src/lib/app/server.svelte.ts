@@ -4,7 +4,7 @@ import { settled } from "svelte";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
 import type { UserPrefs } from "./prefs.svelte";
-import { listenSub, safeInvoke } from "./utils";
+import { listenSub, safeInvoke, LogLevel } from "./utils";
 import type { EventDef } from "./events";
 import { EVENT_BUS } from "./events/bus";
 import { TauriServerConnection } from "$lib/api/connection";
@@ -109,13 +109,18 @@ export class ServerManager {
 }
 
 export const EVENTS = [
-    { key: 'app/server/no_tauri', },
+    {
+        key: 'app/server/no_tauri',
+        level: LogLevel.Info,
+    },
     {
         key: 'app/server/stopped',
-        dataSchema: {} as {disconnectedGames: {id: string, name: string}[]}
+        dataSchema: {} as {disconnectedGames: {id: string, name: string}[]},
+        level: LogLevel.Info,
     },
     {
         key: 'app/server/reconcile',
         dataSchema: {} as {serverOnly: string[], regOnly: string[]},
+        level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'app/server'>[];

@@ -3,7 +3,7 @@ import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
-import { APP_VERSION, formatZodError, jsonParse, safeParse } from "./utils";
+import { APP_VERSION, formatZodError, jsonParse, safeParse, LogLevel } from "./utils";
 import { migrate, moveField, type Migration } from "./utils/migrations";
 import { err, ok, type Result } from "neverthrow";
 import type { EventDef } from "./events";
@@ -203,10 +203,12 @@ export const EVENTS = [
             error: z.instanceof(ZodError).transform(e => e as ZodError<UserPrefsData>),
         }),
         description: "User prefs failed validation during load",
+        level: LogLevel.Error,
     },
     {
         key: 'app/prefs/load/success',
         description: "User prefs loaded successfully",
+        level: LogLevel.Debug,
     },
     {
         key: 'app/prefs/fixups/selected_engine_not_found',
@@ -214,17 +216,21 @@ export const EVENTS = [
             engineId: z.string(),
         }),
         description: "Saved 'selected engine ID' not found, defaulting to Randy",
+        level: LogLevel.Warning,
     },
     {
         key: 'app/prefs/save/cancelled_due_to_load_error',
         description: "Backed out of saving due to current load error",
+        level: LogLevel.Info,
     },
     {
         key: 'app/prefs/save/success',
         description: "User prefs saved successfully",
+        level: LogLevel.Debug,
     },
     {
         key: 'app/prefs/import/failed',
         description: "User prefs import failed",
+        level: LogLevel.Error,
     },
 ] as const satisfies EventDef<'app/prefs'>[];

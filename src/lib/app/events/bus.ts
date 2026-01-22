@@ -1,5 +1,5 @@
 import { v4 as uuid } from "uuid";
-import type { EventData, EventDef, EventInstance, EventKey, DatalessKey, HasDataKey } from ".";
+import type { EventData, EventInstance, EventKey, DatalessKey, HasDataKey } from ".";
 import { createListener, DefaultMap } from "../utils";
 
 export class EventBus {
@@ -78,14 +78,3 @@ export class EventSub<K extends EventKey> {
 }
 
 export const EVENT_BUS = new EventBus();
-
-export const MY_EVENTS = [
-    {
-        key: 'thank_the_bus_driver',
-    },
-] as const satisfies EventDef[];
-
-EVENT_BUS.emit("thank_the_bus_driver");
-// BUS.send("thank_the_bus_driver", undefined);
-// BUS.send("test1");
-EVENT_BUS.emit("test1", null);

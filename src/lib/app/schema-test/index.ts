@@ -2,7 +2,6 @@ import type { ConnectionClient } from "$lib/api/connection";
 import { ClientGame } from "../../api/client-game";
 import type { ActionResult } from '../../api/client-game';
 import { TEST_ACTIONS_MAP } from "./actions";
-import type { EventDef } from "../events";
 
 export class SchemaTestGame extends ClientGame {
     private readonly actions = TEST_ACTIONS_MAP;
@@ -102,7 +101,3 @@ export class SchemaTestGame extends ClientGame {
         this.schemaChanged = false;
     }
 }
-
-export const EVENTS = [
-
-] as const satisfies EventDef<'app/client-game/schema-test'>[];

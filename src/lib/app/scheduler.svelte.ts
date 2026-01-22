@@ -4,7 +4,7 @@ import { zActData, type Action } from "$lib/api/v1/spec";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { untrack } from "svelte";
-import { debounced } from "./utils";
+import { debounced, LogLevel } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";
 import { EVENT_BUS } from "./events/bus";
 import { toast } from "svelte-sonner";
@@ -276,53 +276,65 @@ export class AutoPoker {
 export const EVENTS = [
     {
         key: 'app/scheduler/act/cancelled',
+        level: LogLevel.Info,
     },
     {
         key: 'app/scheduler/act/fail/ignored',
         dataSchema: {} as { force: boolean; ignores: string[]; },
+        level: LogLevel.Info,
     },
     {
         key: 'app/scheduler/act/fail/no_actions',
         dataSchema: {} as { force: boolean; actionsProvided?: boolean; },
+        level: LogLevel.Info,
     },
     {
         key: 'app/scheduler/act/fail/action_not_found',
         dataSchema: {} as { force: boolean; act: EngineAct; },
+        level: LogLevel.Error,
     },
     {
         key: 'app/scheduler/act/fail/failed_to_send',
         dataSchema: {} as { force: boolean; },
+        level: LogLevel.Error,
     },
     {
         key: 'app/scheduler/act/say',
         dataSchema: {} as { say: string; notify: boolean; },
         description: "Actor decided to speak",
+        level: LogLevel.Info,
     },
     {
         key: 'app/scheduler/act/perform',
         dataSchema: {} as { force: boolean; action: string; },
         description: "Engine acting",
+        level: LogLevel.Info,
     },
     {
         key: 'app/scheduler/act/performing',
         dataSchema: {} as { force: boolean; result: EngineActResult; },
+        level: LogLevel.Debug,
     },
     {
         key: 'app/scheduler/act/error',
         dataSchema: {} as { message: string; cause?: string; },
         description: "Engine error during acting",
+        level: LogLevel.Error,
     },
     {
         key: 'app/scheduler/idle/try',
         description: "Engine idle, poking",
+        level: LogLevel.Info,
     },
     {
         key: 'app/scheduler/idle/force',
         description: "Engine idle for a while, force acting",
+        level: LogLevel.Info,
     },
     {
         key: 'app/scheduler/idle/no_fq',
         description: "Engine idle but force already queued (stalled?)",
+        level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'app/scheduler'>[];
 
@@ -333,13 +345,16 @@ export const DISPLAY = {
 export const ACT_EVENTS = [
     {
         key: 'api/actor/skip',
+        level: LogLevel.Info,
     },
     {
         key: 'api/actor/say',
         dataSchema: {} as { msg: string; notify: boolean; },
+        level: LogLevel.Info,
     },
     {
         key: 'api/actor/act',
         dataSchema: {} as { action: string; data: unknown; },
+        level: LogLevel.Info,
     }
 ] as const satisfies EventDef<'api/actor'>[];

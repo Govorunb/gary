@@ -1,6 +1,6 @@
 import { EVENT_BUS } from "$lib/app/events/bus";
 import type { EventDef } from "$lib/app/events";
-import { shortId } from "$lib/app/utils";
+import { shortId, LogLevel } from "$lib/app/utils";
 import { toast } from "svelte-sonner";
 import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, DIAGNOSTICS_BY_KEY, type DiagData } from "./diagnostics";
 import type { Game } from "./game.svelte";
@@ -129,33 +129,41 @@ export const EVENTS = [
     {
         key: 'app/diagnostics/triggered',
         dataSchema: EVENT_DATA.inst,
+        level: LogLevel.Info,
     },
     {
         key: 'app/diagnostics/dismissed',
         dataSchema: EVENT_DATA.inst,
+        level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/restored',
         dataSchema: EVENT_DATA.inst,
+        level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/suppressed',
         dataSchema: EVENT_DATA.key,
+        level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/unsuppressed',
         dataSchema: EVENT_DATA.key,
+        level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/unknown/trigger',
         dataSchema: {} as typeof EVENT_DATA.key & { context: any },
+        level: LogLevel.Error,
     },
     {
         key: 'app/diagnostics/unknown/suppress',
         dataSchema: EVENT_DATA.key,
+        level: LogLevel.Error,
     },
     {
         key: 'app/diagnostics/unknown/unsuppress',
         dataSchema: EVENT_DATA.key,
+        level: LogLevel.Error,
     },
 ] as const satisfies EventDef<'app/diagnostics'>[];

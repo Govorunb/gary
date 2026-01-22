@@ -11,6 +11,7 @@ import { Randy, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 import { UIState } from "$lib/ui/app/ui-state.svelte";
 import type { EventDef } from "./events";
+import { LogLevel } from "./utils";
 
 /**
  * Represents a user session within the app.
@@ -129,30 +130,36 @@ export const EVENTS = [
         key: 'app/session/created',
         dataSchema: {} as { session: { id: string, name: string } },
         description: "Created session",
+        level: LogLevel.Debug,
     },
     {
         key: 'app/session/disposed',
         dataSchema: {} as { session: { id: string, name: string } },
         description: "Disposed session",
+        level: LogLevel.Info,
     },
     {
         key: 'app/session/engine/not_found',
         dataSchema: {} as { id: string },
         description: "Tried to get engine but it doesn't exist, reverting to Randy",
+        level: LogLevel.Error,
     },
     {
         key: 'app/session/engine/no_delete_system',
         dataSchema: {} as { id: string },
         description: "Cannot delete system engine",
+        level: LogLevel.Error,
     },
     {
         key: 'app/session/engine/created',
         dataSchema: {} as { id: string },
         description: "Created new engine",
+        level: LogLevel.Success,
     },
     {
         key: 'app/session/engine/initialized',
         dataSchema: {} as { id: string },
         description: "Initialized engine",
+        level: LogLevel.Debug,
     },
 ] as const satisfies EventDef<'app/session'>[];

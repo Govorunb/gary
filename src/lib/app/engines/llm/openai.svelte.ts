@@ -8,7 +8,7 @@ import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
-import { parseError } from "$lib/app/utils";
+import { parseError, LogLevel } from "$lib/app/utils";
 import type { EventDef } from "$lib/app/events";
 import { EVENT_BUS } from "$lib/app/events/bus";
 import { v4 as uuid } from "uuid";
@@ -119,21 +119,24 @@ export class OpenAIClient {
         }
         EVENT_BUS.emit('app/engines/llm/response', { reqId, response: res });
         if (res.isErr()) {
+            EVENT_BUS.emit('app/engines/llm/network_error', { reqId });
             return err(res.error);
         }
         const response = res.value;
         type RespOrError = typeof response | { choices?: never, error: any };
         const resp = (response as RespOrError).choices?.[0];
         if (!resp) {
+            EVENT_BUS.emit('app/engines/llm/error_result', { reqId });
             return err(new EngineError(`${this.name} did not return successful result`, parseError(res.value)));
         }
         if (resp.finish_reason !== "stop" && resp.finish_reason !== "length") {
+            EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'finish_reason' });
             return err(new EngineError(`${this.name} returned unexpected finish_reason '${resp.finish_reason}'`, undefined, false))
         }
         const textOutput = resp?.message?.content;
         const reasoning = (resp.message as any)?.reasoning;
         if (!textOutput) {
-            EVENT_BUS.emit('app/engines/llm/assert', { assertion: 'empty_response', response });
+            EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'empty_response' });
             return err(new EngineError(`${this.name} returned no text`, undefined, true));
         }
         const msg = zMessage.decode({
@@ -151,16 +154,18 @@ export class OpenAIClient {
 export const EVENTS = [
     {
         key: 'app/engines/llm/network_error',
+        dataSchema: {} as { reqId: string },
+        level: LogLevel.Error,
     },
     {
         key: 'app/engines/llm/error_result',
+        dataSchema: {} as { reqId: string },
+        level: LogLevel.Error,
     },
     {
         key: 'app/engines/llm/assert',
-        dataSchema: z.object({
-            assertion: z.string(),
-            response: z.any().sensitive(),
-        }),
+        dataSchema: {} as { reqId: string, assertion: string },
+        level: LogLevel.Error,
     },
     {
         key: 'app/engines/llm/request',
@@ -168,6 +173,7 @@ export const EVENTS = [
             reqId: z.string(),
             params: z.any().sensitive(),
         }),
+        level: LogLevel.Verbose,
     },
     {
         key: 'app/engines/llm/response',
@@ -175,5 +181,6 @@ export const EVENTS = [
             reqId: z.string(),
             response: z.any().sensitive(),
         }),
+        level: LogLevel.Verbose,
     },
 ] as const satisfies EventDef<'app/engines/llm'>[];
