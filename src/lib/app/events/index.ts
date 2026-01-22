@@ -1,5 +1,5 @@
 import type z from "zod";
-import { LogLevel } from "$lib/app/utils";
+import { LogLevel, type UnwrapZod } from "$lib/app/utils";
 import type { ReportOptions, ToastOptions } from "$lib/app/utils/reporting";
 import { MY_EVENTS as BUS_EVENTS } from "./bus";
 import { EVENTS as WS_SERVER_EVENTS } from "$lib/app/server.svelte";
@@ -28,7 +28,7 @@ export interface EventDef<Prefix extends string = ''> {
      * so in simple situations `{} as MyType` will work fine.  
      * Use zod if you need to annotate fields (e.g. `.default()` or `.sensitive()`).
     */
-    dataSchema?: any;
+    dataSchema?: z.ZodType | any;
     description?: string;
     /** Default log level for the event. Used for display (toasts, event log). */
     level?: LogLevel; // default Info
@@ -97,7 +97,6 @@ export type EventData<K extends EventKey> = 'dataSchema' extends keyof EventByKe
 
 export type DatalessKey = Extract<Events, { key: EventKey, dataSchema?: never }>['key'];
 export type HasDataKey = Exclude<EventKey, DatalessKey>;
-export type UnwrapZod<T> = T extends z.ZodType ? z.infer<T> : T;
 
 export type EventInstances = {
     [K in EventKey]: {

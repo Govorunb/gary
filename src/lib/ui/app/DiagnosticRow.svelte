@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Game } from "$lib/api/game.svelte";
     import { CircleX, Info, Skull, TriangleAlert, Check, CheckCheck, EyeOff, Eye, Undo, Undo2, ChevronDown } from '@lucide/svelte';
-    import { DIAGNOSTICS_BY_KEY, DiagnosticSeverity, type GameDiagnostic } from '$lib/api/diagnostics';
+    import { DIAGNOSTICS_BY_KEY, DiagnosticSeverity, type DiagnosticKey, type GameDiagnostic } from '$lib/api/diagnostics';
     import { tooltip } from '$lib/app/utils';
     import { boolAttr } from 'runed';
     import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
@@ -10,7 +10,7 @@
 
     type Props = {
         game: Game;
-        diag: GameDiagnostic;
+        diag: GameDiagnostic<DiagnosticKey>;
     };
 
     let { game, diag }: Props = $props();

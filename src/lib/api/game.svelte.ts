@@ -1,5 +1,5 @@
 import type { Session } from "$lib/app/session.svelte";
-import { jsonParse, localeTimeWithMs, safeParse } from "$lib/app/utils";
+import { formatZodError, jsonParse, localeTimeWithMs, safeParse } from "$lib/app/utils";
 import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
 import { TIMEOUTS } from "./diagnostics";
@@ -90,14 +90,13 @@ export class Game {
     }
 
     async recv(txt: string) {
-        const msg = jsonParse(txt)
-            .andThen(json => safeParse(v1.zGameMessage, json));
+        const msg = jsonParse(txt).mapErr(e => `Failed to parse JSON: ${e}`)
+            .andThen(json => safeParse(v1.zGameMessage, json).mapErr(e => formatZodError(e).join("\n")));
         if (msg.isOk()) {
             await this.processMsg(msg.value);
-            return;
+        } else {
+            this.diagnostics.trigger("prot/invalid_message", { message: txt, error: msg.error });
         }
-        const err = msg.error;
-        this.diagnostics.trigger("prot/invalid_message", { message: txt, error: err });
     }
 
     async processMsg(msg: v1.GameMessage) {

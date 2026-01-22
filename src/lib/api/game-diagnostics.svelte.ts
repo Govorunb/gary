@@ -2,13 +2,13 @@ import { EVENT_BUS } from "$lib/app/events/bus";
 import type { EventDef } from "$lib/app/events";
 import { shortId } from "$lib/app/utils";
 import { toast } from "svelte-sonner";
-import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, DIAGNOSTICS_BY_KEY } from "./diagnostics";
+import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, DIAGNOSTICS_BY_KEY, type DiagData } from "./diagnostics";
 import type { Game } from "./game.svelte";
 
 const bugToast = { description: "This is a bug in the app, not a diagnostic for your game." };
 
 export class GameDiagnostics {
-    public diagnostics: GameDiagnostic[] = $state([]);
+    public diagnostics: GameDiagnostic<DiagnosticKey>[] = $state([]);
 
     constructor(private readonly game: Game) { }
 
@@ -29,7 +29,7 @@ export class GameDiagnostics {
         return status;
     }
 
-    public trigger(key: DiagnosticKey, context?: any, report: boolean = true): GameDiagnostic | null {
+    public trigger<K extends DiagnosticKey>(key: K, context?: DiagData<K>, report: boolean = true): GameDiagnostic<K> | null {
         const diagDef = DIAGNOSTICS_BY_KEY[key];
         if (!diagDef) {
             EVENT_BUS.emit('app/diagnostics/unknown/trigger', { key, context });
@@ -38,13 +38,13 @@ export class GameDiagnostics {
         }
 
         const suppressed = this.isSuppressed(key);
-        const diag = $state<GameDiagnostic>({
+        const diag = $state<GameDiagnostic<K>>({
             id: shortId(),
             timestamp: Date.now(),
             key,
             context,
             dismissed: suppressed,
-        });
+        } as GameDiagnostic<K>);
         this.diagnostics.push(diag);
 
         EVENT_BUS.emit('app/diagnostics/triggered', { diag, severity: diagDef.severity, report, suppressed });
@@ -121,8 +121,8 @@ export class GameDiagnostics {
 }
 
 const EVENT_DATA = {
-    key: {} as { key: DiagnosticKey; context?: any },
-    inst: {} as { diag: GameDiagnostic; severity: DiagnosticSeverity; report: boolean; suppressed: boolean },
+    key: {} as { key: DiagnosticKey },
+    inst: {} as { diag: GameDiagnostic<DiagnosticKey>; severity: DiagnosticSeverity; report: boolean; suppressed: boolean },
 } as const;
 
 export const EVENTS = [
@@ -148,7 +148,7 @@ export const EVENTS = [
     },
     {
         key: 'app/diagnostics/unknown/trigger',
-        dataSchema: EVENT_DATA.key,
+        dataSchema: {} as typeof EVENT_DATA.key & { context: any },
     },
     {
         key: 'app/diagnostics/unknown/suppress',

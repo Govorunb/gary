@@ -33,3 +33,4 @@ export function formatZodError<E extends ZodError>(e: E) {
 z.ZodType.prototype.sensitive = function<T extends z.ZodType>(this: T): T {
     return this.meta({sensitive: true});
 }
+export type UnwrapZod<T> = T extends z.ZodType ? z.infer<T> : T;
