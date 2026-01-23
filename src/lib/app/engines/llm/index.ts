@@ -95,21 +95,20 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         ctx = this.mergeUserTurns(ctx);
         // TODO: tools
         const schema = this.structuredOutputSchemaForActions(resolvedActions, isForce);
-        const gen = await this.generateStructuredOutput(ctx, schema, signal);
-        if (gen.isErr()) {
-            return err(gen.error);
+        const genRes = await this.generateStructuredOutput(ctx, schema, signal);
+        if (genRes.isErr()) {
+            return err(genRes.error);
         }
-        const genMsg = gen.value;
+        const genMsg = genRes.value;
         // shown only to LLM -> preserves prior example for in-context learning or something
         session.context.actor({...genMsg, visibilityOverrides: { user: false }}, this.id);
-        const commandRes = jsonParse(genMsg.text)
-                .map(p => p.command)
-                .mapErr(e => new EngineError(`Failed to parse JSON: ${e}`, e));
-        if (commandRes.isErr()) {
-            return commandRes;
+        const resp = jsonParse(genMsg.text)
+            .mapErr(e => new EngineError(`Failed to parse JSON: ${e}`, e));
+        if (resp.isErr()) {
+            return err(resp.error);
         }
-        const command = commandRes.value;
-        if (zWait.safeParse(command).success) {
+        const command = resp.value.command;
+        if (zWait.safeParse(resp.value).success) {
             if (isForce) {
                 return err(new EngineError("Internal error - force act allowed waiting"));
             }
