@@ -7,7 +7,6 @@ import * as v1 from "./v1/spec";
 import type { BaseConnection } from "./connection";
 import dayjs from "dayjs";
 import { dequal } from "dequal/lite";
-import type { Message } from "$lib/app/context.svelte";
 import { findUnsupportedSchemaKeywords } from "./helpers";
 import type { JSONSchema } from "openai/lib/jsonschema";
 import type { EventDef } from "$lib/app/events";
@@ -64,7 +63,6 @@ export class Game {
         conn.onclose(() => {
             if (this.name === v1PendingGameName(conn.id)) return;
             EVENT_BUS.emit('api/game/disconnected', { game: { id: this.id, name: this.name } });
-            void this.session.context.system({ text: `${this.name} disconnected`, silent: true });
             this.clearPendingActions();
             this.forceQueue.length = 0;
         });
@@ -84,7 +82,6 @@ export class Game {
     }
 
     private connected() {
-        void this.session.context.system({ text: `${this.name} connected`, silent: true });
         toast.info(`${this.name} connected`);
         EVENT_BUS.emit('api/game/connected', { game: { id: this.id, name: this.name } });
     }
@@ -164,8 +161,12 @@ export class Game {
         // (like a 1s timer after startup or sth)
     }
 
-    context(text: string, silent: Message['silent']) {
-        this.session.context.client(this, { text, silent });
+    context(text: string, silent: boolean) {
+        EVENT_BUS.emit('api/game/context', {
+            game: { id: this.id, name: this.name },
+            message: text,
+            silent,
+        });
     }
 
     getAction(name: string, onlyActive: boolean = true) {
@@ -300,17 +301,16 @@ export class Game {
             this.diagnostics.trigger("prot/force/multiple", { msgData: msg.data });
         }
         this.session.scheduler.forceQueue.push(actions);
-        const text = this.forceMsg(actions, msg.data.query, msg.data.state);
-        this.context(text, "noAct"); // don't act twice from one prompt
+        EVENT_BUS.emit('api/game/force', {
+            game: { id: this.id, name: this.name },
+            ...msg.data,
+        });
     }
 
     async sendAction(actData: v1.ActData) {
-        this.session.context.system({
-            text: `Executing action ${actData.name} (Request ID: ${actData.id.substring(0, 8)})`,
-            silent: true,
-            visibilityOverrides: {
-                user: false,
-            }
+        EVENT_BUS.emit('api/game/act/actor', {
+            game: { id: this.id, name: this.name },
+            act: actData,
         });
         const sentAt = Date.now();
         const timeout = setTimeout(() => {
@@ -340,11 +340,12 @@ export class Game {
         if (!success && !message) {
             this.diagnostics.trigger("prot/result/error_nomessage");
         }
-        let text = `Result for action ${actData.name} (request ID ${id.substring(0, 8)}): ${success ? "Performing" : "Failure"}`;
-        text += message ? ` (${message})` : " (no message)";
-        // noAct on failure to represent the upcoming retry
-        // (in v2+, the game will retry - so we still don't want to trigger acting)
-        this.context(text, success || "noAct");
+        EVENT_BUS.emit('api/game/action_result', {
+            game: { id: this.id, name: this.name },
+            act: actData,
+            success,
+            message,
+        });
         // v1 spec: Neuro will retry failed `actions/force`s
         if (this.version === "v1" && v1Force) {
             this.forceQueue.unshift(v1Force); // spec says "immediately" so i guess we doom loop
@@ -356,26 +357,12 @@ export class Game {
             name: action,
             data,
         });
-
-        let text = `User act to ${this.name} (request ID ${actData.id.substring(0, 8)}): ${actData.name}`;
-        text += (actData.data ? `\nData: ${actData.data}` : " (no data)");
         EVENT_BUS.emit('api/game/act/user', { game: { id: this.id, name: this.name }, act: actData });
-        this.session.context.user({ text: text, silent: true });
         await this.sendAction(actData);
     }
 
     toString() {
         return `Game { name: "${this.name}", version: "${this.version}"}`;
-    }
-
-    private forceMsg(actions: v1.Action[], query?: string, state?: string) {
-        const obj = {
-            actions: actions.map(a => a.name),
-            query,
-            state
-        };
-        const prompt = `You must perform one of the following actions, given this information: ${JSON.stringify(obj)}`;
-        return prompt;
     }
 
     private clearPendingActions() {
@@ -472,5 +459,10 @@ export const EVENTS = [
         key: 'api/game/act/user',
         dataSchema: {} as GameEventData & { act: v1.ActData },
         level: LogLevel.Debug,
+    },
+    {
+        key: 'api/game/action_result',
+        dataSchema: {} as GameEventData & { act: v1.ActData; success: boolean; message?: string },
+        level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'api/game'>[];

@@ -4,6 +4,14 @@ import { LogLevel } from "$lib/app/utils";
 
 export const EVENTS = [
     {
+        key: 'ui/context/input',
+        dataSchema: z.object({
+            text: z.string(),
+            silent: z.boolean(),
+        }),
+        level: LogLevel.Info,
+    },
+    {
         key: 'ui/game/send_raw/sent',
         dataSchema: z.object({
             gameId: z.string(),

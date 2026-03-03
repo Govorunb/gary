@@ -1,51 +1,78 @@
-import { v7 as uuid7 } from "uuid";
 import { z } from "zod";
 import { zConst } from "$lib/app/utils";
-import type { Game } from "$lib/api/game.svelte";
+import type { EventInstance, EventKey } from "./events";
+import type { EventLogDelta, EventLogStore } from "./events/log.svelte";
 
 export class ContextManager {
-    readonly allMessages: Message[] = $state([]);
+    #allMessages: Message[] = $state([]);
+    public get allMessages() {
+        return this.#allMessages;
+    }
     /** A subset of messages that are visible to the model. */
     readonly actorView: Message[] = $derived(this.allMessages.filter(m => m.visibilityOverrides?.engine ?? true));
     /** A subset of messages that are visible to the user. */
     readonly userView: Message[] = $derived(this.allMessages.filter(m => m.visibilityOverrides?.user ?? true));
+    #ondispose: (() => void)[] = [];
+    #onActorMessage: ((msg: Message) => void)[] = [];
 
-    constructor() {
-        this.reset();
+    constructor(private readonly eventLog: EventLogStore) {
+        this.#ondispose.push(this.eventLog.onDelta(delta => this.#onDelta(delta)));
+        this.eventLog.all.forEach(event => this.#appendProjected(event));
     }
 
-    push(msg: z.input<typeof zMessage>): z.output<typeof zMessage> {
-        const msg_ = zMessage.decode(msg);
-        this.allMessages.push(msg_);
-        return msg_;
-    }
-
-    pop() {
-        return this.allMessages.pop();
-    }
-
-    protected clear() {
-        this.allMessages.length = 0;
+    onActorViewAppend(cb: (msg: Message) => void): () => void {
+        this.#onActorMessage.push(cb);
+        return () => {
+            const i = this.#onActorMessage.indexOf(cb);
+            if (i >= 0) {
+                this.#onActorMessage.splice(i, 1);
+            }
+        };
     }
 
     reset() {
-        this.clear();
+        this.#allMessages.length = this.eventLog.all.length;
+        // TODO: for when allMessages is an array of events
+        // for (let i = 0; i < this.allMessages.length; i++) {
+        //     this.#allMessages[i] = this.eventLog.all[i];
+        // }
     }
 
-    system(partialMsg: SourcelessMessageInput) {
-        return this.push({ source: zSystemSource.decode({}), ...partialMsg });
+    dispose() {
+        this.#ondispose.forEach(dispose => dispose());
+        this.#ondispose.length = 0;
+        this.#onActorMessage.length = 0;
     }
 
-    client(game: Game, partialMsg: SourcelessMessageInput) {
-        return this.push({ source: zClientSource.decode({name: game.name, id: game.conn.id}), ...partialMsg });
+    #onDelta(delta: EventLogDelta) {
+        if (delta.type === "reset") {
+            this.reset();
+            return;
+        }
+        this.#appendProjected(delta.event);
     }
 
-    user(partialMsg: SourcelessMessageInput) {
-        return this.push({ source: zUserSource.decode({}), ...partialMsg });
-    }
-
-    actor(partialMsg: SourcelessMessageInput, engineId: string) {
-        return this.push({ source: zActorSource.decode({engineId}), silent: true, ...partialMsg });
+    #appendProjected(event: EventInstance<EventKey>) {
+        const projection = projectEventForContext(event);
+        if (!projection) return;
+        const msg = zMessage.decode({
+            id: event.id,
+            timestamp: event.timestamp,
+            source: projection.source,
+            text: "",
+            silent: projection.silent ?? false,
+            visibilityOverrides: {
+                user: projection.showUser,
+                engine: projection.showActor,
+            },
+            customData: {
+                event,
+            },
+        });
+        this.allMessages.push(msg);
+        if (msg.visibilityOverrides?.engine ?? true) {
+            this.#onActorMessage.forEach(cb => cb(msg));
+        }
     }
 }
 
@@ -62,22 +89,10 @@ export const zSource = z.discriminatedUnion("type", [
 ]);
 
 export const zMessage = z.strictObject({
-    id: z.string().default(uuid7),
+    id: z.string(),
     timestamp: z.coerce.date().default(() => new Date()),
-    // TODO: maybe a "category"/"type" and this can just be an event stream for the entire app/session
-    // would replace per-message visibility with per-category (making it configurable)
-    // though context *should* ideally be separate
-    source: zSource, // aka "role"
+    source: zSource,
     text: z.string(),
-    /** If `true`, the message will show de-emphasized in the UI.
-     *
-     * `false` will prompt the scheduler to act, `true` and `"noAct"` won't.
-
-     * Defaults to `false`.
-     *
-     * ---
-     * Actor messages don't prompt acting even if non-silent.
-     */
     silent: z.union([z.boolean(), z.literal("noAct")]).default(false),
     visibilityOverrides: z.strictObject({
         user: z.boolean().default(true),
@@ -86,8 +101,114 @@ export const zMessage = z.strictObject({
     customData: z.record(z.string(), z.any()).default({}),
 });
 
-export const zSourcelessMessage = zMessage.omit({source: true});
-export type SourcelessMessageInput = z.input<typeof zSourcelessMessage>;
-
 export type Message = z.infer<typeof zMessage>;
 export type MessageSource = z.infer<typeof zSource>;
+
+export function getMessageEvent(msg: Message): EventInstance<EventKey> | null {
+    const evt = msg.customData.event;
+    if (!evt || typeof evt !== "object" || typeof evt.key !== "string") {
+        return null;
+    }
+    return evt as EventInstance<EventKey>;
+}
+
+type ContextProjection = {
+    source: MessageSource;
+    silent?: Message["silent"];
+    showUser: boolean;
+    showActor: boolean;
+};
+
+function projectEventForContext(event: EventInstance<EventKey>): ContextProjection | null {
+    switch (event.key) {
+        case "api/game/connected":
+        case "api/game/disconnected":
+            return {
+                source: zSystemSource.decode({}),
+                silent: true,
+                showUser: true,
+                showActor: true,
+            };
+        case "api/game/context":
+            return {
+                source: zClientSource.decode({
+                    id: event.data.game.id,
+                    name: event.data.game.name,
+                }),
+                silent: event.data.silent,
+                showUser: true,
+                showActor: true,
+            };
+        case "api/game/force":
+            return {
+                source: zClientSource.decode({
+                    id: event.data.game.id,
+                    name: event.data.game.name,
+                }),
+                silent: "noAct",
+                showUser: true,
+                showActor: true,
+            };
+        case "api/game/action_result":
+            return {
+                source: zClientSource.decode({
+                    id: event.data.game.id,
+                    name: event.data.game.name,
+                }),
+                silent: event.data.success || "noAct",
+                showUser: true,
+                showActor: true,
+            };
+        case "api/game/act/user":
+            return {
+                source: zUserSource.decode({}),
+                silent: true,
+                showUser: true,
+                showActor: true,
+            };
+        case "api/game/act/actor":
+            return {
+                source: zSystemSource.decode({}),
+                silent: true,
+                showUser: false,
+                showActor: true,
+            };
+        case "api/actor/skip":
+            return {
+                source: zActorSource.decode({ engineId: event.data.engineId }),
+                silent: true,
+                showUser: true,
+                showActor: false,
+            };
+        case "api/actor/say":
+            return {
+                source: zActorSource.decode({ engineId: event.data.engineId }),
+                silent: !event.data.notify,
+                showUser: true,
+                showActor: false,
+            };
+        case "api/actor/act":
+            return {
+                source: zActorSource.decode({ engineId: event.data.engineId }),
+                silent: false,
+                showUser: true,
+                showActor: false,
+            };
+        case "api/actor/generated":
+            return {
+                source: zActorSource.decode({ engineId: event.data.engineId }),
+                silent: true,
+                showUser: false,
+                showActor: true,
+            };
+        case "ui/context/input":
+            return {
+                source: zUserSource.decode({}),
+                silent: event.data.silent,
+                showUser: true,
+                showActor: true,
+            };
+        default:
+            return null;
+    }
+}

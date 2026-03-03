@@ -4,6 +4,7 @@
     import { tooltip } from "$lib/app/utils";
     import { boolAttr } from "runed";
     import dayjs from "dayjs";
+    import { formatContextMessage } from "./formatters/registry";
 
     interface Props {
         msg: Message;
@@ -12,6 +13,7 @@
     const { msg }: Props = $props();
 
     const timestamp = $derived(dayjs(msg.timestamp));
+    const rendered = $derived(formatContextMessage(msg, "user"));
 
     const session = getSession();
     const registry = getRegistry();
@@ -69,7 +71,7 @@
                 </button>
             {/if}
         </div>
-        <span class="message-text">{msg.text}</span>
+        <span class="message-text">{rendered.text}</span>
     </div>
 </div>
 

@@ -1,6 +1,5 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
 import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from ".";
-import type { Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
@@ -35,7 +34,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         this.client = new OpenAIClient(outer, ENGINE_ID);
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<Message, EngineActError> {
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<{ text: string }, EngineActError> {
         if (!this.options.apiKey) {
             return errAsync(new ConfigError("OpenRouter API key is required"));
         }

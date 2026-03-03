@@ -7,6 +7,8 @@ import z from "zod";
 import { jsonParse, safeParse, zConst } from "$lib/app/utils";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import type { ChatCompletionMessageParam } from "openai/resources/index.mjs";
+import { EVENT_BUS } from "$lib/app/events/bus";
+import { formatContextMessage } from "$lib/ui/app/context/formatters/registry";
 
 export const zLLMOptions = z.strictObject({
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
@@ -100,8 +102,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return err(genRes.error);
         }
         const genMsg = genRes.value;
-        // shown only to LLM -> preserves prior example for in-context learning or something
-        session.context.actor({...genMsg, visibilityOverrides: { user: false }}, this.id);
+        EVENT_BUS.emit('api/actor/generated', { engineId: this.id, text: genMsg.text });
         const resp = jsonParse(genMsg.text)
             .mapErr(e => new EngineError(`Failed to parse JSON: ${e}`, e));
         if (resp.isErr()) {
@@ -178,14 +179,15 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     /** Generate a response adhering to the given schema. */
-    protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<Message, EngineActError>;
+    protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<{ text: string }, EngineActError>;
     protected abstract generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineActResult, EngineActError>;
 
     private convertMessage(msg: Message): OpenAIMessage {
+        const { text } = formatContextMessage(msg, "actor");
         if (msg.source.type === "actor") {
             return {
                 role: "assistant",
-                content: msg.text,
+                content: text,
                 // TODO: tool calls
             } satisfies OpenAIMessage;
         }
@@ -196,7 +198,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 type: "message",
                 timestamp: msg.timestamp,
                 source: msg.source,
-                text: msg.text,
+                text,
             }),
         } satisfies OpenAIMessage;
     }

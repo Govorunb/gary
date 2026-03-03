@@ -12,6 +12,7 @@ import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter
 import { UIState } from "$lib/ui/app/ui-state.svelte";
 import type { EventDef } from "./events";
 import { LogLevel } from "./utils";
+import { EventLogStore } from "./events/log.svelte";
 
 /**
  * Represents a user session within the app.
@@ -21,6 +22,7 @@ import { LogLevel } from "./utils";
  */
 export class Session {
     readonly id: string;
+    readonly eventLog: EventLogStore;
     readonly context: ContextManager;
     readonly registry: Registry;
     readonly scheduler: Scheduler;
@@ -36,7 +38,8 @@ export class Session {
         this.id = uuidv4();
         this.name = $state(name);
         this.ondispose = [];
-        this.context = new ContextManager();
+        this.eventLog = new EventLogStore();
+        this.context = new ContextManager(this.eventLog);
         this.registry = new Registry(this);
         this.scheduler = new Scheduler(this);
         this.uiState = new UIState(this);
@@ -45,19 +48,11 @@ export class Session {
             this.initEngine(id);
         }
         this.activeEngine = $derived.by(() => this.getEngine(this.userPrefs.app.selectedEngine));
-        // FIXME: why tf is this here
-        let topSeenMsg = $state(0);
-        $effect(() => {
-            const msgCount = this.context.actorView.length;
-            for (let i = topSeenMsg; i < msgCount; i++) {
-                const msg = this.context.actorView[i];
-                if (!msg.silent && msg.source.type !== "actor") {
-                    this.scheduler.actPending = true;
-                    break;
-                }
+        this.onDispose(this.context.onActorViewAppend((msg) => {
+            if (!msg.silent && msg.source.type !== "actor") {
+                this.scheduler.actPending = true;
             }
-            topSeenMsg = msgCount;
-        })
+        }));
     }
 
     private getEngine(id: string): Engine<unknown> {
@@ -100,6 +95,8 @@ export class Session {
         this.ondispose.length = 0;
         this.engines = {};
         EVENT_BUS.emit('app/session/disposed', { session: {id: this.id, name: this.name} });
+        this.context.dispose();
+        this.eventLog.dispose();
     }
 
     public initEngine(id?: string): string {

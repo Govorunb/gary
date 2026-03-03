@@ -1,6 +1,5 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
 import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from ".";
-import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
@@ -30,7 +29,7 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.client = new OpenAIClient({get prefs() { return self.options; }}, engineId);
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<Message, EngineActError> {
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<{ text: string }, EngineActError> {
         return new ResultAsync(this.client.genJson(context, outputSchema, undefined, signal));
     }
 
@@ -73,7 +72,7 @@ export class OpenAIClient {
         outputSchema?: JSONSchema,
         extraParams?: Record<string, any>,
         signal?: AbortSignal,
-    ): Promise<Result<Message, EngineActError>> {
+    ): Promise<Result<{ text: string }, EngineActError>> {
         const model = this.options.modelId;
         if (!model) {
             return err(new ConfigError(`${this.name} is missing a model ID`));
@@ -134,20 +133,11 @@ export class OpenAIClient {
             return err(new EngineError(`${this.name} returned unexpected finish_reason '${resp.finish_reason}'`, undefined, false))
         }
         const textOutput = resp?.message?.content;
-        const reasoning = (resp.message as any)?.reasoning;
         if (!textOutput) {
             EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'empty_response' });
             return err(new EngineError(`${this.name} returned no text`, undefined, true));
         }
-        const msg = zMessage.decode({
-            text: textOutput,
-            source: zActorSource.decode({engineId: this.id}),
-            silent: true,
-            customData: {
-                [this.id]: { response, reasoning, },
-            },
-        });
-        return ok(msg);
+        return ok({ text: textOutput });
     }
 }
 

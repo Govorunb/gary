@@ -58,7 +58,6 @@ export class Registry {
         const game = new Game(this.session, conn, name);
         this.games.push(game);
         conn.onclose(() => {
-            EVENT_BUS.emit('api/game/disconnected', { game: { id: game.id, name: game.name }});
             toast.info(`${game.name} disconnected`);
             // TODO: keeping disconnected games in UI (for action list/diagnostics) is undecided
             this.removeGame(game.conn.id);

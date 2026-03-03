@@ -124,23 +124,16 @@ export class Scheduler {
             return errAsync(new LogicError(`Engine chose to ${choice === "skip" ? choice : "yap"} in forced act. Please don't tell the developer. I will cry`));
         }
         if (choice === "skip") {
-            // for user display only
-            this.session.context.actor({
-                text: `Engine chose not to act`,
-                silent: true,
-                visibilityOverrides: { engine: false },
-                customData: { engine: engine.name },
-            }, engine.id);
+            EVENT_BUS.emit('api/actor/skip', { engineId: engine.id });
             return okAsync(choice);
         }
         if ('say' in choice) {
-            // for user display only
             EVENT_BUS.emit('app/scheduler/act/say', { ...choice });
-            this.session.context.actor({
-                text: `Gary ${choice.notify ? "wants attention" : "says"}: ${choice.say}`,
-                silent: !choice.notify,
-                visibilityOverrides: { engine: false }
-            }, engine.id);
+            EVENT_BUS.emit('api/actor/say', {
+                engineId: engine.id,
+                msg: choice.say,
+                notify: choice.notify,
+            });
             if (choice.notify) {
                 toast.info(`Gary says: ${choice.say}`);
             }
@@ -158,16 +151,12 @@ export class Scheduler {
         }
         EVENT_BUS.emit('app/scheduler/act/perform', { force: forced, action: act.name });
         const actData = zActData.decode({...act});
-        this.session.context.actor({
-            text: `Act${forced ? " (forced)" : ""}: ${actData.name} (ID ${actData.id.substring(0, 8)})`
-                + (actData.data ? `\nData: ${actData.data}` : " (no data)"),
-            // user-facing; LLM sees a copy of its own response (LLMEngine.actCore)
-            visibilityOverrides: {
-                engine: false,
-                user: true,
-            },
-            customData: { actData, game: game.name },
-        }, engine.id);
+        EVENT_BUS.emit('api/actor/act', {
+            engineId: engine.id,
+            force: forced,
+            game: game.name,
+            act: actData,
+        });
         return ResultAsync.fromPromise(game.sendAction(actData), (e) => LogicError.sendErr(e as Error))
             .orTee(() => EVENT_BUS.emit('app/scheduler/act/fail/failed_to_send', { force: forced }))
             .map(() => act);
@@ -345,16 +334,27 @@ export const DISPLAY = {
 export const ACT_EVENTS = [
     {
         key: 'api/actor/skip',
+        dataSchema: {} as { engineId: string; },
         level: LogLevel.Info,
     },
     {
         key: 'api/actor/say',
-        dataSchema: {} as { msg: string; notify: boolean; },
+        dataSchema: {} as { engineId: string; msg: string; notify: boolean; },
         level: LogLevel.Info,
     },
     {
         key: 'api/actor/act',
-        dataSchema: {} as { action: string; data: unknown; },
+        dataSchema: {} as {
+            engineId: string;
+            force: boolean;
+            game: string;
+            act: ReturnType<typeof zActData.decode>;
+        },
+        level: LogLevel.Info,
+    },
+    {
+        key: 'api/actor/generated',
+        dataSchema: {} as { engineId: string; text: string; },
         level: LogLevel.Info,
     }
 ] as const satisfies EventDef<'api/actor'>[];

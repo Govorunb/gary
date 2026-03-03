@@ -12,9 +12,9 @@ Also, trawling through raw text logs kind of sucks, to be perfectly honest. Stru
 
 There should be a central **event stream** ("firehose") in the app, and consumers should be able to **subscribe** and filter for the event keys they're interested in. For example, the context log UI would filter for `api/client/*` (`connected`/`disconnected`/`context`/`renamed` etc), `user/ctx_msg`, `api/actor/*` (`act`/`force_act`/`skip_act`/`say`/`say_notify` etc), and so on.
 
-Undecided on whether events should be declared centrally (like diagnostics) or vertically (owned by the relevant module).
+Events are declared vertically (in the relevant module) and gathered centrally (like diagnostics).
 
-Events with data should be typed ~~(not sure how to reconcile this with easy declaration)~~.
+Declaring events with data must be type-safe for inference on later use.
 
 There would be a unified display (**event log**) to show events to the user. With it, we can finally let the user adjust logging verbosity and so on.
 
