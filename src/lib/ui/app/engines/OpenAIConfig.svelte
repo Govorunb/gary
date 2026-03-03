@@ -16,6 +16,9 @@
             || dirtyConfig.name.match(/\bollama\b/i)
             || dirtyConfig.serverUrl.match(":11434/")}
         {@const isWindows = dev || navigator.platform.includes("Win32")}
+        {@const isLMStudio = engineId === 'lmstudio'
+            || dirtyConfig.name.match(/\blms|lmstudio|lm studio\b/i)
+            || dirtyConfig.serverUrl.match(":1234/")}
         <StringField
             bind:value={dirtyConfig.name}
             label="Name"
@@ -28,6 +31,14 @@
                     Ollama on Windows requires a user workaround.
                     See <OutLink href="https://github.com/Govorunb/gary/issues/7">issue #7</OutLink>.
                     {#if dev}(shown on any OS in dev mode){/if}
+                </p>
+            </div>
+        {/if}
+        {#if isLMStudio}
+            <div class="callout warn">
+                <p class="note">
+                    LMStudio requires CORS enabled in its server settings.
+                    See <OutLink href="https://github.com/Govorunb/gary/issues/10#issuecomment-3972596384">issue #10</OutLink>.
                 </p>
             </div>
         {/if}
