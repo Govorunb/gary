@@ -354,7 +354,15 @@ export const ACT_EVENTS = [
     },
     {
         key: 'api/actor/generated',
-        dataSchema: {} as { engineId: string; text: string; },
+        dataSchema: {} as {
+            engineId: string;
+            text: string;
+            metadata?: {
+                reasoning?: unknown;
+                usage?: unknown;
+                response?: unknown;
+            };
+        },
         level: LogLevel.Info,
     }
 ] as const satisfies EventDef<'api/actor'>[];

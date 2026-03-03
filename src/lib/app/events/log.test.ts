@@ -20,7 +20,7 @@ describe("EventLogStore", () => {
         const bus = new EventBus();
         const store = new EventLogStore(bus);
         const deltas: string[] = [];
-        store.onDelta((delta) => deltas.push(delta.type));
+        store.subscribe((delta) => deltas.push(delta.type));
 
         bus.emit("test2");
         store.clear();

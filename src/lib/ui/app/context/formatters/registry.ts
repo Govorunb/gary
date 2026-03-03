@@ -1,4 +1,4 @@
-import { getMessageEvent, type Message } from "$lib/app/context.svelte";
+import type { EventInstance, EventKey } from "$lib/app/events";
 import type { ContextFormatOutput, ContextFormatTarget, ContextFormatterMap } from "./types";
 import { API_GAME_CONTEXT_FORMATTERS } from "./api-game";
 import { SCHEDULER_CONTEXT_FORMATTERS } from "./scheduler";
@@ -11,16 +11,11 @@ export const CONTEXT_FORMATTERS = {
     ...SESSION_CONTEXT_FORMATTERS,
 } as const satisfies ContextFormatterMap;
 
-export function formatContextMessage(msg: Message, target: ContextFormatTarget): ContextFormatOutput {
-    const event = getMessageEvent(msg);
-    if (!event) {
-        return { text: msg.text };
-    }
-
+export function formatContextEvent(event: EventInstance<EventKey>, target: ContextFormatTarget): ContextFormatOutput | null {
     const formatter = (CONTEXT_FORMATTERS as ContextFormatterMap)[event.key] ?? FALLBACK_CONTEXT_FORMATTER;
-    const formatted = formatter(event as never, msg, target);
+    const formatted = formatter(event as never, target);
     if (formatted) {
         return formatted;
     }
-    return FALLBACK_CONTEXT_FORMATTER(event as never, msg, target) ?? { text: msg.text };
+    return FALLBACK_CONTEXT_FORMATTER(event as never, target);
 }

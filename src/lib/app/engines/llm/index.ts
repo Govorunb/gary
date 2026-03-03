@@ -1,14 +1,14 @@
 import type { Action } from "$lib/api/v1/spec";
 import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Session } from "$lib/app/session.svelte";
-import type { Message } from "$lib/app/context.svelte";
+import type { ActorContextEvent } from "$lib/app/context.svelte";
 import type { JSONSchema, JSONSchemaDefinition } from "openai/lib/jsonschema";
 import z from "zod";
 import { jsonParse, safeParse, zConst } from "$lib/app/utils";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import type { ChatCompletionMessageParam } from "openai/resources/index.mjs";
 import { EVENT_BUS } from "$lib/app/events/bus";
-import { formatContextMessage } from "$lib/ui/app/context/formatters/registry";
+import { formatContextEvent } from "$lib/ui/app/context/formatters/registry";
 
 export const zLLMOptions = z.strictObject({
     /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
@@ -75,6 +75,14 @@ export type CommonLLMOptions = z.infer<typeof zLLMOptions>;
 
 export type OpenAIMessage = ChatCompletionMessageParam;
 export type OpenAIContext = OpenAIMessage[];
+export type LLMGeneration = {
+    text: string;
+    metadata?: {
+        reasoning?: unknown;
+        usage?: unknown;
+        response?: unknown;
+    };
+};
 
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
     abstract name: string;
@@ -102,7 +110,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return err(genRes.error);
         }
         const genMsg = genRes.value;
-        EVENT_BUS.emit('api/actor/generated', { engineId: this.id, text: genMsg.text });
+        EVENT_BUS.emit('api/actor/generated', { engineId: this.id, text: genMsg.text, metadata: genMsg.metadata });
         const resp = jsonParse(genMsg.text)
             .mapErr(e => new EngineError(`Failed to parse JSON: ${e}`, e));
         if (resp.isErr()) {
@@ -179,15 +187,18 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     /** Generate a response adhering to the given schema. */
-    protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<{ text: string }, EngineActError>;
+    protected abstract generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError>;
     protected abstract generateToolCall(context: OpenAIContext, actions: Action[]): ResultAsync<EngineActResult, EngineActError>;
 
-    private convertMessage(msg: Message): OpenAIMessage {
-        const { text } = formatContextMessage(msg, "actor");
-        if (msg.source.type === "actor") {
+    private convertMessage(event: ActorContextEvent): OpenAIMessage | null {
+        const rendered = formatContextEvent(event, "actor");
+        if (!rendered) {
+            return null;
+        }
+        if (rendered.source.type === "actor") {
             return {
                 role: "assistant",
-                content: text,
+                content: rendered.text,
                 // TODO: tool calls
             } satisfies OpenAIMessage;
         }
@@ -196,9 +207,9 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             role: "user",
             content: JSON.stringify({
                 type: "message",
-                timestamp: msg.timestamp,
-                source: msg.source,
-                text,
+                timestamp: event.timestamp,
+                source: rendered.source,
+                text: rendered.text,
             }),
         } satisfies OpenAIMessage;
     }
@@ -223,7 +234,7 @@ The custom user instructions are as follows:`);
 
     // TODO: context trimming
     private convertContext(session: Session): OpenAIContext {
-        const msgs = session.context.actorView.map(msg => this.convertMessage(msg));
+        const msgs = session.context.actorView.map(msg => this.convertMessage(msg)).filter(Boolean) as OpenAIMessage[];
         msgs.unshift({
             role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
             content: this.systemPrompt(session),

@@ -9,5 +9,7 @@ function safeStringify(value: unknown): string {
 }
 
 export const FALLBACK_CONTEXT_FORMATTER: ContextEventFormatter = (event) => ({
+    source: { type: "system" },
+    silent: true,
     text: `[${event.key}] ${safeStringify(event.data)}`,
 });

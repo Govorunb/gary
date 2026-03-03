@@ -1,5 +1,5 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from ".";
+import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type OpenAIContext } from ".";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
@@ -29,7 +29,7 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.client = new OpenAIClient({get prefs() { return self.options; }}, engineId);
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<{ text: string }, EngineActError> {
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<LLMGeneration, EngineActError> {
         return new ResultAsync(this.client.genJson(context, outputSchema, undefined, signal));
     }
 
@@ -72,7 +72,7 @@ export class OpenAIClient {
         outputSchema?: JSONSchema,
         extraParams?: Record<string, any>,
         signal?: AbortSignal,
-    ): Promise<Result<{ text: string }, EngineActError>> {
+    ): Promise<Result<LLMGeneration, EngineActError>> {
         const model = this.options.modelId;
         if (!model) {
             return err(new ConfigError(`${this.name} is missing a model ID`));
@@ -137,7 +137,14 @@ export class OpenAIClient {
             EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'empty_response' });
             return err(new EngineError(`${this.name} returned no text`, undefined, true));
         }
-        return ok({ text: textOutput });
+        return ok({
+            text: textOutput,
+            metadata: {
+                reasoning: (resp.message as any)?.reasoning,
+                usage: response.usage,
+                response,
+            },
+        });
     }
 }
 

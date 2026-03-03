@@ -15,11 +15,10 @@ describe("ContextManager projection", () => {
         const { bus, context } = createContext();
         bus.emit("ui/context/input", { text: "hello", silent: false });
 
-        expect(context.allMessages.length).toBe(1);
         expect(context.userView.length).toBe(1);
         expect(context.actorView.length).toBe(1);
-        expect(context.allMessages[0].source.type).toBe("user");
-        expect(context.allMessages[0].silent).toBe(false);
+        expect(context.userView[0].key).toBe("ui/context/input");
+        expect(context.actorView[0].key).toBe("ui/context/input");
     });
 
     test("projects actor-generated output only to actor view", () => {
@@ -28,7 +27,7 @@ describe("ContextManager projection", () => {
 
         expect(context.userView.length).toBe(0);
         expect(context.actorView.length).toBe(1);
-        expect(context.actorView[0].source.type).toBe("actor");
+        expect(context.actorView[0].key).toBe("api/actor/generated");
     });
 
     test("uses visibility rules for actor skip", () => {
@@ -37,21 +36,27 @@ describe("ContextManager projection", () => {
 
         expect(context.userView.length).toBe(1);
         expect(context.actorView.length).toBe(0);
-        expect(context.userView[0].silent).toBe(true);
+        expect(context.userView[0].key).toBe("api/actor/skip");
     });
 
     test("notifies actor-view append subscribers", () => {
         const { bus, context } = createContext();
         let seen = 0;
-        context.onActorViewAppend(() => seen++);
+        let prompts = 0;
+        context.onActorViewAppend((_event, shouldPrompt) => {
+            seen++;
+            if (shouldPrompt) prompts++;
+        });
 
         bus.emit("ui/context/input", { text: "poke", silent: false });
         bus.emit("api/actor/skip", { engineId: "randy" });
+        bus.emit("api/game/connected", { game: { id: "g1", name: "Chess" } });
 
-        expect(seen).toBe(1);
+        expect(seen).toBe(2);
+        expect(prompts).toBe(1);
     });
 
-    test("reset clears projected messages only", () => {
+    test("reset clears user/actor projections", () => {
         const { bus, context } = createContext();
         bus.emit("ui/context/input", { text: "one", silent: false });
         bus.emit("api/game/force", {
@@ -61,9 +66,16 @@ describe("ContextManager projection", () => {
             priority: "medium",
         });
 
-        expect(context.allMessages.length).toBe(2);
+        expect(context.userView.length).toBe(2);
+        expect(context.actorView.length).toBe(2);
         context.reset();
-        expect(context.allMessages.length).toBe(0);
+        expect(context.userView.length).toBe(0);
+        expect(context.actorView.length).toBe(0);
+    });
+
+    test("ignores events outside explicit key subscriptions", () => {
+        const { bus, context } = createContext();
+        bus.emit("app/session/created", { session: { id: "s1", name: "default" } });
         expect(context.userView.length).toBe(0);
         expect(context.actorView.length).toBe(0);
     });
