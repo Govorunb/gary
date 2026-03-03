@@ -12,7 +12,7 @@
     import r from "$lib/app/utils/reporting";
     import Ajv, { type ValidateFunction } from "ajv";
     import { tooltip } from "$lib/app/utils";
-    import { JSONSchemaFaker } from "json-schema-faker";
+    import { generate } from "json-schema-faker";
     import { boolAttr, PressedKeys } from "runed";
 
     type Props = {
@@ -45,7 +45,7 @@
 
     function genJson() {
         if (!action.schema) return "";
-        return JSON.stringify(JSONSchemaFaker.generate(action.schema), null, 2);
+        return JSON.stringify(generate(action.schema), null, 2);
     }
 
     $effect(() => {

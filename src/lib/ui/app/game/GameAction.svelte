@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Dices, Send } from "@lucide/svelte";
     import { getSession, getUIState } from "$lib/app/utils/di";
-    import { JSONSchemaFaker } from "json-schema-faker";
+    import { generate } from "json-schema-faker";
     import { zAct, zActData } from "$lib/api/v1/spec";
     import r from "$lib/app/utils/reporting";
     import CopyButton from "../../common/CopyButton.svelte";
@@ -39,7 +39,7 @@
         let generatedData: string | undefined;
         if (action.schema) {
             try {
-                const genObj = JSONSchemaFaker.generate(action.schema);
+                const genObj = generate(action.schema);
                 generatedData = JSON.stringify(genObj);
             } catch (e) {
                 r.error(`Failed to generate random data for ${action.name}`, `${e}`);
