@@ -1,7 +1,7 @@
 import type { Action } from "$lib/api/v1/spec";
 import { pickRandom, sleep } from "../utils";
 import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "./index.svelte";
-import { JSONSchemaFaker } from "json-schema-faker";
+import { generate } from "json-schema-faker";
 import type { Session } from "../session.svelte";
 import z from "zod";
 import type { UserPrefs } from "../prefs.svelte";
@@ -62,7 +62,7 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
 
     private generate(action: Action): any {
         if (!action.schema) return null;
-        return JSONSchemaFaker.generate(action.schema);
+        return generate(action.schema);
     }
 }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Dices, Send } from "@lucide/svelte";
     import { getUIState } from "$lib/app/utils/di";
-    import { JSONSchemaFaker } from "json-schema-faker";
+    import { generate } from "json-schema-faker";
     import CopyButton from "../../common/CopyButton.svelte";
     import CodeMirror from "../../common/CodeMirror.svelte";
     import { parseError, preventDefault, tooltip } from "$lib/app/utils";
@@ -44,7 +44,7 @@
         let generatedData: string | undefined;
         if (action.schema) {
             try {
-                const genObj = JSONSchemaFaker.generate(action.schema);
+                const genObj = generate(action.schema);
                 generatedData = JSON.stringify(genObj);
             } catch (e) {
                 EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });

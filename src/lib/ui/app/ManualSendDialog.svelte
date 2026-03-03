@@ -10,7 +10,7 @@
     import { getSession, getUserPrefs } from "$lib/app/utils/di";
     import Ajv, { type ValidateFunction } from "ajv";
     import { parseError, tooltip } from "$lib/app/utils";
-    import { JSONSchemaFaker } from "json-schema-faker";
+    import { generate } from "json-schema-faker";
     import { boolAttr, PressedKeys } from "runed";
     import { EVENT_BUS } from "$lib/app/events/bus";
     import { toast } from "svelte-sonner";
@@ -46,7 +46,7 @@
 
     function genJson() {
         if (!action.schema) return "";
-        return JSON.stringify(JSONSchemaFaker.generate(action.schema), null, 2);
+        return JSON.stringify(generate(action.schema), null, 2);
     }
 
     $effect(() => {

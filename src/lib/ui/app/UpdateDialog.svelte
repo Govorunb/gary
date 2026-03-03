@@ -42,7 +42,7 @@
                 label: "Restart now",
                 async onClick() {
                     if (isTauri()) {
-                        await safeInvoke('plugin:process|restart')
+                        await safeInvoke('restart')
                             .orTee((e) => toast.error("Failed to restart", { description: e }));
                         await sleep(2500);
                         toast.success("Erm... awkward...", {
