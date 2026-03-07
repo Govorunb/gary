@@ -24,7 +24,8 @@
 
 ### App logic
 
-- Non-silent message (from user) with no connected games still primes the scheduler (should call model if yapping is allowed?)
+- Let the model yap even without actions to mimic Neuro? (prefs)
+    - Non-silent message (from user) with no connected games still primes the scheduler
 - 'Strict mode' that raises all diagnostic severities by 1 (warnings become errors, errors become fatal and instantly disconnect WS)
 - Figure out where game-specific prefs go when the game changes name
 - Scheduler takes from games' forceQueues instead of games pushing to its "central" FQ
@@ -68,6 +69,10 @@
 - Spamming toasts seriously hurts performance
 - Context log height gets recalculated a lot
 - LLM instructions editor (in settings)
+- Need better onboarding/clarity for hotkeys and diagnostics
+    - Toasts cover context send button - Ctrl+Enter not surfaced
+- Double click to open manual send dialog?
+- Deterministic/empty values in manual send
 
 ## Miscellaneous wishlist/musings
 
