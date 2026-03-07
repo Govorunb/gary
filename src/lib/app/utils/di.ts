@@ -8,6 +8,9 @@ import { Updater } from "../updater.svelte";
 import { ThemeManager } from "../theme.svelte";
 import type { Result } from "neverthrow";
 import type { UIState } from "$lib/ui/app/ui-state.svelte";
+// FIXME: find a better place (and better architecture)
+// it's just imported for side effects (otherwise tree-shaken out)
+import r from "$lib/app/utils/reporting";
 
 const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
 const [ getSession, setSession ] = createContext<Session>();

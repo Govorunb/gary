@@ -1,8 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { moveField, deleteField } from "./migrations";
-import r, { LogLevel } from "$lib/app/utils/reporting";
 
-r.level = LogLevel.Warning;
 
 describe("migration helpers", () => {
     test("moveField renames top-level field", () => {

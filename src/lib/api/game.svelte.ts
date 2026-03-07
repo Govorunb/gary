@@ -1,6 +1,5 @@
 import type { Session } from "$lib/app/session.svelte";
-import { jsonParse, localeTimeWithMs, safeParse } from "$lib/app/utils";
-import r, { LogLevel } from "$lib/app/utils/reporting";
+import { formatZodError, jsonParse, localeTimeWithMs, safeParse, LogLevel } from "$lib/app/utils";
 import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
 import { TIMEOUTS } from "./diagnostics";
@@ -8,9 +7,11 @@ import * as v1 from "./v1/spec";
 import type { BaseConnection } from "./connection";
 import dayjs from "dayjs";
 import { dequal } from "dequal/lite";
-import type { Message } from "$lib/app/context.svelte";
 import { findUnsupportedSchemaKeywords } from "./helpers";
 import type { JSONSchema } from "openai/lib/jsonschema";
+import type { EventDef } from "$lib/app/events";
+import { EVENT_BUS } from "$lib/app/events/bus";
+import { toast } from "svelte-sonner";
 
 export type GameAction = v1.Action & { active: boolean };
 export type PendingAction = {
@@ -28,6 +29,14 @@ export class Game {
     public startupState: { type: "connected" | "implied" | "startup"; at: number; } | null = $state(null);
     private pendingActions = $state(new SvelteMap<string, PendingAction>());
     private forceQueue: v1.ForceAction[] = $state([]);
+    
+    public get id() {
+        return this.conn.id;
+    }
+
+    public get shortId() {
+        return this.conn.shortId;
+    }
 
     constructor(
         public readonly session: Session,
@@ -53,17 +62,14 @@ export class Game {
         });
         conn.onclose(() => {
             if (this.name === v1PendingGameName(conn.id)) return;
-            r.info(`${this.name} disconnected`);
-            void this.session.context.system({ text: `${this.name} disconnected`, silent: true });
+            EVENT_BUS.emit('api/game/disconnected', { game: { id: this.id, name: this.name } });
             this.clearPendingActions();
             this.forceQueue.length = 0;
         });
         conn.onmessage((txt) => this.recv(txt));
         conn.onerror((err) => {
-            r.warn(`${this.name} broke its websocket somehow`, {
-                details: err,
-                toast: { level: LogLevel.Error },
-            });
+            toast.error(`${this.name} broke its websocket somehow`, { description: err });
+            EVENT_BUS.emit('api/game/conn_error', { game: { id: this.id, name: this.name } });
         });
     }
 
@@ -76,27 +82,26 @@ export class Game {
     }
 
     private connected() {
-        void this.session.context.system({ text: `${this.name} connected`, silent: true });
-        r.info(`${this.name} connected`, { toast: true });
+        toast.info(`${this.name} connected`);
+        EVENT_BUS.emit('api/game/connected', { game: { id: this.id, name: this.name } });
     }
 
     async recv(txt: string) {
-        const msg = jsonParse(txt)
-            .andThen(json => safeParse(v1.zGameMessage, json));
+        const msg = jsonParse(txt).mapErr(e => `Failed to parse JSON: ${e}`)
+            .andThen(json => safeParse(v1.zGameMessage, json).mapErr(e => formatZodError(e).join("\n")));
         if (msg.isOk()) {
             await this.processMsg(msg.value);
-            return;
+        } else {
+            this.diagnostics.trigger("prot/invalid_message", { message: txt, error: msg.error });
         }
-        const err = msg.error;
-        this.diagnostics.trigger("prot/invalid_message", { message: txt, error: err });
     }
 
     async processMsg(msg: v1.GameMessage) {
-        r.verbose(`Handling ${msg.command}`);
+        EVENT_BUS.emit('api/game/recv', {game: {id: this.id, name: this.name}, msg});
         if (this.conn.version === "v1") {
             // technically vulnerable but i'd like to see a game out in the wild actually guess its own id
             if (this.name === v1PendingGameName(this.conn.id)) {
-                r.debug(`First message for v1 game - taking game name '${msg.game}' from WS msg`);
+                EVENT_BUS.emit('api/game/v1/name', { game: {id: this.id, name: msg.game}});
                 this.name = msg.game;
                 this.connected();
             } else if (this.name !== msg.game) {
@@ -105,7 +110,8 @@ export class Game {
                 this.name = msg.game;
             }
         }
-        switch (msg.command) {
+        const command = msg.command;
+        switch (command) {
             case "startup":
                 this.startup();
                 break;
@@ -127,7 +133,8 @@ export class Game {
             case "shutdown/ready":
                 break;
             default:
-                r.warn(`(${this.name}) Unimplemented command '${(msg as any).command}'`);
+                toast.warning(`(${this.name}) Unimplemented command '${command}'`);
+                EVENT_BUS.emit('api/game/assert_unimplemented_command', { game: { id: this.id, name: this.name }, command });
         }
         if (!["startup", "implied"].includes(this.startupState?.type ?? "")) {
             this.diagnostics.trigger("prot/startup/missing", { firstMessage: { msg } });
@@ -136,14 +143,16 @@ export class Game {
     }
 
     startup() {
-        r.info(`(${this.name}) startup`);
+        EVENT_BUS.emit('api/game/startup', {
+            game: {id: this.id, name: this.name},
+            startupStateWas: this.startupState,
+        });
         if (this.startupState?.type === "startup") {
             this.diagnostics.trigger("prot/startup/multiple");
         } else {
             const now = Date.now();
             const startupDelay = now - (this.startupState?.at ?? now);
             this.startupState = { type: "startup", at: now };
-            r.info(`Startup delay: ${startupDelay}`);
             if (startupDelay > TIMEOUTS["perf/late/startup"]) {
                 this.diagnostics.trigger("perf/late/startup", { delayMs: startupDelay });
             }
@@ -152,8 +161,12 @@ export class Game {
         // (like a 1s timer after startup or sth)
     }
 
-    context(text: string, silent: Message['silent']) {
-        this.session.context.client(this, { text, silent });
+    context(text: string, silent: boolean) {
+        EVENT_BUS.emit('api/game/context', {
+            game: { id: this.id, name: this.name },
+            message: text,
+            silent,
+        });
     }
 
     getAction(name: string, onlyActive: boolean = true) {
@@ -199,13 +212,12 @@ export class Game {
     }
 
     async registerActions(actions: v1.Action[]) {
-        r.debug(`${this.getActiveActions().length} currently registered actions`);
-        let new_actions = 0;
+        const newActions = [];
         for (const action of actions) {
             const existing = this.actions.get(action.name);
             let schemaUpdated = false;
             if (!existing) {
-                new_actions++;
+                newActions.push(action.name);
                 schemaUpdated = true;
             } else {
                 const {active: wasActive, ...rawExisting} = existing;
@@ -213,6 +225,11 @@ export class Game {
                     schemaUpdated = true;
                 }
                 if (wasActive) {
+                    EVENT_BUS.emit('api/game/register/duplicate', {
+                        game: {id: this.id, name: this.name, version: this.version},
+                        old: rawExisting,
+                        new: action,
+                    });
                     // duplicate action conflict resolution
                     // v1 drops incoming (ignore new), v2 onwards will drop existing (overwrite with new)
                     const isV1 = this.version === "v1";
@@ -220,7 +237,6 @@ export class Game {
                         && !schemaUpdated;
                     if (isIdentical) {
                         this.diagnostics.trigger("perf/register/identical_duplicate", { action: action.name });
-                        r.info(`Skipped registering identical duplicate of action ${action.name}`);
                         continue; // skip since it doesn't matter (already active too)
                     } else if (isV1) {
                         this.diagnostics.trigger("prot/v1/register/conflict", {
@@ -228,8 +244,6 @@ export class Game {
                             existing: rawExisting,
                         });
                     }
-                    const logMethod = isV1 ? r.warn : r.info;
-                    logMethod.bind(r)(`(${this.name}) ${isV1 ? "Ignoring" : "Overwriting"} duplicate action ${action.name} (as per ${this.version} spec)`, { toast: false });
                     if (isV1) continue;
                 }
             }
@@ -242,11 +256,7 @@ export class Game {
             const storedAction = $state({ ...action, active: true });
             this.actions.set(action.name, storedAction);
         }
-        if (actions.length > 5) {
-            r.debug(`(${this.name}) Registered ${actions.length} actions (${new_actions} new)`);
-        } else {
-            r.debug(`(${this.name}) Registered actions: [${actions.map(a => a.name).join(", ")}]`);
-        }
+        EVENT_BUS.emit('api/game/register', {game: {id: this.id, name: this.name}, actions, newActions});
     }
 
     async unregisterActions(actions: string[]) {
@@ -258,10 +268,9 @@ export class Game {
                 this.diagnostics.trigger("prot/unregister/inactive", { action_name });
             } else {
                 existing.active = false;
-                r.debug(`(${this.name}) Unregistered action '${action_name}'`);
             }
         }
-        r.debug(`(${this.name}) Actions unregistered: [${actions}]`);
+        EVENT_BUS.emit('api/game/unregister', { game: { id: this.id, name: this.name }, action_names: actions });
     }
 
     async forceAction(msg: v1.ForceAction) {
@@ -292,17 +301,16 @@ export class Game {
             this.diagnostics.trigger("prot/force/multiple", { msgData: msg.data });
         }
         this.session.scheduler.forceQueue.push(actions);
-        const text = this.forceMsg(actions, msg.data.query, msg.data.state);
-        this.context(text, "noAct"); // don't act twice from one prompt
+        EVENT_BUS.emit('api/game/force', {
+            game: { id: this.id, name: this.name },
+            ...msg.data,
+        });
     }
 
     async sendAction(actData: v1.ActData) {
-        this.session.context.system({
-            text: `Executing action ${actData.name} (Request ID: ${actData.id.substring(0, 8)})`,
-            silent: true,
-            visibilityOverrides: {
-                user: false,
-            }
+        EVENT_BUS.emit('api/game/act/actor', {
+            game: { id: this.id, name: this.name },
+            act: actData,
         });
         const sentAt = Date.now();
         const timeout = setTimeout(() => {
@@ -332,11 +340,12 @@ export class Game {
         if (!success && !message) {
             this.diagnostics.trigger("prot/result/error_nomessage");
         }
-        let text = `Result for action ${actData.name} (request ID ${id.substring(0, 8)}): ${success ? "Performing" : "Failure"}`;
-        text += message ? ` (${message})` : " (no message)";
-        // noAct on failure to represent the upcoming retry
-        // (in v2+, the game will retry - so we still don't want to trigger acting)
-        this.context(text, success || "noAct");
+        EVENT_BUS.emit('api/game/action_result', {
+            game: { id: this.id, name: this.name },
+            act: actData,
+            success,
+            message,
+        });
         // v1 spec: Neuro will retry failed `actions/force`s
         if (this.version === "v1" && v1Force) {
             this.forceQueue.unshift(v1Force); // spec says "immediately" so i guess we doom loop
@@ -348,26 +357,12 @@ export class Game {
             name: action,
             data,
         });
-
-        let text = `User act to ${this.name} (request ID ${actData.id.substring(0, 8)}): ${actData.name}`;
-        text += (actData.data ? `\nData: ${actData.data}` : " (no data)");
-        r.debug(text);
-        this.session.context.user({ text: text, silent: true });
+        EVENT_BUS.emit('api/game/act/user', { game: { id: this.id, name: this.name }, act: actData });
         await this.sendAction(actData);
     }
 
     toString() {
         return `Game { name: "${this.name}", version: "${this.version}"}`;
-    }
-
-    private forceMsg(actions: v1.Action[], query?: string, state?: string) {
-        const obj = {
-            actions: actions.map(a => a.name),
-            query,
-            state
-        };
-        const prompt = `You must perform one of the following actions, given this information: ${JSON.stringify(obj)}`;
-        return prompt;
     }
 
     private clearPendingActions() {
@@ -388,3 +383,86 @@ function prettyPending(p: PendingAction) {
         sentAt: localeTimeWithMs(dayjs(p.sentAt))
     };
 }
+
+type GameEventData = { game: { id: string, name: string } };
+
+export const EVENTS = [
+    {
+        key: 'api/game/connected',
+        dataSchema: {} as GameEventData,
+        level: LogLevel.Info,
+    },
+    {
+        key: 'api/game/disconnected',
+        dataSchema: {} as GameEventData,
+        level: LogLevel.Info,
+    },
+    {
+        key: 'api/game/conn_error',
+        dataSchema: {} as GameEventData,
+        level: LogLevel.Error,
+    },
+    {
+        key: 'api/game/recv',
+        dataSchema: {} as GameEventData & { msg: v1.GameMessage },
+        description: "Processing game message",
+        level: LogLevel.Debug,
+    },
+    {
+        // FIXME: dev/assert/
+        key: 'api/game/assert_unimplemented_command',
+        dataSchema: {} as GameEventData & { command: string },
+        level: LogLevel.Warning,
+    },
+    {
+        key: 'api/game/startup',
+        dataSchema: {} as GameEventData & { startupStateWas: Game['startupState'] },
+        level: LogLevel.Info,
+    },
+    {
+        key: 'api/game/context',
+        dataSchema: {} as GameEventData & v1.Context['data'],
+        level: LogLevel.Info,
+    },
+    {
+        key: 'api/game/register',
+        dataSchema: {} as GameEventData & v1.RegisterActions['data'] & { newActions: string[] },
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'api/game/unregister',
+        dataSchema: {} as GameEventData & v1.UnregisterActions['data'],
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'api/game/force',
+        dataSchema: {} as GameEventData & v1.ForceAction['data'],
+        level: LogLevel.Info,
+    },
+    {
+        key: 'api/game/v1/name',
+        dataSchema: {} as GameEventData,
+        description: "First message for v1 game - taking game name from WS msg",
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'api/game/register/duplicate',
+        dataSchema: {} as GameEventData & { game: {version: Game['version']}, old: v1.Action, new: v1.Action },
+        level: LogLevel.Info,
+    },
+    {
+        key: 'api/game/act/actor',
+        dataSchema: {} as GameEventData & { act: v1.ActData },
+        level: LogLevel.Info,
+    },
+    {
+        key: 'api/game/act/user',
+        dataSchema: {} as GameEventData & { act: v1.ActData },
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'api/game/action_result',
+        dataSchema: {} as GameEventData & { act: v1.ActData; success: boolean; message?: string },
+        level: LogLevel.Info,
+    },
+] as const satisfies EventDef<'api/game'>[];

@@ -5,10 +5,14 @@ import type { Engine } from "./engines/index.svelte";
 import { Registry } from "$lib/api/registry.svelte";
 import type { UserPrefs } from "./prefs.svelte";
 import { OpenAIEngine, zOpenAIPrefs } from "./engines/llm/openai.svelte";
-import r from "$lib/app/utils/reporting";
+import { EVENT_BUS } from "./events/bus";
+import { toast } from "svelte-sonner";
 import { Randy, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 import { UIState } from "$lib/ui/app/ui-state.svelte";
+import type { EventDef } from "./events";
+import { LogLevel } from "./utils";
+import { EventLogStore } from "./events/log.svelte";
 
 /**
  * Represents a user session within the app.
@@ -18,6 +22,7 @@ import { UIState } from "$lib/ui/app/ui-state.svelte";
  */
 export class Session {
     readonly id: string;
+    readonly eventLog: EventLogStore;
     readonly context: ContextManager;
     readonly registry: Registry;
     readonly scheduler: Scheduler;
@@ -33,33 +38,27 @@ export class Session {
         this.id = uuidv4();
         this.name = $state(name);
         this.ondispose = [];
-        this.context = new ContextManager();
+        this.eventLog = new EventLogStore();
+        this.context = new ContextManager(this.eventLog);
         this.registry = new Registry(this);
         this.scheduler = new Scheduler(this);
         this.uiState = new UIState(this);
-        r.debug(`Created session ${name} (${this.id})`);
+        EVENT_BUS.emit('app/session/created', { session: {id: this.id, name: this.name} });
         for (const id of Object.keys(this.userPrefs.engines)) {
             this.initEngine(id);
         }
         this.activeEngine = $derived.by(() => this.getEngine(this.userPrefs.app.selectedEngine));
-        // FIXME: why tf is this here
-        let topSeenMsg = $state(0);
-        $effect(() => {
-            const msgCount = this.context.actorView.length;
-            for (let i = topSeenMsg; i < msgCount; i++) {
-                const msg = this.context.actorView[i];
-                if (!msg.silent && msg.source.type !== "actor") {
-                    this.scheduler.actPending = true;
-                    break;
-                }
+        this.onDispose(this.context.onActorViewAppend((_event, shouldPromptAct) => {
+            if (shouldPromptAct) {
+                this.scheduler.actPending = true;
             }
-            topSeenMsg = msgCount;
-        })
+        }));
     }
 
     private getEngine(id: string): Engine<unknown> {
         if (!this.engines[id]) {
-            r.error(`Tried to get engine ${id} but it doesn't exist, reverting to Randy`);
+            EVENT_BUS.emit('app/session/engine/not_found', { id });
+            toast.error(`Engine ${id} not found, reverting to Randy`);
             id = RANDY_ID;
         }
         return this.engines[id];
@@ -67,7 +66,8 @@ export class Session {
 
     public deleteEngine(id: string) {
         if (id === RANDY_ID || id === OPENROUTER_ID) {
-            r.error(`Cannot delete system engine ${id}`);
+            EVENT_BUS.emit('app/session/engine/no_delete_system', { id });
+            toast.error(`Cannot delete system engine ${id}`);
             return;
         }
         if (this.activeEngine.id === id) {
@@ -94,16 +94,17 @@ export class Session {
         }
         this.ondispose.length = 0;
         this.engines = {};
-        r.info(`Disposed session ${this.name} (${this.id})`);
+        EVENT_BUS.emit('app/session/disposed', { session: {id: this.id, name: this.name} });
+        this.context.dispose();
+        this.eventLog.dispose();
     }
 
     public initEngine(id?: string): string {
         if (!id) {
             id = uuidv4();
-            this.userPrefs.engines[id] = zOpenAIPrefs.decode({
-                name: "New engine",
-            });
-            r.success(`Created engine ${id.substring(0, 8)}`);
+            this.userPrefs.engines[id] = zOpenAIPrefs.decode({ name: "New engine" });
+            EVENT_BUS.emit('app/session/engine/created', { id });
+            toast.success(`Created engine ${id.substring(0, 8)}`);
         }
         switch (id) {
             case RANDY_ID:
@@ -116,7 +117,46 @@ export class Session {
                 this.engines[id] = new OpenAIEngine(this.userPrefs, id);
                 break;
         }
-        r.debug(`Initialized engine ${id}`);
+        EVENT_BUS.emit('app/session/engine/initialized', { id });
         return id;
     }
 }
+
+export const EVENTS = [
+    {
+        key: 'app/session/created',
+        dataSchema: {} as { session: { id: string, name: string } },
+        description: "Created session",
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/session/disposed',
+        dataSchema: {} as { session: { id: string, name: string } },
+        description: "Disposed session",
+        level: LogLevel.Info,
+    },
+    {
+        key: 'app/session/engine/not_found',
+        dataSchema: {} as { id: string },
+        description: "Tried to get engine but it doesn't exist, reverting to Randy",
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/session/engine/no_delete_system',
+        dataSchema: {} as { id: string },
+        description: "Cannot delete system engine",
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/session/engine/created',
+        dataSchema: {} as { id: string },
+        description: "Created new engine",
+        level: LogLevel.Success,
+    },
+    {
+        key: 'app/session/engine/initialized',
+        dataSchema: {} as { id: string },
+        description: "Initialized engine",
+        level: LogLevel.Debug,
+    },
+] as const satisfies EventDef<'app/session'>[];

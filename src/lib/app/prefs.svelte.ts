@@ -1,18 +1,20 @@
-import z from "zod";
-import r from "$lib/app/utils/reporting";
+import z, { ZodError } from "zod";
 import { zOpenRouterPrefs } from "./engines/llm/openrouter.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { zRandyPrefs, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { toast } from "svelte-sonner";
-import { APP_VERSION, formatZodError, jsonParse, safeParse } from "./utils";
+import { APP_VERSION, formatZodError, jsonParse, safeParse, LogLevel } from "./utils";
 import { migrate, moveField, type Migration } from "./utils/migrations";
 import { err, ok, type Result } from "neverthrow";
+import type { EventDef } from "./events";
+import { EVENT_BUS } from "./events/bus";
 
 export const USER_PREFS = "userPrefs";
 
 export class UserPrefs {
     #data: UserPrefsData;
 
+    // TODO: should be a boolean
     loadError: string | null = $state(null);
 
     constructor(loadRes: Result<UserPrefsData, string>) {
@@ -60,31 +62,27 @@ export class UserPrefs {
             const zodError = parsed.error;
             const errorMessage = `Validation failed:\n${formatZodError(zodError).join("\n")}`;
 
-            r.error("Failed to parse user prefs", {
-                details: errorMessage,
-                toast: false, // dialog will pop up momentarily
-                ctx: {
-                    issues: zodError.issues,
-                    // data, // erm. don't log that
-                }
-            });
+            EVENT_BUS.emit("app/prefs/load/parse_failed", { error: zodError });
+
             return err(errorMessage);
         }
-        r.debug("loaded prefs");
+
+        EVENT_BUS.emit("app/prefs/load/success");
+
         // TODO: dedicated thing for fixups
         if (!Reflect.has(parsed.data.engines, parsed.data.app.selectedEngine)) {
+            EVENT_BUS.emit("app/prefs/fixups/selected_engine_not_found", { engineId: parsed.data.app.selectedEngine });
+
             parsed.data.app.selectedEngine = RANDY_ID;
-            r.warn("Selected engine not found, defaulting to Randy", {
-                toast: {
-                    dismissable: true,
-                    closeButton: true,
-                    id: "prefs-selected-engine-not-found",
-                    position: "top-center",
-                    action: {
-                        label: "OK",
-                        onClick: () => {
-                            toast.dismiss("prefs-selected-engine-not-found");
-                        }
+            toast.warning("Selected engine not found, defaulting to Randy", {
+                dismissable: true,
+                closeButton: true,
+                id: "prefs-selected-engine-not-found",
+                position: "top-center",
+                action: {
+                    label: "OK",
+                    onClick: () => {
+                        toast.dismiss("prefs-selected-engine-not-found");
                     }
                 }
             });
@@ -94,12 +92,12 @@ export class UserPrefs {
 
     async save() {
         if (this.loadError) {
-            r.info("Prefs have load error, aborting save");
+            EVENT_BUS.emit('app/prefs/save/cancelled_due_to_load_error');
             return;
         }
         // TODO: validation here (fatal if fails)
         this.write(JSON.stringify(this.#data));
-        r.debug("saved prefs");
+        EVENT_BUS.emit('app/prefs/save/success');
     }
 
     private async write(contents: string) {
@@ -171,12 +169,12 @@ export const zUserPrefs = z.strictObject({
     // first-time defaults
     .prefault(() => ({
         ollama: zOpenAIPrefs.decode({
-            name: "Ollama (localhost)",
+            name: "Ollama",
             serverUrl: "http://localhost:11434/v1",
             apiKey: "",
         }),
         lmstudio: zOpenAIPrefs.decode({
-            name: "LMStudio (localhost)",
+            name: "LMStudio",
             serverUrl: "http://localhost:1234/v1",
             apiKey: "",
         }),
@@ -197,3 +195,42 @@ const MIGRATIONS: Migration[] = [
         }
     },
 ];
+
+export const EVENTS = [
+    {
+        key: 'app/prefs/load/parse_failed',
+        dataSchema: z.object({
+            error: z.instanceof(ZodError).transform(e => e as ZodError<UserPrefsData>),
+        }),
+        description: "User prefs failed validation during load",
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/prefs/load/success',
+        description: "User prefs loaded successfully",
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/prefs/fixups/selected_engine_not_found',
+        dataSchema: z.object({
+            engineId: z.string(),
+        }),
+        description: "Saved 'selected engine ID' not found, defaulting to Randy",
+        level: LogLevel.Warning,
+    },
+    {
+        key: 'app/prefs/save/cancelled_due_to_load_error',
+        description: "Backed out of saving due to current load error",
+        level: LogLevel.Info,
+    },
+    {
+        key: 'app/prefs/save/success',
+        description: "User prefs saved successfully",
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/prefs/import/failed',
+        description: "User prefs import failed",
+        level: LogLevel.Error,
+    },
+] as const satisfies EventDef<'app/prefs'>[];

@@ -7,10 +7,10 @@
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
     import { getUserPrefs } from "$lib/app/utils/di";
     import { zNeuroMessage } from "$lib/api/v1/spec";
-    import r from "$lib/app/utils/reporting";
-    import { formatZodError, jsonParse, safeParse, tooltip } from "$lib/app/utils";
+    import { formatZodError, jsonParse, parseError, safeParse, tooltip } from "$lib/app/utils";
     import { PressedKeys } from "runed";
-    import { on } from "svelte/events";
+    import { EVENT_BUS } from "$lib/app/events/bus";
+    import { toast } from "svelte-sonner";
 
     type Props = {
         open: boolean;
@@ -113,9 +113,11 @@
     async function sendMessage() {
         try {
             await game.conn.sendRaw(jsonContent);
-            r.success("Sent raw WebSocket message", {toast: true});
+            EVENT_BUS.emit('ui/game/send_raw/sent', { gameId: game.conn.id });
+            toast.success("Sent raw WebSocket message");
         } catch (e) {
-            r.error(`Failed to send raw message to ${game.name}`, `${e}`);
+            EVENT_BUS.emit('ui/game/send_raw/error', { gameId: game.conn.id, error: parseError(e) });
+            toast.error(`Failed to send raw message to ${game.name}`, { description: `${e}` });
         } finally {
             closeDialog();
         }

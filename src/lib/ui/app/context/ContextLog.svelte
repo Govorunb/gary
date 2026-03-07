@@ -58,8 +58,8 @@
     <div class="reverse-log">
         <div class="log" onscroll={logScroll} bind:this={scrollElem}>
             <!-- TODO: https://tanstack.com/virtual/latest/docs/introduction -->
-            {#each session.context.userView as msg (msg.id)}
-                <ContextMessage {msg} />
+            {#each session.context.userView as event (event.id)}
+                <ContextMessage {event} />
             {/each}
         </div>
     </div>

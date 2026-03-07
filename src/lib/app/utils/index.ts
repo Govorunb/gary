@@ -1,13 +1,26 @@
 import type { Attachment } from "svelte/attachments";
-import z, { type ZodError, type core, type ZodCatch, type ZodDefault } from "zod";
-import { ok, err, ResultAsync, type Result, Ok, Err } from "neverthrow";
-import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
+import { ok, err, ResultAsync, type Result, Ok, Err, errAsync } from "neverthrow";
+import { invoke, isTauri, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
-import r from "./reporting";
 import type { Dayjs } from "dayjs";
 import { dev } from "$app/environment";
 // import { isTauri } from "@tauri-apps/api/core";
+import { toast } from "svelte-sonner";
+export * from "./zod";
+export * from "./default-map";
+
+export type NoUndefined<T> = T extends undefined ? never : T;
+
+export enum LogLevel {
+    Verbose,
+    Debug,
+    Info,
+    Success, // behaves like info log level (but toasts have a 'success' type)
+    Warning,
+    Error,
+    Fatal // behaves like 'error' (but ideally there should be a modal for a GH issue flow and such)
+}
 
 export function pickRandom<T>(arr: T[]) {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -20,7 +33,9 @@ export function isWebkitGtk() {
 
 export const scrollNumInput: Attachment<HTMLInputElement> = (el) => {
     if (el.type !== "number" && el.type !== "range") {
-        r.warn("scrollNumInput should only be attached to inputs of type 'number' or 'range'");
+        const err = "scrollNumInput should only be attached to inputs of type 'number' or 'range'";
+        console.error(el, '\n', err);
+        toast.error(err);
         el.style.border = "1px red dotted";
         return;
     }
@@ -55,26 +70,6 @@ export function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
 }
 
-/** This lets us omit the field when constructing from e.g. `zStartup.decode({})`. */
-export function zConst<T extends z.core.util.Literal>(value: NonNullable<T>) {
-    return z.literal(value).default(value);
-}
-
-export type NoUndefined<T> = T extends undefined ? never : T;
-
-export function zFallback<T extends z.ZodType>(schema: T, value: NoUndefined<core.output<T>>): ZodCatch<ZodDefault<T>> {
-    return schema.default(value).catch(value);
-}
-
-declare module "zod" {
-    interface ZodType {
-        fallback(value: core.output<this>): ZodCatch<ZodDefault<this>>;
-    }
-}
-z.ZodType.prototype.fallback = function<T extends z.ZodType>(value: T) {
-    return zFallback(this, value);
-}
-
 export function shortId() {
     return Math.random().toString(36).substring(2);
 }
@@ -99,7 +94,9 @@ export function jsonParse(s: string): Result<any, Error> {
 }
 
 export function safeInvoke<TRet = void>(cmd: string, args?: InvokeArgs, options?: InvokeOptions): ResultAsync<TRet, string> {
-    return ResultAsync.fromPromise(invoke(cmd, args, options), s => s as string);
+    return isTauri()
+        ? ResultAsync.fromPromise(invoke(cmd, args, options), s => s as string)
+        : errAsync("Tauri not available");
 }
 
 declare module "neverthrow" {
@@ -124,14 +121,6 @@ Ok.prototype.flip = function <T, E>(): Err<E, T> {
 }
 Err.prototype.flip = function <T, E>(): Ok<E, T> {
     return ok(this.error);
-}
-
-export function safeParse<T>(z: z.ZodType<T>, o: unknown): Result<T, z.ZodError<T>> {
-    const res = z.safeParse(o);
-    if (res.success) {
-        return ok(res.data);
-    }
-    return err(res.error);
 }
 
 export const horizontalScroll: Attachment<HTMLElement> = (el) => {
@@ -295,13 +284,11 @@ export function debounced(func: () => void, delayMs: number): DebouncedFn {
     return f;
 }
 
-export function formatZodError<E extends ZodError>(e: E) {
-    return e.issues.map(i => `${i.path.join('.') || "(root)"}: ${i.message}`);
-}
-
 export function isApril1st() {
     if (dev) return true;
     const today = new Date();
     // month 0-indexed, day 1-indexed. make it make sense
     return today.getMonth() === 3 && today.getDate() === 1;
 }
+
+export type Await<T> = T extends Promise<infer R> ? R : T;

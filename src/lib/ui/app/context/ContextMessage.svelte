@@ -1,17 +1,20 @@
 <script lang="ts">
-    import type { Message } from "$lib/app/context.svelte";
+    import type { UserContextEvent } from "$lib/app/context.svelte";
     import { getRegistry, getSession, getUIState } from "$lib/app/utils/di";
     import { tooltip } from "$lib/app/utils";
     import { boolAttr } from "runed";
     import dayjs from "dayjs";
+    import { formatContextEvent } from "./formatters/registry";
 
     interface Props {
-        msg: Message;
+        event: UserContextEvent;
     }
 
-    const { msg }: Props = $props();
+    const { event }: Props = $props();
 
-    const timestamp = $derived(dayjs(msg.timestamp));
+    const timestamp = $derived(dayjs(event.timestamp));
+    const rendered = $derived(formatContextEvent(event, "user"));
+    const source = $derived(rendered?.source ?? { type: "system" } as const);
 
     const session = getSession();
     const registry = getRegistry();
@@ -24,18 +27,18 @@
         actor: "🤖",
     };
 
-    function getSourceIcon(msg: Message): string {
-        return sourceIcons[msg.source.type] ?? "❓";
+    function getSourceIcon(sourceType: string): string {
+        return sourceIcons[sourceType as keyof typeof sourceIcons] ?? "❓";
     }
 </script>
 
-<div class={["message", msg.source.type]}
-    class:silent={msg.silent === true /* boolean | "noAct" */}
+<div class={["message", source.type]}
+    class:silent={rendered?.silent === true /* boolean | "noAct" */}
 >
     <span class="message-icon"
-        {@attach tooltip(msg.source.type)}
+        {@attach tooltip(source.type)}
     >
-        {getSourceIcon(msg)}
+        {getSourceIcon(source.type)}
     </span>
     <div class="message-content">
         <div class="message-header">
@@ -44,8 +47,8 @@
             >
                 {timestamp.format("LTS")}
             </span>
-            {#if msg.source.type === 'client'}
-                {@const id = msg.source.id}
+            {#if source.type === 'client'}
+                {@const id = source.id}
                 {@const game = registry.getGame(id)}
                 <button class="message-title"
                     tabindex="-1"
@@ -53,11 +56,11 @@
                     onclick={() => game && uiState.selectGameTab(id)}
                     title={`ID: ${id}\nClick to focus game tab`}
                 >
-                    {msg.source.name}
+                    {source.name}
                 </button>
             {/if}
-            {#if msg.source.type === 'actor'}
-                {@const id = msg.source.engineId}
+            {#if source.type === 'actor'}
+                {@const id = source.engineId}
                 {@const engine = session.engines[id]}
                 <button class="message-title"
                     tabindex="-1"
@@ -69,7 +72,7 @@
                 </button>
             {/if}
         </div>
-        <span class="message-text">{msg.text}</span>
+        <span class="message-text">{rendered?.text ?? ""}</span>
     </div>
 </div>
 
