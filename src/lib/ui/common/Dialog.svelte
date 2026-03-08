@@ -31,8 +31,8 @@
     }: Props = $props();
 
     const positionClasses = {
-        'center': 'fixed inset-0 flex justify-center items-center align-middle',
-        'top-start': 'fixed inset-0 flex justify-center items-start pt-[15vh]'
+        'center': 'layer-dialog fixed inset-0 flex items-center justify-center align-middle',
+        'top-start': 'layer-dialog fixed inset-0 flex items-start justify-center pt-[15vh]'
     };
 </script>
 
@@ -41,7 +41,7 @@
         <Dialog.Trigger element={trigger} />
     {/if}
     <Portal>
-        <Dialog.Backdrop class="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity" />
+        <Dialog.Backdrop class="layer-dialog-backdrop fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity" />
         <Dialog.Positioner class={positionClasses[position]}>
             <Dialog.Content element={content} class={["dialog-content", className]}>
                 {#if title}

@@ -2,7 +2,7 @@
 
 ## Candidates for next major
 
-- [Event log](./event-log.md)
+- [Event log](./events.md)
     - Granular exports (visibility presets - "user", "actor", "bug report")
 - Tool calling + reasoning/interleaved thinking (toggle "fast call"/"deep think")
     - Responses API?

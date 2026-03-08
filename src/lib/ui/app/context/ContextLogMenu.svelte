@@ -3,6 +3,7 @@
     import { getSession } from "$lib/app/utils/di";
     import { EllipsisVertical } from "@lucide/svelte";
     import Popover from "$lib/ui/common/Popover.svelte";
+    import { formatContextEvent } from "./formatters/registry";
 
     const session = getSession();
 
@@ -16,7 +17,11 @@
         closeMenu();
     }
     function copyContext() {
-        navigator.clipboard.writeText(JSON.stringify(session.context.userView));
+        const withRenderedText = session.context.userView.map(event => ({
+            ...event,
+            text: formatContextEvent(event, "user")?.text ?? "",
+        }));
+        navigator.clipboard.writeText(JSON.stringify(withRenderedText));
         closeMenu();
     }
 </script>

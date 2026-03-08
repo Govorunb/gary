@@ -1,11 +1,14 @@
-import { shortId } from "$lib/app/utils";
-import r from "$lib/app/utils/reporting";
-import { type GameDiagnostic, getDiagnosticDefinition, DiagnosticSeverity, type DiagnosticKey, SeverityToLogLevel } from "./diagnostics";
+import { EVENT_BUS } from "$lib/app/events/bus";
+import type { EventDef } from "$lib/app/events";
+import { shortId, LogLevel } from "$lib/app/utils";
+import { toast } from "svelte-sonner";
+import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, DIAGNOSTICS_BY_KEY, type DiagData } from "./diagnostics";
 import type { Game } from "./game.svelte";
 
+const bugToast = { description: "This is a bug in the app, not a diagnostic for your game." };
 
 export class GameDiagnostics {
-    public diagnostics: GameDiagnostic[] = $state([]);
+    public diagnostics: GameDiagnostic<DiagnosticKey>[] = $state([]);
 
     constructor(private readonly game: Game) { }
 
@@ -14,7 +17,7 @@ export class GameDiagnostics {
         for (const { key, dismissed } of this.diagnostics) {
             if (dismissed) continue;
 
-            const diag = getDiagnosticDefinition(key);
+            const diag = DIAGNOSTICS_BY_KEY[key];
             if (!diag) continue;
 
             if (diag.severity >= DiagnosticSeverity.Error) {
@@ -26,30 +29,33 @@ export class GameDiagnostics {
         return status;
     }
 
-    public trigger(key: DiagnosticKey, context?: any, report: boolean = true): GameDiagnostic | null {
-        const diagDef = getDiagnosticDefinition(key);
+    public trigger<K extends DiagnosticKey>(key: K, context?: DiagData<K>, report: boolean = true): GameDiagnostic<K> | null {
+        const diagDef = DIAGNOSTICS_BY_KEY[key];
         if (!diagDef) {
-            r.error(`Unknown diagnostic ${key}`, { ctx: context });
+            EVENT_BUS.emit('app/diagnostics/unknown/trigger', { key, context });
+            toast.error(`Failed to trigger diagnostic '${key}' - unknown diagnostic`, bugToast);
             return null;
         }
 
         const suppressed = this.isSuppressed(key);
-        const diag = $state<GameDiagnostic>({
+        const diag = $state<GameDiagnostic<K>>({
             id: shortId(),
             timestamp: Date.now(),
             key,
             context,
             dismissed: suppressed,
-        });
+        } as GameDiagnostic<K>);
         this.diagnostics.push(diag);
 
-        const logLevel = SeverityToLogLevel[diagDef.severity];
-        r.report(logLevel, {
-            message: `(${this.game.name}) ${diagDef.title}`,
-            details: diagDef.description,
-            ctx: context ? { context } : undefined,
-            toast: report && !suppressed ? undefined : false,
-        });
+        EVENT_BUS.emit('app/diagnostics/triggered', { diag, severity: diagDef.severity, report, suppressed });
+
+        if (report && !suppressed) {
+            if (diagDef.severity >= DiagnosticSeverity.Error) {
+                toast.error(`(${this.game.name}) ${diagDef.title}`);
+            } else if (diagDef.severity === DiagnosticSeverity.Warning) {
+                toast.warning(`(${this.game.name}) ${diagDef.title}`);
+            }
+        }
         if (diagDef.severity >= DiagnosticSeverity.Fatal) {
             // TODO: disconnect with error code
             // TODO: delay next connect afterwards (if the client is *really* misbehaving, instant reconnects are a bad idea)
@@ -67,13 +73,10 @@ export class GameDiagnostics {
     }
 
     public suppress(key: DiagnosticKey) {
-        const diag = getDiagnosticDefinition(key);
+        const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
-            r.error(`Cannot suppress unknown diagnostic ${key}.`, {
-                toast: {
-                    description: "This is a bug in the app, not a diagnostic for your game."
-                }
-            });
+            EVENT_BUS.emit('app/diagnostics/unknown/suppress', { key });
+            toast.error(`Cannot suppress unknown diagnostic ${key}`, bugToast);
             return;
         }
         if (!this.suppressions.includes(key)) {
@@ -83,13 +86,10 @@ export class GameDiagnostics {
     }
 
     public unsuppress(key: DiagnosticKey) {
-        const diag = getDiagnosticDefinition(key);
+        const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
-            r.error(`Tried to unsuppress unknown diagnostic ${key}`, {
-                toast: {
-                    description: "This is a bug in the app, not a diagnostic for your game."
-                }
-            });
+            EVENT_BUS.emit('app/diagnostics/unknown/unsuppress', { key });
+            toast.error(`Tried to unsuppress unknown diagnostic ${key}`, bugToast);
             return;
         }
         const i = this.suppressions.indexOf(key);
@@ -119,3 +119,51 @@ export class GameDiagnostics {
         this.diagnostics.length = 0;
     }
 }
+
+const EVENT_DATA = {
+    key: {} as { key: DiagnosticKey },
+    inst: {} as { diag: GameDiagnostic<DiagnosticKey>; severity: DiagnosticSeverity; report: boolean; suppressed: boolean },
+} as const;
+
+export const EVENTS = [
+    {
+        key: 'app/diagnostics/triggered',
+        dataSchema: EVENT_DATA.inst,
+        level: LogLevel.Info,
+    },
+    {
+        key: 'app/diagnostics/dismissed',
+        dataSchema: EVENT_DATA.inst,
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/diagnostics/restored',
+        dataSchema: EVENT_DATA.inst,
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/diagnostics/suppressed',
+        dataSchema: EVENT_DATA.key,
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/diagnostics/unsuppressed',
+        dataSchema: EVENT_DATA.key,
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/diagnostics/unknown/trigger',
+        dataSchema: {} as typeof EVENT_DATA.key & { context: any },
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/diagnostics/unknown/suppress',
+        dataSchema: EVENT_DATA.key,
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/diagnostics/unknown/unsuppress',
+        dataSchema: EVENT_DATA.key,
+        level: LogLevel.Error,
+    },
+] as const satisfies EventDef<'app/diagnostics'>[];

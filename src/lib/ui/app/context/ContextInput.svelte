@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { Flag, FlagOff, SendHorizontal, Volume2, VolumeOff } from "@lucide/svelte";
-    import { PressedKeys, TextareaAutosize } from "runed";
-    import { tooltip } from "$lib/app/utils";
-    import { getSession, getUserPrefs } from "$lib/app/utils/di";
+import { Flag, FlagOff, SendHorizontal, Volume2, VolumeOff } from "@lucide/svelte";
+import { PressedKeys, TextareaAutosize } from "runed";
+import { tooltip } from "$lib/app/utils";
+import { getUserPrefs } from "$lib/app/utils/di";
+import { EVENT_BUS } from "$lib/app/events/bus";
 
-    const session = getSession();
-    const userPrefs = getUserPrefs();
+const userPrefs = getUserPrefs();
 
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
@@ -22,11 +22,11 @@
         maxHeight: 100, // hack but the 'right' way (multiple of line-height) isn't obvious rn
     });
 
-    function submit() {
-        if (!value) return;
-        session.context.user({text: value, silent});
-        value = "";
-    }
+function submit() {
+    if (!value) return;
+    EVENT_BUS.emit('ui/context/input', { text: value, silent });
+    value = "";
+}
 
     function toggleSilent() {
         userPrefs.app.ctxInputSilent = !userPrefs.app.ctxInputSilent;

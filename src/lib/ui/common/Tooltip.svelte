@@ -22,8 +22,8 @@
 <Tooltip {...props}>
     <Tooltip.Trigger element={trigger} />
     <Portal>
-        <Tooltip.Positioner>
-            <Tooltip.Content element={content}>
+        <Tooltip.Positioner class="layer-tooltip">
+            <Tooltip.Content element={content} class="layer-tooltip relative">
                 {@render children?.()}
             </Tooltip.Content>
         </Tooltip.Positioner>

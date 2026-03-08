@@ -2,8 +2,11 @@ import type { Session } from "$lib/app/session.svelte";
 import { clamp, isApril1st } from "$lib/app/utils";
 import { DialogManager } from "./dialog-manager.svelte";
 
+export type DashboardSidebarSide = "left" | "right";
+
 export class UIState {
     selectedGameTab: number = $state(0);
+    mobileOpenSidebar: DashboardSidebarSide | null = $state(null);
     readonly dialogs = new DialogManager();
     aprilFools: boolean;
 
@@ -26,6 +29,42 @@ export class UIState {
 
     devToggleAprilFools() {
         this.aprilFools = !this.aprilFools;
+    }
+
+    isSidebarCollapsed(side: DashboardSidebarSide) {
+        switch (side) {
+            case "left":
+                return this.session.userPrefs.app.dashboard.sidebars.leftCollapsed;
+            case "right":
+                return this.session.userPrefs.app.dashboard.sidebars.rightCollapsed;
+        }
+    }
+
+    setSidebarCollapsed(side: DashboardSidebarSide, collapsed: boolean) {
+        switch (side) {
+            case "left":
+                this.session.userPrefs.app.dashboard.sidebars.leftCollapsed = collapsed;
+                break;
+            case "right":
+                this.session.userPrefs.app.dashboard.sidebars.rightCollapsed = collapsed;
+                break;
+        }
+    }
+
+    toggleSidebar(side: DashboardSidebarSide) {
+        this.setSidebarCollapsed(side, !this.isSidebarCollapsed(side));
+    }
+
+    isMobileSidebarOpen(side: DashboardSidebarSide) {
+        return this.mobileOpenSidebar === side;
+    }
+
+    openMobileSidebar(side: DashboardSidebarSide) {
+        this.mobileOpenSidebar = side;
+    }
+
+    closeMobileSidebar() {
+        this.mobileOpenSidebar = null;
     }
 
     selectGameTab(gameId: string) {

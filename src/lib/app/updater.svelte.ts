@@ -1,11 +1,14 @@
 import { check as tauriCheckUpdate, type Update } from "@tauri-apps/plugin-updater";
-import r from "$lib/app/utils/reporting";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import dayjs, { type OpUnitType } from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
 import type { UIState } from "$lib/ui/app/ui-state.svelte";
 import { isTauri } from "@tauri-apps/api/core";
-import { sleep } from "./utils";
+import { pickRandom, sleep, type Await, LogLevel } from "./utils";
+import type { EventDef } from "./events";
+import { EVENT_BUS } from "./events/bus";
+import { toast } from "svelte-sonner";
+import z from "zod";
 
 const simUpdate: Update = {
     available: true,
@@ -69,34 +72,33 @@ export class Updater {
         this.#checkingForUpdates = true;
 
         let updateRes: Result<Update | null, string>;
-        r.debug(`Checking for updates (${isCheckManual ? "manual" : "auto"})`);
+        EVENT_BUS.emit('app/update/check', { isManual: isCheckManual });
         if (isTauri()) {
             updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
         } else {
             // vite dev
             await sleep(500);
-            updateRes = [ok(simUpdate), ok(null), err("failed the vibe check")][Math.floor(3 * Math.random())];
+            updateRes = pickRandom([ok(simUpdate), ok(null), err("failed the vibe check")]);
         }
         this.#lastCheckResult = updateRes;
         this.#checkingForUpdates = false;
+
+        EVENT_BUS.emit('app/update/check/result', { result: updateRes, isManual: isCheckManual, skipVersion: this.skipVersion });
 
         if (updateRes.isOk()) {
             this.prefs.lastCheckedAt = Date.now();
             if (this.update) {
                 const skipped = this.skipVersion === this.update.version;
                 if (skipped) {
-                    r.info("Update skipped", `Version ${this.update.version} was previously set as skipped`);
+                    EVENT_BUS.emit('app/update/skipped', { version: this.update.version });
                 } else if (!isCheckManual) {
                     await this.notifyUpdateAvailable();
                 }
             } else {
-                r.info("No update available");
+                EVENT_BUS.emit('app/update/none_available');
             }
         } else {
-            r.error("Could not check for updates", {
-                details: updateRes.error,
-                toast: false,
-            });
+            EVENT_BUS.emit('app/update/check_error', { error: updateRes.error });
         }
         return updateRes;
     }
@@ -105,14 +107,12 @@ export class Updater {
         if (!this.update) return;
         if (this.skipVersion === this.update.version) return;
 
-        r.success("Update available!", {
-            details: `Version ${this.update.version} is available`,
-            toast: {
-                closeButton: true,
-                action: {
-                    label: "See more",
-                    onClick: () => this.promptForUpdate(),
-                }
+        EVENT_BUS.emit('app/update/notify_available', { version: this.update.version });
+        toast.success("Update available!", {
+            description: `Version ${this.update.version} is available`,
+            action: {
+                label: "See more",
+                onClick: () => this.promptForUpdate(),
             }
         });
     }
@@ -123,3 +123,54 @@ export class Updater {
         this.uiState.dialogs.openUpdateDialog();
     }
 }
+
+export const EVENTS = [
+    {
+        key: 'app/update/check',
+        dataSchema: z.object({
+            isManual: z.boolean(),
+        }),
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/update/check/result',
+        dataSchema: z.object({
+            result: z.custom<Await<ReturnType<Updater['checkForUpdates']>>>(),
+            isManual: z.boolean(),
+            skipVersion: z.string().nullish(),
+        }),
+        level: LogLevel.Info,
+    },
+    {
+        key: 'app/update/check_error',
+        dataSchema: z.object({
+            error: z.string(),
+        }),
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/update/notify_available',
+        dataSchema: z.object({
+            version: z.string(),
+        }),
+        level: LogLevel.Success,
+    },
+    {
+        key: 'app/update/skipped',
+        dataSchema: z.object({
+            version: z.string(),
+        }),
+        level: LogLevel.Info,
+    },
+    {
+        key: 'app/update/none_available',
+        level: LogLevel.Info,
+    },
+    {
+        key: 'app/update/restart_failed',
+        dataSchema: z.object({
+            error: z.custom<Error>(),
+        }),
+        level: LogLevel.Error,
+    },
+] as const satisfies EventDef<'app/update'>[];

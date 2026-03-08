@@ -1,6 +1,5 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from "./index.svelte";
-import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
+import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type OpenAIContext } from ".";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
@@ -8,25 +7,29 @@ import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
-import r from "$lib/app/utils/reporting";
-import { parseError } from "$lib/app/utils";
+import { parseError, LogLevel } from "$lib/app/utils";
+import type { EventDef } from "$lib/app/events";
+import { EVENT_BUS } from "$lib/app/events/bus";
+import { v4 as uuid } from "uuid";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
  */
 export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
-    readonly name: string;
     private readonly client: OpenAIClient;
+
+    public get name() {
+        return this.options.name;
+    }
 
     constructor(userPrefs: UserPrefs, engineId: string) {
         super(userPrefs, engineId);
-        this.name = $derived(this.options.name);
 
         const self = this;
         this.client = new OpenAIClient({get prefs() { return self.options; }}, engineId);
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<Message, EngineActError> {
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<LLMGeneration, EngineActError> {
         return new ResultAsync(this.client.genJson(context, outputSchema, undefined, signal));
     }
 
@@ -39,8 +42,8 @@ export const zOpenAIPrefs = z.looseObject({
     name: z.string().nonempty(),
     ...zLLMOptions.shape,
     /** Leave empty if your server doesn't need authentication. (e.g. local) */
-    apiKey: z.string().default(""),
-    serverUrl: z.url().default("https://api.openai.com/v1"),
+    apiKey: z.string().default("").sensitive(),
+    serverUrl: z.url().default("https://api.openai.com/v1").sensitive(),
     modelId: z.string().optional(),
 });
 
@@ -69,7 +72,7 @@ export class OpenAIClient {
         outputSchema?: JSONSchema,
         extraParams?: Record<string, any>,
         signal?: AbortSignal,
-    ): Promise<Result<Message, EngineActError>> {
+    ): Promise<Result<LLMGeneration, EngineActError>> {
         const model = this.options.modelId;
         if (!model) {
             return err(new ConfigError(`${this.name} is missing a model ID`));
@@ -104,8 +107,8 @@ export class OpenAIClient {
         // lmstudio has responses (allegedly stateful) but doesn't support `strict` in tool definitions (ouch)
         // it also doesn't seem to constrain generation with `text.format` at all?
         // so... `response_format` on `chat/completions` it is
-        console.warn("Full request params:", params);
-        console.log("Origin:", origin);
+        const reqId = uuid();
+        EVENT_BUS.emit('app/engines/llm/request', { reqId, params });
         const res = await ResultAsync.fromPromise(
             this.client.chat.completions.create(params, { signal }),
             (error) => new EngineError(`${this.name} request failed: ${error}`, error as Error, false),
@@ -113,36 +116,68 @@ export class OpenAIClient {
         if (signal?.aborted) {
             return err("cancelled");
         }
-        console.log("Response:", res);
+        EVENT_BUS.emit('app/engines/llm/response', { reqId, response: res });
         if (res.isErr()) {
+            EVENT_BUS.emit('app/engines/llm/network_error', { reqId });
             return err(res.error);
         }
         const response = res.value;
         type RespOrError = typeof response | { choices?: never, error: any };
         const resp = (response as RespOrError).choices?.[0];
         if (!resp) {
+            EVENT_BUS.emit('app/engines/llm/error_result', { reqId });
             return err(new EngineError(`${this.name} did not return successful result`, parseError(res.value)));
         }
         if (resp.finish_reason !== "stop" && resp.finish_reason !== "length") {
+            EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'finish_reason' });
             return err(new EngineError(`${this.name} returned unexpected finish_reason '${resp.finish_reason}'`, undefined, false))
         }
         const textOutput = resp?.message?.content;
-        const reasoning = (resp.message as any)?.reasoning;
         if (!textOutput) {
-            r.error(`Empty response from '${this.name}'`, {
-                toast: false,
-                ctx: { response },
-            });
+            EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'empty_response' });
             return err(new EngineError(`${this.name} returned no text`, undefined, true));
         }
-        const msg = zMessage.decode({
+        return ok({
             text: textOutput,
-            source: zActorSource.decode({engineId: this.id}),
-            silent: true,
-            customData: {
-                [this.id]: { response, reasoning, },
+            metadata: {
+                reasoning: (resp.message as any)?.reasoning,
+                usage: response.usage,
+                response,
             },
         });
-        return ok(msg);
     }
 }
+
+export const EVENTS = [
+    {
+        key: 'app/engines/llm/network_error',
+        dataSchema: {} as { reqId: string },
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/engines/llm/error_result',
+        dataSchema: {} as { reqId: string },
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/engines/llm/assert',
+        dataSchema: {} as { reqId: string, assertion: string },
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/engines/llm/request',
+        dataSchema: z.object({
+            reqId: z.string(),
+            params: z.any().sensitive(),
+        }),
+        level: LogLevel.Verbose,
+    },
+    {
+        key: 'app/engines/llm/response',
+        dataSchema: z.object({
+            reqId: z.string(),
+            response: z.any().sensitive(),
+        }),
+        level: LogLevel.Verbose,
+    },
+] as const satisfies EventDef<'app/engines/llm'>[];

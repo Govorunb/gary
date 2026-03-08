@@ -34,7 +34,7 @@
     }
 </script>
 
-<div class="h-full fcol-0 p-4">
+<div class="game-tabs-shell">
     <div class="header">
         <h2>Connections</h2>
         <Popover>
@@ -79,14 +79,18 @@
 <style lang="postcss">
     @reference "global.css";
 
+    .game-tabs-shell {
+        @apply h-full fcol-0 p-2;
+    }
+
     .header {
         @apply flex items-center justify-between;
-        @apply px-2;
+        @apply px-1;
     }
 
     .games-container {
         @apply fcol-1 flex-1 overflow-y-hidden;
-        @apply px-1 py-2;
+        @apply px-0.5 py-1;
     }
 
     .menu-header {
