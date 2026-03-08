@@ -6,6 +6,7 @@ export type DashboardSidebarSide = "left" | "right";
 
 export class UIState {
     selectedGameTab: number = $state(0);
+    mobileOpenSidebar: DashboardSidebarSide | null = $state(null);
     readonly dialogs = new DialogManager();
     aprilFools: boolean;
 
@@ -52,6 +53,18 @@ export class UIState {
 
     toggleSidebar(side: DashboardSidebarSide) {
         this.setSidebarCollapsed(side, !this.isSidebarCollapsed(side));
+    }
+
+    isMobileSidebarOpen(side: DashboardSidebarSide) {
+        return this.mobileOpenSidebar === side;
+    }
+
+    openMobileSidebar(side: DashboardSidebarSide) {
+        this.mobileOpenSidebar = side;
+    }
+
+    closeMobileSidebar() {
+        this.mobileOpenSidebar = null;
     }
 
     selectGameTab(gameId: string) {
