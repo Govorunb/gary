@@ -26,8 +26,8 @@
 <Popover {...props}>
     <Popover.Trigger element={trigger} />
     <Portal>
-        <Popover.Positioner>
-            <Popover.Content element={content} class={["popover-content", className]}>
+        <Popover.Positioner class="layer-popover">
+            <Popover.Content element={content} class={["popover-content layer-popover relative", className]}>
                 {@render children?.()}
                 {#if arrow}
                     <Popover.Arrow class="global-popover-arrow">

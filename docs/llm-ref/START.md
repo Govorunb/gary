@@ -12,6 +12,17 @@ Always read `src/global.css` when doing UI work.
 
 Explore `src/lib/app/utils/` for commonly reused functionality.
 
+Prefer tests with durable value over low-level setter/getter coverage.
+- Good test targets:
+  - Self-contained utility functions defined by their inputs, e.g. `toStepPrecision` in `src/lib/app/utils/index.ts`
+  - Integration tests that lock down cross-system behavior, e.g. `src/lib/api/diagnostics.test.ts`
+- Poor default test targets:
+  - Bottom-layer unit tests that only prove that a line of code executes as written (setter gets called, boolean is flipped, etc)
+- Rule of thumb:
+  - If the behavior is obvious from one local implementation and cheap to re-derive, do not add a dedicated unit test for it
+  - If the behavior is easy to forget, easy to break indirectly, or defined by many inputs/interactions, a test is usually justified
+  - Tests help us confidently forget code that *should* be forgotten to free up the mental model - `toStepPrecision` is a perfect example
+
 Avoid Tailwind class soup (long class strings) and prefer explicit CSS classes with `@apply` directives:
 ```svelte
 <script lang="ts">

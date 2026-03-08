@@ -128,6 +128,12 @@ export const zAppPrefs = z.strictObject({
     ctxInputSilent: z.boolean().fallback(false),
     manualSendSchemaCollapsed: z.boolean().fallback(true),
     rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
+    dashboard: z.strictObject({
+        sidebars: z.strictObject({
+            leftCollapsed: z.boolean().fallback(false),
+            rightCollapsed: z.boolean().fallback(false),
+        }).prefault({}),
+    }).prefault({}),
     systemPrompt: z.string().nullish(),
     joyless: z.boolean().fallback(false),
     garyGoldMembershipEndsAfter: z.number().nullish(),
