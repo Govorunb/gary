@@ -1,6 +1,7 @@
 import { v4 as uuid } from "uuid";
 import type { EventData, EventInstance, EventKey, DatalessKey, HasDataKey } from ".";
 import { createListener, DefaultMap } from "../utils";
+import { untrack } from "svelte";
 
 export class EventBus {
     #allSubs: Set<EventSub<EventKey>> = new Set();
@@ -9,6 +10,10 @@ export class EventBus {
     emit<K extends DatalessKey>(key: K): void;
     emit<K extends HasDataKey>(key: K, data: EventData<K>): void;
     emit<K extends EventKey>(key: K, data?: EventData<K>) {
+        untrack(() => this.#emit(key, data));
+    }
+    
+    #emit<K extends EventKey>(key: K, data?: EventData<K>) {
         const e = {
             id: uuid(),
             timestamp: Date.now(),
