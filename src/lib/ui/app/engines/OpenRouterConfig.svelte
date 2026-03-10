@@ -1,6 +1,6 @@
 <script lang="ts">
     import { zOpenRouterPrefs, type OpenRouterPrefs, ENGINE_ID, OpenRouter } from '$lib/app/engines/llm/openrouter.svelte';
-    import { StringField, BooleanField } from '$lib/ui/common/form';
+    import { StringField, BooleanField, SelectField } from '$lib/ui/common/form';
     import type { ConfigProps } from './EngineConfig.svelte';
     import { toast } from 'svelte-sonner';
     import OutLink from '$lib/ui/common/OutLink.svelte';
@@ -91,5 +91,45 @@
             label="Allow yapping"
             description="Let the model choose to speak instead of acting (unless forced)"
         />
+        <details class="advanced-details">
+            <summary>Advanced</summary>
+            <SelectField
+                bind:value={dirtyConfig.reasoningEffort}
+                label="Reasoning effort"
+                options={[
+                    { value: "auto", label: "Auto (recommended)" },
+                    { value: "none", label: "None" },
+                    { value: "low", label: "Low" },
+                    { value: "medium", label: "Medium" },
+                    { value: "high", label: "High" },
+                ]}
+            >
+                {#snippet description()}
+                    <p class="note">
+                        Auto defaults to None for minimum l*tency (but falls back to Low if the provider requires reasoning).
+                    </p>
+                {/snippet}
+            </SelectField>
+        </details>
     {/snippet}
 </EngineConfig>
+
+<style lang="postcss">
+    @reference "global.css";
+
+    .advanced-details {
+        @apply mt-1 border border-neutral-200 dark:border-neutral-700 rounded-md;
+        padding: 0.5rem;
+        &[open] summary {
+            @apply pb-2;
+        }
+        & summary {
+            @apply frow-1.5 items-center cursor-pointer select-none;
+            @apply text-sm font-semibold;
+            @apply transition-[filter];
+            &:hover {
+                @apply brightness-125 dark:brightness-75;
+            }
+        }
+    }
+</style>

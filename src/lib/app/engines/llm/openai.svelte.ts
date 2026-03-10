@@ -23,7 +23,10 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.name = $derived(this.options.name);
 
         const self = this;
-        this.client = new OpenAIClient({get prefs() { return self.options; }}, engineId);
+        this.client = new OpenAIClient(
+            {get prefs() { return self.options; }},
+            engineId
+        );
     }
 
     generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<Message, EngineActError> {
@@ -35,9 +38,12 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     }
 }
 
+export const zReasoningEffort = z.enum(["auto", "none", "low", "medium", "high"]);
+
 export const zOpenAIPrefs = z.looseObject({
     name: z.string().nonempty(),
     ...zLLMOptions.shape,
+    reasoningEffort: zReasoningEffort.fallback("auto"),
     /** Leave empty if your server doesn't need authentication. (e.g. local) */
     apiKey: z.string().default(""),
     serverUrl: z.url().default("https://api.openai.com/v1"),
@@ -45,13 +51,17 @@ export const zOpenAIPrefs = z.looseObject({
 });
 
 export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
+export type ReasoningEffort = OpenAIPrefs["reasoningEffort"];
 
 // At some point we migrated OpenRouter from its own (beta) SDK back to just using the OpenAI-compatible API
 // It started to look a bit too similar after that... the refactoring itch was irresistible
 export class OpenAIClient {
     private readonly client: OpenAI;
     private readonly options: OpenAIPrefs;
-    constructor(reactivePrefs: {prefs: OpenAIPrefs}, private id: string) {
+    constructor(
+        reactivePrefs: {prefs: OpenAIPrefs},
+        private id: string
+    ) {
         this.options = $derived(reactivePrefs.prefs);
         this.client = new OpenAI({
             apiKey: this.options.apiKey ?? "-", // throws if key is empty
@@ -75,16 +85,15 @@ export class OpenAIClient {
             return err(new ConfigError(`${this.name} is missing a model ID`));
         }
 
-        const params: ChatCompletionCreateParamsNonStreaming = {
+        const baseParams: ChatCompletionCreateParamsNonStreaming = {
             model,
             messages,
-            reasoning_effort: "none",
             stream: false,
             ...extraParams,
         };
 
         if (outputSchema) {
-            params.response_format = {
+            baseParams.response_format = {
                 type: "json_schema",
                 json_schema: {
                     name: "gary_action",
@@ -104,18 +113,60 @@ export class OpenAIClient {
         // lmstudio has responses (allegedly stateful) but doesn't support `strict` in tool definitions (ouch)
         // it also doesn't seem to constrain generation with `text.format` at all?
         // so... `response_format` on `chat/completions` it is
-        console.warn("Full request params:", params);
-        console.log("Origin:", origin);
-        const res = await ResultAsync.fromPromise(
-            this.client.chat.completions.create(params, { signal }),
-            (error) => new EngineError(`${this.name} request failed: ${error}`, error as Error, false),
-        );
+        type WireReasoningEffort = Exclude<ReasoningEffort, "auto">;
+        type RequestFailure = { error: unknown; message: string; apiMessage?: string; causeMessage?: string };
+        const isReasoningEffortError = (failure: RequestFailure) => {
+            const text = [failure.message, failure.apiMessage, failure.causeMessage]
+                .filter(Boolean)
+                .join(" ");
+            return /reasoning[_ ]effort/i.test(text);
+        };
+        const sendRequest = async (effort?: WireReasoningEffort) => {
+            const params: ChatCompletionCreateParamsNonStreaming = {
+                ...baseParams,
+                ...(effort ? { reasoning_effort: effort } : {}),
+            };
+            console.warn("Full request params:", params);
+            console.log("Origin:", origin);
+            const res = await ResultAsync.fromPromise(
+                this.client.chat.completions.create(params, { signal }),
+                (error) => {
+                    const message = error instanceof Error ? error.message : String(error);
+                    const apiMessage = (error as any)?.error?.message;
+                    const causeMessage = (error as any)?.cause?.message;
+                    return {
+                        error,
+                        message,
+                        apiMessage,
+                        causeMessage,
+                    } satisfies RequestFailure;
+                },
+            );
+            return res;
+        };
+
+        const preference = this.options.reasoningEffort ?? "auto";
+        let res: Awaited<ReturnType<typeof sendRequest>>;
+        switch (preference) {
+            case "auto":
+                res = await sendRequest("none");
+                break;
+            default:
+                res = await sendRequest(preference);
+        }
+        if (preference === "auto" && res.isErr() && isReasoningEffortError(res.error)) {
+            this.options.reasoningEffort = "low";
+            r.warn("Reasoning effort 'auto' unsupported, defaulting to low", {
+                toast: true,
+            });
+            res = await sendRequest("low");
+        }
         if (signal?.aborted) {
             return err("cancelled");
         }
         console.log("Response:", res);
         if (res.isErr()) {
-            return err(res.error);
+            return err(new EngineError(`${this.name} request failed: ${res.error.message}`, res.error.error as Error, false));
         }
         const response = res.value;
         type RespOrError = typeof response | { choices?: never, error: any };
