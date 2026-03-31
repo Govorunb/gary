@@ -16,7 +16,7 @@ describe("EventLogStore", () => {
         expect(typeof store.all[0].timestamp).toBe("number");
     });
 
-    test("emits append/clear deltas", () => {
+    test("emits append/reset deltas", () => {
         const bus = new EventBus();
         const store = new EventLogStore(bus);
         const deltas: string[] = [];
@@ -25,7 +25,7 @@ describe("EventLogStore", () => {
         bus.emit("test2");
         store.clear();
 
-        expect(deltas).toStrictEqual(["append", "clear"]);
+        expect(deltas).toStrictEqual(["append", "reset"]);
         expect(store.all.length).toBe(0);
     });
 });

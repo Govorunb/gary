@@ -26,7 +26,7 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         super(userPrefs, engineId);
 
         const self = this;
-        this.client = new OpenAIClient({get prefs() { return self.options; }}, engineId);
+        this.client = new OpenAIClient({get prefs() { return self.options; }});
     }
 
     generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<LLMGeneration, EngineActError> {
@@ -54,7 +54,7 @@ export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
 export class OpenAIClient {
     private readonly client: OpenAI;
     private readonly options: OpenAIPrefs;
-    constructor(reactivePrefs: {prefs: OpenAIPrefs}, private id: string) {
+    constructor(reactivePrefs: {prefs: OpenAIPrefs}) {
         this.options = $derived(reactivePrefs.prefs);
         this.client = new OpenAI({
             apiKey: this.options.apiKey ?? "-", // throws if key is empty

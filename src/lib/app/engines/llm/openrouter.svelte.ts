@@ -31,7 +31,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         $effect(() => {
             outer.prefs = inner;
         });
-        this.client = new OpenAIClient(outer, ENGINE_ID);
+        this.client = new OpenAIClient(outer);
     }
 
     generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError> {
