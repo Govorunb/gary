@@ -24,7 +24,8 @@
 
 ### App logic
 
-- Non-silent message (from user) with no connected games still primes the scheduler (should call model if yapping is allowed?)
+- Let the model yap even without actions to mimic Neuro? (prefs)
+    - Non-silent message (from user) with no connected games still primes the scheduler
 - 'Strict mode' that raises all diagnostic severities by 1 (warnings become errors, errors become fatal and instantly disconnect WS)
 - Figure out where game-specific prefs go when the game changes name
 - Scheduler takes from games' forceQueues instead of games pushing to its "central" FQ
@@ -50,6 +51,7 @@
     - Editing the log - edit message text, remove message
     - "Act (forced)"/"Gary wants attention" should be a heading (like [game name for client msgs](https://github.com/Govorunb/gary/blob/9997b2151f180cd339d6d7b93aa17c3ff687bc21/src/lib/ui/app/context/ContextMessage.svelte#L50-L59))
     - Save/show which engine was the 'actor'
+    - Ephemeral actor message that represents the active generation ("Gary is thinking...")
 - Performance (because WebKit is [ngmi](https://github.com/orgs/tauri-apps/discussions/8524))
     - Virtualize context log https://tanstack.com/virtual/latest/docs/introduction
     - Keep a CodeMirror instance loaded offscreen and Portal it into dialogs (deranged)
@@ -65,9 +67,14 @@
 - Allow binding to `0.0.0.0`
 - Onboarding (docs, first-time teaching tips)
     - First-time tip for when an engine error pauses the scheduler
+    - Toasts cover context send button - Ctrl+Enter not surfaced
+    - Getting to the Diagnostics dialog is about as intuitive as a late stage The Witness puzzle
 - Spamming toasts seriously hurts performance
 - Context log height gets recalculated a lot
 - LLM instructions editor (in settings)
+- Double click action header to open manual send dialog a-la Tony?
+    - Probably not, now Ctrl-click on the other hand...
+- Deterministic/empty values in manual send
 
 ## Miscellaneous wishlist/musings
 

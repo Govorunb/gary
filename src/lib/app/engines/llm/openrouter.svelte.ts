@@ -5,7 +5,7 @@ import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
-import { OpenAIClient } from "./openai.svelte";
+import { OpenAIClient, zReasoningEffort } from "./openai.svelte";
 import { parseError } from "$lib/app/utils";
 
 export const ENGINE_ID = "openRouter";
@@ -32,6 +32,10 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             outer.prefs = inner;
         });
         this.client = new OpenAIClient(outer);
+        $effect(() => {
+            if (inner.reasoningEffort !== this.options.reasoningEffort)
+                this.options.reasoningEffort = inner.reasoningEffort;
+        });
     }
 
     generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError> {
@@ -69,6 +73,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 
 export const zOpenRouterPrefs = z.strictObject({
     ...zLLMOptions.shape,
+    reasoningEffort: zReasoningEffort.default("auto"),
     apiKey: z.string().default("").sensitive(),
     /** OpenRouter model identifier.
      * Can be:
