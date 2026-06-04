@@ -352,7 +352,7 @@ export class Game {
         }
     }
 
-    async manualSend(action: string, data?: any) {
+    async manualSend(action: string, data?: string) {
         const actData = v1.zActData.decode({
             name: action,
             data,

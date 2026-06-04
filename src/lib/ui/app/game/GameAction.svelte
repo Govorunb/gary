@@ -31,7 +31,7 @@
 
     const evtData = $derived({gameId: game.id, actionName: action.name});
 
-    function doSend(data?: any) {
+    function doSend(data?: string) {
         EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!data });
         game.manualSend(action.name, data)
             .catch(e => {
@@ -79,7 +79,7 @@
             {:else}
                 <button
                     class="action-btn"
-                    onclick={preventDefault(doSend)}
+                    onclick={preventDefault(() => doSend())}
                     {@attach tooltip("Send")}
                 >
                     <Send class="size-4" />
