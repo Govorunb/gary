@@ -53,6 +53,8 @@ export const zOpenAIPrefs = z.looseObject({
 export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
 export type ReasoningEffort = OpenAIPrefs["reasoningEffort"];
 
+const OPENAI_COMPAT_NO_API_KEY = " ";
+
 // At some point we migrated OpenRouter from its own (beta) SDK back to just using the OpenAI-compatible API
 // It started to look a bit too similar after that... the refactoring itch was irresistible
 export class OpenAIClient {
@@ -61,7 +63,7 @@ export class OpenAIClient {
     constructor(reactivePrefs: {prefs: OpenAIPrefs}) {
         this.options = $derived(reactivePrefs.prefs);
         this.client = new OpenAI({
-            apiKey: this.options.apiKey ?? "-", // throws if key is empty
+            apiKey: this.options.apiKey || OPENAI_COMPAT_NO_API_KEY,
             dangerouslyAllowBrowser: true,
             baseURL: this.options.serverUrl,
         });
@@ -103,7 +105,7 @@ export class OpenAIClient {
         // so me use pull model instead of push model. hoh
         // me just know seniorberry shake head and wag finger from inside cloud, but me the one that feel alive
         this.client.baseURL = this.options.serverUrl;
-        this.client.apiKey = this.options.apiKey;
+        this.client.apiKey = this.options.apiKey || OPENAI_COMPAT_NO_API_KEY;
 
         // after evaluating tools/responses api - it all sucks bad
         // ollama only just started to support it (but not `tool_choice` - so, still useless to us)
