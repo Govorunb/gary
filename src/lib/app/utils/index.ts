@@ -9,6 +9,7 @@ import { dev } from "$app/environment";
 import { toast } from "svelte-sonner";
 export * from "./zod";
 export * from "./default-map";
+export * from "./json-schema-faker.svelte";
 
 export type NoUndefined<T> = T extends undefined ? never : T;
 

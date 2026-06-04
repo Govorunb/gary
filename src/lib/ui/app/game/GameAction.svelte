@@ -1,14 +1,14 @@
 <script lang="ts">
     import { Dices, Send } from "@lucide/svelte";
     import { getUIState } from "$lib/app/utils/di";
-    import { generate } from "json-schema-faker";
     import CopyButton from "../../common/CopyButton.svelte";
     import CodeMirror from "../../common/CodeMirror.svelte";
-    import { parseError, preventDefault, tooltip } from "$lib/app/utils";
+    import { generateFromJsonSchema, parseError, preventDefault, tooltip } from "$lib/app/utils";
     import type { Game, GameAction } from "$lib/api/game.svelte";
     import { boolAttr } from "runed";
     import { EVENT_BUS } from "$lib/app/events/bus";
     import { toast } from "svelte-sonner";
+    import type { JsonSchema } from "json-schema-faker";
 
     type Props = {
         action: GameAction;
@@ -40,11 +40,11 @@
             });
     }
 
-    function sendRandom() {
+    async function sendRandom() {
         let generatedData: string | undefined;
         if (action.schema) {
             try {
-                const genObj = generate(action.schema);
+                const genObj = await generateFromJsonSchema(action.schema as JsonSchema);
                 generatedData = JSON.stringify(genObj);
             } catch (e) {
                 EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
