@@ -2,9 +2,11 @@
     import { onMount } from "svelte";
     import DashboardSidebar from "$lib/ui/app/DashboardSidebar.svelte";
     import ContextLog from "$lib/ui/app/context/ContextLog.svelte";
+    import ConnectClientPopover from "$lib/ui/app/game/ConnectClientPopover.svelte";
     import GameTabs from "$lib/ui/app/game/GameTabs.svelte";
     import Workspace from "$lib/ui/app/workspace/Workspace.svelte";
     import { getRegistry, getUIState } from "$lib/app/utils/di";
+    import { Plus } from "@lucide/svelte";
 
     const registry = getRegistry();
     const uiState = getUIState();
@@ -100,6 +102,20 @@
                 {:else}
                     <div class="rail-empty-state" title="No games connected">0</div>
                 {/if}
+
+                <ConnectClientPopover>
+                    {#snippet trigger(props)}
+                        <button
+                            {...props}
+                            class="rail-connect-button"
+                            type="button"
+                            title="Connect client"
+                            aria-label="Connect client"
+                        >
+                            <Plus class="size-5" />
+                        </button>
+                    {/snippet}
+                </ConnectClientPopover>
             </div>
         {/snippet}
     </DashboardSidebar>
@@ -184,14 +200,20 @@
     }
 
     .rail-game-button,
-    .rail-empty-state {
+    .rail-empty-state,
+    .rail-connect-button {
         @apply flex h-11 w-11 items-center justify-center rounded-xl;
         @apply border border-neutral-200/80 bg-white/80 text-sm font-semibold text-neutral-700;
         @apply transition-colors shadow-sm;
         @apply dark:border-neutral-700 dark:bg-surface-800/80 dark:text-neutral-100;
     }
 
-    .rail-game-button:hover {
+    .rail-connect-button {
+        @apply mt-auto;
+    }
+
+    .rail-game-button:hover,
+    .rail-connect-button:hover {
         @apply bg-neutral-100 dark:bg-surface-700;
     }
 
