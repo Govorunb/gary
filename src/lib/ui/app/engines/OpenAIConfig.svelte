@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { dev } from '$app/environment';
     import { zOpenAIPrefs } from '$lib/app/engines/llm/openai.svelte';
     import { StringField, BooleanField, UrlField, SelectField } from '$lib/ui/common/form';
     import Hotkey from '$lib/ui/common/Hotkey.svelte';
@@ -15,7 +14,6 @@
         {@const isOllama = engineId === 'ollama'
             || dirtyConfig.name.match(/\bollama\b/i)
             || dirtyConfig.serverUrl.match(":11434/")}
-        {@const isWindows = dev || navigator.platform.includes("Win32")}
         {@const isLMStudio = engineId === 'lmstudio'
             || dirtyConfig.name.match(/\blms|lmstudio|lm studio\b/i)
             || dirtyConfig.serverUrl.match(":1234/")}
@@ -25,15 +23,6 @@
             required
             description="Display name for this engine"
         />
-        {#if isOllama && isWindows}
-            <div class="callout warn">
-                <p class="note">
-                    Ollama on Windows requires a user workaround.
-                    See <OutLink href="https://github.com/Govorunb/gary/issues/7">issue #7</OutLink>.
-                    {#if dev}(shown on any OS in dev mode){/if}
-                </p>
-            </div>
-        {/if}
         {#if isLMStudio}
             <div class="callout warn">
                 <p class="note">

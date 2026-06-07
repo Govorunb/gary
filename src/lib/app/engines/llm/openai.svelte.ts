@@ -1,6 +1,8 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
 import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type OpenAIContext } from ".";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
+import { isTauri } from "@tauri-apps/api/core";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import z from "zod";
@@ -54,6 +56,42 @@ export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
 export type ReasoningEffort = OpenAIPrefs["reasoningEffort"];
 
 const OPENAI_COMPAT_NO_API_KEY = " ";
+// https://github.com/ollama/ollama/issues/10507
+// https://github.com/Govorunb/gary/issues/7
+const LOCAL_LLM_ORIGIN = "http://localhost";
+
+function isLocalOrPrivateHttpEndpoint(endpoint: string): boolean {
+    try {
+        const url = new URL(endpoint);
+        if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+        const host = url.hostname.toLowerCase();
+        if (host === "localhost" || host.endsWith(".localhost")) return true;
+        if (host === "127.0.0.1" || host === "::1" || host === "[::1]") return true;
+        if (/^10\./.test(host)) return true;
+        if (/^192\.168\./.test(host)) return true;
+        const match = host.match(/^172\.(\d+)\./);
+        if (!match) return false;
+        const second = Number(match[1]);
+        return second >= 16 && second <= 31;
+    } catch {
+        return false;
+    }
+}
+
+function requestUrl(input: string | URL | Request): string {
+    return input instanceof Request ? input.url : input.toString();
+}
+
+export const openAICompatFetch: typeof fetch = (input, init) => {
+    if (!isTauri()) return globalThis.fetch(input, init);
+
+    const url = requestUrl(input);
+    if (!isLocalOrPrivateHttpEndpoint(url)) return tauriFetch(input, init);
+
+    const headers = new Headers(init?.headers);
+    headers.set("Origin", LOCAL_LLM_ORIGIN);
+    return tauriFetch(input, { ...init, headers });
+};
 
 // At some point we migrated OpenRouter from its own (beta) SDK back to just using the OpenAI-compatible API
 // It started to look a bit too similar after that... the refactoring itch was irresistible
@@ -66,6 +104,7 @@ export class OpenAIClient {
             apiKey: this.options.apiKey || OPENAI_COMPAT_NO_API_KEY,
             dangerouslyAllowBrowser: true,
             baseURL: this.options.serverUrl,
+            fetch: openAICompatFetch,
         });
     }
 
