@@ -50,10 +50,10 @@ class DefaultReporter implements Reporter {
         this.log({ message: text }, level);
 
         const havePresenter = e.key in EVENTS_DISPLAY;
-        const presenter = EVENTS_DISPLAY[e.key] ?? def.description;
+        const presenter = EVENTS_DISPLAY[e.key];
         const shouldPresent = havePresenter || e.levelOverride !== undefined || level >= this.autoToastLevel;
 
-        if (!presenter) {
+        if (!presenter && !def.description) {
             if (shouldPresent) {
                 const err = `Missing event presenter or description for ${e.key}!`;
                 console.error(err);
@@ -63,12 +63,9 @@ class DefaultReporter implements Reporter {
         }
         if (!shouldPresent) return;
 
-        const display = typeof presenter === "function"
+        const opts = presenter
             ? presenter(e.data as never)
-            : presenter;
-        const opts: ToastOptions = typeof display === "string"
-            ? { title: display }
-            : display;
+            : { title: def.description };
         const combined = { level, ...opts } satisfies ToastOptions;
         this.toast(combined);
     }

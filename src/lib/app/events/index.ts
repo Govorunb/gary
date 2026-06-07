@@ -33,9 +33,7 @@ export interface EventDef<Prefix extends string = ''> {
 }
 
 // if not defined, defaults to eventDescription
-export type EventPresenter<K extends EventKey> = 
-    | string // title only
-    | ((data: EventData<K>) => string | ToastOptions);
+export type EventPresenter<K extends EventKey> = (data: EventData<K>) => ToastOptions;
 
 export type Keys<E extends EventDef[]> = E[number]['key'];
 export type PresentDefs<K extends EventKey> = {

@@ -464,8 +464,12 @@ export const EVENTS = [
 ] as const satisfies EventDef<'api/game'>[];
 
 export const DISPLAY = {
-    "api/game/connected": ({ game }) => `${game.name} connected`,
-    "api/game/disconnected": ({ game }) => `${game.name} disconnected`,
+    "api/game/connected": ({ game }) => ({
+        title: `${game.name} connected`,
+    }),
+    "api/game/disconnected": ({ game }) => ({
+        title: `${game.name} disconnected`,
+    }),
     "api/game/conn_error": ({ game, err }) => ({
         title: `${game.name} broke its websocket somehow`,
         description: err,

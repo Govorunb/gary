@@ -72,7 +72,9 @@ export const EVENTS = [
 ] as const satisfies EventDef<'ui'>[];
 
 export const DISPLAY = {
-    "ui/game/send_raw/sent": () => "Sent raw WebSocket message",
+    "ui/game/send_raw/sent": () => ({
+        title: "Sent raw WebSocket message",
+    }),
     "ui/game/send_raw/error": ({ gameName, error }) => ({
         title: `Failed to send raw message to ${gameName}`,
         description: `${error}`,
