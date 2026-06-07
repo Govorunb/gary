@@ -3,8 +3,7 @@ import type { ConnectionClient } from "$lib/api/connection";
 import * as v1 from "$lib/api/v1/spec";
 import { formatZodError, jsonParse, safeParse, LogLevel } from "../app/utils";
 import { EVENT_BUS } from "$lib/app/events/bus";
-import type { EventDef } from "$lib/app/events";
-import { toast } from "svelte-sonner";
+import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
 
 export type ActionResult = Omit<v1.ActionResult['data'], 'id'>;
 
@@ -43,7 +42,6 @@ export abstract class ClientGame {
                 await this.reregisterAll();
                 break;
             default:
-                toast.warning(`Unhandled message type: ${command}`);
                 EVENT_BUS.emit('api/client/unhandled_command', {game: {id: this.id, name: this.name}, command});
         }
     }
@@ -169,3 +167,8 @@ export const EVENTS = [
     },
 ] as const satisfies EventDef<'api/client'>[];
 
+export const DISPLAY = {
+    "api/client/unhandled_command": ({ command }) => ({
+        title: `Unhandled message type: ${command}`,
+    }),
+} as PresentDefs<Keys<typeof EVENTS>>;

@@ -10,7 +10,6 @@
     import { formatZodError, jsonParse, parseError, safeParse, tooltip } from "$lib/app/utils";
     import { PressedKeys } from "runed";
     import { EVENT_BUS } from "$lib/app/events/bus";
-    import { toast } from "svelte-sonner";
 
     type Props = {
         open: boolean;
@@ -114,10 +113,8 @@
         try {
             await game.conn.sendRaw(jsonContent);
             EVENT_BUS.emit('ui/game/send_raw/sent', { gameId: game.conn.id });
-            toast.success("Sent raw WebSocket message");
         } catch (e) {
-            EVENT_BUS.emit('ui/game/send_raw/error', { gameId: game.conn.id, error: parseError(e) });
-            toast.error(`Failed to send raw message to ${game.name}`, { description: `${e}` });
+            EVENT_BUS.emit('ui/game/send_raw/error', { gameId: game.conn.id, gameName: game.name, error: parseError(e) });
         } finally {
             closeDialog();
         }

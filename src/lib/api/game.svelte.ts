@@ -9,9 +9,8 @@ import dayjs from "dayjs";
 import { dequal } from "dequal/lite";
 import { findUnsupportedSchemaKeywords } from "./helpers";
 import type { JSONSchema } from "openai/lib/jsonschema";
-import type { EventDef } from "$lib/app/events";
+import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
 import { EVENT_BUS } from "$lib/app/events/bus";
-import { toast } from "svelte-sonner";
 
 export type GameAction = v1.Action & { active: boolean };
 export type PendingAction = {
@@ -68,8 +67,7 @@ export class Game {
         });
         conn.onmessage((txt) => this.recv(txt));
         conn.onerror((err) => {
-            toast.error(`${this.name} broke its websocket somehow`, { description: err });
-            EVENT_BUS.emit('api/game/conn_error', { game: { id: this.id, name: this.name } });
+            EVENT_BUS.emit('api/game/conn_error', { game: { id: this.id, name: this.name }, err });
         });
     }
 
@@ -82,7 +80,6 @@ export class Game {
     }
 
     private connected() {
-        toast.info(`${this.name} connected`);
         EVENT_BUS.emit('api/game/connected', { game: { id: this.id, name: this.name } });
     }
 
@@ -133,7 +130,6 @@ export class Game {
             case "shutdown/ready":
                 break;
             default:
-                toast.warning(`(${this.name}) Unimplemented command '${command}'`);
                 EVENT_BUS.emit('api/game/assert_unimplemented_command', { game: { id: this.id, name: this.name }, command });
         }
         if (!["startup", "implied"].includes(this.startupState?.type ?? "")) {
@@ -399,7 +395,7 @@ export const EVENTS = [
     },
     {
         key: 'api/game/conn_error',
-        dataSchema: {} as GameEventData,
+        dataSchema: {} as GameEventData & { err: string },
         level: LogLevel.Error,
     },
     {
@@ -466,3 +462,15 @@ export const EVENTS = [
         level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'api/game'>[];
+
+export const DISPLAY = {
+    "api/game/connected": ({ game }) => `${game.name} connected`,
+    "api/game/disconnected": ({ game }) => `${game.name} disconnected`,
+    "api/game/conn_error": ({ game, err }) => ({
+        title: `${game.name} broke its websocket somehow`,
+        description: err,
+    }),
+    "api/game/assert_unimplemented_command": ({ game, command }) => ({
+        title: `(${game.name}) Unimplemented command '${command}'`,
+    }),
+} as PresentDefs<Keys<typeof EVENTS>>;

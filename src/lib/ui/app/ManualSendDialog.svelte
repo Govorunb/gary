@@ -12,7 +12,6 @@
     import { generateFromJsonSchema, parseError, tooltip } from "$lib/app/utils";
     import { boolAttr, PressedKeys } from "runed";
     import { EVENT_BUS } from "$lib/app/events/bus";
-    import { toast } from "svelte-sonner";
     import type { JsonSchema } from "json-schema-faker";
 
     type Props = {
@@ -69,7 +68,6 @@
             }
         } catch (e) {
             EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
-            toast.error(`Could not generate random data for ${actionToGenerate.name}`, { description: `${e}` });
         }
     }
 
@@ -117,7 +115,6 @@
         game.manualSend(actionToSend.name, jsonContent)
             .catch(e => {
                 EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) });
-                toast.error(`Failed to send action ${actionToSend.name}`, { description: `${e}` });
             })
             .finally(closeDialog);
     }

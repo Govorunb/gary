@@ -6,11 +6,10 @@ import { Registry } from "$lib/api/registry.svelte";
 import type { UserPrefs } from "./prefs.svelte";
 import { OpenAIEngine, zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { EVENT_BUS } from "./events/bus";
-import { toast } from "svelte-sonner";
 import { Randy, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 import { UIState } from "$lib/ui/app/ui-state.svelte";
-import type { EventDef } from "./events";
+import type { EventDef, Keys, PresentDefs } from "./events";
 import { LogLevel } from "./utils";
 import { EventLogStore } from "./events/log.svelte";
 
@@ -58,7 +57,6 @@ export class Session {
     private getEngine(id: string): Engine<unknown> {
         if (!this.engines[id]) {
             EVENT_BUS.emit('app/session/engine/not_found', { id });
-            toast.error(`Engine ${id} not found, reverting to Randy`);
             id = RANDY_ID;
         }
         return this.engines[id];
@@ -67,7 +65,6 @@ export class Session {
     public deleteEngine(id: string) {
         if (id === RANDY_ID || id === OPENROUTER_ID) {
             EVENT_BUS.emit('app/session/engine/no_delete_system', { id });
-            toast.error(`Cannot delete system engine ${id}`);
             return;
         }
         if (this.activeEngine.id === id) {
@@ -104,7 +101,6 @@ export class Session {
             id = uuidv4();
             this.userPrefs.engines[id] = zOpenAIPrefs.decode({ name: "New engine" });
             EVENT_BUS.emit('app/session/engine/created', { id });
-            toast.success(`Created engine ${id.substring(0, 8)}`);
         }
         switch (id) {
             case RANDY_ID:
@@ -160,3 +156,15 @@ export const EVENTS = [
         level: LogLevel.Debug,
     },
 ] as const satisfies EventDef<'app/session'>[];
+
+export const DISPLAY = {
+    "app/session/engine/not_found": ({ id }) => ({
+        title: `Engine ${id} not found, reverting to Randy`,
+    }),
+    "app/session/engine/no_delete_system": ({ id }) => ({
+        title: `Cannot delete system engine ${id}`,
+    }),
+    "app/session/engine/created": ({ id }) => ({
+        title: `Created engine ${id.substring(0, 8)}`,
+    }),
+} as PresentDefs<Keys<typeof EVENTS>>;

@@ -7,7 +7,6 @@
     import type { Game, GameAction } from "$lib/api/game.svelte";
     import { boolAttr } from "runed";
     import { EVENT_BUS } from "$lib/app/events/bus";
-    import { toast } from "svelte-sonner";
     import type { JsonSchema } from "json-schema-faker";
 
     type Props = {
@@ -36,7 +35,6 @@
         game.manualSend(action.name, data)
             .catch(e => {
                 EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) });
-                toast.error(`Failed to send action ${action.name}`, { description: `${e}` });
             });
     }
 
@@ -49,7 +47,6 @@
             } catch (e) {
                 EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
                 // TODO: popover
-                toast.error(`Could not generate random data for ${action.name}`, { description: `${e}` });
                 return;
             }
         }

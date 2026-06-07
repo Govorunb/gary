@@ -4,9 +4,8 @@ import * as v1 from "./v1/spec";
 import { safeInvoke, LogLevel } from "$lib/app/utils";
 import type { Session } from "$lib/app/session.svelte";
 import { Game } from "./game.svelte";
-import type { EventDef } from "$lib/app/events";
+import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
 import { EVENT_BUS } from "$lib/app/events/bus";
-import { toast } from "svelte-sonner";
 
 export type WSConnectionRequest = { id: string; } & (
     { version: "v1"; game: undefined; }
@@ -50,7 +49,6 @@ export class Registry {
 
     async deny(req: WSConnectionRequest, reason: string) {
         EVENT_BUS.emit('api/registry/conn_req/denied', {req, reason});
-        toast.warning("Denied connection request", { description: reason });
         await safeInvoke('ws_deny', { id: req.id, reason });
     }
 
@@ -58,7 +56,6 @@ export class Registry {
         const game = new Game(this.session, conn, name);
         this.games.push(game);
         conn.onclose(() => {
-            toast.info(`${game.name} disconnected`);
             // TODO: keeping disconnected games in UI (for action list/diagnostics) is undecided
             this.removeGame(game.conn.id);
         });
@@ -126,3 +123,10 @@ export const EVENTS = [
         level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'api/registry'>[];
+
+export const DISPLAY = {
+    "api/registry/conn_req/denied": ({ reason }) => ({
+        title: "Denied connection request",
+        description: reason,
+    }),
+} as PresentDefs<Keys<typeof EVENTS>>;

@@ -1,10 +1,9 @@
 import type { Channel } from "@tauri-apps/api/core";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import { toast } from "svelte-sonner";
 import type { NeuroMessage, GameMessage } from "./v1/spec";
 import { listenSub, safeInvoke, type Awaitable, createListener, LogLevel } from "$lib/app/utils";
 import { EVENT_BUS } from "$lib/app/events/bus";
-import type { EventDef } from "$lib/app/events";
+import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
 
 type OnMessageHandler = (msg: string) => Awaitable;
 type OnCloseHandler = (clientDisconnected?: CloseFrame) => Awaitable;
@@ -67,7 +66,6 @@ export abstract class BaseConnection {
     public async receiveRaw(text: string) {
         if (this.#disposed) return;
         if (!this.#onmessage.length) {
-            toast.warning(`Connection ${this.shortId} has no onmessage handlers!`);
             EVENT_BUS.emit('api/conn/no_onmessage_handlers', { id: this.id, text });
         }
         for (const cbMessage of this.#onmessage) {
@@ -186,7 +184,6 @@ export class TauriServerConnection extends BaseConnection {
         this.devAssertNotDisposed();
         await safeInvoke('ws_send', { id: this.id, text } satisfies SendArgs)
             .orTee(e => {
-                toast.error("Failed to send WS message", { description: e });
                 EVENT_BUS.emit('api/conn/ws_tauri/send_failed', { id: this.id, text, err: e });
             });
     }
@@ -196,7 +193,6 @@ export class TauriServerConnection extends BaseConnection {
 
         await safeInvoke('ws_close', { id: this.id, code, reason } satisfies CloseArgs)
             .orTee(e => {
-                toast.error("Failed to close WS", { description: e});
                 EVENT_BUS.emit('api/conn/ws_tauri/close_failed', { id: this.id, err: e });
             });
         this.dispose();
@@ -352,3 +348,17 @@ export const EVENTS = [
         level: LogLevel.Verbose,
     },
 ] as const satisfies EventDef<'api/conn'>[];
+
+export const DISPLAY = {
+    "api/conn/no_onmessage_handlers": ({ id }) => ({
+        title: `Connection ${id.substring(0, 6)} has no onmessage handlers!`,
+    }),
+    "api/conn/ws_tauri/send_failed": ({ err }) => ({
+        title: "Failed to send WS message",
+        description: err,
+    }),
+    "api/conn/ws_tauri/close_failed": ({ err }) => ({
+        title: "Failed to close WS",
+        description: err,
+    }),
+} as PresentDefs<Keys<typeof EVENTS>>;

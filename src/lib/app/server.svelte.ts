@@ -5,7 +5,7 @@ import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
 import type { UserPrefs } from "./prefs.svelte";
 import { listenSub, safeInvoke, LogLevel } from "./utils";
-import type { EventDef } from "./events";
+import type { EventDef, Keys, PresentDefs } from "./events";
 import { EVENT_BUS } from "./events/bus";
 import { TauriServerConnection } from "$lib/api/connection";
 import { toast } from "svelte-sonner";
@@ -61,21 +61,29 @@ export class ServerManager {
     }
 
     private doSync(conns: ServerConnections) {
+        const wasRunning = this.running;
         this.connections = conns;
+
+        if (wasRunning && !this.running) {
+            EVENT_BUS.emit('app/server/stopped');
+        }
+
         void this.reconcileConnections();
     }
 
     private async reconcileConnections() {
-        if (this.connections == null) {
+        if (!this.running) {
             const wsGames = this.registry.games.filter(g => g.conn instanceof TauriServerConnection);
             
-            toast.warning("Server stopped, disconnecting games");
-            
+            if (wsGames.length > 0) {
+                const disconnectedGames = wsGames.map(g => ({id: g.id, name: g.name}));
+                EVENT_BUS.emit('app/server/stopped/disconnecting', { disconnectedGames });
+            }
+
             for (const game of wsGames) {
                 this.registry.removeGame(game.id);
                 game.conn.dispose();
             }
-            EVENT_BUS.emit('app/server/stopped', { disconnectedGames: wsGames.map(g => ({id: g.id, name: g.name}))});
             return;
         }
 
@@ -115,8 +123,12 @@ export const EVENTS = [
     },
     {
         key: 'app/server/stopped',
-        dataSchema: {} as {disconnectedGames: {id: string, name: string}[]},
         level: LogLevel.Info,
+    },
+    {
+        key: 'app/server/stopped/disconnecting',
+        dataSchema: {} as {disconnectedGames: {id: string, name: string}[]},
+        level: LogLevel.Warning,
     },
     {
         key: 'app/server/reconcile',
@@ -124,3 +136,9 @@ export const EVENTS = [
         level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'app/server'>[];
+
+export const DISPLAY = {
+    "app/server/stopped/disconnecting": ({ disconnectedGames: dg }) => ({
+        title: `Server stopped, disconnecting ${dg.length} games`,
+    }),
+} as PresentDefs<Keys<typeof EVENTS>>;

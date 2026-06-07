@@ -63,7 +63,6 @@ export class Scheduler {
         }
         this.#abort.abort();
         EVENT_BUS.emit('app/scheduler/act/cancelled');
-        toast.success("Cancelled acting");
         return true;
     }
 
@@ -146,7 +145,6 @@ export class Scheduler {
         const game = this.registry.games.find(g => g.getAction(act.name));
         if (!game) {
             EVENT_BUS.emit('app/scheduler/act/fail/action_not_found', { force: forced, act });
-            toast.error(`Engine selected unknown action: ${act.name}\nThis action was not registered by any game`);
             return errAsync(LogicError.notFound(act.name));
         }
         EVENT_BUS.emit('app/scheduler/act/perform', { force: forced, action: act.name });
@@ -180,12 +178,10 @@ export class Scheduler {
     private onError(err: EngineActError) {
         if (err === "cancelled") {
             EVENT_BUS.emit('app/scheduler/act/cancelled');
-            toast.success("Cancelled acting");
             return;
         }
         const errMsg = (err.cause as Error)?.message;
         EVENT_BUS.emit('app/scheduler/act/error', { message: err.message, cause: errMsg });
-        toast.error(`Engine error: ${err.message}`, { description: errMsg });
         this.errored = true;
     }
 
@@ -328,6 +324,17 @@ export const EVENTS = [
 ] as const satisfies EventDef<'app/scheduler'>[];
 
 export const DISPLAY = {
+    "app/scheduler/act/cancelled": () => ({
+        title: "Cancelled acting",
+        level: LogLevel.Success
+    }),
+    "app/scheduler/act/fail/action_not_found": ({ act }) => ({
+        title: `Engine selected unknown action: ${act.name}\nThis action was not registered by any game`,
+    }),
+    "app/scheduler/act/error": ({ message, cause }) => ({
+        title: `Engine error: ${message}`,
+        description: cause,
+    }),
 } as PresentDefs<Keys<typeof EVENTS>>;
 
 // FIXME: move to lib/app/engines

@@ -1,19 +1,19 @@
 import type z from "zod";
 import { LogLevel, type UnwrapZod } from "$lib/app/utils";
 import type { ReportOptions, ToastOptions } from "$lib/app/utils/reporting";
-import { EVENTS as WS_SERVER_EVENTS } from "$lib/app/server.svelte";
+import { EVENTS as WS_SERVER_EVENTS, DISPLAY as WS_SERVER_DISPLAY } from "$lib/app/server.svelte";
 import { EVENTS as PREFS_EVENTS } from "$lib/app/prefs.svelte";
-import { EVENTS as SESSION_EVENTS } from "$lib/app/session.svelte";
-import { EVENTS as CONN_EVENTS } from "$lib/api/connection";
-import { EVENTS as CLIENT_GAME_EVENTS } from "$lib/api/client-game";
+import { EVENTS as SESSION_EVENTS, DISPLAY as SESSION_DISPLAY } from "$lib/app/session.svelte";
+import { EVENTS as CONN_EVENTS, DISPLAY as CONN_DISPLAY } from "$lib/api/connection";
+import { EVENTS as CLIENT_GAME_EVENTS, DISPLAY as CLIENT_GAME_DISPLAY } from "$lib/api/client-game";
 import { EVENTS as DIAG_EVENTS } from "$lib/api/game-diagnostics.svelte";
-import { EVENTS as GAME_EVENTS } from "$lib/api/game.svelte";
-import { EVENTS as REGISTRY_EVENTS } from "$lib/api/registry.svelte";
+import { EVENTS as GAME_EVENTS, DISPLAY as GAME_DISPLAY } from "$lib/api/game.svelte";
+import { EVENTS as REGISTRY_EVENTS, DISPLAY as REGISTRY_DISPLAY } from "$lib/api/registry.svelte";
 import { EVENTS as MIGRATIONS_EVENTS } from "$lib/app/utils/migrations";
 import { EVENTS as SCHED_EVENTS, ACT_EVENTS, DISPLAY as SCHED_PRESENT } from "$lib/app/scheduler.svelte";
 import { EVENTS as UPDATER_EVENTS } from "$lib/app/updater.svelte";
 import { EVENTS as LLM_EVENTS } from "$lib/app/engines/llm/openai.svelte";
-import { EVENTS as UI_EVENTS } from "$lib/ui/events";
+import { EVENTS as UI_EVENTS, DISPLAY as UI_DISPLAY } from "$lib/ui/events";
 
 export interface EventDef<Prefix extends string = ''> {
     /** Unique key signifying the event type.
@@ -107,5 +107,12 @@ export type EventInstances = {
 export type EventInstance<K extends EventKey> = Extract<EventInstances, { key: K }>;
 
 export const EVENTS_DISPLAY = {
+    ...WS_SERVER_DISPLAY,
+    ...SESSION_DISPLAY,
+    ...CONN_DISPLAY,
+    ...CLIENT_GAME_DISPLAY,
+    ...GAME_DISPLAY,
+    ...REGISTRY_DISPLAY,
     ...SCHED_PRESENT,
+    ...UI_DISPLAY,
 } as PresentDefs<EventKey>;
