@@ -287,9 +287,6 @@
             @apply border-neutral-400 dark:border-neutral-500;
         }
 
-        &::content, &::slotted {
-            @apply rounded-lg;
-        }
     }
 
     .prefs-iex-status {
