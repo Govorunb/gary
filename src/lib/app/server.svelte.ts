@@ -119,10 +119,12 @@ export class ServerManager {
 export const EVENTS = [
     {
         key: 'app/server/no_tauri',
+        description: "No Tauri backend available",
         level: LogLevel.Info,
     },
     {
         key: 'app/server/stopped',
+        description: "Server stopped",
         level: LogLevel.Info,
     },
     {
@@ -133,6 +135,7 @@ export const EVENTS = [
     {
         key: 'app/server/reconcile',
         dataSchema: {} as {serverOnly: string[], regOnly: string[]},
+        description: "Reconciled server connections with registered games",
         level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'app/server'>[];

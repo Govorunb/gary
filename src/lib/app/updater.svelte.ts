@@ -5,7 +5,7 @@ import type { UserPrefs } from "./prefs.svelte";
 import type { UIState } from "$lib/ui/app/ui-state.svelte";
 import { isTauri } from "@tauri-apps/api/core";
 import { pickRandom, sleep, type Await, LogLevel } from "./utils";
-import type { EventDef } from "./events";
+import type { EventDef, Keys, PresentDefs } from "./events";
 import { EVENT_BUS } from "./events/bus";
 import { toast } from "svelte-sonner";
 import z from "zod";
@@ -130,6 +130,7 @@ export const EVENTS = [
         dataSchema: z.object({
             isManual: z.boolean(),
         }),
+        description: "Checking for updates",
         level: LogLevel.Debug,
     },
     {
@@ -139,6 +140,7 @@ export const EVENTS = [
             isManual: z.boolean(),
             skipVersion: z.string().nullish(),
         }),
+        description: "Finished checking for updates",
         level: LogLevel.Info,
     },
     {
@@ -153,6 +155,7 @@ export const EVENTS = [
         dataSchema: z.object({
             version: z.string(),
         }),
+        description: "Update available",
         level: LogLevel.Success,
     },
     {
@@ -160,10 +163,12 @@ export const EVENTS = [
         dataSchema: z.object({
             version: z.string(),
         }),
+        description: "Skipped update",
         level: LogLevel.Info,
     },
     {
         key: 'app/update/none_available',
+        description: "No update available",
         level: LogLevel.Info,
     },
     {
@@ -174,3 +179,14 @@ export const EVENTS = [
         level: LogLevel.Error,
     },
 ] as const satisfies EventDef<'app/update'>[];
+
+export const DISPLAY = {
+    "app/update/check_error": ({ error }) => ({
+        title: "Update check failed",
+        description: error,
+    }),
+    "app/update/restart_failed": ({ error }) => ({
+        title: "Failed to restart after update",
+        description: `${error}`,
+    }),
+} as PresentDefs<Keys<typeof EVENTS>>;

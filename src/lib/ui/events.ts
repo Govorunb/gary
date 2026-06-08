@@ -9,6 +9,7 @@ export const EVENTS = [
             text: z.string(),
             silent: z.boolean(),
         }),
+        description: "User added context",
         level: LogLevel.Info,
     },
     {
@@ -34,6 +35,7 @@ export const EVENTS = [
             actionName: z.string(),
             hasData: z.boolean(),
         }),
+        description: "User sent an action",
         level: LogLevel.Info,
     },
     {
@@ -67,6 +69,7 @@ export const EVENTS = [
         dataSchema: z.object({
             version: z.string(),
         }),
+        description: "Update installed",
         level: LogLevel.Success,
     },
 ] as const satisfies EventDef<'ui'>[];

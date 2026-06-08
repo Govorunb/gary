@@ -236,16 +236,19 @@ export const EVENTS = [
     {
         key: 'app/engines/llm/network_error',
         dataSchema: {} as { reqId: string },
+        description: "LLM request failed due to a network error",
         level: LogLevel.Error,
     },
     {
         key: 'app/engines/llm/error_result',
         dataSchema: {} as { reqId: string },
+        description: "LLM request returned an error result",
         level: LogLevel.Error,
     },
     {
         key: 'app/engines/llm/assert',
         dataSchema: {} as { reqId: string, assertion: string },
+        description: "LLM response failed an internal assertion",
         level: LogLevel.Error,
     },
     {
@@ -260,6 +263,7 @@ export const EVENTS = [
             reqId: z.string(),
             params: z.any().sensitive(),
         }),
+        description: "LLM request sent",
         level: LogLevel.Verbose,
     },
     {
@@ -268,6 +272,7 @@ export const EVENTS = [
             reqId: z.string(),
             response: z.any().sensitive(),
         }),
+        description: "LLM response received",
         level: LogLevel.Verbose,
     },
 ] as const satisfies EventDef<'app/engines/llm'>[];

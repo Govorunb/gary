@@ -413,26 +413,31 @@ export const EVENTS = [
     {
         key: 'api/game/startup',
         dataSchema: {} as GameEventData & { startupStateWas: Game['startupState'] },
+        description: "Game sent startup",
         level: LogLevel.Info,
     },
     {
         key: 'api/game/context',
         dataSchema: {} as GameEventData & v1.Context['data'],
+        description: "Game sent context",
         level: LogLevel.Info,
     },
     {
         key: 'api/game/register',
         dataSchema: {} as GameEventData & v1.RegisterActions['data'] & { newActions: string[] },
+        description: "Game registered actions",
         level: LogLevel.Debug,
     },
     {
         key: 'api/game/unregister',
         dataSchema: {} as GameEventData & v1.UnregisterActions['data'],
+        description: "Game unregistered actions",
         level: LogLevel.Debug,
     },
     {
         key: 'api/game/force',
         dataSchema: {} as GameEventData & v1.ForceAction['data'],
+        description: "Game forced an action",
         level: LogLevel.Info,
     },
     {
@@ -444,21 +449,25 @@ export const EVENTS = [
     {
         key: 'api/game/register/duplicate',
         dataSchema: {} as GameEventData & { game: {version: Game['version']}, old: v1.Action, new: v1.Action },
+        description: "Game re-registered an action",
         level: LogLevel.Info,
     },
     {
         key: 'api/game/act/actor',
         dataSchema: {} as GameEventData & { act: v1.ActData },
+        description: "Sent actor action to game",
         level: LogLevel.Info,
     },
     {
         key: 'api/game/act/user',
         dataSchema: {} as GameEventData & { act: v1.ActData },
+        description: "Sent user action to game",
         level: LogLevel.Debug,
     },
     {
         key: 'api/game/action_result',
         dataSchema: {} as GameEventData & { act: v1.ActData; success: boolean; message?: string },
+        description: "Game sent action result",
         level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'api/game'>[];

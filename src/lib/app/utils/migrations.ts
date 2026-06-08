@@ -143,6 +143,7 @@ export const EVENTS = [
     {
         key: 'app/migrations/cannot_migrate',
         dataSchema: {} as { reason: "version_not_found" } | (CommonData & { reason: "downwards" }),
+        description: "Cannot migrate preferences",
         level: LogLevel.Warning,
     },
     {

@@ -1,5 +1,5 @@
 import { EVENT_BUS } from "$lib/app/events/bus";
-import type { EventDef } from "$lib/app/events";
+import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
 import { shortId, LogLevel } from "$lib/app/utils";
 import { toast } from "svelte-sonner";
 import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, DIAGNOSTICS_BY_KEY, type DiagData } from "./diagnostics";
@@ -33,7 +33,6 @@ export class GameDiagnostics {
         const diagDef = DIAGNOSTICS_BY_KEY[key];
         if (!diagDef) {
             EVENT_BUS.emit('app/diagnostics/unknown/trigger', { key, context });
-            toast.error(`Failed to trigger diagnostic '${key}' - unknown diagnostic`, bugToast);
             return null;
         }
 
@@ -76,7 +75,6 @@ export class GameDiagnostics {
         const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
             EVENT_BUS.emit('app/diagnostics/unknown/suppress', { key });
-            toast.error(`Cannot suppress unknown diagnostic ${key}`, bugToast);
             return;
         }
         if (!this.suppressions.includes(key)) {
@@ -89,7 +87,6 @@ export class GameDiagnostics {
         const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
             EVENT_BUS.emit('app/diagnostics/unknown/unsuppress', { key });
-            toast.error(`Tried to unsuppress unknown diagnostic ${key}`, bugToast);
             return;
         }
         const i = this.suppressions.indexOf(key);
@@ -129,26 +126,31 @@ export const EVENTS = [
     {
         key: 'app/diagnostics/triggered',
         dataSchema: EVENT_DATA.inst,
+        description: "Diagnostic triggered",
         level: LogLevel.Info,
     },
     {
         key: 'app/diagnostics/dismissed',
         dataSchema: EVENT_DATA.inst,
+        description: "Diagnostic dismissed",
         level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/restored',
         dataSchema: EVENT_DATA.inst,
+        description: "Diagnostic restored",
         level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/suppressed',
         dataSchema: EVENT_DATA.key,
+        description: "Diagnostic suppressed",
         level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/unsuppressed',
         dataSchema: EVENT_DATA.key,
+        description: "Diagnostic unsuppressed",
         level: LogLevel.Debug,
     },
     {
@@ -167,3 +169,18 @@ export const EVENTS = [
         level: LogLevel.Error,
     },
 ] as const satisfies EventDef<'app/diagnostics'>[];
+
+export const DISPLAY = {
+    "app/diagnostics/unknown/trigger": ({ key }) => ({
+        title: `Failed to trigger diagnostic '${key}' - unknown diagnostic`,
+        description: bugToast.description,
+    }),
+    "app/diagnostics/unknown/suppress": ({ key }) => ({
+        title: `Cannot suppress unknown diagnostic ${key}`,
+        description: bugToast.description,
+    }),
+    "app/diagnostics/unknown/unsuppress": ({ key }) => ({
+        title: `Tried to unsuppress unknown diagnostic ${key}`,
+        description: bugToast.description,
+    }),
+} as PresentDefs<Keys<typeof EVENTS>>;

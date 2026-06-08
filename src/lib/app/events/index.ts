@@ -6,12 +6,12 @@ import { EVENTS as PREFS_EVENTS } from "$lib/app/prefs.svelte";
 import { EVENTS as SESSION_EVENTS, DISPLAY as SESSION_DISPLAY } from "$lib/app/session.svelte";
 import { EVENTS as CONN_EVENTS, DISPLAY as CONN_DISPLAY } from "$lib/api/connection";
 import { EVENTS as CLIENT_GAME_EVENTS, DISPLAY as CLIENT_GAME_DISPLAY } from "$lib/api/client-game";
-import { EVENTS as DIAG_EVENTS } from "$lib/api/game-diagnostics.svelte";
+import { EVENTS as DIAG_EVENTS, DISPLAY as DIAG_DISPLAY } from "$lib/api/game-diagnostics.svelte";
 import { EVENTS as GAME_EVENTS, DISPLAY as GAME_DISPLAY } from "$lib/api/game.svelte";
 import { EVENTS as REGISTRY_EVENTS, DISPLAY as REGISTRY_DISPLAY } from "$lib/api/registry.svelte";
 import { EVENTS as MIGRATIONS_EVENTS } from "$lib/app/utils/migrations";
 import { EVENTS as SCHED_EVENTS, ACT_EVENTS, DISPLAY as SCHED_PRESENT } from "$lib/app/scheduler.svelte";
-import { EVENTS as UPDATER_EVENTS } from "$lib/app/updater.svelte";
+import { EVENTS as UPDATER_EVENTS, DISPLAY as UPDATER_DISPLAY } from "$lib/app/updater.svelte";
 import { EVENTS as LLM_EVENTS } from "$lib/app/engines/llm/openai.svelte";
 import { EVENTS as UI_EVENTS, DISPLAY as UI_DISPLAY } from "$lib/ui/events";
 
@@ -105,12 +105,18 @@ export type EventInstances = {
 export type EventInstance<K extends EventKey> = Extract<EventInstances, { key: K }>;
 
 export const EVENTS_DISPLAY = {
+    "i_have_no_event_and_i_must_log": ({ message, details }) => ({
+        title: message,
+        description: details,
+    }),
     ...WS_SERVER_DISPLAY,
     ...SESSION_DISPLAY,
     ...CONN_DISPLAY,
     ...CLIENT_GAME_DISPLAY,
+    ...DIAG_DISPLAY,
     ...GAME_DISPLAY,
     ...REGISTRY_DISPLAY,
     ...SCHED_PRESENT,
+    ...UPDATER_DISPLAY,
     ...UI_DISPLAY,
 } as PresentDefs<EventKey>;

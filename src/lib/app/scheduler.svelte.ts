@@ -266,11 +266,13 @@ export const EVENTS = [
     {
         key: 'app/scheduler/act/fail/ignored',
         dataSchema: {} as { force: boolean; ignores: string[]; },
+        description: "Scheduler ignored an act request",
         level: LogLevel.Info,
     },
     {
         key: 'app/scheduler/act/fail/no_actions',
         dataSchema: {} as { force: boolean; actionsProvided?: boolean; },
+        description: "Scheduler could not act because no actions were available",
         level: LogLevel.Info,
     },
     {
@@ -281,6 +283,7 @@ export const EVENTS = [
     {
         key: 'app/scheduler/act/fail/failed_to_send',
         dataSchema: {} as { force: boolean; },
+        description: "Scheduler failed to send the selected action",
         level: LogLevel.Error,
     },
     {
@@ -342,11 +345,13 @@ export const ACT_EVENTS = [
     {
         key: 'api/actor/skip',
         dataSchema: {} as { engineId: string; },
+        description: "Actor skipped acting",
         level: LogLevel.Info,
     },
     {
         key: 'api/actor/say',
         dataSchema: {} as { engineId: string; msg: string; notify: boolean; },
+        description: "Actor spoke",
         level: LogLevel.Info,
     },
     {
@@ -357,6 +362,7 @@ export const ACT_EVENTS = [
             game: string;
             act: ReturnType<typeof zActData.decode>;
         },
+        description: "Actor selected an action",
         level: LogLevel.Info,
     },
     {
@@ -370,6 +376,7 @@ export const ACT_EVENTS = [
                 response?: unknown;
             };
         },
+        description: "Actor generated text",
         level: LogLevel.Info,
     }
 ] as const satisfies EventDef<'api/actor'>[];
