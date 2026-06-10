@@ -13,3 +13,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .codex
 .agents
+tmp/
+
+# impeccable skill
+.impeccable/
+DESIGN.md
+PRODUCT.md
