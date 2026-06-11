@@ -151,7 +151,7 @@
 
     .dashboard-shell {
         @apply relative grid flex-1 min-h-0 gap-1 p-1;
-        grid-template-columns: var(--left-sidebar-width, 20rem) minmax(0, 1fr) var(--right-sidebar-width, 17rem);
+        grid-template-columns: var(--left-sidebar-width, 20rem) minmax(0, 1fr) var(--right-sidebar-width, 21rem);
     }
 
     .dashboard-shell[data-left-collapsed] {
