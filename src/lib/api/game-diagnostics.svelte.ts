@@ -32,7 +32,7 @@ export class GameDiagnostics {
     public trigger<K extends DiagnosticKey>(key: K, context?: DiagData<K>, report: boolean = true): GameDiagnostic<K> | null {
         const diagDef = DIAGNOSTICS_BY_KEY[key];
         if (!diagDef) {
-            EVENT_BUS.emit('app/diagnostics/unknown/trigger', { key, context });
+            EVENT_BUS.emit('app/diagnostics/unknown/trigger', { game: { id: this.game.id, name: this.game.name }, key, context });
             return null;
         }
 
@@ -46,7 +46,13 @@ export class GameDiagnostics {
         } as GameDiagnostic<K>);
         this.diagnostics.push(diag);
 
-        EVENT_BUS.emit('app/diagnostics/triggered', { diag, severity: diagDef.severity, report, suppressed });
+        EVENT_BUS.emit('app/diagnostics/triggered', {
+            game: { id: this.game.id, name: this.game.name },
+            diag,
+            severity: diagDef.severity,
+            report,
+            suppressed,
+        });
 
         if (report && !suppressed) {
             if (diagDef.severity >= DiagnosticSeverity.Error) {
@@ -74,7 +80,7 @@ export class GameDiagnostics {
     public suppress(key: DiagnosticKey) {
         const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
-            EVENT_BUS.emit('app/diagnostics/unknown/suppress', { key });
+            EVENT_BUS.emit('app/diagnostics/unknown/suppress', { game: { id: this.game.id, name: this.game.name }, key });
             return;
         }
         if (!this.suppressions.includes(key)) {
@@ -86,7 +92,7 @@ export class GameDiagnostics {
     public unsuppress(key: DiagnosticKey) {
         const diag = DIAGNOSTICS_BY_KEY[key];
         if (!diag) {
-            EVENT_BUS.emit('app/diagnostics/unknown/unsuppress', { key });
+            EVENT_BUS.emit('app/diagnostics/unknown/unsuppress', { game: { id: this.game.id, name: this.game.name }, key });
             return;
         }
         const i = this.suppressions.indexOf(key);
@@ -118,6 +124,7 @@ export class GameDiagnostics {
 }
 
 const EVENT_DATA = {
+    game: {} as { game: { id: string; name: string } },
     key: {} as { key: DiagnosticKey },
     inst: {} as { diag: GameDiagnostic<DiagnosticKey>; severity: DiagnosticSeverity; report: boolean; suppressed: boolean },
 } as const;
@@ -125,47 +132,47 @@ const EVENT_DATA = {
 export const EVENTS = [
     {
         key: 'app/diagnostics/triggered',
-        dataSchema: EVENT_DATA.inst,
+        dataSchema: {} as typeof EVENT_DATA.game & typeof EVENT_DATA.inst,
         description: "Diagnostic triggered",
         level: LogLevel.Info,
     },
     {
         key: 'app/diagnostics/dismissed',
-        dataSchema: EVENT_DATA.inst,
+        dataSchema: {} as typeof EVENT_DATA.game & typeof EVENT_DATA.inst,
         description: "Diagnostic dismissed",
         level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/restored',
-        dataSchema: EVENT_DATA.inst,
+        dataSchema: {} as typeof EVENT_DATA.game & typeof EVENT_DATA.inst,
         description: "Diagnostic restored",
         level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/suppressed',
-        dataSchema: EVENT_DATA.key,
+        dataSchema: {} as typeof EVENT_DATA.game & typeof EVENT_DATA.key,
         description: "Diagnostic suppressed",
         level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/unsuppressed',
-        dataSchema: EVENT_DATA.key,
+        dataSchema: {} as typeof EVENT_DATA.game & typeof EVENT_DATA.key,
         description: "Diagnostic unsuppressed",
         level: LogLevel.Debug,
     },
     {
         key: 'app/diagnostics/unknown/trigger',
-        dataSchema: {} as typeof EVENT_DATA.key & { context: any },
+        dataSchema: {} as typeof EVENT_DATA.game & typeof EVENT_DATA.key & { context: any },
         level: LogLevel.Error,
     },
     {
         key: 'app/diagnostics/unknown/suppress',
-        dataSchema: EVENT_DATA.key,
+        dataSchema: {} as typeof EVENT_DATA.game & typeof EVENT_DATA.key,
         level: LogLevel.Error,
     },
     {
         key: 'app/diagnostics/unknown/unsuppress',
-        dataSchema: EVENT_DATA.key,
+        dataSchema: {} as typeof EVENT_DATA.game & typeof EVENT_DATA.key,
         level: LogLevel.Error,
     },
 ] as const satisfies EventDef<'app/diagnostics'>[];
