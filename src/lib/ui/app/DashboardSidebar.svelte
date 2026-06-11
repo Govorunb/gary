@@ -148,6 +148,12 @@
         @apply relative;
     }
 
+    .dashboard-sidebar[data-side="right"][data-collapsed]:not([data-narrow]) .sidebar-rail::before {
+        content: "";
+        @apply absolute inset-y-0 right-0;
+        width: 1rem;
+    }
+
     .sidebar-content {
         @apply h-full overflow-hidden;
     }

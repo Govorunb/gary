@@ -139,9 +139,7 @@
         {/snippet}
 
         {#snippet rail()}
-            <div class="right-rail-body">
-                <span class="right-rail-title">Workspace</span>
-            </div>
+            <div class="right-rail-body"></div>
         {/snippet}
     </DashboardSidebar>
 </div>
@@ -159,7 +157,7 @@
     }
 
     .dashboard-shell[data-right-collapsed] {
-        --right-sidebar-width: 3.5rem;
+        --right-sidebar-width: 0.25rem;
     }
 
     .main-panel {
@@ -183,7 +181,7 @@
     }
 
     .right-rail-body {
-        @apply items-center justify-center;
+        @apply hidden;
     }
 
     .rail-header {
@@ -220,13 +218,6 @@
     .rail-game-button[data-selected] {
         @apply border-primary-300 bg-primary-100 text-primary-900;
         @apply dark:border-primary-700 dark:bg-primary-900/50 dark:text-primary-100;
-    }
-
-    .right-rail-title {
-        writing-mode: vertical-rl;
-        transform: rotate(180deg);
-        @apply text-xs font-semibold uppercase tracking-[0.24em];
-        @apply text-neutral-500 dark:text-neutral-400;
     }
 
     @media (max-width: 1023px) {
