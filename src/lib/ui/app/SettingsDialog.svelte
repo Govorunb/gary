@@ -99,6 +99,11 @@
                 <p class="field-label">Theme</p>
                 <ThemePicker bind:currentTheme={userPrefs.app.theme} />
             </div>
+            <div class="field">
+                <Switch bind:checked={userPrefs.app.hideSensitiveInfo}>
+                    <p class="field-label">Hide sensitive info</p>
+                </Switch>
+            </div>
             {#if isApril1st()}
                 <div class="field">
                     <Switch bind:checked={() => !userPrefs.app.joyless, (v) => userPrefs.app.joyless = !v}>

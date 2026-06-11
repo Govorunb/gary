@@ -1,8 +1,9 @@
 <script lang="ts">
-    import { Bug, Check, ChevronDown, CircleX, Info, Logs, Skull, TriangleAlert } from "@lucide/svelte";
+    import { Bug, Check, ChevronDown, CircleX, Eye, Info, Logs, Skull, TriangleAlert } from "@lucide/svelte";
     import dayjs from "dayjs";
-    import { EVENTS_BY_KEY, EVENTS_DISPLAY, type EventDef, type EventInstance, type EventKey } from "$lib/app/events";
+    import { EVENTS_BY_KEY, EVENTS_DISPLAY, hasSensitiveSchemaField, type EventDef, type EventInstance, type EventKey } from "$lib/app/events";
     import { LogLevel } from "$lib/app/utils";
+    import { getUserPrefs } from "$lib/app/utils/di";
     import CodeMirror from "$lib/ui/common/CodeMirror.svelte";
 
     type Props = {
@@ -12,7 +13,10 @@
 
     let { event, clock }: Props = $props();
 
+    const userPrefs = getUserPrefs();
+
     let detailsOpen = $state(false);
+    let sensitiveInfoRevealed = $state(false);
 
     const levelConfig: Record<LogLevel, { icon: typeof Info; label: string; class: string }> = {
         [LogLevel.Verbose]: { icon: Logs, label: "Verbose", class: "level-verbose" },
@@ -34,6 +38,13 @@
     const absoluteTimestamp = $derived(dayjs(event.timestamp).format("MMM D, YYYY h:mm:ss A"));
     const detailJson = $derived(formatDetails(event, level));
     const hasDetails = $derived(event.data !== undefined);
+    const hasSensitiveDetails = $derived(hasDetails && hasSensitiveSchemaField((EVENTS_BY_KEY[event.key] as EventDef).dataSchema));
+    const sensitiveDetailsHidden = $derived(hasSensitiveDetails && userPrefs.app.hideSensitiveInfo && !sensitiveInfoRevealed);
+
+    $effect(() => {
+        if (!detailsOpen) sensitiveInfoRevealed = false;
+    });
+
     function getPresentedEvent(evt: EventInstance<EventKey>): { title?: string; description?: string } {
         const presenter = EVENTS_DISPLAY[evt.key] as ((data: never) => { title?: string; description?: string }) | undefined;
         const def = EVENTS_BY_KEY[evt.key] as EventDef;
@@ -83,6 +94,12 @@
             2,
         );
     }
+
+    function showSensitiveInfo(evt: MouseEvent) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        sensitiveInfoRevealed = true;
+    }
 </script>
 
 {#snippet eventHeader(disclosure = false)}
@@ -116,14 +133,31 @@
             {@render eventHeader(true)}
         </summary>
 
-        <div class="details-editor">
-            <CodeMirror
-                code={detailJson}
-                open={detailsOpen}
-                readonly
-                minHeight="4rem"
-                maxHeight="12rem"
-            />
+        <div class="details-editor" class:sensitive-details={sensitiveDetailsHidden}>
+            <div class="details-code" class:blurred={sensitiveDetailsHidden} aria-hidden={sensitiveDetailsHidden}>
+                <CodeMirror
+                    code={detailJson}
+                    open={detailsOpen}
+                    readonly
+                    minHeight="4rem"
+                    maxHeight="12rem"
+                />
+            </div>
+
+            {#if sensitiveDetailsHidden}
+                <button
+                    class="sensitive-overlay"
+                    type="button"
+                    onclick={showSensitiveInfo}
+                    aria-label="Show sensitive event details"
+                >
+                    <span class="sensitive-title">Sensitive info hidden</span>
+                    <span class="sensitive-action">
+                        <Eye class="size-3.5" />
+                        Show sensitive info
+                    </span>
+                </button>
+            {/if}
         </div>
     </details>
 {:else}
@@ -227,7 +261,40 @@
     }
 
     .details-editor {
-        @apply mx-1.5 mb-1.5 min-w-0;
+        @apply relative mx-1.5 mb-1.5 min-w-0;
+    }
+
+    .details-code {
+        @apply min-w-0;
+    }
+
+    .details-code.blurred {
+        @apply pointer-events-none select-none;
+        filter: blur(3px);
+    }
+
+    .sensitive-overlay {
+        @apply absolute inset-0 z-10 fcol-1 items-center justify-center rounded-lg px-3 py-2 text-center;
+        @apply border border-warning-200/80 bg-warning-50/90 text-warning-900 shadow-sm;
+        @apply transition-colors;
+        @apply dark:border-warning-700/70 dark:bg-surface-900/90 dark:text-warning-100;
+
+        &:hover {
+            @apply bg-warning-100 dark:bg-surface-800;
+        }
+
+        &:focus-visible {
+            @apply outline-none ring-2 ring-warning-400;
+        }
+    }
+
+    .sensitive-title {
+        @apply text-sm font-semibold leading-5;
+    }
+
+    .sensitive-action {
+        @apply frow-1.5 items-center text-xs font-medium leading-4;
+        @apply text-warning-800 dark:text-warning-200;
     }
 
     .level-verbose .level-icon,

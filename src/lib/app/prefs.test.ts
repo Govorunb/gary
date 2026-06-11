@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { zUserPrefs } from "./prefs.svelte";
 import { moveField, deleteField, migrate } from "./utils/migrations";
 
 const simple = {
@@ -253,5 +254,15 @@ describe("migrate", () => {
 		const data = { version: "1.0.0", foo: "bar" } as any;
 		const result = migrate("1.3.0", data, [wrap]) as any;
 		expect(result).toStrictEqual({ version: "1.3.0", foo: "bar" });
+	});
+});
+
+describe("user prefs", () => {
+	test("hides sensitive info by default", () => {
+		expect(zUserPrefs.parse({ version: "test" }).app.hideSensitiveInfo).toBe(true);
+	});
+
+	test("preserves explicit sensitive-info visibility preference", () => {
+		expect(zUserPrefs.parse({ version: "test", app: { hideSensitiveInfo: false } }).app.hideSensitiveInfo).toBe(false);
 	});
 });
