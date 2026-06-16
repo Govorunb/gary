@@ -1,8 +1,9 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
-    import { Filter } from "@lucide/svelte";
+    import { EllipsisVertical, Filter } from "@lucide/svelte";
+    import { toast } from "svelte-sonner";
     import type { Game } from "$lib/api/game.svelte";
-    import { EVENTS_BY_KEY, type EventInstance, type EventKey } from "$lib/app/events";
+    import { EVENTS_BY_KEY, redactSensitiveData, type EventDef, type EventInstance, type EventKey } from "$lib/app/events";
     import { LogLevel } from "$lib/app/utils";
     import { getSession } from "$lib/app/utils/di";
     import Popover from "$lib/ui/common/Popover.svelte";
@@ -18,6 +19,7 @@
 
     let selectedOnly = $state(false);
     let minimumLevel = $state(LogLevel.Info);
+    let menuOpen = $state(false);
     let clock = $state(Date.now());
     let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -71,6 +73,39 @@
         return false;
     }
 
+    function closeMenu() {
+        menuOpen = false;
+    }
+
+    async function copyVisibleEventsJson() {
+        const events = visibleEvents.map((event) => ({
+            ...event,
+            data: redactSensitiveData((EVENTS_BY_KEY[event.key] as EventDef).dataSchema, event.data),
+        }));
+
+        try {
+            await navigator.clipboard.writeText(JSON.stringify(events, eventJsonReplacer, 2));
+            toast.success("Copied JSON to clipboard");
+        } catch (error) {
+            toast.error("Failed to copy JSON", {
+                description: error instanceof Error ? error.message : String(error),
+            });
+        } finally {
+            closeMenu();
+        }
+    }
+
+    function eventJsonReplacer(_key: string, value: unknown) {
+        if (value instanceof Error) {
+            return {
+                name: value.name,
+                message: value.message,
+                stack: value.stack,
+            };
+        }
+        return value;
+    }
+
     function clearClockTimeout() {
         if (!timeout) return;
         clearTimeout(timeout);
@@ -112,49 +147,69 @@
             <p>{visibleEvents.length} of {totalEvents} shown</p>
         </div>
 
-        <Popover>
-            {#snippet trigger(props)}
-                <button
-                    {...props}
-                    class="filter-button"
-                    type="button"
-                    aria-label="Filter event log"
-                    title="Filter event log"
-                >
-                    <Filter class="size-4" />
-                    <span>{filterLabel}</span>
-                </button>
-            {/snippet}
+        <div class="header-actions">
+            <Popover>
+                {#snippet trigger(props)}
+                    <button
+                        {...props}
+                        class="filter-button"
+                        type="button"
+                        aria-label="Filter event log"
+                        title="Filter event log"
+                    >
+                        <Filter class="size-4" />
+                        <span>{filterLabel}</span>
+                    </button>
+                {/snippet}
 
-            <div class="filter-panel">
-                <div class="filter-group">
-                    <p class="filter-heading">Scope</p>
-                    <label>
-                        <input type="radio" name="event-log-scope" checked={!selectedOnly} onchange={() => selectedOnly = false} />
-                        <span>All events</span>
-                    </label>
-                    <label title={selectedScopeLabel}>
-                        <input type="radio" name="event-log-scope" checked={selectedOnly} onchange={() => selectedOnly = true} />
-                        <span>Selected game only</span>
-                    </label>
-                </div>
-
-                <div class="filter-group">
-                    <p class="filter-heading">Minimum level</p>
-                    {#each minimumLevelOptions as level}
+                <div class="filter-panel">
+                    <div class="filter-group">
+                        <p class="filter-heading">Scope</p>
                         <label>
-                            <input
-                                type="radio"
-                                name="event-log-level"
-                                checked={minimumLevel === level}
-                                onchange={() => minimumLevel = level}
-                            />
-                            <span>{LogLevel[level]}+</span>
+                            <input type="radio" name="event-log-scope" checked={!selectedOnly} onchange={() => selectedOnly = false} />
+                            <span>All events</span>
                         </label>
-                    {/each}
+                        <label title={selectedScopeLabel}>
+                            <input type="radio" name="event-log-scope" checked={selectedOnly} onchange={() => selectedOnly = true} />
+                            <span>Selected game only</span>
+                        </label>
+                    </div>
+
+                    <div class="filter-group">
+                        <p class="filter-heading">Minimum level</p>
+                        {#each minimumLevelOptions as level}
+                            <label>
+                                <input
+                                    type="radio"
+                                    name="event-log-level"
+                                    checked={minimumLevel === level}
+                                    onchange={() => minimumLevel = level}
+                                />
+                                <span>{LogLevel[level]}+</span>
+                            </label>
+                        {/each}
+                    </div>
                 </div>
-            </div>
-        </Popover>
+            </Popover>
+
+            <Popover modal open={menuOpen} onOpenChange={(d) => menuOpen = d.open}>
+                {#snippet trigger(props)}
+                    <button
+                        {...props}
+                        class="menu-trigger"
+                        type="button"
+                        aria-label="Event log menu"
+                        title="Event log menu"
+                    >
+                        <EllipsisVertical class="size-4" />
+                    </button>
+                {/snippet}
+
+                <button class="menu-item" type="button" onclick={copyVisibleEventsJson}>
+                    Copy JSON
+                </button>
+            </Popover>
+        </div>
     </div>
 
     <div class="event-feed">
@@ -193,6 +248,10 @@
         }
     }
 
+    .header-actions {
+        @apply frow-1.5 shrink-0 items-center;
+    }
+
     .filter-button {
         @apply frow-1.5 shrink-0 items-center rounded-md px-2 py-1.5;
         @apply border border-neutral-200/80 bg-white/80 text-xs font-medium text-neutral-700 shadow-sm;
@@ -205,6 +264,34 @@
 
         &:focus-visible {
             @apply outline-none ring-2 ring-primary-500;
+        }
+    }
+
+    .menu-trigger {
+        @apply flex size-8 shrink-0 items-center justify-center rounded-md;
+        @apply border border-neutral-200/80 bg-white/80 text-neutral-700 shadow-sm;
+        @apply transition-colors;
+        @apply dark:border-neutral-700 dark:bg-surface-800/80 dark:text-neutral-100;
+
+        &:hover {
+            @apply bg-neutral-100 dark:bg-surface-700;
+        }
+
+        &:focus-visible {
+            @apply outline-none ring-2 ring-primary-500;
+        }
+    }
+
+    .menu-item {
+        @apply w-full rounded-sm px-3 py-2;
+        @apply text-left text-sm text-neutral-700 transition-colors duration-150 dark:text-neutral-300;
+
+        &:hover {
+            @apply bg-neutral-200/70 dark:bg-neutral-700/70;
+        }
+
+        &:focus-visible {
+            @apply outline-none ring-1 ring-neutral-400 dark:ring-neutral-600;
         }
     }
 

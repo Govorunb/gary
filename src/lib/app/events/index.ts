@@ -14,7 +14,7 @@ import { EVENTS as SCHED_EVENTS, ACT_EVENTS, DISPLAY as SCHED_PRESENT } from "$l
 import { EVENTS as UPDATER_EVENTS, DISPLAY as UPDATER_DISPLAY } from "$lib/app/updater.svelte";
 import { EVENTS as LLM_EVENTS } from "$lib/app/engines/llm/openai.svelte";
 import { EVENTS as UI_EVENTS, DISPLAY as UI_DISPLAY } from "$lib/ui/events";
-export { hasSensitiveSchemaField } from "./sensitive";
+export { hasSensitiveSchemaField, redactSensitiveData } from "./sensitive";
 
 export interface EventDef<Prefix extends string = ''> {
     /** Unique key signifying the event type.
