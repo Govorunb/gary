@@ -1,6 +1,6 @@
 import type z from "zod";
 import { LogLevel, type UnwrapZod } from "$lib/app/utils";
-import type { ReportOptions, ToastOptions } from "$lib/app/utils/reporting";
+import type { ToastOptions } from "$lib/app/utils/reporting";
 import { EVENTS as WS_SERVER_EVENTS, DISPLAY as WS_SERVER_DISPLAY } from "$lib/app/server.svelte";
 import { EVENTS as PREFS_EVENTS } from "$lib/app/prefs.svelte";
 import { EVENTS as SESSION_EVENTS, DISPLAY as SESSION_DISPLAY } from "$lib/app/session.svelte";
@@ -42,11 +42,6 @@ export type PresentDefs<K extends EventKey> = {
 };
 
 export const EVENTS = [
-    {
-        key: 'i_have_no_event_and_i_must_log',
-        dataSchema: {} as ReportOptions & { level?: LogLevel },
-        level: LogLevel.Debug,
-    },
     {
         key: 'test1',
         dataSchema: null,
@@ -106,10 +101,6 @@ export type EventInstances = {
 export type EventInstance<K extends EventKey> = Extract<EventInstances, { key: K }>;
 
 export const EVENTS_DISPLAY = {
-    "i_have_no_event_and_i_must_log": ({ message, details }) => ({
-        title: message,
-        description: details,
-    }),
     ...WS_SERVER_DISPLAY,
     ...SESSION_DISPLAY,
     ...CONN_DISPLAY,

@@ -64,17 +64,11 @@ export function moveField(
     const toParts = toPath.split(".");
     const fromKey = fromParts.pop()!;
     const toKey = toParts.pop()!;
-    EVENT_BUS.emit('i_have_no_event_and_i_must_log', {
-        message: `Moving .${fromPath} to .${toPath}`,
-        level: LogLevel.Verbose,
-    });
+    EVENT_BUS.emit('app/migrations/field_move', { fromPath, toPath });
 
     const fromParent = navigate(data, fromParts);
     if (!fromParent || !(fromKey in fromParent)) {
-        EVENT_BUS.emit('i_have_no_event_and_i_must_log', {
-            message: `Rename field skipped: source path '${fromPath}' not found`,
-            level: LogLevel.Debug,
-        });
+        EVENT_BUS.emit('app/migrations/field_move_skipped', { fromPath, toPath, reason: "source_not_found" });
         return;
     }
 
@@ -102,10 +96,7 @@ export function deleteField(data: Record<string, any>, path: FieldPath): void {
 
     const parent = navigate(data, parts);
     if (!parent || !(key in parent)) {
-        EVENT_BUS.emit('i_have_no_event_and_i_must_log', {
-            message: `Delete field skipped: path '${path}' not found`,
-            level: LogLevel.Debug,
-        });
+        EVENT_BUS.emit('app/migrations/field_delete_skipped', { path, reason: "path_not_found" });
         return;
     }
 
@@ -138,6 +129,7 @@ function ensurePath(obj: any, pathParts: string[]): Record<string, any> {
 }
 
 type CommonData = {from: string, to: string};
+type MoveFieldData = { fromPath: FieldPath; toPath: FieldPath };
 
 export const EVENTS = [
     {
@@ -162,6 +154,24 @@ export const EVENTS = [
         key: 'app/migrations/apply',
         dataSchema: {} as CommonData & { migration: Migration },
         description: 'Applying migration',
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/migrations/field_move',
+        dataSchema: {} as MoveFieldData,
+        description: 'Moving migration field',
+        level: LogLevel.Verbose,
+    },
+    {
+        key: 'app/migrations/field_move_skipped',
+        dataSchema: {} as MoveFieldData & { reason: "source_not_found" },
+        description: 'Skipped migration field move',
+        level: LogLevel.Debug,
+    },
+    {
+        key: 'app/migrations/field_delete_skipped',
+        dataSchema: {} as { path: FieldPath; reason: "path_not_found" },
+        description: 'Skipped migration field delete',
         level: LogLevel.Debug,
     },
 ] as const satisfies EventDef<'app/migrations'>[];
