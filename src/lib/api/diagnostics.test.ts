@@ -525,6 +525,30 @@ describe("prot/schema/unsupported_keywords", () => {
         expect(harness.diagnosticKeys).toStrictEqual([]);
     });
 
+    test("ignore schema annotation keywords", async ({harness}) => {
+        await harness.client.hello();
+
+        const action = {
+            ...ACTION,
+            schema: {
+                type: "object",
+                title: "Test action schema",
+                description: "Schema metadata is not a validation constraint.",
+                properties: {
+                    foo: {
+                        type: "string",
+                        title: "Foo",
+                        description: "Helpful context for the model."
+                    }
+                },
+                additionalProperties: false
+            }
+        } satisfies v1.Action;
+        await harness.client.registerActions([action]);
+
+        expect(harness.diagnosticKeys).toStrictEqual([]);
+    });
+
     test("properties - property name matching keyword is ignored", async ({harness}) => {
         await harness.client.hello();
 

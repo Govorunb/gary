@@ -5,6 +5,7 @@ const SUPPORTED_SCHEMA_KEYWORDS = [
     "additionalItems",
     "const",
     "default",
+    "description",
     "enum",
     "examples",
     "exclusiveMaximum",
@@ -21,6 +22,7 @@ const SUPPORTED_SCHEMA_KEYWORDS = [
     "prefixItems",
     "properties",
     "required",
+    "title",
     "type"
 ] as const;
 

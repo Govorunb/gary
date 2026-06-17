@@ -18,7 +18,7 @@ class MockSession {
         actPending: false
     };
     private readonly mockPrefs = {
-        ...zUserPrefs.decode({}),
+        ...zUserPrefs.decode({ version: "test" }),
         getGamePrefs(game: string) {
             return this.api.games[game] ??= zGamePrefs.decode({});
         }
