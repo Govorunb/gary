@@ -75,6 +75,7 @@
 - Double click action header to open manual send dialog a-la Tony?
     - Probably not, now Ctrl-click on the other hand...
 - Deterministic/empty values in manual send
+- Busy icon restarts animation if engine goes idle and busy again in the same frame
 
 ## Miscellaneous wishlist/musings
 
