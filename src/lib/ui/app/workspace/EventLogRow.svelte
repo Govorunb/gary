@@ -5,6 +5,7 @@
     import { LogLevel } from "$lib/app/utils";
     import { getUserPrefs } from "$lib/app/utils/di";
     import CodeMirror from "$lib/ui/common/CodeMirror.svelte";
+    import { formatEventTime } from "./event-time";
 
     type Props = {
         event: EventInstance<EventKey>;
@@ -61,19 +62,6 @@
                 description: `Failed to render event presenter: ${error}`,
             };
         }
-    }
-
-    function formatEventTime(timestamp: number, now: number): string {
-        const age = Math.max(0, now - timestamp);
-        if (age < 5_000) return "now";
-        if (age < 60_000) return `${Math.floor(age / 5_000) * 5}s`;
-        if (age < 10 * 60_000) {
-            return `${Math.floor(age / 60_000)}m`;
-        }
-        if (age < 60 * 60_000) return `${Math.floor(age / 60_000)}m`;
-
-        const date = dayjs(timestamp);
-        return date.isSame(dayjs(now), "day") ? date.format("h:mm A") : date.format("MMM D, h:mm A");
     }
 
     function formatDetails(evt: EventInstance<EventKey>, evtLevel: LogLevel): string {
