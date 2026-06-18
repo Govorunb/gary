@@ -1,43 +1,14 @@
 <script lang="ts">
-    import { settled, untrack } from "svelte";
     import { getSession } from "$lib/app/utils/di";
     import OutLink from "$lib/ui/common/OutLink.svelte";
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import ContextMessage from "$lib/ui/app/context/ContextMessage.svelte";
     import ContextLogMenu from "$lib/ui/app/context/ContextLogMenu.svelte";
     import ContextInput from "./ContextInput.svelte";
-    import { ElementSize } from "runed";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
+    import VirtualLog from "$lib/ui/common/VirtualLog.svelte";
 
     const session = getSession();
-
-    let scrollElem: HTMLDivElement | null = $state(null);
-    let scrollOffset = $state(0);
-    const scrollThreshold = 100;
-    const logElemSize = new ElementSize(() => scrollElem);
-    let pendingScroll = $state(false);
-
-    // TODO: large perf impact from measuring
-    $effect(() => {
-        void session.context.userView.length;
-        void logElemSize.height;
-        untrack(updateScroll);
-    });
-
-    function updateScroll() {
-        if (!pendingScroll && scrollElem && scrollOffset < scrollThreshold) {
-            pendingScroll = true;
-            settled().then(() => {
-                pendingScroll = false;
-                scrollElem!.scrollTop = scrollElem!.scrollHeight;
-            });
-        }
-    }
-
-    function logScroll(event: Event) {
-        const target = event.target as HTMLDivElement;
-        scrollOffset = target.scrollHeight - target.clientHeight - target.scrollTop;
-    }
 </script>
 
 <div class="context-log-container">
@@ -56,12 +27,17 @@
         </TeachingTooltip>
     </div>
     <div class="reverse-log">
-        <div class="log" onscroll={logScroll} bind:this={scrollElem}>
-            <!-- TODO: https://tanstack.com/virtual/latest/docs/introduction -->
-            {#each session.context.userView as event (event.id)}
+        <VirtualLog
+            class="h-full"
+            items={session.context.userView}
+            getKey={(event) => event.id}
+            estimateSize={88}
+            overscan={10}
+        >
+            {#snippet children(event)}
                 <ContextMessage {event} />
-            {/each}
-        </div>
+            {/snippet}
+        </VirtualLog>
     </div>
     <ContextInput />
 </div>
@@ -77,8 +53,5 @@
     }
     .reverse-log {
         @apply fcol-0 flex-1 min-h-0;
-    }
-    .log {
-        @apply fcol-scroll-2 h-full;
     }
 </style>

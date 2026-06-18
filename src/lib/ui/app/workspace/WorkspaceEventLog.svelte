@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { onDestroy } from "svelte";
     import { EllipsisVertical, Filter } from "@lucide/svelte";
     import { toast } from "svelte-sonner";
     import type { Game } from "$lib/api/game.svelte";
@@ -7,6 +6,7 @@
     import { LogLevel } from "$lib/app/utils";
     import { getSession } from "$lib/app/utils/di";
     import Popover from "$lib/ui/common/Popover.svelte";
+    import VirtualLog from "$lib/ui/common/VirtualLog.svelte";
     import EventLogRow from "./EventLogRow.svelte";
 
     type Props = {
@@ -21,7 +21,7 @@
     let minimumLevel = $state(LogLevel.Info);
     let menuOpen = $state(false);
     let clock = $state(Date.now());
-    let timeout: ReturnType<typeof setTimeout> | null = null;
+    let clockInterval: ReturnType<typeof setInterval> | null = null;
 
     const minimumLevelOptions = [
         LogLevel.Verbose,
@@ -35,8 +35,7 @@
     const visibleEvents = $derived.by(() => {
         return allEvents
             .filter((event) => eventLevel(event) >= minimumLevel)
-            .filter((event) => !selectedOnly || matchesSelectedGame(event, selectedGame))
-            .toReversed();
+            .filter((event) => !selectedOnly || matchesSelectedGame(event, selectedGame));
     });
     const totalEvents = $derived(allEvents.length);
     const filterLabel = $derived(`${selectedOnly ? "Game" : "All"} ${LogLevel[minimumLevel]}+`);
@@ -48,12 +47,16 @@
     const selectedScopeLabel = $derived(selectedGame ? selectedGame.name : "No game selected");
 
     $effect(() => {
-        visibleEvents;
-        clock;
-        scheduleNextTick();
-    });
+        clockInterval ??= setInterval(() => {
+            clock = Date.now();
+        }, 5_000);
 
-    onDestroy(() => clearClockTimeout());
+        return () => {
+            if (!clockInterval) return;
+            clearInterval(clockInterval);
+            clockInterval = null;
+        };
+    });
 
     function eventLevel(event: EventInstance<EventKey>): LogLevel {
         return event.levelOverride ?? EVENTS_BY_KEY[event.key].level ?? LogLevel.Info;
@@ -104,39 +107,6 @@
             };
         }
         return value;
-    }
-
-    function clearClockTimeout() {
-        if (!timeout) return;
-        clearTimeout(timeout);
-        timeout = null;
-    }
-
-    function scheduleNextTick() {
-        clearClockTimeout();
-
-        const next = visibleEvents
-            .map((event) => nextTimeBoundary(event.timestamp, clock))
-            .filter((time): time is number => time !== null)
-            .sort((a, b) => a - b)[0];
-
-        if (!next) return;
-
-        const delay = Math.max(250, next - Date.now());
-        timeout = setTimeout(() => {
-            clock = Date.now();
-        }, delay);
-    }
-
-    function nextTimeBoundary(timestamp: number, now: number): number | null {
-        const age = Math.max(0, now - timestamp);
-
-        if (age < 5_000) return timestamp + 5_000;
-        if (age < 60_000) return timestamp + (Math.floor(age / 5_000) + 1) * 5_000;
-        if (age < 10 * 60_000) return timestamp + (Math.floor(age / 10_000) + 1) * 10_000;
-        if (age < 60 * 60_000) return timestamp + (Math.floor(age / 60_000) + 1) * 60_000;
-
-        return null;
     }
 </script>
 
@@ -212,15 +182,23 @@
         </div>
     </div>
 
-    <div class="event-feed">
-        {#each visibleEvents as event (event.id)}
+    <VirtualLog
+        class="event-feed"
+        items={visibleEvents}
+        getKey={(event) => event.id}
+        estimateSize={56}
+        overscan={12}
+    >
+        {#snippet children(event)}
             <EventLogRow {event} {clock} />
-        {:else}
+        {/snippet}
+
+        {#snippet empty()}
             <div class="empty-state">
                 <p>{emptyText}</p>
             </div>
-        {/each}
-    </div>
+        {/snippet}
+    </VirtualLog>
 </section>
 
 <style lang="postcss">
@@ -325,7 +303,7 @@
     }
 
     .event-feed {
-        @apply fcol-scroll-2 min-h-0 flex-1 pr-1;
+        @apply min-h-0 flex-1 pr-1;
     }
 
     .empty-state {
