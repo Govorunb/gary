@@ -3,6 +3,7 @@ import { ClientGame, type ActionResult } from "$lib/api/client-game";
 import { InternalConnection, ConnectionClient } from "$lib/api/connection";
 import { type UserPrefs, zGamePrefs, zUserPrefs } from "$lib/app/prefs.svelte";
 import { ContextManager } from "$lib/app/context.svelte";
+import { EventLogStore } from "$lib/app/events/log.svelte";
 import type { Scheduler } from "$lib/app/scheduler.svelte";
 import type * as v1 from "$lib/api/v1/spec";
 
@@ -17,14 +18,15 @@ class MockSession {
         actPending: false
     };
     private readonly mockPrefs = {
-        ...zUserPrefs.decode({}),
+        ...zUserPrefs.decode({ version: "test" }),
         getGamePrefs(game: string) {
             return this.api.games[game] ??= zGamePrefs.decode({});
         }
     };
+    readonly eventLog = new EventLogStore();
     readonly id = "test-session";
     readonly name = "test-session";
-    readonly context = new ContextManager();
+    readonly context = new ContextManager(this.eventLog);
     readonly scheduler = mock<Scheduler, typeof this.mockScheduler>(this.mockScheduler);
     readonly userPrefs = mock<UserPrefs, typeof this.mockPrefs>(this.mockPrefs);
     readonly engines: Record<string, any> = {};

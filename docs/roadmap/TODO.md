@@ -2,7 +2,7 @@
 
 ## Candidates for next major
 
-- [Event log](./event-log.md)
+- [Event log](./events.md)
     - Granular exports (visibility presets - "user", "actor", "bug report")
 - Tool calling + reasoning/interleaved thinking (toggle "fast call"/"deep think")
     - Responses API?
@@ -75,6 +75,7 @@
 - Double click action header to open manual send dialog a-la Tony?
     - Probably not, now Ctrl-click on the other hand...
 - Deterministic/empty values in manual send
+- Busy icon restarts animation if engine goes idle and busy again in the same frame
 
 ## Miscellaneous wishlist/musings
 

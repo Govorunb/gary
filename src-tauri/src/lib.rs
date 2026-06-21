@@ -8,7 +8,7 @@ use tauri_plugin_log::{log::LevelFilter, RotationStrategy, Target, TargetKind};
 mod api;
 mod app;
 use app::state::{App, AppStateMutex};
-use app::commands::{is_server_running, server_state, start_server, stop_server, open_logs_folder};
+use app::commands::{is_server_running, server_state, start_server, stop_server, open_logs_folder, restart};
 use api::server::{ws_accept, ws_deny, ws_send, ws_close};
 use app::log::gary_log;
 
@@ -16,6 +16,7 @@ use app::log::gary_log;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
         .setup(|app| {
             app.manage(AppStateMutex::new(App::new(app.handle().clone())));
             app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap();

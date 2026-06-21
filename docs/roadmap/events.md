@@ -1,30 +1,24 @@
-# Event log
+# Events
 
-The [message](/src/lib/app/context.svelte.ts#L52-L93) architecture was fine enough at first, but it's now starting to get in the way of future features.  
-For example, putting "Act (forced)"/"Gary wants attention" in the message header so we can leave the message text to be the actual content is actually kind of a pain.
+The [`Message`](/src/lib/app/context.svelte.ts#L52-L93) architecture was fine enough at first, but it's now starting to get in the way of future features. It worked as a general store of *text*, but since `customData` is untyped the options for expansion are limited.
 
-It requires us to differentiate the "kind" of "actor message" (act/forced/say/notify):
-- `customData` can store but it's completely untyped
-- Can just match `string.startsWith` but that's mega scuffed
-
-We also need to store and surface app messages that are relevant to the user but not to the LLM and vice versa.  
-It was silly to think a unified context (where actor and user care about and see exactly the same things) was the right solution.
+In addition, though the "user context" and "LLM context" overlap a lot, real usage has revealed that the LLM context is not a strict subset of the user context - i.e., there are some things the LLM should see that the user shouldn't (normally). Right now, a place just has to "know" to send two separate messages with different visibilities - the decision is made away from the context, somewhere at the producer. Events move this responsibility to the consumer (where it should be). For an aggregator of state like ContextManager, the logic of "what adds to the context" should be collected inside the module rather than distributed across the whole app.
 
 Also, trawling through raw text logs kind of sucks, to be perfectly honest. Structured logging should be the default in (current year).
 
 ## Outline
 
-**Events** are fired when things happen. Each event has a **type** key (e.g. `api/client/connected` - composed like a tree path) and event **instances** have unique IDs - akin to diagnostics.
+**Events** are fired when things happen. Each event has a **key** (e.g. `api/client/connected` - composed like a tree path) and event **instances** have unique IDs - akin to diagnostics.
 
 There should be a central **event stream** ("firehose") in the app, and consumers should be able to **subscribe** and filter for the event keys they're interested in. For example, the context log UI would filter for `api/client/*` (`connected`/`disconnected`/`context`/`renamed` etc), `user/ctx_msg`, `api/actor/*` (`act`/`force_act`/`skip_act`/`say`/`say_notify` etc), and so on.
 
-Undecided on whether events should be declared centrally (like diagnostics) or vertically (owned by the relevant module).
+Events are declared vertically (in the relevant module) and gathered centrally (like diagnostics).
 
-Events with data should be typed (not sure how to reconcile this with easy declaration).
+Declaring events with data must be type-safe for inference on later use.
 
 There would be a unified display (**event log**) to show events to the user. With it, we can finally let the user adjust logging verbosity and so on.
 
-The [reporting](/src/lib/app/utils/reporting.ts) module would be co-opted into this. It'll only accept events (with a general `lazy_dev/uncategorized` event for arbitrary logs) and pipe them to the firehose.
+The [reporting](/src/lib/app/utils/reporting.ts) module would be co-opted into this. It'll only accept events (with a temporary escape hatch "arbitrary log" event with an annoying name) and pipe them to the firehose.
 
 Also, zod metadata for sensitive fields (blur).
 
@@ -41,19 +35,24 @@ Mock/direction/pseudocode declaration pattern:
 export const MY_EVENTS = [
     {
         key: 'app/subsys/doohickey',
-        dataSchema: z.object({
+        // simple types for simple data
+        dataSchema: {} as {
+            game: { id: string, name: string },
+            reason: string,
             // ...
-        }),
+        }
         // ...
     },
     {
         key: 'app/subsys/finagle',
+        // zod for schemas that need metadata
         dataSchema: z.strictObject({
             // ...
+            superSecretPassword: z.string().sensitive(),
         }),
         // ...
     }
-] as const satisfies EventDef[];
+] as const satisfies EventDef<'app/subsys'>[]; // key prefix
 
 /// events.ts (central declaration)
 import { MY_EVENTS as SUBSYS_EVENTS } from '$lib/app/some_subsystem';
@@ -66,15 +65,15 @@ export const EVENTS = [
 
 Usage:
 ```ts
-const myEvents = firehose.filter(['app/subsys/doohickey', 'app/subsys/finagle']);
-// inferred as EventStream<'app/subsys/doohickey' | 'app/subsys/finagle'>
-// which will contain (typeof EVENTS)['app/subsys/doohickey' | 'app/subsys/finagle']
-// i.e. (Event<SomeData> | Event<OtherData>)
+const myEvents = EVENT_BUS.subscribe([A, B]);
+// returns EventSub<A | B>
+// which will contain EventInstance<A | B>
+// i.e. (EventInstance<A> | EventInstance<B>)
 ```
 
 ### Reactivity 
 
-Not sure if Svelte was made with pipelines in mind, afaik `$derived` arrays just recompute the whole thing:
+Svelte wasn't made with pipelines in mind - `$derived` arrays just recompute the whole thing:
 
 ```ts
 const myState = $state([1,2,3,4,5]);

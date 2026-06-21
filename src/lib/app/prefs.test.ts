@@ -1,8 +1,6 @@
 import { describe, expect, test } from "vitest";
+import { zUserPrefs } from "./prefs.svelte";
 import { moveField, deleteField, migrate } from "./utils/migrations";
-import r, { LogLevel } from "$lib/app/utils/reporting";
-
-r.level = LogLevel.Warning;
 
 const simple = {
 	version: "1.0.1",
@@ -49,26 +47,20 @@ const wrap = {
 
 describe("migrate", () => {
 	test("returns null/undefined data as is", () => {
-		r.level = LogLevel.Error;
 		expect(migrate("1.0.1", null, [add, remove, moveDeeper, rename])).toBeNull();
 		expect(migrate("1.0.1", undefined, [add, remove, moveDeeper, rename])).toBeUndefined();
-		r.level = LogLevel.Warning;
 	});
 
 	test("returns data unchanged if version is invalid", () => {
-		r.level = LogLevel.Error;
 		const data = { version: "invalid", foo: "bar" };
 		const result = migrate("1.0.1", data, [simple]);
 		expect(result).toEqual(data);
-		r.level = LogLevel.Warning;
 	});
 
 	test("returns data unchanged if version is missing", () => {
-		r.level = LogLevel.Error;
 		const data = { foo: "bar" };
 		const result = migrate("1.0.1", data, [simple]);
 		expect(result).toEqual(data);
-		r.level = LogLevel.Warning;
 	});
 
 	test("applies simple migration", () => {
@@ -262,5 +254,15 @@ describe("migrate", () => {
 		const data = { version: "1.0.0", foo: "bar" } as any;
 		const result = migrate("1.3.0", data, [wrap]) as any;
 		expect(result).toStrictEqual({ version: "1.3.0", foo: "bar" });
+	});
+});
+
+describe("user prefs", () => {
+	test("hides sensitive info by default", () => {
+		expect(zUserPrefs.parse({ version: "test" }).app.hideSensitiveInfo).toBe(true);
+	});
+
+	test("preserves explicit sensitive-info visibility preference", () => {
+		expect(zUserPrefs.parse({ version: "test", app: { hideSensitiveInfo: false } }).app.hideSensitiveInfo).toBe(false);
 	});
 });

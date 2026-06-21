@@ -1,12 +1,11 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from "./index.svelte";
-import type { Message } from "$lib/app/context.svelte";
+import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type OpenAIContext } from ".";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
-import { OpenAIClient, zReasoningEffort } from "./openai.svelte";
+import { OpenAIClient, type OpenAIPrefs, zReasoningEffort } from "./openai.svelte";
 import { parseError } from "$lib/app/utils";
 
 export const ENGINE_ID = "openRouter";
@@ -17,32 +16,28 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 
     constructor(userPrefs: UserPrefs) {
         super(userPrefs, ENGINE_ID);
-        // have to do this dance for reactivity
-        const inner = $derived({
+        const clientPrefs = $state<OpenAIPrefs>({
             name: this.name,
             ...this.options,
             modelId: this.options.model ?? "openrouter/auto",
             serverUrl: "https://openrouter.ai/api/v1/",
         });
-        // ignore the formatting, svelte is annoying about where the diagnostic suppression should be placed
-        const outer = $state({
-            // svelte-ignore state_referenced_locally
-            prefs: inner
-        });
         $effect(() => {
-            outer.prefs = inner;
+            Object.assign(clientPrefs, {
+                name: this.name,
+                ...this.options,
+                modelId: this.options.model ?? "openrouter/auto",
+                serverUrl: "https://openrouter.ai/api/v1/",
+            });
         });
-        this.client = new OpenAIClient(
-            outer,
-            ENGINE_ID
-        );
+        this.client = new OpenAIClient({ prefs: clientPrefs });
         $effect(() => {
-            if (inner.reasoningEffort !== this.options.reasoningEffort)
-                this.options.reasoningEffort = inner.reasoningEffort;
+            if (clientPrefs.reasoningEffort !== this.options.reasoningEffort)
+                this.options.reasoningEffort = clientPrefs.reasoningEffort;
         });
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<Message, EngineActError> {
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError> {
         if (!this.options.apiKey) {
             return errAsync(new ConfigError("OpenRouter API key is required"));
         }
@@ -78,7 +73,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 export const zOpenRouterPrefs = z.strictObject({
     ...zLLMOptions.shape,
     reasoningEffort: zReasoningEffort.default("auto"),
-    apiKey: z.string().default(""),
+    apiKey: z.string().default("").sensitive(),
     /** OpenRouter model identifier.
      * Can be:
      * - Empty or "openrouter/auto" for auto routing

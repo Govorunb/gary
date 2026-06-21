@@ -1,14 +1,13 @@
 <script lang="ts">
     import { Dices, Send } from "@lucide/svelte";
-    import { getSession, getUIState } from "$lib/app/utils/di";
-    import { generate } from "json-schema-faker";
-    import { zAct, zActData } from "$lib/api/v1/spec";
-    import r from "$lib/app/utils/reporting";
+    import { getUIState } from "$lib/app/utils/di";
     import CopyButton from "../../common/CopyButton.svelte";
     import CodeMirror from "../../common/CodeMirror.svelte";
-    import { preventDefault, tooltip } from "$lib/app/utils";
+    import { generateFromJsonSchema, parseError, preventDefault, tooltip } from "$lib/app/utils";
     import type { Game, GameAction } from "$lib/api/game.svelte";
     import { boolAttr } from "runed";
+    import { EVENT_BUS } from "$lib/app/events/bus";
+    import type { JsonSchema } from "json-schema-faker";
 
     type Props = {
         action: GameAction;
@@ -16,7 +15,6 @@
     };
 
     let { action, game }: Props = $props();
-    const session = getSession();
     const uiState = getUIState();
 
     const active = $derived(action.active);
@@ -30,24 +28,29 @@
         uiState.dialogs.openManualSendDialog(action, game);
     }
 
-    function sendImmediate() {
-        game.manualSend(action.name, undefined)
-            .catch(e => r.error(`Failed to send action ${action.name}`, `${e}`));
+    const evtData = $derived({gameId: game.id, actionName: action.name});
+
+    function doSend(data?: string) {
+        EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!data });
+        game.manualSend(action.name, data)
+            .catch(e => {
+                EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) });
+            });
     }
 
-    function sendRandom() {
+    async function sendRandom() {
         let generatedData: string | undefined;
         if (action.schema) {
             try {
-                const genObj = generate(action.schema);
+                const genObj = await generateFromJsonSchema(action.schema as JsonSchema);
                 generatedData = JSON.stringify(genObj);
             } catch (e) {
-                r.error(`Failed to generate random data for ${action.name}`, `${e}`);
+                EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
+                // TODO: popover
                 return;
             }
         }
-        game.manualSend(action.name, generatedData)
-            .catch(e => r.error(`Failed to send action ${action.name}`, `${e}`));
+        doSend(generatedData);
     }
 </script>
 
@@ -73,7 +76,7 @@
             {:else}
                 <button
                     class="action-btn"
-                    onclick={preventDefault(sendImmediate)}
+                    onclick={preventDefault(() => doSend())}
                     {@attach tooltip("Send")}
                 >
                     <Send class="size-4" />

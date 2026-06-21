@@ -1,4 +1,3 @@
-import r from "$lib/app/utils/reporting";
 import type { ConnectionClient } from "$lib/api/connection";
 import { ClientGame } from "../../api/client-game";
 import type { ActionResult } from '../../api/client-game';
@@ -30,7 +29,7 @@ export class SchemaTestGame extends ClientGame {
         }
 
         if (this.samsara && this.registeredActions.size === 0) {
-            r.info("[schema-test] No more actions - reregistering all. The eternal cycle continues");
+            this.sendContext("No more actions - re-registering all. The eternal cycle continues", true);
             await this.resetActions();
         }
 
@@ -41,20 +40,17 @@ export class SchemaTestGame extends ClientGame {
         const action = this.actions.get(name);
 
         if (!action) {
-            r.error(`[schema-test] Unknown action: ${name}`);
             return { success: false, message: `Unknown action '${name}'` };
         }
 
         if (!this.registeredActions.has(name)) {
-            r.warn(`[schema-test] Called '${name}' out of turn (unregistered)`);
+            this.sendContext(`Called '${name}' out of turn (unregistered)`, true);
         }
 
         const validation = this.validateData(action.schema, data);
         if (!validation.valid) {
-            // r.warn(`[schema-test] '${name}' failed validation`, `Error: ${validation.error}\nData: ${JSON.stringify(data)}`);
             return { success: false, message: `Invalid data: ${validation.error}` };
         }
-        r.info(`[schema-test] [${name}] Success`);
 
         this.registeredActions.delete(name);
         await this.unregisterActions([name]);
@@ -86,7 +82,6 @@ export class SchemaTestGame extends ClientGame {
     }
 
     public async hello() {
-        r.info(`[schema-test] Registering ${this.actions.size} actions`);
         super.hello();
 
         await this.sendContext(

@@ -66,5 +66,6 @@ pub fn open_logs_folder(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn restart(app: AppHandle) -> Result<(), String> {
-  app.request_restart()
+    app.request_restart();
+    Ok(())
 }

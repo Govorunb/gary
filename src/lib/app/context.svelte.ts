@@ -1,93 +1,110 @@
-import { v7 as uuid7 } from "uuid";
-import { z } from "zod";
-import { zConst } from "$lib/app/utils";
-import type { Game } from "$lib/api/game.svelte";
+import type { EventInstance } from "./events";
+import type { EventLogDelta, EventLogStore } from "./events/log.svelte";
+
+export const USER_CONTEXT_KEYS = [
+    "api/game/connected",
+    "api/game/disconnected",
+    "api/game/context",
+    "api/game/force",
+    "api/game/action_result",
+    "api/game/act/user",
+    "api/actor/skip",
+    "api/actor/say",
+    "api/actor/act",
+    "ui/context/input",
+] as const;
+
+export const ACTOR_CONTEXT_KEYS = [
+    "api/game/connected",
+    "api/game/disconnected",
+    "api/game/context",
+    "api/game/force",
+    "api/game/action_result",
+    "api/game/act/user",
+    "api/game/act/actor",
+    "api/actor/generated",
+    "ui/context/input",
+] as const;
+
+export type UserContextEventKey = typeof USER_CONTEXT_KEYS[number];
+export type ActorContextEventKey = typeof ACTOR_CONTEXT_KEYS[number];
+
+export type UserContextEvent = EventInstance<UserContextEventKey>;
+export type ActorContextEvent = EventInstance<ActorContextEventKey>;
 
 export class ContextManager {
-    readonly allMessages: Message[] = $state([]);
-    /** A subset of messages that are visible to the model. */
-    readonly actorView: Message[] = $derived(this.allMessages.filter(m => m.visibilityOverrides?.engine ?? true));
-    /** A subset of messages that are visible to the user. */
-    readonly userView: Message[] = $derived(this.allMessages.filter(m => m.visibilityOverrides?.user ?? true));
+    readonly userView: UserContextEvent[] = $state([]);
+    readonly actorView: ActorContextEvent[] = $state([]);
 
-    constructor() {
-        this.reset();
+    #ondispose: (() => void)[] = [];
+    #onActorEvent: Array<(event: ActorContextEvent, shouldPromptAct: boolean) => void> = [];
+
+    constructor(private readonly eventLog: EventLogStore) {
+        this.#ondispose.push(this.eventLog.subscribe(USER_CONTEXT_KEYS, (delta) => this.#onUserDelta(delta)));
+        this.#ondispose.push(this.eventLog.subscribe(ACTOR_CONTEXT_KEYS, (delta) => this.#onActorDelta(delta)));
+
+        const userKeys = new Set<string>(USER_CONTEXT_KEYS);
+        const actorKeys = new Set<string>(ACTOR_CONTEXT_KEYS);
+        for (const event of this.eventLog.all) {
+            if (userKeys.has(event.key)) {
+                this.userView.push(event as UserContextEvent);
+            }
+            if (actorKeys.has(event.key)) {
+                const actorEvent = event as ActorContextEvent;
+                this.actorView.push(actorEvent);
+            }
+        }
     }
 
-    push(msg: z.input<typeof zMessage>): z.output<typeof zMessage> {
-        const msg_ = zMessage.decode(msg);
-        this.allMessages.push(msg_);
-        return msg_;
-    }
-
-    pop() {
-        return this.allMessages.pop();
-    }
-
-    protected clear() {
-        this.allMessages.length = 0;
+    onActorViewAppend(cb: (event: ActorContextEvent, shouldPromptAct: boolean) => void): () => void {
+        this.#onActorEvent.push(cb);
+        return () => {
+            const i = this.#onActorEvent.indexOf(cb);
+            if (i >= 0) {
+                this.#onActorEvent.splice(i, 1);
+            }
+        };
     }
 
     reset() {
-        this.clear();
+        this.userView.length = 0;
+        this.actorView.length = 0;
     }
 
-    system(partialMsg: SourcelessMessageInput) {
-        return this.push({ source: zSystemSource.decode({}), ...partialMsg });
+    dispose() {
+        this.#ondispose.forEach(dispose => dispose());
+        this.#ondispose.length = 0;
+        this.#onActorEvent.length = 0;
     }
 
-    client(game: Game, partialMsg: SourcelessMessageInput) {
-        return this.push({ source: zClientSource.decode({name: game.name, id: game.conn.id}), ...partialMsg });
+    #onUserDelta(delta: EventLogDelta) {
+        if (delta.type === "reset") {
+            this.userView.length = 0;
+            return;
+        }
+        this.userView.push(delta.event as UserContextEvent);
     }
 
-    user(partialMsg: SourcelessMessageInput) {
-        return this.push({ source: zUserSource.decode({}), ...partialMsg });
-    }
-
-    actor(partialMsg: SourcelessMessageInput, engineId: string) {
-        return this.push({ source: zActorSource.decode({engineId}), silent: true, ...partialMsg });
+    #onActorDelta(delta: EventLogDelta) {
+        if (delta.type === "reset") {
+            this.actorView.length = 0;
+            return;
+        }
+        const event = delta.event as ActorContextEvent;
+        this.actorView.push(event);
+        const shouldPrompt = shouldPromptAct(event);
+        this.#onActorEvent.forEach(cb => cb(event, shouldPrompt));
     }
 }
 
-export const zSystemSource = z.strictObject({type: zConst("system")});
-export const zClientSource = z.strictObject({type: zConst("client"), name: z.string(), id: z.string()});
-export const zActorSource = z.strictObject({type: zConst("actor"), engineId: z.string()});
-export const zUserSource = z.strictObject({type: zConst("user")});
-
-export const zSource = z.discriminatedUnion("type", [
-    zSystemSource.required({type: true}),
-    zClientSource.required({type: true}),
-    zActorSource.required({type: true}),
-    zUserSource.required({type: true}),
-]);
-
-export const zMessage = z.strictObject({
-    id: z.string().default(uuid7),
-    timestamp: z.coerce.date().default(() => new Date()),
-    // TODO: maybe a "category"/"type" and this can just be an event stream for the entire app/session
-    // would replace per-message visibility with per-category (making it configurable)
-    // though context *should* ideally be separate
-    source: zSource, // aka "role"
-    text: z.string(),
-    /** If `true`, the message will show de-emphasized in the UI.
-     *
-     * `false` will prompt the scheduler to act, `true` and `"noAct"` won't.
-
-     * Defaults to `false`.
-     *
-     * ---
-     * Actor messages don't prompt acting even if non-silent.
-     */
-    silent: z.union([z.boolean(), z.literal("noAct")]).default(false),
-    visibilityOverrides: z.strictObject({
-        user: z.boolean().default(true),
-        engine: z.boolean().default(true),
-    }).optional().prefault({}),
-    customData: z.record(z.string(), z.any()).default({}),
-});
-
-export const zSourcelessMessage = zMessage.omit({source: true});
-export type SourcelessMessageInput = z.input<typeof zSourcelessMessage>;
-
-export type Message = z.infer<typeof zMessage>;
-export type MessageSource = z.infer<typeof zSource>;
+function shouldPromptAct(event: ActorContextEvent): boolean {
+    switch (event.key) {
+        case "ui/context/input":
+        case "api/game/context":
+            return !event.data.silent;
+        case "api/game/action_result":
+            return !!event.data.success;
+        default:
+            return false;
+    }
+}

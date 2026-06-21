@@ -1,14 +1,31 @@
 import { describe, test, expect } from "vitest";
+import { EVENT_BUS } from "../events/bus";
 import { moveField, deleteField } from "./migrations";
-import r, { LogLevel } from "$lib/app/utils/reporting";
 
-r.level = LogLevel.Warning;
 
 describe("migration helpers", () => {
     test("moveField renames top-level field", () => {
         const data: Record<string, any> = { old: "value", keep: "this" };
         moveField(data, "old", "new");
         expect(data).toStrictEqual({ new: "value", keep: "this" });
+    });
+
+    test("moveField emits a dedicated migration event", () => {
+        const events: unknown[] = [];
+        const sub = EVENT_BUS.subscribe(["app/migrations/field_move"] as const);
+        sub.onnext((event) => events.push(event));
+
+        try {
+            const data: Record<string, any> = { old: "value" };
+            moveField(data, "old", "new");
+        } finally {
+            sub.destroy();
+        }
+
+        expect(events).toMatchObject([{
+            key: "app/migrations/field_move",
+            data: { fromPath: "old", toPath: "new" },
+        }]);
     });
 
     test("moveField renames nested field", () => {
@@ -21,6 +38,24 @@ describe("migration helpers", () => {
         const data: Record<string, any> = { other: "value" };
         moveField(data, "missing", "new");
         expect(data).toStrictEqual({ other: "value" });
+    });
+
+    test("moveField emits a dedicated skip event", () => {
+        const events: unknown[] = [];
+        const sub = EVENT_BUS.subscribe(["app/migrations/field_move_skipped"] as const);
+        sub.onnext((event) => events.push(event));
+
+        try {
+            const data: Record<string, any> = { other: "value" };
+            moveField(data, "missing", "new");
+        } finally {
+            sub.destroy();
+        }
+
+        expect(events).toMatchObject([{
+            key: "app/migrations/field_move_skipped",
+            data: { fromPath: "missing", toPath: "new", reason: "source_not_found" },
+        }]);
     });
 
     test("moveField skips if nested source parent does not exist", () => {
@@ -52,6 +87,24 @@ describe("migration helpers", () => {
         const data: Record<string, any> = { keep: "this" };
         deleteField(data, "missing");
         expect(data.keep).toBe("this");
+    });
+
+    test("deleteField emits a dedicated skip event", () => {
+        const events: unknown[] = [];
+        const sub = EVENT_BUS.subscribe(["app/migrations/field_delete_skipped"] as const);
+        sub.onnext((event) => events.push(event));
+
+        try {
+            const data: Record<string, any> = { keep: "this" };
+            deleteField(data, "missing");
+        } finally {
+            sub.destroy();
+        }
+
+        expect(events).toMatchObject([{
+            key: "app/migrations/field_delete_skipped",
+            data: { path: "missing", reason: "path_not_found" },
+        }]);
     });
 
     test("deleteField skips if nested parent does not exist", () => {

@@ -8,12 +8,11 @@
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
     import { getSession, getUserPrefs } from "$lib/app/utils/di";
-    import { zAct, zActData } from "$lib/api/v1/spec";
-    import r from "$lib/app/utils/reporting";
     import Ajv, { type ValidateFunction } from "ajv";
-    import { tooltip } from "$lib/app/utils";
-    import { generate } from "json-schema-faker";
+    import { generateFromJsonSchema, parseError, tooltip } from "$lib/app/utils";
     import { boolAttr, PressedKeys } from "runed";
+    import { EVENT_BUS } from "$lib/app/events/bus";
+    import type { JsonSchema } from "json-schema-faker";
 
     type Props = {
         open: boolean;
@@ -22,7 +21,6 @@
     };
 
     let { open = $bindable(), action, game }: Props = $props();
-    const session = getSession();
     const userPrefs = getUserPrefs();
     const ajv = new Ajv({ validateFormats: false, allErrors: true });
     const keys = new PressedKeys();
@@ -30,8 +28,12 @@
     keys.onKeys(["Control", "Enter"], sendAction);
     keys.onKeys(["Alt", "R"], reroll);
 
-    let jsonContent = $state(genJson());
+    const currentAction = $derived(game.getAction(action.name, false) ?? action);
+    const evtData = $derived({gameId: game.id, actionName: currentAction.name});
+
+    let jsonContent = $state("");
     let validationErrors = $state<string[] | null>(null);
+    let latestGenerationRequest = 0;
     const isValid = $derived(!validationErrors);
     const schemaCollapsed = $derived(userPrefs.app.manualSendSchemaCollapsed);
     const schemaOpen = $derived(!schemaCollapsed);
@@ -40,20 +42,37 @@
         userPrefs.app.manualSendSchemaCollapsed = !userPrefs.app.manualSendSchemaCollapsed;
     }
 
-    const validate = $derived((action.schema && ajv.compile(action.schema)) as ValidateFunction);
-    const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
+    const validate = $derived((currentAction.schema && ajv.compile(currentAction.schema)) as ValidateFunction);
+    const schemaJson = $derived(currentAction.schema && JSON.stringify(currentAction.schema, null, 2));
 
-    function genJson() {
-        if (!action.schema) return "";
-        return JSON.stringify(generate(action.schema), null, 2);
+    async function genJson(actionToGenerate: Action) {
+        if (!actionToGenerate.schema) return "";
+        return JSON.stringify(await generateFromJsonSchema(actionToGenerate.schema as JsonSchema), null, 2);
     }
 
     $effect(() => {
         validateJSON();
     })
 
+    $effect(() => {
+        const actionForDialog = currentAction;
+        void populateRandomJson(actionForDialog);
+    });
+
+    async function populateRandomJson(actionToGenerate: Action) {
+        const request = ++latestGenerationRequest;
+        try {
+            const nextJson = await genJson(actionToGenerate);
+            if (request === latestGenerationRequest) {
+                jsonContent = nextJson;
+            }
+        } catch (e) {
+            EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
+        }
+    }
+
     function reroll() {
-        jsonContent = genJson();
+        void populateRandomJson(currentAction);
     }
 
     function handleCodeChange(newCode: string) {
@@ -61,7 +80,7 @@
     }
 
     function validateJSON() {
-        if (!action.schema) {
+        if (!currentAction.schema) {
             validationErrors = null;
             return;
         }
@@ -91,15 +110,19 @@
     async function sendAction() {
         if (!isValid && !shiftPressed) return;
 
-        game.manualSend(action.name, jsonContent)
-            .catch(e => r.error(`Failed to send action ${action.name}`, `${e}`))
+        const actionToSend = currentAction;
+        EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!jsonContent });
+        game.manualSend(actionToSend.name, jsonContent)
+            .catch(e => {
+                EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) });
+            })
             .finally(closeDialog);
     }
 </script>
 
 <Dialog bind:open>
     {#snippet title()}
-        <h3>Manual Send ({action.name})</h3>
+        <h3>Manual Send ({currentAction.name})</h3>
         <div class="header-actions">
             <ShiftIndicator />
             <TeachingTooltip>
@@ -115,7 +138,7 @@
     {/snippet}
     {#snippet body()}
         <div class="action-info">
-            <p class="text-sm text-neutral-600 dark:text-neutral-400">{action.description}</p>
+            <p class="text-sm text-neutral-600 dark:text-neutral-400">{currentAction.description}</p>
         </div>
         {#if schemaJson}
             <div class="editor-section">

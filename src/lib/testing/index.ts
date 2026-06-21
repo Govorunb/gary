@@ -1,4 +1,5 @@
-import r, { LogLevel } from "$lib/app/utils/reporting";
+import r from "$lib/app/utils/reporting";
+import { LogLevel } from "$lib/app/utils";
 import { test as baseTest, vi } from "vitest";
 import { SelfTestHarness } from "./self-test-harness";
 

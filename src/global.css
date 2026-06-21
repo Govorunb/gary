@@ -4,6 +4,16 @@
 @import '@skeletonlabs/skeleton-svelte';
 @import '@skeletonlabs/skeleton/themes/cerberus';
 
+:root {
+    --z-mobile-sidebar-backdrop: 20;
+    --z-mobile-sidebar-toggle: 21;
+    --z-mobile-sidebar: 22;
+    --z-dialog-backdrop: 100;
+    --z-dialog: 110;
+    --z-popover: 1000;
+    --z-tooltip: 1010;
+}
+
 @layer base {
     /* for some reason *only some* of the text transitions really slowly (>1s) */
     h1,h2,h3,h4,p,a,button,span,svg {
@@ -116,6 +126,7 @@
         --arrow-size: calc(var(--spacing) * 4);
         --arrow-background: light-dark(var(--color-surface-100), var(--color-surface-800));
     }
+
 }
 
 @layer theme {
@@ -142,4 +153,32 @@
 @utility frow-* {
     @apply flex flex-row;
     gap: calc(var(--spacing) * --value(number));
+}
+
+@utility layer-mobile-sidebar-backdrop {
+    z-index: var(--z-mobile-sidebar-backdrop);
+}
+
+@utility layer-mobile-sidebar-toggle {
+    z-index: var(--z-mobile-sidebar-toggle);
+}
+
+@utility layer-mobile-sidebar {
+    z-index: var(--z-mobile-sidebar);
+}
+
+@utility layer-popover {
+    z-index: var(--z-popover);
+}
+
+@utility layer-tooltip {
+    z-index: var(--z-tooltip);
+}
+
+@utility layer-dialog-backdrop {
+    z-index: var(--z-dialog-backdrop);
+}
+
+@utility layer-dialog {
+    z-index: var(--z-dialog);
 }

@@ -1,35 +1,37 @@
 import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, LLMEngine, zLLMOptions, type OpenAIContext } from "./index.svelte";
-import { zActorSource, zMessage, type Message } from "$lib/app/context.svelte";
+import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type OpenAIContext } from ".";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
+import { isTauri } from "@tauri-apps/api/core";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
 import type { Action } from "$lib/api/v1/spec";
-import r from "$lib/app/utils/reporting";
-import { parseError } from "$lib/app/utils";
+import { parseError, LogLevel } from "$lib/app/utils";
+import type { EventDef } from "$lib/app/events";
+import { EVENT_BUS } from "$lib/app/events/bus";
+import { v4 as uuid } from "uuid";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
  */
 export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
-    readonly name: string;
     private readonly client: OpenAIClient;
+
+    public get name() {
+        return this.options.name;
+    }
 
     constructor(userPrefs: UserPrefs, engineId: string) {
         super(userPrefs, engineId);
-        this.name = $derived(this.options.name);
 
         const self = this;
-        this.client = new OpenAIClient(
-            {get prefs() { return self.options; }},
-            engineId
-        );
+        this.client = new OpenAIClient({get prefs() { return self.options; }});
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<Message, EngineActError> {
+    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<LLMGeneration, EngineActError> {
         return new ResultAsync(this.client.genJson(context, outputSchema, undefined, signal));
     }
 
@@ -45,28 +47,64 @@ export const zOpenAIPrefs = z.looseObject({
     ...zLLMOptions.shape,
     reasoningEffort: zReasoningEffort.fallback("auto"),
     /** Leave empty if your server doesn't need authentication. (e.g. local) */
-    apiKey: z.string().default(""),
-    serverUrl: z.url().default("https://api.openai.com/v1"),
+    apiKey: z.string().default("").sensitive(),
+    serverUrl: z.url().default("https://api.openai.com/v1").sensitive(),
     modelId: z.string().optional(),
 });
 
 export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
 export type ReasoningEffort = OpenAIPrefs["reasoningEffort"];
 
+const OPENAI_COMPAT_NO_API_KEY = " ";
+// https://github.com/ollama/ollama/issues/10507
+// https://github.com/Govorunb/gary/issues/7
+const LOCAL_LLM_ORIGIN = "http://localhost";
+
+function isLocalOrPrivateHttpEndpoint(endpoint: string): boolean {
+    try {
+        const url = new URL(endpoint);
+        if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+        const host = url.hostname.toLowerCase();
+        if (host === "localhost" || host.endsWith(".localhost")) return true;
+        if (host === "127.0.0.1" || host === "::1" || host === "[::1]") return true;
+        if (/^10\./.test(host)) return true;
+        if (/^192\.168\./.test(host)) return true;
+        const match = host.match(/^172\.(\d+)\./);
+        if (!match) return false;
+        const second = Number(match[1]);
+        return second >= 16 && second <= 31;
+    } catch {
+        return false;
+    }
+}
+
+function requestUrl(input: string | URL | Request): string {
+    return input instanceof Request ? input.url : input.toString();
+}
+
+export const openAICompatFetch: typeof fetch = (input, init) => {
+    if (!isTauri()) return globalThis.fetch(input, init);
+
+    const url = requestUrl(input);
+    if (!isLocalOrPrivateHttpEndpoint(url)) return tauriFetch(input, init);
+
+    const headers = new Headers(init?.headers);
+    headers.set("Origin", LOCAL_LLM_ORIGIN);
+    return tauriFetch(input, { ...init, headers });
+};
+
 // At some point we migrated OpenRouter from its own (beta) SDK back to just using the OpenAI-compatible API
 // It started to look a bit too similar after that... the refactoring itch was irresistible
 export class OpenAIClient {
     private readonly client: OpenAI;
     private readonly options: OpenAIPrefs;
-    constructor(
-        reactivePrefs: {prefs: OpenAIPrefs},
-        private id: string
-    ) {
+    constructor(reactivePrefs: {prefs: OpenAIPrefs}) {
         this.options = $derived(reactivePrefs.prefs);
         this.client = new OpenAI({
-            apiKey: this.options.apiKey ?? "-", // throws if key is empty
+            apiKey: this.options.apiKey || OPENAI_COMPAT_NO_API_KEY,
             dangerouslyAllowBrowser: true,
             baseURL: this.options.serverUrl,
+            fetch: openAICompatFetch,
         });
     }
 
@@ -79,7 +117,7 @@ export class OpenAIClient {
         outputSchema?: JSONSchema,
         extraParams?: Record<string, any>,
         signal?: AbortSignal,
-    ): Promise<Result<Message, EngineActError>> {
+    ): Promise<Result<LLMGeneration, EngineActError>> {
         const model = this.options.modelId;
         if (!model) {
             return err(new ConfigError(`${this.name} is missing a model ID`));
@@ -106,7 +144,7 @@ export class OpenAIClient {
         // so me use pull model instead of push model. hoh
         // me just know seniorberry shake head and wag finger from inside cloud, but me the one that feel alive
         this.client.baseURL = this.options.serverUrl;
-        this.client.apiKey = this.options.apiKey;
+        this.client.apiKey = this.options.apiKey || OPENAI_COMPAT_NO_API_KEY;
 
         // after evaluating tools/responses api - it all sucks bad
         // ollama only just started to support it (but not `tool_choice` - so, still useless to us)
@@ -121,13 +159,13 @@ export class OpenAIClient {
                 .join(" ");
             return /reasoning[_ ]effort/i.test(text);
         };
+        const reqId = uuid();
         const sendRequest = async (effort?: WireReasoningEffort) => {
             const params: ChatCompletionCreateParamsNonStreaming = {
                 ...baseParams,
                 ...(effort ? { reasoning_effort: effort } : {}),
             };
-            console.warn("Full request params:", params);
-            console.log("Origin:", origin);
+            EVENT_BUS.emit('app/engines/llm/request', { reqId, params });
             const res = await ResultAsync.fromPromise(
                 this.client.chat.completions.create(params, { signal }),
                 (error) => {
@@ -156,44 +194,85 @@ export class OpenAIClient {
         }
         if (preference === "auto" && res.isErr() && isReasoningEffortError(res.error)) {
             this.options.reasoningEffort = "low";
-            r.warn("Reasoning effort 'auto' unsupported, defaulting to low", {
-                toast: true,
-            });
+            EVENT_BUS.emit('app/engines/llm/reasoning_effort_fallback', { reqId });
             res = await sendRequest("low");
         }
         if (signal?.aborted) {
             return err("cancelled");
         }
-        console.log("Response:", res);
+        EVENT_BUS.emit('app/engines/llm/response', { reqId, response: res });
         if (res.isErr()) {
+            EVENT_BUS.emit('app/engines/llm/network_error', { reqId });
             return err(new EngineError(`${this.name} request failed: ${res.error.message}`, res.error.error as Error, false));
         }
         const response = res.value;
         type RespOrError = typeof response | { choices?: never, error: any };
         const resp = (response as RespOrError).choices?.[0];
         if (!resp) {
+            EVENT_BUS.emit('app/engines/llm/error_result', { reqId });
             return err(new EngineError(`${this.name} did not return successful result`, parseError(res.value)));
         }
         if (resp.finish_reason !== "stop" && resp.finish_reason !== "length") {
+            EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'finish_reason' });
             return err(new EngineError(`${this.name} returned unexpected finish_reason '${resp.finish_reason}'`, undefined, false))
         }
         const textOutput = resp?.message?.content;
-        const reasoning = (resp.message as any)?.reasoning;
         if (!textOutput) {
-            r.error(`Empty response from '${this.name}'`, {
-                toast: false,
-                ctx: { response },
-            });
+            EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'empty_response' });
             return err(new EngineError(`${this.name} returned no text`, undefined, true));
         }
-        const msg = zMessage.decode({
+        return ok({
             text: textOutput,
-            source: zActorSource.decode({engineId: this.id}),
-            silent: true,
-            customData: {
-                [this.id]: { response, reasoning, },
+            metadata: {
+                reasoning: (resp.message as any)?.reasoning,
+                usage: response.usage,
+                response,
             },
         });
-        return ok(msg);
     }
 }
+
+export const EVENTS = [
+    {
+        key: 'app/engines/llm/network_error',
+        dataSchema: {} as { reqId: string },
+        description: "LLM request failed due to a network error",
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/engines/llm/error_result',
+        dataSchema: {} as { reqId: string },
+        description: "LLM request returned an error result",
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/engines/llm/assert',
+        dataSchema: {} as { reqId: string, assertion: string },
+        description: "LLM response failed an internal assertion",
+        level: LogLevel.Error,
+    },
+    {
+        key: 'app/engines/llm/reasoning_effort_fallback',
+        dataSchema: {} as { reqId: string },
+        level: LogLevel.Warning,
+        description: "Reasoning effort 'auto' unsupported, defaulting to low",
+    },
+    {
+        key: 'app/engines/llm/request',
+        dataSchema: z.object({
+            reqId: z.string(),
+            params: z.any().sensitive(),
+        }),
+        description: "LLM request sent",
+        level: LogLevel.Verbose,
+    },
+    {
+        key: 'app/engines/llm/response',
+        dataSchema: z.object({
+            reqId: z.string(),
+            response: z.any().sensitive(),
+        }),
+        description: "LLM response received",
+        level: LogLevel.Verbose,
+    },
+] as const satisfies EventDef<'app/engines/llm'>[];

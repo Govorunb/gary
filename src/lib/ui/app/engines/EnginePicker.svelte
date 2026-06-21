@@ -5,13 +5,13 @@
     import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
     import { getEngineConfigComponent } from './EngineConfig.svelte';
     import { PressedKeys } from 'runed';
-    import r from "$lib/app/utils/reporting";
     import { ENGINE_ID as RANDY_ID } from '$lib/app/engines/randy.svelte';
     import { ENGINE_ID as OPENROUTER_ID } from '$lib/app/engines/llm/openrouter.svelte';
     import { fade, fly } from 'svelte/transition';
     import TeachingTooltip from '$lib/ui/common/TeachingTooltip.svelte';
     import Hotkey from '$lib/ui/common/Hotkey.svelte';
     import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
+    import { toast } from 'svelte-sonner';
 
     const session = getSession();
     const userPrefs = getUserPrefs();
@@ -76,7 +76,7 @@
 
     function deleteEngine(id: string) {
         if (!canDelete(id)) {
-            r.error(`Cannot delete engine ${id}`);
+            toast.error(`Cannot delete engine ${id}`);
             return;
         }
         if (id === session.activeEngine.id) {

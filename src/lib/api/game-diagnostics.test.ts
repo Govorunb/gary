@@ -1,6 +1,6 @@
 import { test } from "$lib/testing";
 import { describe, expect, vi } from "vitest";
-import r from "$lib/app/utils/reporting";
+import { toast } from "svelte-sonner";
 
 const INFO = "misc/test/info";
 const WARN = "misc/test/warn";
@@ -48,28 +48,20 @@ describe("suppression", () => {
         expect(harness.diagnosticKeys).toStrictEqual([info, info, warn, info, ERR]);
     });
 
-    test("report", ({harness}) => {
+    test("toast", ({harness}) => {
         const diag = harness.server.diagnostics;
-        const reportSpy = vi.spyOn(r, "report");
-        diag.trigger(INFO, undefined, true);
-        expect(reportSpy, "report=true").toHaveBeenCalledOnce();
-        reportSpy.mockClear();
+        const toastWarnSpy = vi.spyOn(toast, "warning");
+        diag.trigger(WARN, undefined, true);
+        expect(toastWarnSpy, "report=true").toHaveBeenCalledOnce();
+        toastWarnSpy.mockClear();
 
-        diag.trigger(INFO, undefined, false);
-        expect(reportSpy, "report=false").toHaveBeenCalledOnce();
-        expect(reportSpy).toHaveBeenCalledWith(
-            expect.any(Number),
-            expect.objectContaining({ toast: false })
-        );
-        reportSpy.mockClear();
+        diag.trigger(WARN, undefined, false);
+        expect(toastWarnSpy, "report=false").not.toHaveBeenCalled();
+        toastWarnSpy.mockClear();
 
-        diag.suppress(INFO);
-        diag.trigger(INFO, undefined, true);
-        expect(reportSpy, "report but suppressed").toHaveBeenCalledOnce();
-        expect(reportSpy).toHaveBeenCalledWith(
-            expect.any(Number),
-            expect.objectContaining({ toast: false })
-        );
+        diag.suppress(WARN);
+        diag.trigger(WARN, undefined, true);
+        expect(toastWarnSpy, "report but suppressed").not.toHaveBeenCalled();
     });
 
     test("dismiss by key", ({harness}) => {

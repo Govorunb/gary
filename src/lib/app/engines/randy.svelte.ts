@@ -1,11 +1,11 @@
 import type { Action } from "$lib/api/v1/spec";
-import { pickRandom, sleep } from "../utils";
+import { generateFromJsonSchema, parseError, pickRandom, sleep } from "../utils";
 import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "./index.svelte";
-import { generate } from "json-schema-faker";
 import type { Session } from "../session.svelte";
 import z from "zod";
 import type { UserPrefs } from "../prefs.svelte";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
+import type { JsonSchema } from "json-schema-faker";
 
 export const ENGINE_ID = "randy";
 /** Automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
@@ -51,18 +51,21 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
         return ResultAsync.fromPromise(
             sleep(this.options.latencyMs, signal),
             _ => "cancelled" as EngineActError
-        ).map(() => {
+        ).andThen(() => {
             const action = pickRandom(resolvedActions);
-            return zEngineAct.decode({
-                name: action.name,
-                data: JSON.stringify(this.generate(action)),
-            });
+            return ResultAsync.fromPromise(
+                this.generate(action),
+                e => new EngineError(`Randy could not generate data for ${action.name}`, parseError(e))
+            ).map(data => zEngineAct.decode({
+                    name: action.name,
+                    data: JSON.stringify(data),
+                }));
         });
     }
 
-    private generate(action: Action): any {
+    private async generate(action: Action): Promise<unknown> {
         if (!action.schema) return null;
-        return generate(action.schema);
+        return generateFromJsonSchema(action.schema as JsonSchema);
     }
 }
 
