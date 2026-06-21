@@ -5,7 +5,7 @@ import { EVENT_BUS } from "../events/bus";
 import { EVENTS_BY_KEY, EVENTS_DISPLAY, type EventDef, type EventInstance, type EventKey } from "../events";
 
 export interface Reporter {
-    /** Minimum log level. */
+    /** Deprecated: event reporting currently logs all levels. */
     level: LogLevel;
     /** Minimum log level to auto-show toasts for. */
     autoToastLevel: LogLevel;
