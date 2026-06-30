@@ -47,13 +47,12 @@
 ### Frontend
 
 - Extra context log features
-    - Menu (buttons to copy message text, ID, etc)
+    - Per-message menu (buttons to copy message text, ID, etc)
     - Editing the log - edit message text, remove message
     - "Act (forced)"/"Gary wants attention" should be a heading (like [game name for client msgs](https://github.com/Govorunb/gary/blob/9997b2151f180cd339d6d7b93aa17c3ff687bc21/src/lib/ui/app/context/ContextMessage.svelte#L50-L59))
     - Save/show which engine was the 'actor'
     - Ephemeral actor message that represents the active generation ("Gary is thinking...")
 - Performance (because WebKit is [ngmi](https://github.com/orgs/tauri-apps/discussions/8524))
-    - Virtualize context log https://tanstack.com/virtual/latest/docs/introduction
     - Keep a CodeMirror instance loaded offscreen and Portal it into dialogs (deranged)
     - Streaming reactive ctx message conversion (entirely reimplement rx it'll be funny)
 - Launch game processes (+ proposed shutdown API)
@@ -62,8 +61,6 @@
     - On fullscreen, use empty right half for something (event log?)
 - Diagnostics
     - Filtering/sorting (errors first, only warnings, regex etc.)
-    - More useful tooltip/popover on status dot
-    - Maybe have the status dot be the menu button
 - Allow binding to `0.0.0.0`
 - Onboarding (docs, first-time teaching tips)
     - First-time tip for when an engine error pauses the scheduler
