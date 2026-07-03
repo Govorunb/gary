@@ -11,6 +11,7 @@
     import { boolAttr } from "runed";
     import OutLink from "../common/OutLink.svelte";
     import Switch from "$lib/ui/common/Switch.svelte";
+    import TeachingTooltip from "../common/TeachingTooltip.svelte";
 
     type Props = {
         open: boolean;
@@ -20,6 +21,32 @@
 
     const userPrefs = getUserPrefs();
     const updater = getUpdater();
+    const characterPresets = {
+        neuro: "Neuro-sama",
+        evil: "Evil Neuro",
+        gary: "Gary",
+        tony: "Tony",
+        jippity: "Jippity",
+    } as const;
+    type CharacterPreset = keyof typeof characterPresets;
+
+    function characterPresetKey() {
+        const { characterId, displayName } = userPrefs.app.character;
+        if (!(characterId in characterPresets)) return "custom";
+
+        const presetKey = characterId as CharacterPreset;
+        return characterPresets[presetKey] === displayName ? presetKey : "custom";
+    }
+
+    let selectedCharacterPreset = $state(characterPresetKey());
+
+    function setCharacterPreset(value: string) {
+        if (!(value in characterPresets)) return;
+
+        const presetKey = value as CharacterPreset;
+        userPrefs.app.character.characterId = presetKey;
+        userPrefs.app.character.displayName = characterPresets[presetKey];
+    }
 
     async function checkForUpdates() {
         if (updater.checkingForUpdates) return;
@@ -100,9 +127,53 @@
                 <ThemePicker bind:currentTheme={userPrefs.app.theme} />
             </div>
             <div class="field">
-                <Switch bind:checked={userPrefs.app.hideSensitiveInfo}>
-                    <p class="field-label">Hide sensitive info</p>
-                </Switch>
+                <div class="field-heading">
+                    <span id="hide-sensitive-info-label" class="field-label">Hide sensitive info</span>
+                    <TeachingTooltip>
+                        <p>Blur potentially sensitive event data in the event log</p>
+                    </TeachingTooltip>
+                    <Switch
+                        bind:checked={userPrefs.app.hideSensitiveInfo}
+                        aria-labelledby="hide-sensitive-info-label"
+                    />
+                </div>
+            </div>
+            <div class="field stacked">
+                <div class="field-heading">
+                    <label class="field-label" for="character-preset">Startup character</label>
+                    <TeachingTooltip>
+                        <p>
+                            The character to report to the game (see <OutLink href="https://github.com/VedalAI/neuro-sdk/blob/6a0e104e72805fc0b63bc9713ce06d9dfda0873e/API/SPECIFICATION.md#startup-acknowledgement">API reference</OutLink>)
+                        </p>
+                    </TeachingTooltip>
+                </div>
+                <select
+                    id="character-preset"
+                    class="settings-select"
+                    bind:value={selectedCharacterPreset}
+                    onchange={(e) => setCharacterPreset((e.target as HTMLSelectElement).value)}
+                >
+                    {#each Object.entries(characterPresets) as [key, label]}
+                        <option value={key}>{label}</option>
+                    {/each}
+                    <option value="custom">Custom</option>
+                </select>
+                {#if selectedCharacterPreset === "custom"}
+                    <div class="custom-character-fields">
+                        <label class="field-label" for="character-id">Character ID</label>
+                        <input
+                            id="character-id"
+                            class="settings-input"
+                            bind:value={userPrefs.app.character.characterId}
+                        />
+                        <label class="field-label" for="display-name">Display name</label>
+                        <input
+                            id="display-name"
+                            class="settings-input"
+                            bind:value={userPrefs.app.character.displayName}
+                        />
+                    </div>
+                {/if}
             </div>
             {#if isApril1st()}
                 <div class="field">
@@ -178,7 +249,7 @@
 
             <div class="fcol-1">
                 <p class="font-light">Automatically check for updates on app launch:</p>
-                <select class="update-select" bind:value={userPrefs.app.updates.autoCheckInterval}>
+                <select class="settings-select" bind:value={userPrefs.app.updates.autoCheckInterval}>
                     <option value="everyLaunch">Every launch</option>
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -274,6 +345,10 @@
 
     .field {
         @apply frow-3 items-center;
+
+        &.stacked {
+            @apply fcol-2 items-stretch;
+        }
     }
 
     .field-label {
@@ -281,7 +356,12 @@
         @apply text-neutral-700 dark:text-neutral-300;
     }
 
-    .update-select {
+    .field-heading {
+        @apply inline-flex items-center gap-1.5;
+    }
+
+    .settings-select,
+    .settings-input {
         @apply w-full px-3 py-2 pr-8 appearance-none;
         @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
         @apply bg-white dark:bg-neutral-800;
@@ -292,6 +372,17 @@
             @apply border-neutral-400 dark:border-neutral-500;
         }
 
+    }
+
+    .settings-input {
+        @apply pr-3;
+    }
+
+    .custom-character-fields {
+        @apply grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 items-center;
+        @apply p-3 rounded-md;
+        @apply bg-neutral-50 dark:bg-neutral-900/30;
+        @apply border border-neutral-200 dark:border-neutral-700;
     }
 
     .prefs-iex-status {

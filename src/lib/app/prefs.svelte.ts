@@ -129,6 +129,10 @@ export const zAppPrefs = z.strictObject({
     manualSendSchemaCollapsed: z.boolean().fallback(true),
     hideSensitiveInfo: z.boolean().fallback(true),
     rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
+    character: z.strictObject({
+        characterId: z.string().fallback("gary"),
+        displayName: z.string().fallback("Gary"),
+    }).prefault({}),
     dashboard: z.strictObject({
         sidebars: z.strictObject({
             leftCollapsed: z.boolean().fallback(false),

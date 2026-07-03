@@ -110,7 +110,7 @@ export class Game {
         const command = msg.command;
         switch (command) {
             case "startup":
-                this.startup();
+                await this.startup();
                 break;
             case "context":
                 this.context(msg.data.message, msg.data.silent);
@@ -138,7 +138,7 @@ export class Game {
         }
     }
 
-    startup() {
+    async startup() {
         EVENT_BUS.emit('api/game/startup', {
             game: {id: this.id, name: this.name},
             startupStateWas: this.startupState,
@@ -153,6 +153,16 @@ export class Game {
                 this.diagnostics.trigger("perf/late/startup", { delayMs: startupDelay });
             }
         }
+        const { characterId, displayName } = this.session.userPrefs.app.character;
+        await this.conn.send(v1.zStartupAck.decode({
+            data: {
+                session: {
+                    sessionId: this.id,
+                    characterId,
+                    displayName,
+                },
+            },
+        }));
         // TODO: diag suggest sending context (game info/rules) on connect
         // (like a 1s timer after startup or sth)
     }

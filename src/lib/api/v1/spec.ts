@@ -96,6 +96,17 @@ export type GameMessage = z.infer<typeof zGameMessage>;
 
 // Neuro messages
 
+export const zStartupAck = z.strictObject({
+    command: zConst("startup"),
+    data: z.strictObject({
+        session: z.strictObject({
+            sessionId: z.string(),
+            characterId: z.string(),
+            displayName: z.string(),
+        }),
+    }),
+});
+
 export const zActData = z.strictObject({
     id: z.string().default(uuid4),
     name: z.string().nonempty(),
@@ -111,10 +122,12 @@ export const zReregisterAll = z.strictObject({
 })
 
 export const zNeuroMessage = z.discriminatedUnion("command", [
+    zStartupAck,
     zAct,
     zReregisterAll,
 ])
 
+export type StartupAck = z.infer<typeof zStartupAck>;
 export type Act = z.infer<typeof zAct>;
 export type ActData = z.infer<typeof zActData>;
 export type ReregisterAll = z.infer<typeof zReregisterAll>;

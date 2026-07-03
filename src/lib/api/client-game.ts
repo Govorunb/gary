@@ -10,6 +10,7 @@ export type ActionResult = Omit<v1.ActionResult['data'], 'id'>;
 export abstract class ClientGame {
     protected readonly ajv = new Ajv({ validateFormats: false });
     public readonly registeredActions = new Map<string, v1.Action>();
+    public startupAck: v1.StartupAck['data']['session'] | null = null;
 
     public get id() {
         return this.conn.conn.id;
@@ -35,6 +36,9 @@ export abstract class ClientGame {
     public async recv(msg: v1.NeuroMessage) {
         const command = msg.command;
         switch (command) {
+            case "startup":
+                this.startupAck = msg.data.session;
+                break;
             case "action":
                 await this.action(msg.data);
                 break;
