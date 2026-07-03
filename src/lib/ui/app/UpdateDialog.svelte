@@ -4,8 +4,6 @@
     import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
     import { isTauri } from "@tauri-apps/api/core";
     import { safeInvoke, sleep } from "$lib/app/utils";
-    import { BundleType, getBundleType } from "@tauri-apps/api/app";
-    import Hotkey from "../common/Hotkey.svelte";
     import { EVENT_BUS } from "$lib/app/events/bus";
     import { toast } from "svelte-sonner";
 
@@ -68,10 +66,6 @@
         open = false;
     }
 
-    let isDebBundle = $state(false);
-    if (isTauri()) {
-        getBundleType().then(b => isDebBundle = b === BundleType.Deb);
-    }
 </script>
 
 <Dialog bind:open position="center">
@@ -93,26 +87,16 @@
         <p>Restart the app at your convenience to finish the update.</p>
     {/snippet}
     {#snippet footer()}
-        <div class="fcol-2 flex-1">
-            <div class="frow-2">
-                <button class="btn btn-base skip-btn" onclick={skip}>
-                    Skip this version
-                </button>
-                <div class="flex-1 self-stretch"></div>
-                <button class="btn btn-base cancel-btn" onclick={cancel}>
-                    Cancel
-                </button>
-                <button class="btn btn-base preset-filled-primary-500" onclick={doUpdate} disabled={isDebBundle || updating}>
-                    {updating ? "Updating..." : "Update"}
-                </button>
-            </div>
-            {#if isDebBundle}
-                <span class="whitespace-pre-line">
-                    Sorry, <Hotkey>.deb</Hotkey> installs currently don't support auto-installation.
-                    Please install the update manually from <OutLink href="https://github.com/Govorunb/gary/releases/v{update.version}">GitHub releases</OutLink>.
-                </span>
-            {/if}
-        </div>
+        <button class="btn btn-base skip-btn" onclick={skip}>
+            Skip this version
+        </button>
+        <div class="flex-1 self-stretch"></div>
+        <button class="btn btn-base cancel-btn" onclick={cancel}>
+            Cancel
+        </button>
+        <button class="btn btn-base preset-filled-primary-500" onclick={doUpdate} disabled={updating}>
+            {updating ? "Updating..." : "Update"}
+        </button>
     {/snippet}
 </Dialog>
 
