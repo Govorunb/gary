@@ -219,15 +219,16 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             DEFAULT_SYSTEM_PROMPT,
             this.options.promptingStrategy === "json" ? SYS_PROMPT_JSON : SYS_PROMPT_TOOLS,
         ];
-        // FIXME: no system prompt editor yet
         if (session.userPrefs.app.systemPrompt?.trim()) { // not null, undefined, or empty/whitespace
             prompts.push(`## User instructions
 
 The user has provided additional custom instructions for you.
 These instructions take precedence over previous system instructions, and you must follow them precisely and faithfully.
 
-The custom user instructions are as follows:`);
+The custom user instructions are as follows:
+<user-instructions>`);
             prompts.push(session.userPrefs.app.systemPrompt);
+            prompts.push(`</user-instructions>`);
         }
         return prompts.join("\n\n");
     }

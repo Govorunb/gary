@@ -8,7 +8,7 @@
     import { app } from "@tauri-apps/api";
     import { APP_VERSION, clearLocalStorage, debounced, isApril1st, jsonParse, safeInvoke } from "$lib/app/utils";
     import { ResultAsync } from "neverthrow";
-    import { boolAttr } from "runed";
+    import { boolAttr, TextareaAutosize } from "runed";
     import OutLink from "../common/OutLink.svelte";
     import Switch from "$lib/ui/common/Switch.svelte";
     import TeachingTooltip from "../common/TeachingTooltip.svelte";
@@ -47,6 +47,13 @@
         userPrefs.app.character.characterId = presetKey;
         userPrefs.app.character.displayName = characterPresets[presetKey];
     }
+
+    let sysPromptTextArea = $state<HTMLTextAreaElement>(null!);
+    new TextareaAutosize({
+        element: () => sysPromptTextArea,
+        input: () => userPrefs.app.systemPrompt || "",
+        maxHeight: 300, // hack but the 'right' way (multiple of line-height) isn't obvious rn
+    });
 
     async function checkForUpdates() {
         if (updater.checkingForUpdates) return;
@@ -174,6 +181,22 @@
                         />
                     </div>
                 {/if}
+            </div>
+            <div class="field stacked">
+                <div class="field-heading">
+                    <label class="field-label" for="user-instructions">User instructions</label>
+                    <TeachingTooltip>
+                        <p>
+                            Additional instructions to give to the LLM. Always in-context as part of the system prompt.
+                        </p>
+                    </TeachingTooltip>
+                </div>
+                <textarea
+                    bind:value={userPrefs.app.systemPrompt}
+                    bind:this={sysPromptTextArea}
+                    class="input-field"
+                    id="user-instructions"
+                ></textarea>
             </div>
             {#if isApril1st()}
                 <div class="field">
@@ -371,7 +394,13 @@
         &:hover {
             @apply border-neutral-400 dark:border-neutral-500;
         }
+    }
 
+    .input-field {
+        @apply rounded-md px-3 py-2 text-sm;
+        @apply bg-white border border-neutral-300;
+        @apply dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100;
+        @apply focus:outline-none focus:ring-2 focus:ring-primary-500;
     }
 
     .settings-input {
