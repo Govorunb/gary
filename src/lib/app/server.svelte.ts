@@ -3,7 +3,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { settled } from "svelte";
 import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
 import type { Session } from "./session.svelte";
-import type { UserPrefs } from "./prefs.svelte";
+import { getServerBindHost, type UserPrefs } from "./prefs.svelte";
 import { listenSub, safeInvoke, LogLevel } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";
 import { EVENT_BUS } from "./events/bus";
@@ -38,13 +38,17 @@ export class ServerManager {
     }
 
     async start() {
-        return safeInvoke("start_server", { port: this.userPrefs.api.server.port })
+        const serverPrefs = this.userPrefs.api.server;
+        return safeInvoke("start_server", {
+            host: getServerBindHost(serverPrefs),
+            port: serverPrefs.port,
+        })
             .orTee(e => isTauri() && toast.error(`Failed to start server`, { description: e }))
             .finally(() => this.sync());
-        }
+    }
         
-        async stop() {
-            return safeInvoke("stop_server")
+    async stop() {
+        return safeInvoke("stop_server")
             .orTee(e => isTauri() && toast.error(`Failed to stop server`, { description: e }))
             .finally(() => this.sync());
     }

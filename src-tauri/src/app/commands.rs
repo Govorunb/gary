@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{net::IpAddr, path::PathBuf};
 
 use log::{debug, info};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -27,7 +27,7 @@ pub async fn server_state(app: AppHandle) -> Option<Vec<Uuid>> {
 }
 
 #[tauri::command]
-pub async fn start_server(app: AppHandle, port: u16) -> Result<(), String> {
+pub async fn start_server(app: AppHandle, host: IpAddr, port: u16) -> Result<(), String> {
     info!("WebView requested to start server");
     let state_mutex = app.state::<AppStateMutex>();
     let mut state = state_mutex.lock().await;
@@ -35,8 +35,8 @@ pub async fn start_server(app: AppHandle, port: u16) -> Result<(), String> {
         return Err("Server already running".into());
     }
     
-    state.start_server(port).await?;
-    info!("Server started on port {port}");
+    state.start_server(host, port).await?;
+    info!("Server started on {host}:{port}");
     let _ = app.emit("server-started", port);
     Ok(())
 }

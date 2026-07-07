@@ -161,6 +161,7 @@ export const zGamePrefs = z.strictObject({
 export const zApiPrefs = z.strictObject({
     server: z.strictObject({
         port: z.coerce.number().int().min(1024).max(65535).fallback(8000),
+        bindAllInterfaces: z.boolean().fallback(false),
         // TODO: server behavior toggles (e.g. conflict resolution)
     }).prefault({}),
     games: z.record(z.string(), zGamePrefs.optional()).prefault({}),
@@ -195,6 +196,13 @@ export const zUserPrefs = z.strictObject({
 export type UserPrefsData = z.infer<typeof zUserPrefs>;
 export type AppPrefs = z.infer<typeof zAppPrefs>;
 export type ApiPrefs = z.infer<typeof zApiPrefs>;
+
+export const LOCAL_SERVER_HOST = "127.0.0.1";
+export const ALL_INTERFACES_SERVER_HOST = "0.0.0.0";
+
+export function getServerBindHost(serverPrefs: ApiPrefs["server"]): string {
+    return serverPrefs.bindAllInterfaces ? ALL_INTERFACES_SERVER_HOST : LOCAL_SERVER_HOST;
+}
 
 const MIGRATIONS: Migration[] = [
     {

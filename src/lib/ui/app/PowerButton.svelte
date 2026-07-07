@@ -8,6 +8,7 @@
     import { isTauri } from "@tauri-apps/api/core";
     import CopyButton from "../common/CopyButton.svelte";
     import { EVENT_BUS } from "$lib/app/events/bus";
+    import { getServerBindHost } from "$lib/app/prefs.svelte";
 
     const userPrefs = getUserPrefs();
     const registry = getRegistry();
@@ -48,7 +49,7 @@
         }
     })
 
-    const address = $derived(`ws://127.0.0.1:${userPrefs.api.server.port}`);
+    const address = $derived(`ws://${getServerBindHost(userPrefs.api.server)}:${userPrefs.api.server.port}`);
 </script>
 
 <div class="frow-3 items-center">

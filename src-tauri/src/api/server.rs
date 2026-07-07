@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, sync::Arc, convert::Into};
+use std::{collections::BTreeMap, sync::Arc, convert::Into, net::{IpAddr, SocketAddr}};
 
 use axum::{extract::{ws::{CloseFrame, Message, WebSocket}, Path, Query, State, WebSocketUpgrade}, response::Response, routing::get, Router};
 use futures_util::{stream::SplitSink, FutureExt, SinkExt, StreamExt};
@@ -91,7 +91,7 @@ impl WSServer {
     }
 }
 
-pub async fn create_server(app: AppHandle, port: u16) -> Result<WSServer, String> {
+pub async fn create_server(app: AppHandle, host: IpAddr, port: u16) -> Result<WSServer, String> {
     let router = Router::new()
         .route("/", get(v1_legacy))
         // v2 is not out yet (not even finalized)
@@ -101,7 +101,7 @@ pub async fn create_server(app: AppHandle, port: u16) -> Result<WSServer, String
         // .route("/v2/", get(v2_game_in_query))
         .with_state(app.clone());
 
-    let addr = ("127.0.0.1", port);
+    let addr = SocketAddr::from((host, port));
     let listener_res = TcpListener::bind(addr).await;
     debug!("Bind result to {addr:?} - {}", if let Err(ref e) = listener_res { e.to_string() } else { "OK".to_owned() });
     let listener = listener_res.map_err(|e| e.to_string())?;

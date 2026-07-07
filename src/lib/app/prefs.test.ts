@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { zUserPrefs } from "./prefs.svelte";
+import { ALL_INTERFACES_SERVER_HOST, getServerBindHost, LOCAL_SERVER_HOST, zUserPrefs } from "./prefs.svelte";
 import { moveField, deleteField, migrate } from "./utils/migrations";
 
 const simple = {
@@ -264,5 +264,26 @@ describe("user prefs", () => {
 
 	test("preserves explicit sensitive-info visibility preference", () => {
 		expect(zUserPrefs.parse({ version: "test", app: { hideSensitiveInfo: false } }).app.hideSensitiveInfo).toBe(false);
+	});
+
+	test("uses local-only server binding by default", () => {
+		const prefs = zUserPrefs.parse({ version: "test" });
+
+		expect(prefs.api.server.bindAllInterfaces).toBe(false);
+		expect(getServerBindHost(prefs.api.server)).toBe(LOCAL_SERVER_HOST);
+	});
+
+	test("preserves all-interfaces server binding preference", () => {
+		const prefs = zUserPrefs.parse({
+			version: "test",
+			api: {
+				server: {
+					bindAllInterfaces: true,
+				},
+			},
+		});
+
+		expect(prefs.api.server.bindAllInterfaces).toBe(true);
+		expect(getServerBindHost(prefs.api.server)).toBe(ALL_INTERFACES_SERVER_HOST);
 	});
 });

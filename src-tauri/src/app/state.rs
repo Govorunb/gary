@@ -1,4 +1,5 @@
 use tauri::{AppHandle, Listener};
+use std::net::IpAddr;
 use tokio::sync::{Mutex, RwLock};
 
 use crate::api::{server::WSServer};
@@ -22,12 +23,12 @@ impl App {
         self.server.is_some()
     }
 
-    pub async fn start_server(&mut self, port: u16) -> Result<(), String> {
+    pub async fn start_server(&mut self, host: IpAddr, port: u16) -> Result<(), String> {
         if self.server.is_some() {
             return Err("Server already running".into())
         }
         self.server = Some(crate::api::server::create_server(
-            self.app_handle.clone(), port
+            self.app_handle.clone(), host, port
         ).await?);
         Ok(())
     }
