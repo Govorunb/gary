@@ -165,7 +165,11 @@ describe("actions/force", () => {
         expect(fq).toStrictEqual([null]);
 
         await harness.client.conn.send(force);
-        expect(fq).toEqual([null, [{...ACTION, active:true}]]);
+        expect(fq).toHaveLength(2);
+        expect(fq[0]).toBeNull();
+        expect(fq[1]).toHaveLength(1);
+        expect(fq[1]?.[0].game).toBe(harness.server);
+        expect(fq[1]?.[0].action).toEqual({...ACTION, active:true});
         expect(harness.diagnosticKeys, "first force with non-client in queue").toStrictEqual([]);
 
         await harness.client.conn.send(force);

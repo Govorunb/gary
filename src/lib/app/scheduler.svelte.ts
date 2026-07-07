@@ -1,4 +1,5 @@
 import type { Session } from "./session.svelte";
+import type { Game } from "$lib/api/game.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
 import { zActData, type Action } from "$lib/api/v1/spec";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
@@ -8,6 +9,21 @@ import { debounced, LogLevel } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";
 import { EVENT_BUS } from "./events/bus";
 import { toast } from "svelte-sonner";
+
+export type ActionCandidate = {
+    game: Game;
+    action: Action;
+};
+
+type EngineActionTarget = ActionCandidate & {
+    displayName: string;
+    engineAction: Action;
+};
+
+type EngineActionSet = {
+    actions: Action[];
+    targetsByName: Map<string, EngineActionTarget>;
+};
 
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
@@ -30,7 +46,7 @@ export class Scheduler {
      */
     public actPending = $state(false);
     /** A queue of pending `ForceAction`s. */
-    public forceQueue: Array<Action[] | null> = $state([]);
+    public forceQueue: Array<ActionCandidate[] | null> = $state([]);
     public readonly autoPoker: AutoPoker;
 
     constructor(private readonly session: Session) {
@@ -56,6 +72,17 @@ export class Scheduler {
     public get activeEngine() {
         return this.session.activeEngine;
     }
+    public get queuedGameForceCount() {
+        return this.forceQueue.filter(Boolean).length;
+    }
+
+    public queueForce(actions: ActionCandidate[] | null) {
+        this.forceQueue.push(actions);
+    }
+
+    public queueGameForce(game: Game, actions: Action[]) {
+        this.queueForce(actions.map(action => ({ game, action })));
+    }
 
     public cancelAct(): boolean {
         if (!this.#abort) {
@@ -70,7 +97,7 @@ export class Scheduler {
         return new ResultAsync(this.actInner(false));
     }
 
-    forceAct(actions?: Action[] | null): ResultAsync<EngineAct, ActError> {
+    forceAct(actions?: ActionCandidate[] | null): ResultAsync<EngineAct, ActError> {
         return new ResultAsync(this.actInner(true, actions))
             .andThen(choice => this.isAct(choice) ? ok(choice)
                 : err(new LogicError(`If you see this, DON'T tell me. This is under enough layers of "nobody will ever see this" checks that if you do, I'm NOT going to debug it. I'm just going to retrain to a plumber.`)))
@@ -81,7 +108,7 @@ export class Scheduler {
         return typeof choice === "object" && 'name' in choice;
     }
 
-    private async actInner(force: boolean, actions?: Action[] | null) {
+    private async actInner(force: boolean, candidates?: ActionCandidate[] | null) {
         this.actPending = false;
         const ignores = this.checkIgnored();
         if (ignores.length) {
@@ -89,15 +116,16 @@ export class Scheduler {
             return err(LogicError.ignored(ignores));
         }
 
-        const actionsProvided = actions !== undefined;
-        actions ??= this.registry.games.flatMap(g => g.getActiveActions());
-        if (actions.length === 0) {
+        const actionsProvided = candidates !== undefined && candidates !== null;
+        candidates ??= this.activeActionCandidates();
+        if (candidates.length === 0) {
             EVENT_BUS.emit('app/scheduler/act/fail/no_actions', { force, actionsProvided });
             if (actionsProvided) {
                 toast.error("No actions provided");
             }
             return err(LogicError.noActions());
         }
+        const actionSet = this.engineActionSet(candidates);
 
         const engine = this.activeEngine;
 
@@ -105,19 +133,76 @@ export class Scheduler {
         const controller = new AbortController();
         this.#abort = controller;
         const actRes = force
-            ? await this.activeEngine!.forceAct(this.session, actions, controller.signal)
-            : await this.activeEngine!.tryAct(this.session, actions, controller.signal);
+            ? await this.activeEngine!.forceAct(this.session, actionSet.actions, controller.signal)
+            : await this.activeEngine!.tryAct(this.session, actionSet.actions, controller.signal);
         this.#abort = null;
         this.busy = false;
 
         return actRes
-            .asyncAndThrough(act => this.perform(act, force, engine))
+            .asyncAndThrough(act => this.perform(act, force, engine, actionSet.targetsByName))
             .orTee(e => e instanceof EngineError && this.onError(e));
     }
 
-    private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>): ResultAsync<EngineActResult, ActError> {
+    private activeActionCandidates(): ActionCandidate[] {
+        return this.registry.games.flatMap(game =>
+            game.getActiveActions().map(action => ({ game, action }))
+        );
+    }
+
+    private engineActionSet(candidates: ActionCandidate[]): EngineActionSet {
+        const actionNameCounts = new Map<string, number>();
+        for (const { action } of candidates) {
+            actionNameCounts.set(action.name, (actionNameCounts.get(action.name) ?? 0) + 1);
+        }
+
+        const displayNames = new Array<string>(candidates.length);
+        const usedNames = new Set<string>();
+
+        for (let i = 0; i < candidates.length; i++) {
+            const { action } = candidates[i];
+            if (actionNameCounts.get(action.name) === 1) {
+                displayNames[i] = action.name;
+                usedNames.add(action.name);
+            }
+        }
+
+        for (let i = 0; i < candidates.length; i++) {
+            const { game, action } = candidates[i];
+            if (displayNames[i]) {
+                continue;
+            }
+
+            const baseName = `${action.name} (${game.name} ${game.shortId})`;
+            let displayName = baseName;
+            let duplicateSuffix = 2;
+            while (usedNames.has(displayName)) {
+                displayName = `${baseName} #${duplicateSuffix}`;
+                duplicateSuffix++;
+            }
+            displayNames[i] = displayName;
+            usedNames.add(displayName);
+        }
+
+        const actions: Action[] = [];
+        const targetsByName = new Map<string, EngineActionTarget>();
+        for (let i = 0; i < candidates.length; i++) {
+            const candidate = candidates[i];
+            const displayName = displayNames[i];
+            const engineAction = { ...candidate.action, name: displayName };
+            actions.push(engineAction);
+            targetsByName.set(displayName, {
+                ...candidate,
+                displayName,
+                engineAction,
+            });
+        }
+
+        return { actions, targetsByName };
+    }
+
+    private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget>): ResultAsync<EngineActResult, ActError> {
         if (typeof choice === 'object' && 'name' in choice) {
-            return this.performAct(choice, force, engine);
+            return this.performAct(choice, force, engine, targetsByName);
         }
         if (force) {
             return errAsync(new LogicError(`Engine chose to ${choice === "skip" ? choice : "yap"} in forced act. Please don't tell the developer. I will cry`));
@@ -141,14 +226,16 @@ export class Scheduler {
         return errAsync(new LogicError(`Reached unreachable fallthrough in 'perform': Did you add a new engine return option?`));
     }
 
-    private performAct(act: EngineAct, forced: boolean, engine: Engine<unknown>): ResultAsync<EngineAct, ActError> {
-        const game = this.registry.games.find(g => g.getAction(act.name));
-        if (!game) {
+    private performAct(act: EngineAct, forced: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget>): ResultAsync<EngineAct, ActError> {
+        const target = targetsByName.get(act.name);
+        if (!target) {
             EVENT_BUS.emit('app/scheduler/act/fail/action_not_found', { force: forced, act });
             return errAsync(LogicError.notFound(act.name));
         }
-        EVENT_BUS.emit('app/scheduler/act/perform', { force: forced, action: act.name });
-        const actData = zActData.decode({...act});
+        const game = target.game;
+        const realAct: EngineAct = { ...act, name: target.action.name };
+        EVENT_BUS.emit('app/scheduler/act/perform', { force: forced, action: realAct.name });
+        const actData = zActData.decode({...realAct});
         EVENT_BUS.emit('api/actor/act', {
             engineId: engine.id,
             force: forced,
@@ -157,7 +244,7 @@ export class Scheduler {
         });
         return ResultAsync.fromPromise(game.sendAction(actData), (e) => LogicError.sendErr(e as Error))
             .orTee(() => EVENT_BUS.emit('app/scheduler/act/fail/failed_to_send', { force: forced }))
-            .map(() => act);
+            .map(() => realAct);
     }
 
     private checkIgnored() {
@@ -230,7 +317,7 @@ export class AutoPoker {
         this.forceTimer = $derived(debounced(() => untrack(() => {
             if (this.scheduler.forceQueue.length === 0) {
                 EVENT_BUS.emit('app/scheduler/idle/force');
-                this.scheduler.forceQueue.push(null);
+                this.scheduler.queueForce(null);
             } else {
                 EVENT_BUS.emit('app/scheduler/idle/no_fq');
             }

@@ -4,7 +4,7 @@ import { InternalConnection, ConnectionClient } from "$lib/api/connection";
 import { type UserPrefs, zGamePrefs, zUserPrefs } from "$lib/app/prefs.svelte";
 import { ContextManager } from "$lib/app/context.svelte";
 import { EventLogStore } from "$lib/app/events/log.svelte";
-import type { Scheduler } from "$lib/app/scheduler.svelte";
+import type { ActionCandidate, Scheduler } from "$lib/app/scheduler.svelte";
 import type * as v1 from "$lib/api/v1/spec";
 
 
@@ -14,8 +14,17 @@ function mock<T, U extends Partial<T>>(mock: U): U & { [K in Exclude<keyof T, ke
 
 class MockSession {
     private readonly mockScheduler = {
-        forceQueue: [] as Array<v1.Action[] | null>,
-        actPending: false
+        forceQueue: [] as Array<ActionCandidate[] | null>,
+        actPending: false,
+        get queuedGameForceCount() {
+            return this.forceQueue.filter(Boolean).length;
+        },
+        queueForce(actions: ActionCandidate[] | null) {
+            this.forceQueue.push(actions);
+        },
+        queueGameForce(game: Game, actions: v1.Action[]) {
+            this.queueForce(actions.map(action => ({ game, action })));
+        },
     };
     private readonly mockPrefs = {
         ...zUserPrefs.decode({ version: "test" }),

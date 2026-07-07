@@ -11,12 +11,12 @@ test("not sharing harness state", async () => {
     const prefs2 = harness2.session.userPrefs;
 
     const action1 = v1.zAction.decode({ name: "action1", schema: null });
-    harness1.session.scheduler.forceQueue.push([action1]);
+    harness1.session.scheduler.queueGameForce(harness1.server, [action1]);
 
     expect([fq1.length, fq2.length]).toStrictEqual([1, 0]);
 
     const action2 = v1.zAction.decode({ name: "action2", schema: null });
-    fq2.push([action2]);
+    harness2.session.scheduler.queueGameForce(harness2.server, [action2]);
 
     expect([fq1.length, fq2.length]).toStrictEqual([1, 1]);
 

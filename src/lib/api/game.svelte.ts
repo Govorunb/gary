@@ -302,11 +302,10 @@ export class Game {
             }
         }
         // only real forces (from client) - manual/autoact forces exist in the queue but are null
-        const realForces = this.session.scheduler.forceQueue.filter(Boolean);
-        if (realForces.length + this.forceQueue.length) {
+        if (this.session.scheduler.queuedGameForceCount + this.forceQueue.length) {
             this.diagnostics.trigger("prot/force/multiple", { msgData: msg.data });
         }
-        this.session.scheduler.forceQueue.push(actions);
+        this.session.scheduler.queueGameForce(this, actions);
         EVENT_BUS.emit('api/game/force', {
             game: { id: this.id, name: this.name },
             ...msg.data,
