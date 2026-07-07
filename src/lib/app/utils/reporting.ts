@@ -1,8 +1,9 @@
-import { toast, type ExternalToast } from "svelte-sonner";
+import type { ExternalToast } from "svelte-sonner";
 import { isTauri } from "@tauri-apps/api/core";
 import { safeInvoke, LogLevel } from ".";
 import { EVENT_BUS } from "../events/bus";
 import { EVENTS_BY_KEY, EVENTS_DISPLAY, type EventDef, type EventInstance, type EventKey } from "../events";
+import { boundedToast } from "./bounded-toast";
 
 export interface Reporter {
     /** Deprecated: event reporting currently logs all levels. */
@@ -57,7 +58,7 @@ class DefaultReporter implements Reporter {
             if (shouldPresent) {
                 const err = `Missing event presenter or description for ${e.key}!`;
                 console.error(err);
-                toast.error(err);
+                boundedToast.error(err, { priority: LogLevel.Error });
             }
             return;
         }
@@ -96,24 +97,25 @@ class DefaultReporter implements Reporter {
                 message,
                 target: options.target,
                 location: loc,
-            }).orTee(err => toast.error("Failed to log!", { description: err }));
+            }).orTee(err => boundedToast.error("Failed to log!", { description: err, priority: LogLevel.Error }));
         }
         logFunc(msg);
     }
 
     private toast(opts: ToastOptions) {
         const toastFuncMap = {
-            [LogLevel.Verbose]: toast.message,
-            [LogLevel.Debug]: toast.message,
-            [LogLevel.Info]: toast.info,
-            [LogLevel.Success]: toast.success,
-            [LogLevel.Warning]: toast.warning,
-            [LogLevel.Error]: toast.error,
-            [LogLevel.Fatal]: toast.error,
+            [LogLevel.Verbose]: boundedToast.message,
+            [LogLevel.Debug]: boundedToast.message,
+            [LogLevel.Info]: boundedToast.info,
+            [LogLevel.Success]: boundedToast.success,
+            [LogLevel.Warning]: boundedToast.warning,
+            [LogLevel.Error]: boundedToast.error,
+            [LogLevel.Fatal]: boundedToast.error,
         };
         // console.log(options, opts);
-        const toastFunc = toastFuncMap[opts.level!];
-        toastFunc(opts.title!, opts);
+        const { level = LogLevel.Info, title = "Notification", ...toastOpts } = opts;
+        const toastFunc = toastFuncMap[level];
+        toastFunc(title, { ...toastOpts, priority: level });
     }
 }
 

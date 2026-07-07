@@ -1,7 +1,7 @@
 import { EVENT_BUS } from "$lib/app/events/bus";
 import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
 import { shortId, LogLevel } from "$lib/app/utils";
-import { toast } from "svelte-sonner";
+import { boundedToast } from "$lib/app/utils/bounded-toast";
 import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, DIAGNOSTICS_BY_KEY, type DiagData } from "./diagnostics";
 import type { Game } from "./game.svelte";
 
@@ -55,10 +55,13 @@ export class GameDiagnostics {
         });
 
         if (report && !suppressed) {
+            const title = `(${this.game.name}) ${diagDef.title}`;
+            const identity = `diagnostic:${this.game.id}:${key}`;
             if (diagDef.severity >= DiagnosticSeverity.Error) {
-                toast.error(`(${this.game.name}) ${diagDef.title}`);
+                const priority = diagDef.severity >= DiagnosticSeverity.Fatal ? LogLevel.Fatal : LogLevel.Error;
+                boundedToast.error(title, { identity, priority });
             } else if (diagDef.severity === DiagnosticSeverity.Warning) {
-                toast.warning(`(${this.game.name}) ${diagDef.title}`);
+                boundedToast.warning(title, { identity, priority: LogLevel.Warning });
             }
         }
         if (diagDef.severity >= DiagnosticSeverity.Fatal) {
