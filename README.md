@@ -160,8 +160,8 @@ There may be cases where other backends (including Neuro) may behave differently
     - Processing other sources of information like vision/audio/chat (for obvious reasons)
     - Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
     - Myriad other things like response timings, text filters, allowed JSON schema keywords, long-term memories, etc
-- Gary sends `actions/reregister_all` on every connect (instead of just **re**connects, as in the spec)
-    - Reminder: this command is still non-standard. Your game/SDK implementation should ideally proactively register actions on connect instead of relying on a prompt from the server (which may not ever come).
+- Gary can send `actions/reregister_all` to v1 clients on every connect when the compatibility setting is enabled (instead of just **re**connects, as in the spec).
+    - Reminder: this command is deprecated and non-standard. Your game/SDK implementation should proactively register actions on connect instead of relying on a prompt from the server (which may not ever come).
 
 #### Acknowledgements
 Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:

@@ -8,17 +8,16 @@
     import { isTauri } from "@tauri-apps/api/core";
     import CopyButton from "../common/CopyButton.svelte";
     import { EVENT_BUS } from "$lib/app/events/bus";
-    import { getServerBindHost } from "$lib/app/prefs.svelte";
+    import { LOCAL_SERVER_HOST } from "$lib/app/prefs.svelte";
 
     const userPrefs = getUserPrefs();
     const registry = getRegistry();
     const manager = getServerManager();
 
     let running = $derived(manager.running);
-    const configDisabled = $derived(running);
 
     let powerBtnTooltip = $derived(running ? "Stop server" : "Start server");
-    const optionsBtnTooltip = $derived(configDisabled ? "Server is running" : "Server options");
+    const optionsBtnTooltip = "Server options";
     const haveTauri = isTauri();
     if (!haveTauri) powerBtnTooltip = "Tauri backend not available";
 
@@ -49,7 +48,7 @@
         }
     })
 
-    const address = $derived(`ws://${getServerBindHost(userPrefs.api.server)}:${userPrefs.api.server.port}`);
+    const address = $derived(`ws://${LOCAL_SERVER_HOST}:${userPrefs.api.server.port}`);
 </script>
 
 <div class="frow-3 items-center">
@@ -68,7 +67,6 @@
             {#snippet trigger(props)}
                 <button {...props}
                     class="options-button"
-                    disabled={configDisabled}
                     title={optionsBtnTooltip}
                     aria-label={optionsBtnTooltip}
                     >

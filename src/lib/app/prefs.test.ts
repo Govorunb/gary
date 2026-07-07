@@ -286,4 +286,17 @@ describe("user prefs", () => {
 		expect(prefs.api.server.bindAllInterfaces).toBe(true);
 		expect(getServerBindHost(prefs.api.server)).toBe(ALL_INTERFACES_SERVER_HOST);
 	});
+
+	test("sends deprecated v1 re-register requests by default for compatibility", () => {
+		expect(zUserPrefs.parse({ version: "test" }).api.compatibility.sendV1ReregisterAll).toBe(true);
+	});
+
+	test("preserves explicit v1 re-register compatibility preference", () => {
+		const prefs = zUserPrefs.parse({
+			version: "test",
+			api: { compatibility: { sendV1ReregisterAll: false } },
+		});
+
+		expect(prefs.api.compatibility.sendV1ReregisterAll).toBe(false);
+	});
 });

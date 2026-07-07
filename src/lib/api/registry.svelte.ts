@@ -6,6 +6,7 @@ import type { Session } from "$lib/app/session.svelte";
 import { Game } from "./game.svelte";
 import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
 import { EVENT_BUS } from "$lib/app/events/bus";
+import type { ApiPrefs } from "$lib/app/prefs.svelte";
 
 export type WSConnectionRequest = { id: string; } & (
     { version: "v1"; game: undefined; }
@@ -40,11 +41,7 @@ export class Registry {
         EVENT_BUS.emit('api/registry/conn_req/accepted', {...req});
         this.createGame(conn, req.game);
         await safeInvoke('ws_accept', { id: req.id, channel } satisfies AcceptArgs);
-        // TODO: deprecate (compat switch)
-        if (conn.version === "v1") {
-            EVENT_BUS.emit('api/registry/v1/reregister_all', {gameId: conn.id});
-            await conn.send(v1.zReregisterAll.decode({}));
-        }
+        await sendDeprecatedV1ReregisterAllForCompat(conn, this.session.userPrefs.api);
     }
 
     async deny(req: WSConnectionRequest, reason: string) {
@@ -89,6 +86,20 @@ export class Registry {
         }
         this.games.length = 0;
     }
+}
+
+export function shouldSendDeprecatedV1ReregisterAll(version: string, apiPrefs: ApiPrefs) {
+    return version === "v1" && apiPrefs.compatibility.sendV1ReregisterAll;
+}
+
+export async function sendDeprecatedV1ReregisterAllForCompat(conn: BaseConnection, apiPrefs: ApiPrefs) {
+    if (!shouldSendDeprecatedV1ReregisterAll(conn.version, apiPrefs)) {
+        return false;
+    }
+
+    EVENT_BUS.emit('api/registry/v1/reregister_all', {gameId: conn.id});
+    await conn.send(v1.zReregisterAll.decode({}));
+    return true;
 }
 
 export const EVENTS = [

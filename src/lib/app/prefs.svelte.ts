@@ -158,12 +158,17 @@ export const zGamePrefs = z.strictObject({
     }).prefault({}),
 }).prefault({});
 
+export const zApiCompatibilityPrefs = z.strictObject({
+    sendV1ReregisterAll: z.boolean().fallback(true),
+}).prefault({});
+
 export const zApiPrefs = z.strictObject({
     server: z.strictObject({
         port: z.coerce.number().int().min(1024).max(65535).fallback(8000),
         bindAllInterfaces: z.boolean().fallback(false),
         // TODO: server behavior toggles (e.g. conflict resolution)
     }).prefault({}),
+    compatibility: zApiCompatibilityPrefs,
     games: z.record(z.string(), zGamePrefs.optional()).prefault({}),
 });
 
