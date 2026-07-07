@@ -9,7 +9,7 @@
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
     import { getSession, getUserPrefs } from "$lib/app/utils/di";
     import Ajv, { type ValidateFunction } from "ajv";
-    import { generateFromJsonSchema, parseError, tooltip } from "$lib/app/utils";
+    import { emptyValueFromJsonSchema, generateFromJsonSchema, parseError, tooltip } from "$lib/app/utils";
     import { boolAttr, PressedKeys } from "runed";
     import { EVENT_BUS } from "$lib/app/events/bus";
     import type { JsonSchema } from "json-schema-faker";
@@ -45,7 +45,12 @@
     const validate = $derived((currentAction.schema && ajv.compile(currentAction.schema)) as ValidateFunction);
     const schemaJson = $derived(currentAction.schema && JSON.stringify(currentAction.schema, null, 2));
 
-    async function genJson(actionToGenerate: Action) {
+    function initialJson(actionToGenerate: Action) {
+        if (!actionToGenerate.schema) return "";
+        return JSON.stringify(emptyValueFromJsonSchema(actionToGenerate.schema as JsonSchema), null, 2);
+    }
+
+    async function randomJson(actionToGenerate: Action) {
         if (!actionToGenerate.schema) return "";
         return JSON.stringify(await generateFromJsonSchema(actionToGenerate.schema as JsonSchema), null, 2);
     }
@@ -56,13 +61,22 @@
 
     $effect(() => {
         const actionForDialog = currentAction;
-        void populateRandomJson(actionForDialog);
+        populateInitialJson(actionForDialog);
     });
+
+    function populateInitialJson(actionToGenerate: Action) {
+        latestGenerationRequest++;
+        try {
+            jsonContent = initialJson(actionToGenerate);
+        } catch (e) {
+            EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
+        }
+    }
 
     async function populateRandomJson(actionToGenerate: Action) {
         const request = ++latestGenerationRequest;
         try {
-            const nextJson = await genJson(actionToGenerate);
+            const nextJson = await randomJson(actionToGenerate);
             if (request === latestGenerationRequest) {
                 jsonContent = nextJson;
             }
@@ -197,7 +211,7 @@
                     {@attach tooltip("Replace editor contents with random data (Alt+R)")}
                 >
                     <Dice6 class="size-4" />
-                    Reroll
+                    Randomize
                 </button>
             {/if}
         </div>
