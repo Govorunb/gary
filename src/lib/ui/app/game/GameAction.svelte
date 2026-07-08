@@ -52,17 +52,28 @@
         }
         doSend(generatedData);
     }
+
+    function quickSend(evt: MouseEvent) {
+        if (evt.defaultPrevented || !evt.ctrlKey) return;
+
+        evt.preventDefault();
+        if (hasSchema) {
+            send();
+        } else {
+            doSend();
+        }
+    }
 </script>
 
 <details class="root accordion group" bind:open data-active={boolAttr(active)}>
-    <summary>
+    <summary onclick={quickSend}>
         <span>{action.name}</span>
         <div class="actions">
             {#if hasSchema}
                 <button
                     class="action-btn"
                     onclick={preventDefault(send)}
-                    {@attach tooltip("Send (manual)")}
+                    {@attach tooltip("Send (manual) - Ctrl-click header")}
                 >
                     <Send class="size-4" />
                 </button>
@@ -77,7 +88,7 @@
                 <button
                     class="action-btn"
                     onclick={preventDefault(() => doSend())}
-                    {@attach tooltip("Send")}
+                    {@attach tooltip("Send - Ctrl-click header")}
                 >
                     <Send class="size-4" />
                 </button>
