@@ -54,7 +54,7 @@
     }
 
     function quickSend(evt: MouseEvent) {
-        if (evt.defaultPrevented || !evt.ctrlKey) return;
+        if (evt.defaultPrevented || !(evt.ctrlKey || evt.metaKey)) return;
 
         evt.preventDefault();
         if (hasSchema) {
@@ -73,7 +73,7 @@
                 <button
                     class="action-btn"
                     onclick={preventDefault(send)}
-                    {@attach tooltip("Send (manual) - Ctrl-click header")}
+                    {@attach tooltip("Send (manual) - Ctrl/Cmd-click header")}
                 >
                     <Send class="size-4" />
                 </button>
@@ -88,7 +88,7 @@
                 <button
                     class="action-btn"
                     onclick={preventDefault(() => doSend())}
-                    {@attach tooltip("Send - Ctrl-click header")}
+                    {@attach tooltip("Send - Ctrl/Cmd-click header")}
                 >
                     <Send class="size-4" />
                 </button>

@@ -14,6 +14,8 @@ test("generates deterministic primitive placeholders", () => {
     expect(emptyValueFromJsonSchema({ type: "number", minimum: 5 })).toBe(5);
     expect(emptyValueFromJsonSchema({ type: "integer", minimum: 5, multipleOf: 2 })).toBe(6);
     expect(emptyValueFromJsonSchema({ type: "integer", maximum: -5, multipleOf: 2 })).toBe(-6);
+    expect(emptyValueFromJsonSchema({ type: "number", exclusiveMinimum: 1 })).toBeGreaterThan(1);
+    expect(emptyValueFromJsonSchema({ type: "number", exclusiveMaximum: -1 })).toBeLessThan(-1);
     expect(emptyValueFromJsonSchema({ type: "boolean" })).toBe(false);
     expect(emptyValueFromJsonSchema({ type: "null" })).toBe(null);
 });

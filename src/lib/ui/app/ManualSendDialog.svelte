@@ -61,13 +61,23 @@
 
     $effect(() => {
         const actionForDialog = currentAction;
-        populateInitialJson(actionForDialog);
+        void populateInitialJson(actionForDialog);
     });
 
-    function populateInitialJson(actionToGenerate: Action) {
-        latestGenerationRequest++;
+    async function populateInitialJson(actionToGenerate: Action) {
+        const request = ++latestGenerationRequest;
         try {
-            jsonContent = initialJson(actionToGenerate);
+            const initialJsonContent = initialJson(actionToGenerate);
+            jsonContent = initialJsonContent;
+
+            if (!actionToGenerate.schema || isValidJsonForAction(initialJsonContent, actionToGenerate)) {
+                return;
+            }
+
+            const generatedJson = await randomJson(actionToGenerate);
+            if (request === latestGenerationRequest) {
+                jsonContent = generatedJson;
+            }
         } catch (e) {
             EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
         }
@@ -91,6 +101,15 @@
 
     function handleCodeChange(newCode: string) {
         jsonContent = newCode;
+    }
+
+    function isValidJsonForAction(json: string, actionToValidate: Action) {
+        if (!actionToValidate.schema) return true;
+        try {
+            return ajv.compile(actionToValidate.schema)(JSON.parse(json));
+        } catch {
+            return false;
+        }
     }
 
     function validateJSON() {

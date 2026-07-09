@@ -98,7 +98,7 @@ function emptyNumber(schema: JsonSchemaObject, integer: boolean): number {
     }
 
     if (schema.exclusiveMinimum !== undefined && schema.exclusiveMinimum >= 0) {
-        const step = multipleOf ?? (integer ? 1 : Number.EPSILON);
+        const step = multipleOf ?? (integer ? 1 : numberStep(schema.exclusiveMinimum));
         return alignNumber(schema.exclusiveMinimum + step, schema, integer, "up");
     }
 
@@ -107,11 +107,15 @@ function emptyNumber(schema: JsonSchemaObject, integer: boolean): number {
     }
 
     if (schema.exclusiveMaximum !== undefined && schema.exclusiveMaximum <= 0) {
-        const step = multipleOf ?? (integer ? 1 : Number.EPSILON);
+        const step = multipleOf ?? (integer ? 1 : numberStep(schema.exclusiveMaximum));
         return alignNumber(schema.exclusiveMaximum - step, schema, integer, "down");
     }
 
     return 0;
+}
+
+function numberStep(value: number) {
+    return Math.max(Number.MIN_VALUE, Math.abs(value) * Number.EPSILON);
 }
 
 function alignNumber(value: number, schema: JsonSchemaObject, integer: boolean, direction: "up" | "down") {
