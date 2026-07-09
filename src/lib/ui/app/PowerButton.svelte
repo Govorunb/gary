@@ -82,10 +82,14 @@
         Server
         {#if haveTauri}
             {#if running}
-                up on
-                <span class="whitespace-nowrap">
-                    {address}<CopyButton data={address} desc="URL" iconSize={13} />
-                </span>
+                {#if userPrefs.api.server.bindAllInterfaces}
+                    listening for network connections on port {userPrefs.api.server.port}
+                {:else}
+                    up on
+                    <span class="whitespace-nowrap">
+                        {address}<CopyButton data={address} desc="URL" iconSize={13} />
+                    </span>
+                {/if}
             {:else}
                 offline
             {/if}

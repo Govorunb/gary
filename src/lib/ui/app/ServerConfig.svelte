@@ -19,16 +19,16 @@
     <BooleanField
         bind:value={userPrefs.api.server.bindAllInterfaces}
         disabled={manager.running}
-        label="Bind all interfaces"
-        description="Use 0.0.0.0 instead of 127.0.0.1"
+        label="Allow connections from other devices"
+        description="Lets integrations outside this computer connect to Gary. Use this computer's network address and port. Only enable this on networks you trust."
     />
 
     <div class="compatibility-section">
         <p class="section-label">API compatibility</p>
         <div class="compatibility-row">
             <div class="compatibility-copy">
-                <p id="v1-reregister-label" class="field-label">Send deprecated v1 re-register request</p>
-                <p class="field-description">For integrations that still depend on actions/reregister_all after connecting.</p>
+                <p id="v1-reregister-label" class="field-label">Re-register actions for older integrations</p>
+                <p class="field-description">Keeps older integrations working. Disable only if an integration registers its actions after connecting.</p>
             </div>
             <Switch
                 bind:checked={userPrefs.api.compatibility.sendV1ReregisterAll}
