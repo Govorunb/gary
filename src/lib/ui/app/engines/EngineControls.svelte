@@ -63,6 +63,10 @@
     const MuteIcon = $derived(machine[state].icon);
     const muteTooltip = $derived(machine[state].tooltip);
     const muteText = $derived(machine[state].text);
+    const showStopIcon = $derived(scheduler.busy && altMode);
+    const showBusyIcon = $derived(scheduler.busy && !altMode);
+    const showForceIcon = $derived(!scheduler.busy && altMode);
+    const showActIcon = $derived(!scheduler.busy && !altMode);
 </script>
 
 <div class="engine-controls">
@@ -93,21 +97,26 @@
                 : (altMode ? "Force Act" : "Act (Shift for Force)")
         )}
     >
-    {#if scheduler.busy}
-        {#if altMode}
-            <Square /> <span class="not-md:hidden">Stop</span>
+        <span class="act-icon-slot" aria-hidden="true">
+            <!-- Keep every icon mounted so the busy animation retains its phase between state changes. -->
+            <Square class="act-icon" data-visible={boolAttr(showStopIcon)} />
+            <Hourglass class="act-icon animate-[spin_2s_ease-in-out_infinite,pulse_4s_linear_infinite]" data-visible={boolAttr(showBusyIcon)} />
+            <HandFist class="act-icon" data-visible={boolAttr(showForceIcon)} />
+            <Pointer class="act-icon" data-visible={boolAttr(showActIcon)} />
+        </span>
+        {#if scheduler.busy}
+            {#if altMode}
+                <span class="not-md:hidden">Stop</span>
+            {:else}
+                <span class="not-md:hidden">Busy</span>
+            {/if}
         {:else}
-            <Hourglass class="animate-[spin_2s_ease-in-out_infinite,pulse_4s_linear_infinite]" />
-            <span class="not-md:hidden">Busy</span>
+            {#if altMode}
+                <span class="not-md:hidden">Force act</span>
+            {:else}
+                <span class="not-md:hidden">Act</span>
+            {/if}
         {/if}
-    {:else}
-        {#if altMode}
-            <HandFist /> <span class="not-md:hidden">Force act</span>
-        {:else}
-            <Pointer /> 
-            <span class="not-md:hidden">Act</span>
-        {/if}
-    {/if}
     </button>
     <button
         onclick={() => scheduler.autoPoker.autoAct = !scheduler.autoPoker.autoAct}
@@ -147,6 +156,19 @@
         &:focus-visible {
             @apply ring-2 ring-primary-500 outline-none;
         }
+    }
+
+    .act-icon-slot {
+        @apply relative inline-grid size-6 shrink-0 place-items-center;
+    }
+
+    .act-icon-slot :global(.act-icon) {
+        @apply absolute;
+        visibility: hidden;
+    }
+
+    .act-icon-slot :global(.act-icon[data-visible]) {
+        visibility: visible;
     }
 
     .mute-btn[data-muted] {
