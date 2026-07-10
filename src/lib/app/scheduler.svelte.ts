@@ -118,7 +118,7 @@ export class Scheduler {
 
         const actionsProvided = candidates !== undefined && candidates !== null;
         candidates ??= this.activeActionCandidates();
-        if (candidates.length === 0) {
+        if (force && candidates.length === 0) {
             EVENT_BUS.emit('app/scheduler/act/fail/no_actions', { force, actionsProvided });
             if (actionsProvided) {
                 toast.error("No actions provided");

@@ -100,6 +100,9 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         if (isForce && !resolvedActions.length) {
             return err(new EngineError("Tried to force act with no available actions"));
         }
+        if (!isForce && !resolvedActions.length && !this.options.allowDoNothing && !this.options.allowYapping) {
+            return err(new ConfigError("No actions are available, and this engine is configured to neither skip nor speak"));
+        }
         let ctx = this.convertContext(session);
         ctx.push(this.closerMessage(resolvedActions));
         ctx = this.mergeUserTurns(ctx);
@@ -117,7 +120,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return err(resp.error);
         }
         const command = resp.value.command;
-        if (zWait.safeParse(resp.value).success) {
+        if (zWait.safeParse(command).success) {
             if (isForce) {
                 return err(new EngineError("Internal error - force act allowed waiting"));
             }
@@ -160,10 +163,13 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             }
             actsAnyOf.push(actionCallSchema);
         }
-        const cmdAnyOf: JSONSchema[] = [{
-            description: "Perform an action.",
-            anyOf: actsAnyOf,
-        }];
+        const cmdAnyOf: JSONSchema[] = [];
+        if (actsAnyOf.length) {
+            cmdAnyOf.push({
+                description: "Perform an action.",
+                anyOf: actsAnyOf,
+            });
+        }
         const root: JSONSchema = {
             type: "object",
             description: "Choose a command to execute.",
@@ -251,7 +257,8 @@ The custom user instructions are as follows:
      * Not kept between generations to reduce context size. (it adds up)
     */
     protected closerMessage(actions?: Action[]): OpenAIMessage {
-        const msgContents = ["It is your turn to act."];
+        const hasActions = !!actions?.length;
+        const msgContents = [hasActions ? "It is your turn to act." : "It is your turn to respond."];
         const tools = this.options.promptingStrategy === "tools";
         if (this.options.allowDoNothing) {
             msgContents.push(tools
@@ -266,7 +273,7 @@ The custom user instructions are as follows:
                 + " to send a message to the human user running your software. The message will not be sent to any clients - nobody in-game will hear you."
             );
         }
-        if (actions) {
+        if (hasActions) {
             msgContents.push(`The following actions are available to you:`);
             for (const action of actions) {
                 let actionText = `    - **${action.name}**`;
@@ -278,11 +285,19 @@ The custom user instructions are as follows:
                 }
                 msgContents.push(actionText);
             }
+        } else {
+            msgContents.push("There are currently no client actions available.");
         }
-        msgContents.push(tools
-            ? "\nYour output should consist of tool calls that correspond to registered actions."
-            : `\nYour output should be a command in JSON syntax. Example: \`{"command":{"action":"open_door","data":{"door_number":1}}\``
-        );
+        if (tools) {
+            msgContents.push(hasActions
+                ? "\nYour output should consist of tool calls that correspond to registered actions."
+                : "\nUse an available command to respond."
+            );
+        } else if (hasActions) {
+            msgContents.push(`\nYour output should be a command in JSON syntax. Example: \`{"command":{"action":"open_door","data":{"door_number":1}}\``);
+        } else {
+            msgContents.push("\nYour output should be a command in JSON syntax.");
+        }
         const finalMsg = {
             role: "user", // TODO: should this be "developer" role?
             content: msgContents.join("\n"),
