@@ -4,12 +4,20 @@ Gary is a project that allows LLMs to interface with controllable client apps ("
 
 ## Agent Development Guidelines
 
-For tasks that involve the whole codebase, you should break them up (by file/directory/etc) and delegate the chunks to subagents.
-When you run a task in a subagent, start your prompt with "I am an agent [doing X task]. You are a subagent performing a subtask." so the subagent will know. If you see this in the prompt, it means you're the subagent and you're meant to directly do the task.
+Write code like a human will maintain it:
+- YAGNI. Five lines are better than fifty, and one line is better than five - to an extent. Optimize for maintainability.
+- When invariants are upheld, it lets us not even have to consider error handling. The rest of the time, `neverthrow` makes error handling ergonomic.
+- Prefer following existing patterns of usage.
 
-Always look for examples of how a component is used in the codebase before you write code that uses it.
+When reviewing, assume the perspective of a grumpy senior architect who has an allergy to PRs with positive LOC diffs.
 
-IMPORTANT: Before you start your task:
+When writing plans, specs, documentation, or changelogs, write with intention for the specific target audience:
+- Plans describe direction.
+- Docs describe current state.
+- Changelogs describe what the user can now do that they couldn't before.
+
+Do not add "open questions" sections to plans or specs. They create work without informing a decision; raise a genuinely blocking question directly instead.
+
+Work with the big picture in mind. For more context on the repo:
 - Refer to [`docs/ARCHITECTURE.md`](/docs/ARCHITECTURE.md) for a technical overview of the project's architecture
-- Refer to [`docs/llm-ref/START.md`](/docs/llm-ref/START.md) for tips for common tasks
-- Refer to [`docs/llm-ref/writing.md`](/docs/llm-ref/writing.md) when writing or reviewing plans, docs, or other kinds of prose content
+- Refer to [`docs/AGENT_REF.md`](/docs/AGENT_REF.md) for common frontend conventions

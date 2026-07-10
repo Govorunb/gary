@@ -65,7 +65,7 @@ There are Tauri plugins to extend the frontend with some common operations:
 - Self-updating (`@tauri-apps/plugin-updater`)
 - Opening a file/folder in the default registered application (`@tauri-apps/plugin-opener`)
 
-There are more out there (e.g. file system access in `@tauri-apps/plugin-fs`), but we only use these three currently.
+There are more out there (e.g. file system access in `@tauri-apps/plugin-fs`), these are just examples.
 
 For Gary specifically, Rust hosts the WebSocket server, relaying messages to the frontend. Rust use in general is preferably kept to a minimum (for various reasons).
 
@@ -80,7 +80,6 @@ For Gary specifically, Rust hosts the WebSocket server, relaying messages to the
 - Svelte 5 + SvelteKit + Vite
 - Tailwind CSS + Skeleton UI + Lucide Icons
 - Svelte Sonner (toasts)
-    - Skeleton UI already provides toasts, but Zag (their dependency) has a bug that makes it so toasts never get disposed internally and you reach max toasts very quickly
 - CodeMirror code editor
 - neverthrow (`Result` type for error handling)
 - Zod (parsing & validation)
@@ -90,7 +89,7 @@ For Gary specifically, Rust hosts the WebSocket server, relaying messages to the
 
 ### Current Development Focus
 - The Svelte frontend (`src/`) is the focus for development work going forward.
-- The Rust backend (`src-tauri`) should be treated as read-only.
+- The Rust backend (`src-tauri`) should be treated as read-only for most work.
 
 ## Essential Paths for Project Navigation
 

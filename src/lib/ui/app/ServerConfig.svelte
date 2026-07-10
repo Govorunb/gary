@@ -26,22 +26,17 @@
 
     <div class="compatibility-section">
         <p class="section-label">API compatibility</p>
-        <div class="compatibility-row">
-            <div class="compatibility-copy">
-                <div class="compatibility-heading">
-                    <p id="v1-reregister-label" class="field-label">Send <code>actions/reregister_all</code></p>
-                    <TeachingTooltip>
-                        <p><code>actions/reregister_all</code> was a proposed message for syncing registered actions on reconnect.</p>
-                        <p class="whitespace-pre-line">Games should instead register their available actions proactively on connect.
-                            Enable when testing older integrations that still expect the request.</p>
-                    </TeachingTooltip>
-                </div>
-            </div>
-            <Switch
-                bind:checked={userPrefs.api.compatibility.sendV1ReregisterAll}
-                aria-labelledby="v1-reregister-label"
-            />
-        </div>
+        <Switch
+            class="compatibility-row"
+            bind:checked={userPrefs.api.compatibility.sendV1ReregisterAll}
+        >
+            <span class="field-label">Send <code>actions/reregister_all</code></span>
+            <TeachingTooltip>
+                <p><code>actions/reregister_all</code> was a proposed message for syncing registered actions on reconnect.</p>
+                <p class="whitespace-pre-line">Games should instead register their available actions proactively on connect.
+                    Enable when testing older integrations that still expect the request.</p>
+            </TeachingTooltip>
+        </Switch>
     </div>
 </div>
 
@@ -66,16 +61,12 @@
         @apply text-neutral-500 dark:text-neutral-400;
     }
 
-    .compatibility-row {
+    :global(.compatibility-row) {
         @apply frow-3 items-start justify-between;
-    }
 
-    .compatibility-copy {
-        @apply fcol-1;
-    }
-
-    .compatibility-heading {
-        @apply frow-1 items-start;
+        :global([data-part="label"]) {
+            @apply frow-1 items-start;
+        }
     }
 
     .field-label {
