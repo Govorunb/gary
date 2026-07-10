@@ -100,8 +100,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         if (isForce && !resolvedActions.length) {
             return err(new EngineError("Tried to force act with no available actions"));
         }
-        if (!isForce && !resolvedActions.length && !this.options.allowDoNothing && !this.options.allowYapping) {
-            return err(new ConfigError("No actions are available, and this engine is configured to neither skip nor speak"));
+        if (!resolvedActions.length && !this.options.allowYapping) {
+            return this.options.allowDoNothing
+                ? ok("skip")
+                : err(new ConfigError("No actions are available, and this engine is configured to neither skip nor speak"));
         }
         let ctx = this.convertContext(session);
         ctx.push(this.closerMessage(resolvedActions));

@@ -48,7 +48,7 @@ class TestLLMEngine extends LLMEngine<CommonLLMOptions> {
 }
 
 describe("LLMEngine no-action acts", () => {
-    test("allows skipping without actions when configured", async () => {
+    test("skips without generating when no actions are available", async () => {
         const engine = new TestLLMEngine(llmOptions({ allowDoNothing: true }));
 
         const result = await engine.tryAct(createSession(), []);
@@ -57,12 +57,8 @@ describe("LLMEngine no-action acts", () => {
         if (result.isOk()) {
             expect(result.value).toBe("skip");
         }
-        expect(engine.outputSchemas).toHaveLength(1);
-        const commandAnyOf = (engine.outputSchemas[0].properties?.command as any).anyOf;
-        expect(commandAnyOf).toHaveLength(1);
-        expect(JSON.stringify(commandAnyOf)).not.toContain('"anyOf":[]');
-        expect(engine.contexts[0].at(-1)?.content).toContain("There are currently no client actions available.");
-        expect(engine.contexts[0].at(-1)?.content).not.toContain("open_door");
+        expect(engine.contexts).toHaveLength(0);
+        expect(engine.outputSchemas).toHaveLength(0);
     });
 
     test("allows yapping without actions when configured", async () => {
