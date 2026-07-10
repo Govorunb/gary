@@ -2,6 +2,7 @@
     import { getServerManager, getUserPrefs } from "$lib/app/utils/di";
     import { BooleanField, NumberField } from "../common/form";
     import Switch from "../common/Switch.svelte";
+    import TeachingTooltip from "../common/TeachingTooltip.svelte";
 
     let manager = getServerManager();
     let userPrefs = getUserPrefs();
@@ -27,8 +28,14 @@
         <p class="section-label">API compatibility</p>
         <div class="compatibility-row">
             <div class="compatibility-copy">
-                <p id="v1-reregister-label" class="field-label">Re-register actions for older integrations</p>
-                <p class="field-description">Keeps older integrations working. Disable only if an integration registers its actions after connecting.</p>
+                <div class="compatibility-heading">
+                    <p id="v1-reregister-label" class="field-label">Send <code>actions/reregister_all</code></p>
+                    <TeachingTooltip>
+                        <p><code>actions/reregister_all</code> was a proposed message for syncing registered actions on reconnect.</p>
+                        <p class="whitespace-pre-line">Games should instead register their available actions proactively on connect.
+                            Enable when testing older integrations that still expect the request.</p>
+                    </TeachingTooltip>
+                </div>
             </div>
             <Switch
                 bind:checked={userPrefs.api.compatibility.sendV1ReregisterAll}
@@ -42,7 +49,11 @@
     @reference "global.css";
 
     .server-config {
-        @apply fcol-3 min-w-80;
+        @apply fcol-3 w-96 max-w-[calc(100vw-2rem)] min-w-0;
+    }
+
+    .server-config :global(.field-input) {
+        @apply w-full;
     }
 
     .compatibility-section {
@@ -63,13 +74,12 @@
         @apply fcol-1;
     }
 
+    .compatibility-heading {
+        @apply frow-1 items-start;
+    }
+
     .field-label {
         @apply text-sm font-medium select-none;
         @apply text-neutral-700 dark:text-neutral-300;
-    }
-
-    .field-description {
-        @apply max-w-60 text-xs leading-4;
-        @apply text-neutral-500 dark:text-neutral-400;
     }
 </style>
