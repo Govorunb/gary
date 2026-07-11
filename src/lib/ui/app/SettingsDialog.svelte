@@ -146,6 +146,17 @@
                 </div>
             </div>
             <div class="field stacked">
+                <label class="field-label" for="action-list-density">Action list density</label>
+                <select
+                    id="action-list-density"
+                    class="settings-select"
+                    bind:value={userPrefs.app.actionListDensity}
+                >
+                    <option value="default">Default</option>
+                    <option value="compact">Compact</option>
+                </select>
+            </div>
+            <div class="field stacked">
                 <div class="field-heading">
                     <label class="field-label" for="character-preset">Startup character</label>
                     <TeachingTooltip>

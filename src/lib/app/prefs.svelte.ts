@@ -128,6 +128,7 @@ export const zAppPrefs = z.strictObject({
     ctxInputSilent: z.boolean().fallback(false),
     manualSendSchemaCollapsed: z.boolean().fallback(true),
     hideSensitiveInfo: z.boolean().fallback(true),
+    actionListDensity: z.enum(["default", "compact"]).fallback("default"),
     rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
     character: z.strictObject({
         characterId: z.string().fallback("gary"),

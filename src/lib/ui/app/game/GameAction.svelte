@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Dices, Send } from "@lucide/svelte";
-    import { getUIState } from "$lib/app/utils/di";
+    import { getUIState, getUserPrefs } from "$lib/app/utils/di";
     import CopyButton from "../../common/CopyButton.svelte";
     import CodeMirror from "../../common/CodeMirror.svelte";
     import { generateFromJsonSchema, parseError, preventDefault, tooltip } from "$lib/app/utils";
@@ -16,6 +16,7 @@
 
     let { action, game }: Props = $props();
     const uiState = getUIState();
+    const userPrefs = getUserPrefs();
 
     const active = $derived(action.active);
 
@@ -65,7 +66,12 @@
     }
 </script>
 
-<details class="root accordion group" bind:open data-active={boolAttr(active)}>
+<details
+    class="root accordion group"
+    bind:open
+    data-active={boolAttr(active)}
+    data-compact={boolAttr(userPrefs.app.actionListDensity === "compact")}
+>
     <summary onclick={quickSend}>
         <span>{action.name}</span>
         <div class="actions">
@@ -162,5 +168,9 @@
 
     .root:not([data-active]) {
         @apply opacity-60;
+    }
+
+    .root[data-compact] summary {
+        @apply py-0.5;
     }
 </style>
