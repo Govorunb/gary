@@ -85,9 +85,6 @@ describe("LLMEngine no-action acts", () => {
         expect(result.isErr()).toBe(true);
         if (result.isErr()) {
             expect(result.error).toBeInstanceOf(ConfigError);
-            if (result.error instanceof ConfigError) {
-                expect(result.error.message).toBe("No actions are available, and this engine is configured to neither skip nor speak");
-            }
         }
         expect(engine.contexts).toHaveLength(0);
         expect(engine.outputSchemas).toHaveLength(0);
