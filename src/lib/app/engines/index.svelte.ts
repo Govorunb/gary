@@ -5,7 +5,9 @@ import type { ResultAsync } from "neverthrow";
 import z from "zod";
 import { zConst } from "../utils";
 
-export const zEngineAct = zActData.omit({ id: true });
+export const zEngineAct = zActData.omit({ id: true }).extend({
+    toolCallId: z.string().optional(),
+});
 export const zSkip = zConst("skip");
 export const zYap = z.strictObject({
     say: z.string(),

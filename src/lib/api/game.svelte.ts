@@ -312,10 +312,11 @@ export class Game {
         });
     }
 
-    async sendAction(actData: v1.ActData) {
+    async sendAction(actData: v1.ActData, toolCallId?: string) {
         EVENT_BUS.emit('api/game/act/actor', {
             game: { id: this.id, name: this.name },
             act: actData,
+            toolCallId,
         });
         const sentAt = Date.now();
         const timeout = setTimeout(() => {
@@ -463,7 +464,7 @@ export const EVENTS = [
     },
     {
         key: 'api/game/act/actor',
-        dataSchema: {} as GameEventData & { act: v1.ActData },
+        dataSchema: {} as GameEventData & { act: v1.ActData; toolCallId?: string },
         description: "Sent actor action to game",
         level: LogLevel.Info,
     },

@@ -1,14 +1,12 @@
-import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type OpenAIContext } from ".";
+import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type LLMRequest } from ".";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import { isTauri } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import OpenAI from "openai";
-import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
+import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageFunctionToolCall } from "openai/resources/chat/completions";
 import z from "zod";
-import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
-import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
-import type { Action } from "$lib/api/v1/spec";
+import { err, ok, type Result, ResultAsync } from "neverthrow";
+import { EngineError, type EngineActError } from "../index.svelte";
 import { parseError, LogLevel } from "$lib/app/utils";
 import type { EventDef } from "$lib/app/events";
 import { EVENT_BUS } from "$lib/app/events/bus";
@@ -31,12 +29,8 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.client = new OpenAIClient({get prefs() { return self.options; }});
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal) : ResultAsync<LLMGeneration, EngineActError> {
-        return new ResultAsync(this.client.genJson(context, outputSchema, undefined, signal));
-    }
-
-    generateToolCall(_context: OpenAIContext, _actions: Action[]): ResultAsync<EngineActResult, EngineActError> {
-        return errAsync(new EngineError("Tool calling not implemented", undefined, false));
+    generate(request: LLMRequest, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError> {
+        return new ResultAsync(this.client.generate(request, undefined, signal));
     }
 }
 
@@ -112,9 +106,8 @@ export class OpenAIClient {
         return this.options.name;
     }
 
-    async genJson(
-        messages: OpenAIContext,
-        outputSchema?: JSONSchema,
+    async generate(
+        request: LLMRequest,
         extraParams?: Record<string, any>,
         signal?: AbortSignal,
     ): Promise<Result<LLMGeneration, EngineActError>> {
@@ -125,32 +118,31 @@ export class OpenAIClient {
 
         const baseParams: ChatCompletionCreateParamsNonStreaming = {
             model,
-            messages,
+            messages: request.messages,
             stream: false,
+            ...(request.responseSchema ? {
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "gary_action",
+                        schema: request.responseSchema as Record<string, unknown>,
+                        strict: true,
+                    },
+                },
+            } : {}),
+            ...(request.tools ? {
+                tools: request.tools,
+                tool_choice: request.toolChoice,
+                parallel_tool_calls: false,
+            } : {}),
             ...extraParams,
         };
-
-        if (outputSchema) {
-            baseParams.response_format = {
-                type: "json_schema",
-                json_schema: {
-                    name: "gary_action",
-                    schema: outputSchema as Record<string, unknown>,
-                    strict: true,
-                },
-            };
-        }
         // ooga booga me no have reactivity because can be instantiate at runtime, outside root effect
         // so me use pull model instead of push model. hoh
         // me just know seniorberry shake head and wag finger from inside cloud, but me the one that feel alive
         this.client.baseURL = this.options.serverUrl;
         this.client.apiKey = this.options.apiKey || OPENAI_COMPAT_NO_API_KEY;
 
-        // after evaluating tools/responses api - it all sucks bad
-        // ollama only just started to support it (but not `tool_choice` - so, still useless to us)
-        // lmstudio has responses (allegedly stateful) but doesn't support `strict` in tool definitions (ouch)
-        // it also doesn't seem to constrain generation with `text.format` at all?
-        // so... `response_format` on `chat/completions` it is
         type WireReasoningEffort = Exclude<ReasoningEffort, "auto">;
         type RequestFailure = { error: unknown; message: string; apiMessage?: string; causeMessage?: string };
         const isReasoningEffortError = (failure: RequestFailure) => {
@@ -212,17 +204,20 @@ export class OpenAIClient {
             EVENT_BUS.emit('app/engines/llm/error_result', { reqId });
             return err(new EngineError(`${this.name} did not return successful result`, parseError(res.value)));
         }
-        if (resp.finish_reason !== "stop" && resp.finish_reason !== "length") {
+        if (resp.finish_reason !== "stop" && resp.finish_reason !== "length" && resp.finish_reason !== "tool_calls") {
             EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'finish_reason' });
             return err(new EngineError(`${this.name} returned unexpected finish_reason '${resp.finish_reason}'`, undefined, false))
         }
-        const textOutput = resp?.message?.content;
-        if (!textOutput) {
-            EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'empty_response' });
-            return err(new EngineError(`${this.name} returned no text`, undefined, true));
-        }
+        const toolCalls = (resp.message.tool_calls ?? [])
+            .filter((call): call is ChatCompletionMessageFunctionToolCall => call.type === "function")
+            .map(call => ({
+                id: call.id,
+                name: call.function.name,
+                arguments: call.function.arguments,
+            }));
         return ok({
-            text: textOutput,
+            text: resp.message.content ?? "",
+            toolCalls,
             metadata: {
                 reasoning: (resp.message as any)?.reasoning,
                 usage: response.usage,

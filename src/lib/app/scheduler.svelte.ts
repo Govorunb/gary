@@ -235,14 +235,14 @@ export class Scheduler {
         const game = target.game;
         const realAct: EngineAct = { ...act, name: target.action.name };
         EVENT_BUS.emit('app/scheduler/act/perform', { force: forced, action: realAct.name });
-        const actData = zActData.decode({...realAct});
+        const actData = zActData.decode({ name: realAct.name, data: realAct.data });
         EVENT_BUS.emit('api/actor/act', {
             engineId: engine.id,
             force: forced,
             game: game.name,
             act: actData,
         });
-        return ResultAsync.fromPromise(game.sendAction(actData), (e) => LogicError.sendErr(e as Error))
+        return ResultAsync.fromPromise(game.sendAction(actData, act.toolCallId), (e) => LogicError.sendErr(e as Error))
             .orTee(() => EVENT_BUS.emit('app/scheduler/act/fail/failed_to_send', { force: forced }))
             .map(() => realAct);
     }
@@ -457,6 +457,11 @@ export const ACT_EVENTS = [
         dataSchema: {} as {
             engineId: string;
             text: string;
+            toolCall?: {
+                id: string;
+                name: string;
+                arguments: string;
+            };
             metadata?: {
                 reasoning?: unknown;
                 usage?: unknown;
