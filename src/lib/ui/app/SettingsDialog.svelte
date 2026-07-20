@@ -199,6 +199,8 @@
                     <TeachingTooltip>
                         <p>
                             Additional instructions to give to the LLM. Always in-context as part of the system prompt.
+                            <br>
+                            Keep in mind, you don't have this option with Neuro! At most you should only use it to try and match her personality, don't try to explain your game in there.
                         </p>
                     </TeachingTooltip>
                 </div>

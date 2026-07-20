@@ -19,7 +19,7 @@ export class UIState {
             this.selectedGameTab = clamp(this.selectedGameTab, 0, session.registry.games.length - 1);
         });
         $effect(() => {
-            this.dialogs.prefsLoadErrorOpen = !!session.userPrefs.loadError;
+            this.dialogs.setPrefsLoadErrorOpen(!!session.userPrefs.loadError);
         });
         this.aprilFools = $derived.by(() => isApril1st()
             && !this.session.userPrefs.app.joyless

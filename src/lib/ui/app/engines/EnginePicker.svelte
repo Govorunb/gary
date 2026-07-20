@@ -18,11 +18,11 @@
     const uiState = getUIState();
 
     const dialogs = uiState.dialogs;
-    const showingEngineList = $derived(dialogs.enginePickerState === true);
-    // UI state machine - null shows engine list
+    const showingEngineList = $derived(dialogs.activeDialog?.type === "enginePicker"
+        && dialogs.activeDialog.engineId === null);
     const configEngineId: string | null = $derived(
-        typeof dialogs.enginePickerState === "string"
-            ? dialogs.enginePickerState
+        dialogs.activeDialog?.type === "enginePicker"
+            ? dialogs.activeDialog.engineId
             : null
     );
     const engines = $derived(Object.entries(session.engines));
@@ -55,7 +55,7 @@
     }
 
     function toggleOpen() {
-        if (dialogs.enginePickerState) {
+        if (dialogs.isOpen("enginePicker")) {
             dialogs.closeEnginePicker();
         } else {
             dialogs.openEnginePicker();
@@ -63,11 +63,11 @@
     }
 
     function openConfig(engineId: string) {
-        dialogs.enginePickerState = engineId;
+        dialogs.openEngineConfig(engineId);
     }
 
     function closeConfig() {
-        dialogs.enginePickerState = true;
+        dialogs.openEnginePicker();
     }
 
     function canDelete(id: string) {
@@ -94,7 +94,10 @@
     }
 </script>
 
-<Dialog bind:open={() => Boolean(dialogs.enginePickerState), (v) => dialogs.enginePickerState = v} position="top-start">
+<Dialog
+    bind:open={() => dialogs.isOpen("enginePicker"), (open) => open ? dialogs.openEnginePicker() : dialogs.closeEnginePicker()}
+    position="top-start"
+>
     {#snippet trigger(props)}
         <button {...props} class="trigger">
             <span class="truncate max-w-96">{session.activeEngine.name}</span>
