@@ -11,6 +11,7 @@ export * from "./zod";
 export * from "./default-map";
 export * from "./json-schema-faker.svelte";
 export * from "./json-schema-empty";
+export * from "./priority-queue";
 
 export type NoUndefined<T> = T extends undefined ? never : T;
 

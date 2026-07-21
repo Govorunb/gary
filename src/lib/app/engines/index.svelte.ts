@@ -1,4 +1,4 @@
-import { zActData, type Action } from "$lib/api/v1/spec";
+import { zActData, type Action, type ForceAction } from "$lib/api/v1/spec";
 import type { Session } from "../session.svelte";
 import type { UserPrefs } from "../prefs.svelte";
 import type { ResultAsync } from "neverthrow";
@@ -32,7 +32,7 @@ export abstract class Engine<TOptions> {
     }
 
     abstract tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError>;
-    abstract forceAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError>;
+    abstract forceAct(session: Session, actions?: Action[], signal?: AbortSignal, forceContext?: ForceAction["data"]): ResultAsync<EngineAct, EngineActError>;
 
     protected resolveActions(session: Session, actions?: Action[]): Action[] {
         if (actions?.length) {

@@ -1,5 +1,5 @@
 import type { Session } from "$lib/app/session.svelte";
-import { formatZodError, jsonParse, localeTimeWithMs, safeParse, LogLevel } from "$lib/app/utils";
+import { formatZodError, jsonParse, localeTimeWithMs, safeParse, LogLevel, PriorityQueue } from "$lib/app/utils";
 import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
 import { TIMEOUTS } from "./diagnostics";
@@ -19,6 +19,10 @@ export type PendingAction = {
     timeout: ReturnType<typeof setTimeout>,
     v1Force?: v1.ForceAction,
 };
+export type QueuedGameForce = {
+    actions: v1.Action[];
+    data: v1.ForceAction["data"];
+};
 
 export class Game {
     public readonly actions = $state(new SvelteMap<string, GameAction>());
@@ -27,7 +31,12 @@ export class Game {
     public status = $derived(this.diagnostics.status);
     public startupState: { type: "connected" | "implied" | "startup"; at: number; } | null = $state(null);
     private pendingActions = $state(new SvelteMap<string, PendingAction>());
-    private forceQueue: v1.ForceAction[] = $state([]);
+    private forceQueueValues: QueuedGameForce[] = $state([]);
+    private forceQueue = new PriorityQueue(
+        force => v1.FORCE_PRIORITY[force.data.priority],
+        this.forceQueueValues,
+    );
+    private forceActive = $state(false);
     
     public get id() {
         return this.conn.id;
@@ -43,16 +52,6 @@ export class Game {
         name?: string
     ) {
         this.name = name ?? v1PendingGameName(conn.id);
-        const dispose = $effect.root(() => {
-            $effect(() => {
-                if (this.forceQueue.length && !this.pendingActions.size) {
-                    const force = this.forceQueue.shift()!;
-                    this.forceAction(force);
-                }
-            });
-        });
-        conn.onclose(dispose);
-
         conn.onconnect(() => {
             this.startupState = { type: "connected", at: Date.now() };
             if (conn.version !== "v1") {
@@ -63,7 +62,7 @@ export class Game {
             if (this.name === v1PendingGameName(conn.id)) return;
             EVENT_BUS.emit('api/game/disconnected', { game: { id: this.id, name: this.name } });
             this.clearPendingActions();
-            this.forceQueue.length = 0;
+            this.forceQueue.clear();
         });
         conn.onmessage((txt) => this.recv(txt));
         conn.onerror((err) => {
@@ -73,6 +72,31 @@ export class Game {
 
     public get version() {
         return this.conn.version;
+    }
+
+    public get hasQueuedForce() {
+        return !this.forceActive && !this.pendingActions.size && this.forceQueue.length > 0;
+    }
+
+    public get hasForce() {
+        return this.forceActive || this.forceQueue.length > 0;
+    }
+
+    public get nextForcePriority(): v1.ForcePriority | null {
+        return this.hasQueuedForce ? this.forceQueue.peek()!.data.priority : null;
+    }
+
+    public takeForce(): QueuedGameForce | null {
+        if (!this.hasQueuedForce) return null;
+        this.forceActive = true;
+        return this.forceQueue.dequeue()!;
+    }
+
+    public completeForce() {
+        this.forceActive = false;
+        if (this.nextForcePriority) {
+            this.session.scheduler.onGameForce(this.nextForcePriority);
+        }
     }
 
     public get gamePrefs() {
@@ -285,8 +309,6 @@ export class Game {
                 pending: this.pendingActions.values().map(prettyPending).toArray(),
                 msg,
             });
-            this.forceQueue.push(msg);
-            return;
         }
         const actions = msg.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
         if (msg.data.action_names.length === 0) {
@@ -301,15 +323,21 @@ export class Game {
                 this.diagnostics.trigger("prot/force/some_invalid", { msgData: msg.data, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
             }
         }
-        // only real forces (from client) - manual/autoact forces exist in the queue but are null
-        if (this.session.scheduler.queuedGameForceCount + this.forceQueue.length) {
+        if (this.forceActive || this.forceQueue.length) {
             this.diagnostics.trigger("prot/force/multiple", { msgData: msg.data });
         }
-        this.session.scheduler.queueGameForce(this, actions);
+        this.enqueueForce(actions, msg.data);
         EVENT_BUS.emit('api/game/force', {
             game: { id: this.id, name: this.name },
             ...msg.data,
         });
+    }
+
+    private enqueueForce(actions: v1.Action[], data: v1.ForceAction["data"]) {
+        this.forceQueue.enqueue({ actions, data }, { discardLower: data.priority === "critical" });
+        if (!this.pendingActions.size) {
+            this.session.scheduler.onGameForce(data.priority);
+        }
     }
 
     async sendAction(actData: v1.ActData, toolCallId?: string) {
@@ -354,7 +382,10 @@ export class Game {
         });
         // v1 spec: Neuro will retry failed `actions/force`s
         if (this.version === "v1" && v1Force) {
-            this.forceQueue.unshift(v1Force); // spec says "immediately" so i guess we doom loop
+            const actions = v1Force.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
+            this.enqueueForce(actions, v1Force.data); // spec says "immediately" so i guess we doom loop
+        } else if (this.nextForcePriority) {
+            this.session.scheduler.onGameForce(this.nextForcePriority);
         }
     }
 

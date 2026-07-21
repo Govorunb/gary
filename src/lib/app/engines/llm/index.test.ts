@@ -102,6 +102,27 @@ describe("LLMEngine tool calling", () => {
         expect(engine.requests[0].tools?.map(tool => tool.function.name)).toStrictEqual(["move", "__wait__"]);
     });
 
+    test("keeps ephemeral force context out of later requests", async () => {
+        const engine = new TestLLMEngine(llmOptions());
+        const action = { name: "move" };
+        engine.generation = {
+            text: "",
+            toolCalls: [{ id: "move-1", name: "move", arguments: "{}" }],
+        };
+
+        await engine.forceAct(createSession(), [action], undefined, {
+            query: "pick the winning move",
+            state: "final round",
+            ephemeral_context: true,
+            action_names: ["move"],
+            priority: "high",
+        });
+        await engine.tryAct(createSession(), [action]);
+
+        expect(JSON.stringify(engine.requests[0].messages)).toContain("pick the winning move");
+        expect(JSON.stringify(engine.requests[1].messages)).not.toContain("pick the winning move");
+    });
+
     test("replays action calls with their tool result", async () => {
         const session = createSession();
         (session.context.actorView as any[]).push(

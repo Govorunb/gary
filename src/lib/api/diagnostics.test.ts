@@ -165,15 +165,48 @@ describe("actions/force", () => {
         expect(fq).toStrictEqual([null]);
 
         await harness.client.conn.send(force);
-        expect(fq).toHaveLength(2);
-        expect(fq[0]).toBeNull();
-        expect(fq[1]).toHaveLength(1);
-        expect(fq[1]?.[0].game).toBe(harness.server);
-        expect(fq[1]?.[0].action).toEqual({...ACTION, active:true});
+        expect(fq).toStrictEqual([null]);
+        expect(harness.server.hasQueuedForce).toBe(true);
+        expect(harness.session.context.actorView.at(-1)?.key).toBe("api/game/force");
         expect(harness.diagnosticKeys, "first force with non-client in queue").toStrictEqual([]);
 
+        const activeForce = harness.server.takeForce();
+        expect(activeForce?.data).toStrictEqual(force.data);
+        expect(harness.server.hasQueuedForce).toBe(false);
         await harness.client.conn.send(force);
         expect(harness.diagnosticKeys).toStrictEqual(["prot/force/multiple"]);
+        harness.server.completeForce();
+        expect(harness.server.hasQueuedForce).toBe(true);
+    });
+
+    test("prioritizes forces and lets critical replace queued lower priorities", async ({harness}) => {
+        await harness.client.hello();
+        await harness.client.registerActions([ACTION]);
+
+        const sendForce = async (priority: v1.ForcePriority, query: string) => {
+            await harness.client.conn.send(v1.zForceAction.decode({
+                game: harness.server.name,
+                data: { query, action_names: [ACTION.name], priority },
+            }));
+        };
+
+        await sendForce("low", "low");
+        await sendForce("high", "high");
+        await sendForce("medium", "medium");
+
+        expect(harness.server.takeForce()?.data.query).toBe("high");
+        harness.server.completeForce();
+        expect(harness.server.takeForce()?.data.query).toBe("medium");
+        harness.server.completeForce();
+        expect(harness.server.takeForce()?.data.query).toBe("low");
+        harness.server.completeForce();
+
+        await sendForce("low", "replace me");
+        await sendForce("critical", "critical");
+
+        expect(harness.server.takeForce()?.data.query).toBe("critical");
+        harness.server.completeForce();
+        expect(harness.server.hasForce).toBe(false);
     });
 });
 

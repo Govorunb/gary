@@ -126,8 +126,9 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         session: Session,
         actions?: Action[],
         signal?: AbortSignal,
+        forceContext?: ForceContext,
     ): ResultAsync<EngineAct, EngineActError> {
-        return new ResultAsync(this.actCore(session, actions, true, signal))
+        return new ResultAsync(this.actCore(session, actions, true, signal, forceContext))
             .andThen(act => isEngineAct(act) ? ok(act) : err(new EngineError("Force act did not act")));
     }
 
@@ -136,6 +137,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         actions: Action[] | undefined,
         isForce: boolean,
         signal?: AbortSignal,
+        forceContext?: ForceContext,
     ): Promise<Result<EngineActResult, EngineActError>> {
         const resolvedActions = this.resolveActions(session, actions);
         if (isForce && !resolvedActions.length) {
@@ -148,6 +150,9 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         }
 
         const messages = this.convertContext(session);
+        if (forceContext?.ephemeral_context) {
+            messages.push(this.forceMessage(forceContext));
+        }
         messages.push(this.closerMessage(resolvedActions));
 
         if (this.options.promptingStrategy === "json") {
@@ -472,6 +477,13 @@ The custom user instructions are as follows:
 
     protected shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(): "system" | "developer" {
         return "system";
+    }
+
+    private forceMessage(context: ForceContext): OpenAIMessage {
+        return {
+            role: "user",
+            content: forceText(context),
+        };
     }
 
     /** An ephemeral reminder at the end of context. */
