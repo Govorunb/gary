@@ -143,6 +143,11 @@ export class OpenAIClient {
         this.client.baseURL = this.options.serverUrl;
         this.client.apiKey = this.options.apiKey || OPENAI_COMPAT_NO_API_KEY;
 
+        // after evaluating tools/responses api - it all sucks bad
+        // ollama only just started to support it (but not `tool_choice` - so, still useless to us)
+        // lmstudio has responses (allegedly stateful) but doesn't support `strict` in tool definitions (ouch)
+        // it also doesn't seem to constrain generation with `text.format` at all?
+        // so... `chat/completions` it is
         type WireReasoningEffort = Exclude<ReasoningEffort, "auto">;
         type RequestFailure = { error: unknown; message: string; apiMessage?: string; causeMessage?: string };
         const isReasoningEffortError = (failure: RequestFailure) => {
