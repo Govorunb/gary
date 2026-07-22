@@ -149,7 +149,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 : err(new ConfigError("No actions are available, and this engine is configured to neither skip nor speak"));
         }
 
-        const messages = this.convertContext(session);
+        const callableActions = this.options.promptingStrategy === "tools"
+            ? this.callableActions(resolvedActions)
+            : [];
+        const messages = this.convertContext(session, callableActions);
         if (forceContext?.ephemeral_context) {
             messages.push(this.forceMessage(forceContext));
         }
@@ -159,7 +162,6 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return this.actWithStructuredOutput(messages, resolvedActions, isForce, signal);
         }
 
-        const callableActions = this.callableActions(resolvedActions);
         const tools = callableActions.map(({ tool }) => tool);
         if (!isForce && this.options.allowDoNothing) {
             tools.push(WAIT_TOOL);
@@ -195,6 +197,12 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (args.isErr()) {
                 return err(args.error);
             }
+            const wrappedData = callable.action.schema
+                ? z.strictObject({ data: z.unknown() }).safeParse(args.value)
+                : null;
+            if (wrappedData && !wrappedData.success) {
+                return err(new EngineError(`Failed to parse tool arguments: ${wrappedData.error}`, wrappedData.error));
+            }
             EVENT_BUS.emit("api/actor/generated", {
                 engineId: this.id,
                 text: generation.text,
@@ -203,7 +211,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             });
             return ok({
                 name: callable.action.name,
-                data: callable.action.schema ? JSON.stringify(args.value) : null,
+                data: wrappedData ? JSON.stringify(wrappedData.data.data) : null,
                 toolCallId: toolCall.id,
             });
         }
@@ -237,12 +245,16 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         }, signal);
         if (generation.isErr()) return err(generation.error);
 
+        const text = generation.value.text.trim();
+        if (!text) {
+            return err(new EngineError("Model returned no structured output", undefined, true));
+        }
         EVENT_BUS.emit("api/actor/generated", {
             engineId: this.id,
-            text: generation.value.text,
+            text,
             metadata: generation.value.metadata,
         });
-        const parsed = jsonParse(generation.value.text)
+        const parsed = jsonParse(text)
             .mapErr(error => new EngineError(`Failed to parse JSON: ${error}`, error));
         if (parsed.isErr()) return err(parsed.error);
 
@@ -338,7 +350,12 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             }
             usedNames.add(name);
             const parameters = action.schema
-                ? snapshotState(action.schema)
+                ? {
+                    type: "object",
+                    properties: { data: snapshotState(action.schema) },
+                    required: ["data"],
+                    additionalProperties: false,
+                }
                 : { type: "object", properties: {}, additionalProperties: false };
             return {
                 action,
@@ -416,11 +433,20 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         };
     }
 
-    protected systemPrompt(session: Session): string {
+    protected systemPrompt(session: Session, callableActions: CallableAction[] = []): string {
         const prompts = [
             DEFAULT_SYSTEM_PROMPT,
             this.options.promptingStrategy === "json" ? STRUCTURED_OUTPUT_SYSTEM_PROMPT : TOOL_SYSTEM_PROMPT,
         ];
+        if (callableActions.length) {
+            prompts.push([
+                "## Available actions",
+                "",
+                "Call one of these client action tools with JSON arguments matching its `parameters` schema:",
+                "",
+                ...callableActions.map(({ tool }) => `- ${JSON.stringify(tool.function)}`),
+            ].join("\n"));
+        }
         if (session.userPrefs.app.systemPrompt?.trim()) {
             prompts.push(`## User instructions
 
@@ -436,13 +462,13 @@ The custom user instructions are as follows:
     }
 
     // TODO: context trimming
-    private convertContext(session: Session): OpenAIContext {
+    private convertContext(session: Session, callableActions: CallableAction[]): OpenAIContext {
         const events = session.context.actorView;
         if (this.options.promptingStrategy === "json") {
             const msgs = events.map(event => this.convertMessage(event)).filter(Boolean) as OpenAIMessage[];
             msgs.unshift({
                 role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
-                content: this.systemPrompt(session),
+                content: this.systemPrompt(session, callableActions),
             });
             return msgs;
         }
@@ -470,7 +496,7 @@ The custom user instructions are as follows:
         }
         msgs.unshift({
             role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
-            content: this.systemPrompt(session),
+            content: this.systemPrompt(session, callableActions),
         });
         return msgs;
     }
@@ -494,6 +520,7 @@ The custom user instructions are as follows:
             contents.push(this.options.promptingStrategy === "tools"
                 ? `You may use the \`${WAIT_TOOL_NAME}\` tool to end the turn without acting or speaking.`
                 : `You may use the \`wait\` command to end the turn without acting or speaking.`);
+            contents.push("In general, prefer acting; only wait intentionally, e.g. when no actions are appropriate to execute at the moment.");
         }
         if (this.options.allowYapping) {
             contents.push(this.options.promptingStrategy === "tools"

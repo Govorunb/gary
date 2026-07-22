@@ -103,7 +103,7 @@ function shouldPromptAct(event: ActorContextEvent): boolean {
         case "api/game/context":
             return !event.data.silent;
         case "api/game/action_result":
-            return !!event.data.success;
+            return !event.data.success;
         default:
             return false;
     }

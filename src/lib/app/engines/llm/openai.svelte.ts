@@ -53,6 +53,11 @@ const OPENAI_COMPAT_NO_API_KEY = " ";
 // https://github.com/ollama/ollama/issues/10507
 // https://github.com/Govorunb/gary/issues/7
 const LOCAL_LLM_ORIGIN = "http://localhost";
+const HARMONY_CHANNEL_SUFFIX = /<\|channel\|>(?:analysis|commentary|final)$/;
+
+function normalizeToolName(name: string): string {
+    return name.replace(HARMONY_CHANNEL_SUFFIX, "");
+}
 
 function isLocalOrPrivateHttpEndpoint(endpoint: string): boolean {
     try {
@@ -154,7 +159,7 @@ export class OpenAIClient {
             const text = [failure.message, failure.apiMessage, failure.causeMessage]
                 .filter(Boolean)
                 .join(" ");
-            return /reasoning[_ ]effort/i.test(text);
+            return /reasoning[_ ]effort|reasoning is mandatory/i.test(text);
         };
         const reqId = uuid();
         const sendRequest = async (effort?: WireReasoningEffort) => {
@@ -217,7 +222,8 @@ export class OpenAIClient {
             .filter((call): call is ChatCompletionMessageFunctionToolCall => call.type === "function")
             .map(call => ({
                 id: call.id,
-                name: call.function.name,
+                // Some gpt-oss servers leak a Harmony channel token into the parsed function name.
+                name: normalizeToolName(call.function.name),
                 arguments: call.function.arguments,
             }));
         return ok({

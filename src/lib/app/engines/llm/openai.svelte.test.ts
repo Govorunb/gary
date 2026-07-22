@@ -68,7 +68,7 @@ describe("OpenAIClient", () => {
         const client = new OpenAIClient({ prefs });
 
         openAIMock.create
-            .mockRejectedValueOnce(new Error("unsupported reasoning_effort"))
+            .mockRejectedValueOnce(new Error("400 Reasoning is mandatory for this endpoint and cannot be disabled."))
             .mockResolvedValue({
                 choices: [{
                     finish_reason: "stop",
@@ -103,7 +103,7 @@ describe("OpenAIClient", () => {
         }), expect.any(Object));
     });
 
-    test("sends and parses function tools", async () => {
+    test("sends and parses function tools with leaked Harmony tokens", async () => {
         const prefs = $state<OpenAIPrefs>({
             name: "OpenAI",
             allowDoNothing: false,
@@ -130,7 +130,7 @@ describe("OpenAIClient", () => {
                     tool_calls: [{
                         id: "call-1",
                         type: "function",
-                        function: { name: "move", arguments: "{}" },
+                        function: { name: "move<|channel|>commentary", arguments: "{}" },
                     }],
                 },
             }],

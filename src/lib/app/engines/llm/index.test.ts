@@ -63,15 +63,41 @@ describe("LLMEngine tool calling", () => {
         });
         engine.generation = {
             text: "",
-            toolCalls: [{ id: "call-1", name: "move", arguments: '{"square":"e4"}' }],
+            toolCalls: [{ id: "call-1", name: "move", arguments: '{"data":{"square":"e4"}}' }],
         };
 
         const result = await engine.tryAct(createSession(), [action]);
 
-        expect(result._unsafeUnwrap()).toMatchObject({ name: "move" });
+        expect(result._unsafeUnwrap()).toMatchObject({ name: "move", data: '{"square":"e4"}' });
         expect(engine.requests[0].tools?.[0].function.parameters).toStrictEqual({
             type: "object",
-            properties: { square: { type: "string" } },
+            properties: {
+                data: {
+                    type: "object",
+                    properties: { square: { type: "string" } },
+                },
+            },
+            required: ["data"],
+            additionalProperties: false,
+        });
+    });
+
+    test("wraps primitive action schemas in a data parameter", async () => {
+        const engine = new TestLLMEngine(llmOptions());
+        const action = await registeredAction({ name: "pick_number", schema: { type: "integer" } });
+        engine.generation = {
+            text: "",
+            toolCalls: [{ id: "call-1", name: "pick_number", arguments: '{"data":42}' }],
+        };
+
+        const result = await engine.tryAct(createSession(), [action]);
+
+        expect(result._unsafeUnwrap()).toMatchObject({ name: "pick_number", data: "42" });
+        expect(engine.requests[0].tools?.[0].function.parameters).toStrictEqual({
+            type: "object",
+            properties: { data: { type: "integer" } },
+            required: ["data"],
+            additionalProperties: false,
         });
     });
 
@@ -117,6 +143,26 @@ describe("LLMEngine tool calling", () => {
             "move_Chess_abc123",
         ]);
         expect(engine.requests[0].toolChoice).toBe("required");
+    });
+
+    test("lists callable tool schemas as available actions in the system prompt", async () => {
+        const engine = new TestLLMEngine(llmOptions());
+        const actions: Action[] = [
+            { name: "move", description: "Move a piece" },
+            { name: "<b>html_inject</b>", description: "Test HTML injection" },
+        ];
+        engine.generation = {
+            text: "",
+            toolCalls: [{ id: "call-1", name: "move", arguments: "{}" }],
+        };
+
+        await engine.tryAct(createSession(), actions);
+
+        const systemPrompt = engine.requests[0].messages[0].content;
+        expect(systemPrompt).toContain("## Available actions");
+        for (const tool of engine.requests[0].tools!) {
+            expect(systemPrompt).toContain(`- ${JSON.stringify(tool.function)}`);
+        }
     });
 
     test("offers wait alongside actions", async () => {
@@ -270,6 +316,15 @@ describe("LLMEngine structured output", () => {
         expect(result._unsafeUnwrap()).toStrictEqual({ say: "hello", notify: true });
         const commands = (engine.requests[0].responseSchema!.properties!.command as any).anyOf;
         expect(commands).toHaveLength(3);
+    });
+
+    test("reports empty structured output before parsing it", async () => {
+        const engine = new TestLLMEngine(llmOptions({ promptingStrategy: "json" }));
+        engine.generation = { text: "", toolCalls: [] };
+
+        const result = await engine.tryAct(createSession(), [{ name: "move" }]);
+
+        expect(result._unsafeUnwrapErr()).toMatchObject({ message: "Model returned no structured output" });
     });
 
     test("rejects unavailable actions even when the provider ignores the schema", async () => {
