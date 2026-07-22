@@ -67,9 +67,6 @@ describe("Scheduler no-action acts", () => {
         expect(result.isErr()).toBe(true);
         if (result.isErr()) {
             expect(result.error).toBeInstanceOf(LogicError);
-            if (result.error instanceof LogicError) {
-                expect(result.error.message).toBe("No actions available");
-            }
         }
         expect(engine.tryAct).not.toHaveBeenCalled();
         expect(engine.forceAct).not.toHaveBeenCalled();

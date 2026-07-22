@@ -1,7 +1,7 @@
 import type { Session } from "./session.svelte";
-import type { Game } from "$lib/api/game.svelte";
+import type { Game, QueuedGameForce } from "$lib/api/game.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
-import { zActData, type Action } from "$lib/api/v1/spec";
+import { FORCE_PRIORITY, zActData, type Action, type ForcePriority } from "$lib/api/v1/spec";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { untrack } from "svelte";
@@ -36,6 +36,7 @@ export class Scheduler {
 
     private readonly registry: Registry;
     #abort: AbortController | null = $state(null);
+    #activePriority: ForcePriority | null = null;
     /** A signal telling the scheduler to prompt the active engine to act as soon as possible.
      * This can be flipped true by:
      * - Non-silent context messages
@@ -45,7 +46,7 @@ export class Scheduler {
      * Note: the act may fail, or the actor may choose not to act; the pending signal is still consumed in either case.
      */
     public actPending = $state(false);
-    /** A queue of pending `ForceAction`s. */
+    /** Manual and auto-act forces. Client forces are owned by their games. */
     public forceQueue: Array<ActionCandidate[] | null> = $state([]);
     public readonly autoPoker: AutoPoker;
 
@@ -53,7 +54,10 @@ export class Scheduler {
         this.registry = this.session.registry;
         $effect(() => {
             if (!this.canAct) return;
-            if (this.forceQueue.length) {
+            const gameForce = this.takeGameForce();
+            if (gameForce) {
+                this.forceGame(gameForce.game, gameForce.force);
+            } else if (this.forceQueue.length) {
                 const force = this.forceQueue.shift();
                 this.forceAct(force);
             } else if (this.actPending) {
@@ -72,16 +76,18 @@ export class Scheduler {
     public get activeEngine() {
         return this.session.activeEngine;
     }
-    public get queuedGameForceCount() {
-        return this.forceQueue.filter(Boolean).length;
+    public get hasPendingForce() {
+        return this.forceQueue.length > 0 || this.registry.games.some(game => game.hasForce);
     }
-
     public queueForce(actions: ActionCandidate[] | null) {
         this.forceQueue.push(actions);
     }
 
-    public queueGameForce(game: Game, actions: Action[]) {
-        this.queueForce(actions.map(action => ({ game, action })));
+    public onGameForce(priority: ForcePriority) {
+        if (this.#abort && this.#activePriority !== null
+            && FORCE_PRIORITY[priority] > FORCE_PRIORITY[this.#activePriority]) {
+            this.#abort.abort();
+        }
     }
 
     public cancelAct(): boolean {
@@ -108,7 +114,32 @@ export class Scheduler {
         return typeof choice === "object" && 'name' in choice;
     }
 
-    private async actInner(force: boolean, candidates?: ActionCandidate[] | null) {
+    private forceGame(game: Game, force: QueuedGameForce) {
+        const candidates = force.actions.map(action => ({ game, action }));
+        new ResultAsync(this.actInner(true, candidates, force.data, force.data.priority))
+            .finally(() => {
+                game.completeForce();
+                if (this.autoPoker.autoAct) this.autoPoker.forceTimer();
+            });
+    }
+
+    private takeGameForce(): { game: Game; force: QueuedGameForce } | null {
+        let selected: Game | null = null;
+        for (const game of this.registry.games) {
+            if (game.nextForcePriority === null) continue;
+            if (!selected || FORCE_PRIORITY[game.nextForcePriority] > FORCE_PRIORITY[selected.nextForcePriority!]) {
+                selected = game;
+            }
+        }
+        return selected ? { game: selected, force: selected.takeForce()! } : null;
+    }
+
+    private async actInner(
+        force: boolean,
+        candidates?: ActionCandidate[] | null,
+        forceContext?: QueuedGameForce["data"],
+        priority: ForcePriority = "low",
+    ) {
         this.actPending = false;
         const ignores = this.checkIgnored();
         if (ignores.length) {
@@ -132,10 +163,12 @@ export class Scheduler {
         this.busy = true;
         const controller = new AbortController();
         this.#abort = controller;
+        this.#activePriority = priority;
         const actRes = force
-            ? await this.activeEngine!.forceAct(this.session, actionSet.actions, controller.signal)
+            ? await this.activeEngine!.forceAct(this.session, actionSet.actions, controller.signal, forceContext)
             : await this.activeEngine!.tryAct(this.session, actionSet.actions, controller.signal);
         this.#abort = null;
+        this.#activePriority = null;
         this.busy = false;
 
         return actRes
@@ -235,14 +268,14 @@ export class Scheduler {
         const game = target.game;
         const realAct: EngineAct = { ...act, name: target.action.name };
         EVENT_BUS.emit('app/scheduler/act/perform', { force: forced, action: realAct.name });
-        const actData = zActData.decode({...realAct});
+        const actData = zActData.decode({ name: realAct.name, data: realAct.data });
         EVENT_BUS.emit('api/actor/act', {
             engineId: engine.id,
             force: forced,
             game: game.name,
             act: actData,
         });
-        return ResultAsync.fromPromise(game.sendAction(actData), (e) => LogicError.sendErr(e as Error))
+        return ResultAsync.fromPromise(game.sendAction(actData, act.toolCallId), (e) => LogicError.sendErr(e as Error))
             .orTee(() => EVENT_BUS.emit('app/scheduler/act/fail/failed_to_send', { force: forced }))
             .map(() => realAct);
     }
@@ -315,7 +348,7 @@ export class AutoPoker {
         }), this.tryInterval));
         
         this.forceTimer = $derived(debounced(() => untrack(() => {
-            if (this.scheduler.forceQueue.length === 0) {
+            if (!this.scheduler.hasPendingForce) {
                 EVENT_BUS.emit('app/scheduler/idle/force');
                 this.scheduler.queueForce(null);
             } else {
@@ -331,7 +364,7 @@ export class AutoPoker {
             }
         });
         $effect(() => {
-            if (this.autoAct && this.scheduler.canAct && !this.scheduler.actPending && !this.scheduler.forceQueue.length) {
+            if (this.autoAct && this.scheduler.canAct && !this.scheduler.actPending && !this.scheduler.hasPendingForce) {
                 void this.tryTimer();
             } else {
                 this.tryTimer.cancel();
@@ -457,6 +490,11 @@ export const ACT_EVENTS = [
         dataSchema: {} as {
             engineId: string;
             text: string;
+            toolCall?: {
+                id: string;
+                name: string;
+                arguments: string;
+            };
             metadata?: {
                 reasoning?: unknown;
                 usage?: unknown;

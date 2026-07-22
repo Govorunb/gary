@@ -10,6 +10,15 @@ export const zAction = z.strictObject({
 
 export type Action = z.infer<typeof zAction>;
 
+export const FORCE_PRIORITY = {
+    low: 0,
+    medium: 1,
+    high: 2,
+    critical: 3,
+} as const;
+
+export type ForcePriority = keyof typeof FORCE_PRIORITY;
+
 export const zGameMessageBase = z.strictObject({
     game: z.string().nonempty(),
     // *technically* an error to include this in dataless messages, but we ball

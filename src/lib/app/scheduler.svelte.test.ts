@@ -1,9 +1,9 @@
 import { describe, expect, test, vi } from "vitest";
-import { okAsync } from "neverthrow";
+import { err, okAsync, type Result, ResultAsync } from "neverthrow";
 import { Scheduler } from "./scheduler.svelte";
-import type { Engine, EngineAct } from "./engines/index.svelte";
-import type { Action, ActData } from "$lib/api/v1/spec";
-import type { Game } from "$lib/api/game.svelte";
+import type { Engine, EngineAct, EngineActResult } from "./engines/index.svelte";
+import type { Action, ActData, ForcePriority } from "$lib/api/v1/spec";
+import type { Game, QueuedGameForce } from "$lib/api/game.svelte";
 import type { Session } from "./session.svelte";
 
 type FakeGameAction = Action & { active: boolean };
@@ -135,15 +135,77 @@ describe("Scheduler action names", () => {
         });
 
         await withScheduler([firstGame, secondGame], engine, async scheduler => {
-            scheduler.queueGameForce(firstGame as unknown as Game, [firstMove]);
-            const queuedForce = scheduler.forceQueue.shift();
-            const result = await scheduler.forceAct(queuedForce);
+            const result = await scheduler.forceAct([{
+                game: firstGame as unknown as Game,
+                action: firstMove,
+            }]);
 
             expect(result.isOk()).toBe(true);
             expect(firstGame.sentActions).toHaveLength(1);
             expect(firstGame.sentActions[0].name).toBe("move");
             expect(firstGame.sentActions[0].data).toBe("{\"square\":\"a1\"}");
             expect(secondGame.sentActions).toHaveLength(0);
+        });
+    });
+});
+
+describe("Scheduler force priority", () => {
+    test("takes the highest-priority force across games", async () => {
+        const action = { name: "move", description: "Move" };
+        const low = createFakeGame("Low", "low", [action]) as FakeGame & Game;
+        const critical = createFakeGame("Critical", "critical", [action]) as FakeGame & Game;
+        const queuedForce = (priority: ForcePriority): QueuedGameForce => ({
+            actions: [action],
+            data: { query: priority, action_names: [action.name], priority },
+        });
+        const lowForce = queuedForce("low");
+        const criticalForce = queuedForce("critical");
+
+        Object.defineProperties(low, {
+            nextForcePriority: { get: () => "low" },
+            takeForce: { value: vi.fn(() => lowForce) },
+        });
+        Object.defineProperties(critical, {
+            nextForcePriority: { get: () => "critical" },
+            takeForce: { value: vi.fn(() => criticalForce) },
+        });
+
+        await withScheduler([low, critical], createEngine(actions => ({ name: actions[0].name })), scheduler => {
+            const selected = (scheduler as unknown as {
+                takeGameForce(): { game: Game; force: QueuedGameForce } | null;
+            }).takeGameForce();
+
+            expect(selected).toStrictEqual({ game: critical, force: criticalForce });
+            expect(low.takeForce).not.toHaveBeenCalled();
+            expect(critical.takeForce).toHaveBeenCalledOnce();
+        });
+    });
+
+    test("interrupts busy inference only for a strictly higher priority", async () => {
+        const signals: AbortSignal[] = [];
+        const engine = {
+            id: "blocking-engine",
+            name: "Blocking Engine",
+            tryAct: vi.fn((_session: Session, _actions?: Action[], signal?: AbortSignal) =>
+                new ResultAsync(new Promise<Result<EngineActResult, "cancelled">>(resolve => {
+                    signals.push(signal!);
+                    signal!.addEventListener("abort", () => resolve(err("cancelled")), { once: true });
+                }))
+            ),
+        } as unknown as Engine<unknown>;
+
+        await withScheduler([], engine, async scheduler => {
+            const acting = scheduler.tryAct();
+            expect(scheduler.busy).toBe(true);
+            expect(signals).toHaveLength(1);
+
+            scheduler.onGameForce("low");
+            expect(signals[0].aborted).toBe(false);
+
+            scheduler.onGameForce("medium");
+            expect(signals[0].aborted).toBe(true);
+            expect((await acting).isErr()).toBe(true);
+            expect(scheduler.busy).toBe(false);
         });
     });
 });

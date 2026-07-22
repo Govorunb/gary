@@ -69,6 +69,15 @@
         <details class="advanced-details">
             <summary>Advanced</summary>
             <SelectField
+                bind:value={dirtyConfig.promptingStrategy}
+                label="Response method"
+                options={[
+                    { value: "json", label: "Structured output" },
+                    { value: "tools", label: "Tool calling" },
+                ]}
+                description="Choose how the model returns actions. Structured output works with more OpenAI-compatible servers."
+            />
+            <SelectField
                 bind:value={dirtyConfig.reasoningEffort}
                 label="Reasoning effort"
                 options={[

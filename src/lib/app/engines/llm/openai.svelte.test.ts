@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { OpenAIClient, type OpenAIPrefs } from "./openai.svelte";
-import type { OpenAIContext } from ".";
+import type { LLMRequest, OpenAIContext } from ".";
 
 const openAIMock = vi.hoisted(() => ({
     create: vi.fn(),
@@ -43,6 +43,7 @@ const context = [{
     role: "user",
     content: "act",
 }] satisfies OpenAIContext;
+const request = { messages: context } satisfies LLMRequest;
 
 describe("OpenAIClient", () => {
     beforeEach(() => {
@@ -75,7 +76,7 @@ describe("OpenAIClient", () => {
                 }],
             });
 
-        const first = await client.genJson(context);
+        const first = await client.generate(request);
 
         expect(first.isOk()).toBe(true);
         expect(prefs.reasoningEffort).toBe("low");
@@ -92,13 +93,105 @@ describe("OpenAIClient", () => {
         prefs.modelId = "anthropic/claude-sonnet-4";
         openAIMock.create.mockClear();
 
-        const second = await client.genJson(context);
+        const second = await client.generate(request);
 
         expect(second.isOk()).toBe(true);
         expect(openAIMock.create).toHaveBeenCalledOnce();
         expect(openAIMock.create).toHaveBeenCalledWith(expect.objectContaining({
             model: "anthropic/claude-sonnet-4",
             reasoning_effort: "low",
+        }), expect.any(Object));
+    });
+
+    test("sends and parses function tools", async () => {
+        const prefs = $state<OpenAIPrefs>({
+            name: "OpenAI",
+            allowDoNothing: false,
+            allowYapping: false,
+            promptingStrategy: "json",
+            reasoningEffort: "none",
+            apiKey: "test-key",
+            serverUrl: "https://api.openai.com/v1",
+            modelId: "gpt-5-mini",
+        });
+        const client = new OpenAIClient({ prefs });
+        const tool = {
+            type: "function" as const,
+            function: {
+                name: "move",
+                parameters: { type: "object", properties: {} },
+            },
+        };
+        openAIMock.create.mockResolvedValue({
+            choices: [{
+                finish_reason: "tool_calls",
+                message: {
+                    content: null,
+                    tool_calls: [{
+                        id: "call-1",
+                        type: "function",
+                        function: { name: "move", arguments: "{}" },
+                    }],
+                },
+            }],
+        });
+
+        const result = await client.generate({
+            messages: context,
+            tools: [tool],
+            toolChoice: "required",
+        });
+
+        expect(result._unsafeUnwrap().toolCalls).toStrictEqual([
+            { id: "call-1", name: "move", arguments: "{}" },
+        ]);
+        expect(openAIMock.create).toHaveBeenCalledWith(expect.objectContaining({
+            tools: [tool],
+            tool_choice: "required",
+            parallel_tool_calls: false,
+        }), expect.any(Object));
+    });
+
+    test("sends a strict structured output schema", async () => {
+        const prefs = $state<OpenAIPrefs>({
+            name: "OpenAI",
+            allowDoNothing: false,
+            allowYapping: false,
+            promptingStrategy: "json",
+            reasoningEffort: "none",
+            apiKey: "test-key",
+            serverUrl: "https://api.openai.com/v1",
+            modelId: "gpt-5-mini",
+        });
+        const client = new OpenAIClient({ prefs });
+        const responseSchema = {
+            type: "object" as const,
+            properties: { command: { type: "string" as const } },
+            required: ["command"],
+            additionalProperties: false,
+        };
+        openAIMock.create.mockResolvedValue({
+            choices: [{
+                finish_reason: "stop",
+                message: { content: JSON.stringify({ command: "wait" }) },
+            }],
+        });
+
+        const result = await client.generate({ messages: context, responseSchema });
+
+        expect(result._unsafeUnwrap()).toMatchObject({
+            text: JSON.stringify({ command: "wait" }),
+            toolCalls: [],
+        });
+        expect(openAIMock.create).toHaveBeenCalledWith(expect.objectContaining({
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "gary_action",
+                    schema: responseSchema,
+                    strict: true,
+                },
+            },
         }), expect.any(Object));
     });
 

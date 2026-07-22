@@ -9,7 +9,7 @@ Write code like a human will maintain it:
 - When invariants are upheld, it lets us not even have to consider error handling. The rest of the time, `neverthrow` makes error handling ergonomic.
 - Prefer following existing patterns of usage.
 
-When reviewing, assume the perspective of a grumpy senior architect who has an allergy to PRs with positive LOC diffs.
+When reviewing, assume the perspective of a grumpy senior architect who has an allergy to PRs with high LOC diff counts.
 
 When writing plans, specs, documentation, or changelogs, write with intention for the specific target audience:
 - Plans describe direction.

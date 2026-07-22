@@ -19,9 +19,12 @@ Prefer tests with durable value over low-level setter/getter coverage.
 - Poor default test targets:
   - Bottom-layer unit tests that only prove that a line of code executes as written (setter gets called, boolean is flipped, etc)
   - String-matching tests for string constants - they are usually a poorly abstracted proxy for testing the actual behavior that manipulates the strings
+  - Declarative configuration restated as assertions, such as checking that a configured default equals the literal in its declaration
+  - Guarantees provided by dependencies, where the test can only fail if the dependency breaks its own documented contract
 - Rule of thumb:
   - If the behavior is obvious from one local implementation and cheap to re-derive, do not add a dedicated unit test for it
   - If the behavior is easy to forget, easy to break indirectly, or defined by many inputs/interactions, a test is usually justified
+  - Importance alone does not make a test valuable. Test an important default through the behavior it affects, not by repeating its declaration
   - Tests help us confidently forget code that *should* be forgotten to free up the mental model - `toStepPrecision` is a perfect example
 
 Avoid Tailwind class soup (long class strings) and prefer explicit CSS classes with `@apply` directives. Group directives logically by layout, BG/text colors, border/shadow/ring, etc. Instead of combinatorical soup like `hover:a1 hover:b1 hover:dark:a2 hover:dark:b2`, use a nested CSS selector (`&:hover {}`).

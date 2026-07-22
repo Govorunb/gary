@@ -1,10 +1,8 @@
-import type { JSONSchema } from "openai/lib/jsonschema.mjs";
-import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type OpenAIContext } from ".";
+import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type LLMRequest } from ".";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
-import { EngineError, type EngineActError, type EngineActResult } from "../index.svelte";
-import type { Action } from "$lib/api/v1/spec";
+import { EngineError, type EngineActError } from "../index.svelte";
 import { OpenAIClient, type OpenAIPrefs, zReasoningEffort } from "./openai.svelte";
 import { parseError } from "$lib/app/utils";
 
@@ -37,17 +35,14 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
         });
     }
 
-    generateStructuredOutput(context: OpenAIContext, outputSchema?: JSONSchema, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError> {
+    generate(request: LLMRequest, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError> {
         if (!this.options.apiKey) {
             return errAsync(new ConfigError("OpenRouter API key is required"));
         }
-        return new ResultAsync(this.client.genJson(context, outputSchema, {
+        return new ResultAsync(this.client.generate(request, {
             // some providers require reasoning (dude why)
             // provider: { require_parameters: true },
         }, signal));
-    }
-    generateToolCall(_context: OpenAIContext, _actions: Action[]): ResultAsync<EngineActResult, EngineActError> {
-        return errAsync(new EngineError("Tool calling not implemented", undefined, false));
     }
 
     static async testApiKey(apiKey: string): Promise<Result<void, EngineError>> {
