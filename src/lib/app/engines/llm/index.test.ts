@@ -1,6 +1,7 @@
 import type { Action } from "$lib/api/v1/spec";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
 import type { Session } from "$lib/app/session.svelte";
+import { SelfTestHarness } from "$lib/testing/self-test-harness";
 import { okAsync, type ResultAsync } from "neverthrow";
 import { describe, expect, test } from "vitest";
 import type { EngineActError } from "../index.svelte";
@@ -29,6 +30,12 @@ function createSession(): Session {
     } as unknown as Session;
 }
 
+async function registeredAction(action: Action): Promise<Action> {
+    const harness = new SelfTestHarness();
+    await harness.server.registerActions([action]);
+    return harness.server.getAction(action.name)!;
+}
+
 class TestLLMEngine extends LLMEngine<CommonLLMOptions> {
     readonly name = "Test LLM";
     generation: LLMGeneration = { text: "", toolCalls: [] };
@@ -45,6 +52,29 @@ class TestLLMEngine extends LLMEngine<CommonLLMOptions> {
 }
 
 describe("LLMEngine tool calling", () => {
+    test("clones reactive action schemas", async () => {
+        const engine = new TestLLMEngine(llmOptions());
+        const action = await registeredAction({
+            name: "move",
+            schema: {
+                type: "object",
+                properties: { square: { type: "string" } },
+            },
+        });
+        engine.generation = {
+            text: "",
+            toolCalls: [{ id: "call-1", name: "move", arguments: '{"square":"e4"}' }],
+        };
+
+        const result = await engine.tryAct(createSession(), [action]);
+
+        expect(result._unsafeUnwrap()).toMatchObject({ name: "move" });
+        expect(engine.requests[0].tools?.[0].function.parameters).toStrictEqual({
+            type: "object",
+            properties: { square: { type: "string" } },
+        });
+    });
+
     test("skips without generating when no actions are available", async () => {
         const engine = new TestLLMEngine(llmOptions({ allowDoNothing: true }));
 
@@ -202,7 +232,7 @@ describe("LLMEngine structured output", () => {
             toolCalls: [],
         };
 
-        const result = await engine.tryAct(createSession(), [{
+        const action = await registeredAction({
             name: "move",
             description: "Move a piece",
             schema: {
@@ -210,7 +240,9 @@ describe("LLMEngine structured output", () => {
                 properties: { square: { type: "string" } },
                 required: ["square"],
             },
-        }]);
+        });
+
+        const result = await engine.tryAct(createSession(), [action]);
 
         expect(result._unsafeUnwrap()).toStrictEqual({
             name: "move",

@@ -2,7 +2,7 @@ import type { Action, ForceAction } from "$lib/api/v1/spec";
 import type { ActorContextEvent } from "$lib/app/context.svelte";
 import { EVENT_BUS } from "$lib/app/events/bus";
 import type { Session } from "$lib/app/session.svelte";
-import { jsonParse } from "$lib/app/utils";
+import { jsonParse, snapshotState } from "$lib/app/utils";
 import type {
     ChatCompletionMessageParam,
     ChatCompletionFunctionTool,
@@ -287,7 +287,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             };
             const required = ["action"];
             if (action.schema) {
-                const dataSchema = structuredClone(action.schema) as JSONSchema;
+                const dataSchema = snapshotState(action.schema) as JSONSchema;
                 dataSchema.additionalProperties = false;
                 properties.data = dataSchema;
                 required.push("data");
@@ -338,7 +338,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             }
             usedNames.add(name);
             const parameters = action.schema
-                ? structuredClone(action.schema)
+                ? snapshotState(action.schema)
                 : { type: "object", properties: {}, additionalProperties: false };
             return {
                 action,
