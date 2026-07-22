@@ -40,21 +40,16 @@ function createScheduler(choice: EngineActResult = { say: "No games, still here.
 }
 
 describe("Scheduler no-action acts", () => {
-    test("tryAct invokes the active engine with no available actions", async () => {
-        const choice = { say: "No games, still here.", notify: false };
-        const { scheduler, engine, dispose } = createScheduler(choice);
+    test("tryAct rejects before invoking the active engine with no available actions", async () => {
+        const { scheduler, engine, dispose } = createScheduler();
 
         const result = await scheduler.tryAct();
 
-        expect(result.isOk()).toBe(true);
-        if (result.isOk()) {
-            expect(result.value).toStrictEqual(choice);
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
+            expect(result.error).toBeInstanceOf(LogicError);
         }
-        expect(engine.tryAct).toHaveBeenCalledOnce();
-        const [sessionArg, actionsArg, signalArg] = engine.tryAct.mock.calls[0];
-        expect(sessionArg).toMatchObject({ activeEngine: engine });
-        expect(actionsArg).toStrictEqual([]);
-        expect(signalArg).toBeInstanceOf(AbortSignal);
+        expect(engine.tryAct).not.toHaveBeenCalled();
         expect(engine.forceAct).not.toHaveBeenCalled();
         dispose();
     });

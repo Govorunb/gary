@@ -183,6 +183,7 @@ describe("Scheduler force priority", () => {
 
     test("interrupts busy inference only for a strictly higher priority", async () => {
         const signals: AbortSignal[] = [];
+        const game = createFakeGame("Test Game", "test", [{ name: "wait" }]);
         const engine = {
             id: "blocking-engine",
             name: "Blocking Engine",
@@ -194,7 +195,7 @@ describe("Scheduler force priority", () => {
             ),
         } as unknown as Engine<unknown>;
 
-        await withScheduler([], engine, async scheduler => {
+        await withScheduler([game], engine, async scheduler => {
             const acting = scheduler.tryAct();
             expect(scheduler.busy).toBe(true);
             expect(signals).toHaveLength(1);
