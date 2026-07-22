@@ -48,7 +48,10 @@
     .context-log-container {
         @apply fcol-3 h-full;
         @apply p-2 text-sm shadow-sm;
-        @apply bg-neutral-50 dark:bg-neutral-900/70;
+        @apply bg-neutral-50;
+        @variant dark {
+            background-color: color-mix(in oklab, var(--color-neutral-900) 70%, var(--color-surface-900));
+        }
         @apply ring-1 ring-primary-200/40 dark:ring-primary-800/40;
     }
     .reverse-log {

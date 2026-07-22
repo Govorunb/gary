@@ -268,7 +268,7 @@ describe("LLMEngine structured output", () => {
         const result = await engine.tryAct(createSession(), [{ name: "move" }]);
 
         expect(result._unsafeUnwrap()).toStrictEqual({ say: "hello", notify: true });
-        const commands = (engine.requests[0].responseSchema?.properties?.command as any).anyOf;
+        const commands = (engine.requests[0].responseSchema!.properties!.command as any).anyOf;
         expect(commands).toHaveLength(3);
     });
 
