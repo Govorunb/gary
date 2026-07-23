@@ -49,11 +49,21 @@
     }
 
     let sysPromptTextArea = $state<HTMLTextAreaElement>(null!);
+    let userInstructions = $state(userPrefs.app.systemPrompt ?? "");
     new TextareaAutosize({
         element: () => sysPromptTextArea,
-        input: () => userPrefs.app.systemPrompt || "",
+        input: () => userInstructions,
         maxHeight: 300, // hack but the 'right' way (multiple of line-height) isn't obvious rn
     });
+    $effect(() => {
+        if (!open) return;
+        userInstructions = userPrefs.app.systemPrompt ?? "";
+    });
+
+    function saveUserInstructions() {
+        if (userInstructions === (userPrefs.app.systemPrompt ?? "")) return;
+        userPrefs.app.systemPrompt = userInstructions;
+    }
 
     async function checkForUpdates() {
         if (updater.checkingForUpdates) return;
@@ -205,10 +215,11 @@
                     </TeachingTooltip>
                 </div>
                 <textarea
-                    bind:value={userPrefs.app.systemPrompt}
+                    bind:value={userInstructions}
                     bind:this={sysPromptTextArea}
                     class="input-field"
                     id="user-instructions"
+                    onblur={saveUserInstructions}
                 ></textarea>
             </div>
             {#if isApril1st()}
