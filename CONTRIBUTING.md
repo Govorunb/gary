@@ -11,7 +11,7 @@ Please strongly consider filing issues for API misbehavior and UI bugs/UX jank.
 A great way to contribute right now is actually to help me streamline the contribution process itself - the project isn't really optimized for multiple contributors currently.  
 So, if you have some spare time, try cloning the repository and building/running the app, and let me know of any undocumented steps/requirements that tripped you up.
 
-Past that, feel free to check out [issues](https://github.com/Govorunb/gary/issues/) and [TODOs](./docs/roadmap/TODO.md).
+Past that, feel free to check out [issues](https://github.com/Govorunb/gary/issues/) for outstanding bugs and proposals.
 The app is currently in beta - the goal is to fill out the feature space and then polish to a 1.0.
 
 If you want to contribute code:
