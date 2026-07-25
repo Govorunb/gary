@@ -6,6 +6,8 @@ jobs:
   publish:
     permissions:
       contents: write
+    env:
+      RUSTUP_TOOLCHAIN: nightly-2026-07-23
     strategy:
       fail-fast: false
       matrix:
@@ -25,12 +27,12 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@0b1efabc08b657293548b77fb76cc02d26091c7e
       with:
-        toolchain: nightly-2026-07-23
+        toolchain: ${{ env.RUSTUP_TOOLCHAIN }}
 
     - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5
       with:
         workspaces: src-tauri
-        shared-key: ${{ matrix.platform }}
+        shared-key: ${{ matrix.platform }}-${{ env.RUSTUP_TOOLCHAIN }}
 
     - name: Set up pnpm
       uses: pnpm/action-setup@1e1c8eafbd745f64b1ef30a7d7ed7965034c486c
