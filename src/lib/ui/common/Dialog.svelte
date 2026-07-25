@@ -3,6 +3,8 @@
     import type { Snippet } from "svelte";
     import type { SvelteHTMLElements } from "svelte/elements";
     import type { DialogRootProps } from "@skeletonlabs/skeleton-svelte";
+    import { hasHardwareAcceleration } from "$lib/app/utils/hardware-acceleration";
+    import { onMount } from "svelte";
 
     type SnippetOfHTML<T extends keyof SvelteHTMLElements> = Snippet<[SvelteHTMLElements[T]]>;
     type Props = {
@@ -34,6 +36,11 @@
         'center': 'layer-dialog fixed inset-0 flex items-center justify-center align-middle',
         'top-start': 'layer-dialog fixed inset-0 flex items-start justify-center pt-[15vh]'
     };
+
+    let useBackdropBlur = $state(false);
+    onMount(() => {
+        useBackdropBlur = hasHardwareAcceleration();
+    });
 </script>
 
 <Dialog {open} onOpenChange={(d) => open = d.open} {...props}>
@@ -41,7 +48,10 @@
         <Dialog.Trigger element={trigger} />
     {/if}
     <Portal>
-        <Dialog.Backdrop class="layer-dialog-backdrop fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity" />
+        <Dialog.Backdrop class={[
+            "layer-dialog-backdrop fixed inset-0 transition-opacity",
+            useBackdropBlur ? "bg-black/20 backdrop-blur-sm" : "bg-black/40",
+        ]} />
         <Dialog.Positioner class={positionClasses[position]}>
             <Dialog.Content element={content} class={["dialog-content", className]}>
                 {#if title}
