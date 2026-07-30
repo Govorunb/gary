@@ -369,37 +369,19 @@ describe("LLMEngine structured output", () => {
 });
 
 describe("LLMEngine context trimming", () => {
-    test("removes protocol bookkeeping before game context", async () => {
+    test("compacts a contiguous prefix and remembers the boundary", async () => {
         const session = createSession();
-        (session.context.actorView as any[]).push(
-            {
-                id: "result",
-                timestamp: 1,
-                key: "api/game/action_result",
-                data: {
-                    game: { id: "game-1", name: "Chess" },
-                    act: { id: "action-1", name: "move" },
-                    success: true,
-                    message: "done ".repeat(500),
-                },
+        (session.context.actorView as any[]).push(...Array.from({ length: 20 }, (_, index) => ({
+            id: `event-${index}`,
+            timestamp: 1_000 + index,
+            key: "ui/context/input",
+            data: {
+                text: index < 4
+                    ? `old-prefix-${index} `.repeat(500)
+                    : `live-${index}`,
+                silent: false,
             },
-            {
-                id: "context",
-                timestamp: 2,
-                key: "api/game/context",
-                data: {
-                    game: { id: "game-1", name: "Chess" },
-                    message: "position ".repeat(500),
-                    silent: true,
-                },
-            },
-            {
-                id: "latest",
-                timestamp: 3,
-                key: "ui/context/input",
-                data: { text: "make the best move", silent: false },
-            },
-        );
+        })));
         const original = structuredClone(session.context.actorView);
         const engine = new TestLLMEngine(llmOptions({
             allowYapping: true,
@@ -410,11 +392,60 @@ describe("LLMEngine context trimming", () => {
         const result = await engine.tryAct(session);
 
         expect(result.isOk()).toBe(true);
-        const wire = JSON.stringify(engine.requests[0].messages);
-        expect(wire).not.toContain("done done");
-        expect(wire).toContain("position position");
-        expect(wire).toContain("make the best move");
+        const firstWire = JSON.stringify(engine.requests[0].messages);
+        expect(firstWire).not.toContain("old-prefix");
+        expect(firstWire).toContain("live-4");
+        expect(firstWire).toContain("live-19");
         expect(session.context.actorView).toStrictEqual(original);
+
+        (session.context.actorView as any[]).push({
+            id: "event-20",
+            timestamp: 1_020,
+            key: "ui/context/input",
+            data: { text: "new-live-event", silent: false },
+        });
+        expect((await engine.tryAct(session)).isOk()).toBe(true);
+        const secondWire = JSON.stringify(engine.requests[1].messages);
+        expect(secondWire).not.toContain("old-prefix");
+        expect(secondWire).toContain("live-4");
+        expect(secondWire).toContain("new-live-event");
+
+        (session.context.actorView as any[]).splice(0, session.context.actorView.length, {
+            id: "reset-event",
+            timestamp: 2_000,
+            key: "ui/context/input",
+            data: { text: "context after reset", silent: false },
+        });
+        expect((await engine.tryAct(session)).isOk()).toBe(true);
+        expect(JSON.stringify(engine.requests[2].messages)).toContain("context after reset");
+    });
+
+    test("compacts history outside the live time window", async () => {
+        const session = createSession();
+        (session.context.actorView as any[]).push(
+            {
+                id: "old",
+                timestamp: 1,
+                key: "ui/context/input",
+                data: { text: "stale ".repeat(2_000), silent: false },
+            },
+            {
+                id: "recent",
+                timestamp: 5 * 60 * 1_000 + 2,
+                key: "ui/context/input",
+                data: { text: "recent context", silent: false },
+            },
+        );
+        const engine = new TestLLMEngine(llmOptions({
+            allowYapping: true,
+            modelMetadata: { test: { contextWindow: 6_800 } },
+        }));
+        engine.generation = { text: "okay", toolCalls: [] };
+
+        expect((await engine.tryAct(session)).isOk()).toBe(true);
+        const wire = JSON.stringify(engine.requests[0].messages);
+        expect(wire).not.toContain("stale stale");
+        expect(wire).toContain("recent context");
     });
 
     test("removes tool calls and their results atomically", async () => {

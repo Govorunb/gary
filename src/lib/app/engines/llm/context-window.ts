@@ -18,6 +18,9 @@ export type ContextDiagnostics = ContextBudget & {
 export const INITIAL_TOKENS_PER_BYTE = 0.5;
 export const MIN_CALIBRATED_TOKENS_PER_BYTE = 0.4;
 export const TOKEN_ESTIMATE_MARGIN = 1.1;
+export const COMPACTION_TRIGGER_RATIO = 0.9;
+export const COMPACTION_LIVE_EDGE_MS = 5 * 60 * 1_000;
+export const COMPACTION_LIVE_EDGE_UNITS = 16;
 
 export function completionReserve(contextWindow: number): number {
     return Math.min(4096, Math.max(512, Math.floor(contextWindow / 4)));

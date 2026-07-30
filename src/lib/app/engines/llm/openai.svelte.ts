@@ -274,7 +274,7 @@ export const EVENTS = [
             estimatedPromptTokens: number;
             removedHistoryUnits: number;
         },
-        description: "Old LLM context trimmed to fit the model context window",
+        description: "Old LLM context compacted to preserve the live edge",
         level: LogLevel.Debug,
     },
     {

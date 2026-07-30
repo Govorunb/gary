@@ -12,6 +12,9 @@ import type { JSONSchema, JSONSchemaDefinition } from "openai/lib/jsonschema";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
 import {
+    COMPACTION_LIVE_EDGE_MS,
+    COMPACTION_LIVE_EDGE_UNITS,
+    COMPACTION_TRIGGER_RATIO,
     completionReserve,
     estimateRequestTokens,
     INITIAL_TOKENS_PER_BYTE,
@@ -133,12 +136,12 @@ type CallableAction = {
 type HistoryUnit = {
     indexes: number[];
     messages: OpenAIMessage[];
-    removalPriority: number;
 };
 
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
     abstract name: string;
     private readonly tokensPerByte = new Map<string, number>();
+    private readonly compactionBoundaries = new WeakMap<Session, Map<string, string>>();
 
     tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
         return new ResultAsync(this.actCore(session, actions, false, signal));
@@ -348,22 +351,23 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         diagnostics: ContextDiagnostics;
         calibrationKey: string;
     }, EngineActError> {
-        const units = this.historyUnits(session.context.actorView);
-        const pinned = units.find(unit => unit.indexes.includes(session.context.actorView.length - 1))
-            ?? units.at(-1);
-        const retained = new Set(units);
+        const events = session.context.actorView;
+        const units = this.historyUnits(events);
         const reserve = completionReserve(budget.contextWindow);
         const promptBudget = budget.contextWindow - reserve;
+        const compactionThreshold = Math.floor(promptBudget * COMPACTION_TRIGGER_RATIO);
         const calibrationKey = budget.model;
         const density = this.tokensPerByte.get(calibrationKey) ?? INITIAL_TOKENS_PER_BYTE;
+        const compactionKey = `${budget.model}\0${this.options.promptingStrategy}`;
+        let retainedStart = this.compactionStart(session, events, units, compactionKey);
 
-        const render = (): LLMRequest => {
+        const render = (start: number): LLMRequest => {
             const messages: OpenAIMessage[] = [{
                 role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
                 content: this.systemPrompt(session, callableActions),
             }];
-            for (const unit of units) {
-                if (retained.has(unit)) messages.push(...unit.messages);
+            for (let i = start; i < units.length; i++) {
+                messages.push(...units[i].messages);
             }
             if (forceContext?.ephemeral_context) {
                 messages.push(this.forceMessage(forceContext));
@@ -390,28 +394,30 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             };
         };
 
-        let request = render();
+        let request = render(retainedStart);
         const estimatedBefore = estimateRequestTokens(request, density);
         let estimated = estimatedBefore;
-        let removedHistoryUnits = 0;
-        const removable = units
-            .filter(unit => unit !== pinned)
-            .toSorted((a, b) =>
-                a.removalPriority - b.removalPriority
-                || Math.min(...a.indexes) - Math.min(...b.indexes)
-            );
-        for (const unit of removable) {
-            if (estimated <= promptBudget) break;
-            retained.delete(unit);
-            removedHistoryUnits++;
-            request = render();
+        const previousRetainedStart = retainedStart;
+
+        if (estimated > compactionThreshold && units.length) {
+            retainedStart = this.liveEdgeStart(events, units, retainedStart);
+            request = render(retainedStart);
             estimated = estimateRequestTokens(request, density);
+
+            while (estimated > promptBudget && retainedStart < units.length - 1) {
+                retainedStart++;
+                request = render(retainedStart);
+                estimated = estimateRequestTokens(request, density);
+            }
         }
 
         if (estimated > promptBudget) {
             return err(new ConfigError(
                 `${this.name}'s instructions, actions, or newest context exceed the ${budget.contextWindow}-token context window`,
             ));
+        }
+        if (retainedStart > previousRetainedStart) {
+            this.rememberCompaction(session, events, units, compactionKey, retainedStart);
         }
 
         const diagnostics: ContextDiagnostics = {
@@ -420,15 +426,70 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             promptBudget,
             estimatedPromptTokensBefore: estimatedBefore,
             estimatedPromptTokens: estimated,
-            removedHistoryUnits,
+            removedHistoryUnits: retainedStart,
         };
-        if (removedHistoryUnits) {
+        if (retainedStart > previousRetainedStart) {
             EVENT_BUS.emit("app/engines/llm/context_trimmed", {
                 engineId: this.id,
                 ...diagnostics,
             });
         }
         return ok({ request, diagnostics, calibrationKey });
+    }
+
+    private compactionStart(
+        session: Session,
+        events: ActorContextEvent[],
+        units: HistoryUnit[],
+        key: string,
+    ): number {
+        const boundaries = this.compactionBoundaries.get(session);
+        const firstRetainedEventId = boundaries?.get(key);
+        if (!firstRetainedEventId) return 0;
+
+        const eventIndex = events.findIndex(event => event.id === firstRetainedEventId);
+        const unitIndex = units.findIndex(unit => unit.indexes.includes(eventIndex));
+        if (eventIndex !== -1 && unitIndex !== -1) return unitIndex;
+
+        boundaries?.delete(key);
+        return 0;
+    }
+
+    private liveEdgeStart(
+        events: ActorContextEvent[],
+        units: HistoryUnit[],
+        currentStart: number,
+    ): number {
+        const newestTimestamp = Math.max(
+            ...units.at(-1)!.indexes.map(index => events[index].timestamp),
+        );
+        const oldestLiveTimestamp = newestTimestamp - COMPACTION_LIVE_EDGE_MS;
+        const countStart = Math.max(currentStart, units.length - COMPACTION_LIVE_EDGE_UNITS);
+        let timeStart = currentStart;
+        while (
+            timeStart < units.length - 1
+            && Math.max(...units[timeStart].indexes.map(index => events[index].timestamp))
+                < oldestLiveTimestamp
+        ) {
+            timeStart++;
+        }
+        return Math.max(countStart, timeStart);
+    }
+
+    private rememberCompaction(
+        session: Session,
+        events: ActorContextEvent[],
+        units: HistoryUnit[],
+        key: string,
+        retainedStart: number,
+    ) {
+        let boundaries = this.compactionBoundaries.get(session);
+        if (!boundaries) {
+            boundaries = new Map();
+            this.compactionBoundaries.set(session, boundaries);
+        }
+        const firstEventIndex = Math.min(...units[retainedStart].indexes);
+        boundaries.set(key, events[firstEventIndex].id);
     }
 
     private recordContextUsage(
@@ -632,7 +693,6 @@ The custom user instructions are as follows:
                 return message ? [{
                     indexes: [index],
                     messages: [message],
-                    removalPriority: this.removalPriority(event),
                 }] : [];
             });
         }
@@ -655,7 +715,6 @@ The custom user instructions are as follows:
                     units.push({
                         indexes: [i, resultIndex],
                         messages: [call, result],
-                        removalPriority: 0,
                     });
                 }
                 consumedToolResults.add(resultIndex);
@@ -667,27 +726,10 @@ The custom user instructions are as follows:
                 units.push({
                     indexes: [i],
                     messages: [msg],
-                    removalPriority: this.removalPriority(event),
                 });
             }
         }
         return units;
-    }
-
-    private removalPriority(event: ActorContextEvent): number {
-        switch (event.key) {
-            case "api/game/connected":
-            case "api/game/disconnected":
-            case "api/game/act/actor":
-                return 0;
-            case "api/game/action_result":
-                return event.data.success ? 0 : 2;
-            case "api/actor/generated":
-            case "api/game/force":
-                return 1;
-            default:
-                return 2;
-        }
     }
 
     protected shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(): "system" | "developer" {
