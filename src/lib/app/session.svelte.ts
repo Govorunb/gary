@@ -49,7 +49,7 @@ export class Session {
         this.activeEngine = $derived.by(() => this.getEngine(this.userPrefs.app.selectedEngine));
         this.onDispose(this.context.onActorViewAppend((_event, shouldPromptAct) => {
             if (shouldPromptAct) {
-                this.scheduler.actPending = true;
+                this.scheduler.requestAct(true);
             }
         }));
     }

@@ -5,7 +5,14 @@ import { EngineError, type EngineActResult } from "./engines/index.svelte";
 import type { Session } from "./session.svelte";
 import type { Action } from "$lib/api/v1/spec";
 
-function createScheduler(choice: EngineActResult = { say: "No games, still here.", notify: false }) {
+function createScheduler(
+    choice: EngineActResult = { say: "No games, still here.", notify: false },
+    games: Array<{
+        nextForcePriority: null;
+        getActiveActions(): Action[];
+        sendAction(...args: unknown[]): Promise<void>;
+    }> = [],
+) {
     const disposers: Array<() => void> = [];
     const engine = {
         id: "test-engine",
@@ -14,7 +21,7 @@ function createScheduler(choice: EngineActResult = { say: "No games, still here.
         forceAct: vi.fn((_session: Session, _actions?: Action[], _signal?: AbortSignal) => errAsync(new EngineError("forceAct should not be called"))),
     };
     const session = {
-        registry: { games: [] },
+        registry: { games },
         activeEngine: engine,
         onDispose(callback: () => void) {
             disposers.push(callback);
@@ -40,6 +47,37 @@ function createScheduler(choice: EngineActResult = { say: "No games, still here.
 }
 
 describe("Scheduler no-action acts", () => {
+    test("gives pending acts time for actions to register", async () => {
+        vi.useFakeTimers();
+        const games: Array<{
+            nextForcePriority: null;
+            getActiveActions(): Action[];
+            sendAction(...args: unknown[]): Promise<void>;
+        }> = [];
+        const { scheduler, engine, dispose } = createScheduler({ name: "serve" }, games);
+
+        scheduler.requestAct(true);
+        await vi.advanceTimersByTimeAsync(50);
+        expect(engine.tryAct).not.toHaveBeenCalled();
+
+        games.push({
+            nextForcePriority: null,
+            getActiveActions: () => [{ name: "serve" }],
+            sendAction: vi.fn().mockResolvedValue(undefined),
+        });
+        await vi.advanceTimersByTimeAsync(50);
+        await Promise.resolve();
+
+        expect(engine.tryAct).toHaveBeenCalledOnce();
+        expect(engine.tryAct).toHaveBeenCalledWith(
+            expect.anything(),
+            [{ name: "serve" }],
+            expect.any(AbortSignal),
+        );
+        dispose();
+        vi.useRealTimers();
+    });
+
     test("tryAct rejects before invoking the active engine with no available actions", async () => {
         const { scheduler, engine, dispose } = createScheduler();
 

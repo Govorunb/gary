@@ -26,6 +26,7 @@ type EngineActionSet = {
 };
 
 const MAX_CONSECUTIVE_RECOVERABLE_ERRORS = 5;
+const PENDING_ACT_GRACE_MS = 100;
 
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
@@ -53,22 +54,30 @@ export class Scheduler {
     /** Manual and auto-act forces. Client forces are owned by their games. */
     public forceQueue: Array<ActionCandidate[] | null> = $state([]);
     public readonly autoPoker: AutoPoker;
+    private readonly pendingActTimer: ReturnType<typeof debounced>;
 
     constructor(private readonly session: Session) {
         this.registry = this.session.registry;
-        $effect(() => {
-            if (!this.canAct) return;
-            const gameForce = this.takeGameForce();
-            if (gameForce) {
-                this.forceGame(gameForce.game, gameForce.force);
-            } else if (this.forceQueue.length) {
-                const force = this.forceQueue.shift();
-                this.forceAct(force);
-            } else if (this.actPending) {
-                this.tryAct();
-            }
-        });
+        this.pendingActTimer = debounced(() => {
+            this.actPending = true;
+            this.drain();
+        }, PENDING_ACT_GRACE_MS);
+        session.onDispose(() => this.pendingActTimer.cancel());
+        $effect(() => this.drain());
         this.autoPoker = new AutoPoker(session);
+    }
+
+    private drain() {
+        if (!this.canAct) return;
+        const gameForce = this.takeGameForce();
+        if (gameForce) {
+            this.forceGame(gameForce.game, gameForce.force);
+        } else if (this.forceQueue.length) {
+            const force = this.forceQueue.shift();
+            this.forceAct(force);
+        } else if (this.actPending) {
+            this.tryAct();
+        }
     }
     public get activeMutes() {
         return [
@@ -85,6 +94,15 @@ export class Scheduler {
     }
     public queueForce(actions: ActionCandidate[] | null) {
         this.forceQueue.push(actions);
+    }
+
+    public requestAct(graceIfNoActions = false) {
+        if (graceIfNoActions && this.activeActionCandidates().length === 0) {
+            this.pendingActTimer();
+        } else {
+            this.pendingActTimer.cancel();
+            this.actPending = true;
+        }
     }
 
     public onGameForce(priority: ForcePriority) {
@@ -144,6 +162,7 @@ export class Scheduler {
         forceContext?: QueuedGameForce["data"],
         priority: ForcePriority = "low",
     ) {
+        this.pendingActTimer.cancel();
         this.actPending = false;
         const ignores = this.checkIgnored();
         if (ignores.length) {
