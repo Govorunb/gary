@@ -12,6 +12,7 @@
         modelId?: string;
         overrides?: ModelMetadataOverrides;
         autoLoad?: boolean;
+        sourceId?: string;
         loadMetadata?: (
             modelId: string,
             refresh?: boolean,
@@ -22,6 +23,7 @@
         modelId = '',
         overrides = $bindable(),
         autoLoad = false,
+        sourceId = '',
         loadMetadata,
     }: Props = $props();
 
@@ -30,7 +32,11 @@
     let isLoading = $state(false);
     let open = $state(false);
     let requestVersion = 0;
-    let lastAutomaticLookup: { model: string; enabled: boolean } | undefined;
+    let lastAutomaticLookup: {
+        model: string;
+        sourceId: string;
+        enabled: boolean;
+    } | undefined;
 
     const model = $derived(modelId.trim());
     const override = $derived(model ? overrides?.[model] : undefined);
@@ -39,12 +45,18 @@
     $effect(() => {
         const requestedModel = model;
         const shouldAutoLoad = autoLoad;
+        const requestedSourceId = sourceId;
         const loader = untrack(() => loadMetadata);
         if (
             lastAutomaticLookup?.model === requestedModel
+            && lastAutomaticLookup.sourceId === requestedSourceId
             && lastAutomaticLookup.enabled === shouldAutoLoad
         ) return;
-        lastAutomaticLookup = { model: requestedModel, enabled: shouldAutoLoad };
+        lastAutomaticLookup = {
+            model: requestedModel,
+            sourceId: requestedSourceId,
+            enabled: shouldAutoLoad,
+        };
 
         const version = ++requestVersion;
         providerMetadata = undefined;

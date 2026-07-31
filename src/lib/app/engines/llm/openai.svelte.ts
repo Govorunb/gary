@@ -1,7 +1,5 @@
 import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type LLMRequest } from ".";
 import type { UserPrefs } from "$lib/app/prefs.svelte";
-import { isTauri } from "@tauri-apps/api/core";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageFunctionToolCall } from "openai/resources/chat/completions";
 import z from "zod";
@@ -11,6 +9,9 @@ import { parseError, LogLevel } from "$lib/app/utils";
 import type { EventDef } from "$lib/app/events";
 import { EVENT_BUS } from "$lib/app/events/bus";
 import { v4 as uuid } from "uuid";
+import { getLMStudioModelMetadata, isLMStudioEngine } from "./lm-studio";
+import { getOllamaModelMetadata, isOllamaEngine } from "./ollama";
+import { openAICompatFetch } from "./openai-compat";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
@@ -31,6 +32,24 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
 
     protected modelId(): string | undefined {
         return this.options.modelId;
+    }
+
+    protected resolveProviderContextWindow(model: string): ResultAsync<number, EngineActError> {
+        if (isLMStudioEngine(this.id, this.options)) {
+            return new ResultAsync(getLMStudioModelMetadata(
+                this.options.serverUrl,
+                model,
+                { apiKey: this.options.apiKey },
+            ).then(result => result.map(metadata => metadata.contextWindow)));
+        }
+        if (isOllamaEngine(this.id, this.options)) {
+            return new ResultAsync(getOllamaModelMetadata(
+                this.options.serverUrl,
+                model,
+                { apiKey: this.options.apiKey },
+            ).then(result => result.map(metadata => metadata.contextWindow)));
+        }
+        return super.resolveProviderContextWindow(model);
     }
 
     generate(request: LLMRequest, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError> {
@@ -54,9 +73,6 @@ export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
 export type ReasoningEffort = OpenAIPrefs["reasoningEffort"];
 
 const OPENAI_COMPAT_NO_API_KEY = " ";
-// https://github.com/ollama/ollama/issues/10507
-// https://github.com/Govorunb/gary/issues/7
-const LOCAL_LLM_ORIGIN = "http://localhost";
 const HARMONY_CHANNEL_SUFFIX = /<\|channel\|>(?:analysis|commentary|final)$/;
 
 function normalizeToolName(name: string): string {
@@ -69,39 +85,6 @@ function responseError(value: unknown): Error | undefined {
     const message = (error as { message?: unknown } | null)?.message;
     return typeof message === "string" ? new Error(message, { cause: error }) : parseError(error);
 }
-
-function isLocalOrPrivateHttpEndpoint(endpoint: string): boolean {
-    try {
-        const url = new URL(endpoint);
-        if (url.protocol !== "http:" && url.protocol !== "https:") return false;
-        const host = url.hostname.toLowerCase();
-        if (host === "localhost" || host.endsWith(".localhost")) return true;
-        if (host === "127.0.0.1" || host === "::1" || host === "[::1]") return true;
-        if (/^10\./.test(host)) return true;
-        if (/^192\.168\./.test(host)) return true;
-        const match = host.match(/^172\.(\d+)\./);
-        if (!match) return false;
-        const second = Number(match[1]);
-        return second >= 16 && second <= 31;
-    } catch {
-        return false;
-    }
-}
-
-function requestUrl(input: string | URL | Request): string {
-    return input instanceof Request ? input.url : input.toString();
-}
-
-export const openAICompatFetch: typeof fetch = (input, init) => {
-    if (!isTauri()) return globalThis.fetch(input, init);
-
-    const url = requestUrl(input);
-    if (!isLocalOrPrivateHttpEndpoint(url)) return tauriFetch(input, init);
-
-    const headers = new Headers(init?.headers);
-    headers.set("Origin", LOCAL_LLM_ORIGIN);
-    return tauriFetch(input, { ...init, headers });
-};
 
 // At some point we migrated OpenRouter from its own (beta) SDK back to just using the OpenAI-compatible API
 // It started to look a bit too similar after that... the refactoring itch was irresistible

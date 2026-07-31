@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { getLMStudioModelMetadata, isLMStudioEngine } from '$lib/app/engines/llm/lm-studio';
+    import { getOllamaModelMetadata, isOllamaEngine } from '$lib/app/engines/llm/ollama';
     import { zOpenAIPrefs } from '$lib/app/engines/llm/openai.svelte';
     import { StringField, BooleanField, UrlField, SelectField } from '$lib/ui/common/form';
     import Hotkey from '$lib/ui/common/Hotkey.svelte';
@@ -12,12 +14,8 @@
 
 <EngineConfig {engineId} {schema} {close}>
     {#snippet configForm(dirtyConfig)}
-        {@const isOllama = engineId === 'ollama'
-            || dirtyConfig.name.match(/\bollama\b/i)
-            || dirtyConfig.serverUrl.match(":11434/")}
-        {@const isLMStudio = engineId === 'lmstudio'
-            || dirtyConfig.name.match(/\blms|lmstudio|lm studio\b/i)
-            || dirtyConfig.serverUrl.match(":1234/")}
+        {@const isOllama = isOllamaEngine(engineId, dirtyConfig)}
+        {@const isLMStudio = isLMStudioEngine(engineId, dirtyConfig)}
         <StringField
             bind:value={dirtyConfig.name}
             label="Name"
@@ -61,6 +59,21 @@
             <ModelMetadata
                 modelId={dirtyConfig.modelId}
                 bind:overrides={dirtyConfig.modelMetadata}
+                autoLoad={isLMStudio || isOllama}
+                sourceId={dirtyConfig.serverUrl}
+                loadMetadata={isLMStudio
+                    ? (modelId, refresh) => getLMStudioModelMetadata(
+                        dirtyConfig.serverUrl,
+                        modelId,
+                        { refresh, apiKey: dirtyConfig.apiKey },
+                    )
+                    : isOllama
+                    ? (modelId, refresh) => getOllamaModelMetadata(
+                        dirtyConfig.serverUrl,
+                        modelId,
+                        { refresh, apiKey: dirtyConfig.apiKey },
+                    )
+                    : undefined}
             />
         </div>
         <BooleanField
