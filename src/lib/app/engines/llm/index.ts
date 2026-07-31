@@ -76,7 +76,7 @@ Assume your name is Gary unless the user refers to you otherwise. You may also e
 export const TOOL_SYSTEM_PROMPT = `\
 ## Response Format
 
-Perform client actions through the provided tools. Ordinary text communicates with the human user running your software and is not sent to any clients. In-game characters cannot hear ordinary text unless there is a specific action for it.\
+Perform client actions through the provided tools. Call at most one tool per response. Ordinary text communicates with the human user running your software and is not sent to any clients. In-game characters cannot hear ordinary text unless there is a specific action for it.\
 `;
 
 export const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `\

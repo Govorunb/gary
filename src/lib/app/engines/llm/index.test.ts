@@ -59,6 +59,18 @@ class TestLLMEngine extends LLMEngine<CommonLLMOptions> {
 }
 
 describe("LLMEngine tool calling", () => {
+    test("instructs the model to make at most one tool call", async () => {
+        const engine = new TestLLMEngine(llmOptions());
+        engine.generation = {
+            text: "",
+            toolCalls: [{ id: "call-1", name: "move", arguments: "{}" }],
+        };
+
+        await engine.tryAct(createSession(), [{ name: "move" }]);
+
+        expect(engine.requests[0].messages[0].content).toContain("Call at most one tool per response.");
+    });
+
     test("clones reactive action schemas", async () => {
         const engine = new TestLLMEngine(llmOptions());
         const action = await registeredAction({
