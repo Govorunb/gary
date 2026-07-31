@@ -1,11 +1,18 @@
 <script lang="ts">
-    import { zOpenRouterPrefs, type OpenRouterPrefs, ENGINE_ID, OpenRouter } from '$lib/app/engines/llm/openrouter.svelte';
+    import {
+        zOpenRouterPrefs,
+        type OpenRouterPrefs,
+        ENGINE_ID,
+        getOpenRouterModelMetadata,
+        OpenRouter,
+    } from '$lib/app/engines/llm/openrouter.svelte';
     import { StringField, BooleanField, SelectField } from '$lib/ui/common/form';
     import type { ConfigProps } from './EngineConfig.svelte';
     import { toast } from 'svelte-sonner';
     import OutLink from '$lib/ui/common/OutLink.svelte';
     import EngineConfig from './EngineConfig.svelte';
     import { LoaderCircle } from '@lucide/svelte';
+    import ModelMetadata from './ModelMetadata.svelte';
 
     let isTestingApiKey: boolean = $state(false);
     let { engineId, close }: ConfigProps<typeof ENGINE_ID> = $props();
@@ -62,25 +69,39 @@
                 {/if}
             </button>
         {/if}
-        <StringField
-            bind:value={dirtyConfig.model}
-            label="Model"
-            placeholder="openrouter/auto"
-        >
-            {#snippet description()}
-                <p class="note">
-                    Visit
-                    <OutLink href="https://openrouter.ai/models">OpenRouter</OutLink>
-                    to pick a model.
-                    <OutLink href="https://openrouter.ai/docs/features/presets">Presets</OutLink>
-                    and
-                    <OutLink href="https://openrouter.ai/docs/faq#what-are-model-variants">variants</OutLink>
-                    are supported.
-                    <br/>
-                    To configure preferred providers or fallback models, create a preset in your OpenRouter account.
-                </p>
-            {/snippet}
-        </StringField>
+        <div class="fcol-2">
+            <StringField
+                bind:value={dirtyConfig.model}
+                label="Model"
+                placeholder="openrouter/auto"
+            >
+                {#snippet description()}
+                    <p class="note">
+                        Visit
+                        <OutLink href="https://openrouter.ai/models">OpenRouter</OutLink>
+                        to pick a model.
+                        <OutLink href="https://openrouter.ai/docs/features/presets">Presets</OutLink>
+                        and
+                        <OutLink href="https://openrouter.ai/docs/faq#what-are-model-variants">variants</OutLink>
+                        are supported.
+                        <br/>
+                        To configure preferred providers or fallback models, create a preset in your OpenRouter account.
+                    </p>
+                {/snippet}
+            </StringField>
+            <ModelMetadata
+                modelId={dirtyConfig.model?.trim() || 'openrouter/auto'}
+                bind:overrides={dirtyConfig.modelMetadata}
+                autoLoad={Boolean(dirtyConfig.apiKey)}
+                loadMetadata={dirtyConfig.apiKey
+                    ? (modelId, refresh) => getOpenRouterModelMetadata(
+                        dirtyConfig.apiKey,
+                        modelId,
+                        { refresh },
+                    )
+                    : undefined}
+            />
+        </div>
         <BooleanField
             bind:value={dirtyConfig.allowDoNothing}
             label="Allow to do nothing"

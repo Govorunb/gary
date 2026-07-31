@@ -4,6 +4,7 @@
     import Hotkey from '$lib/ui/common/Hotkey.svelte';
     import OutLink from '$lib/ui/common/OutLink.svelte';
     import EngineConfig from './EngineConfig.svelte';
+    import ModelMetadata from './ModelMetadata.svelte';
 
     let { engineId, close } = $props();
     const schema = zOpenAIPrefs;
@@ -51,11 +52,17 @@
                 </p>
             </div>
         {/if}
-        <StringField
-            bind:value={dirtyConfig.modelId}
-            label="Model ID"
-            description="Model identifier (e.g., llama3.1-7b)"
-        />
+        <div class="fcol-2">
+            <StringField
+                bind:value={dirtyConfig.modelId}
+                label="Model ID"
+                description="Model identifier (e.g., llama3.1-7b)"
+            />
+            <ModelMetadata
+                modelId={dirtyConfig.modelId}
+                bind:overrides={dirtyConfig.modelMetadata}
+            />
+        </div>
         <BooleanField
             bind:value={dirtyConfig.allowDoNothing}
             label="Allow to do nothing"

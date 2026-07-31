@@ -3,7 +3,7 @@
     import { type HTMLInputAttributes } from 'svelte/elements';
 
     interface Props extends Omit<HTMLInputAttributes, 'type' | 'value' | 'id'> {
-        value: number;
+        value?: number;
         label?: string;
         placeholder?: string;
         required?: boolean;
@@ -46,7 +46,7 @@
     {#if slider}
         <div class="w-full frow-2 items-center">
             {@render input()}
-            <span class="min-w-6">{toStepPrecision(value, step)}</span>
+            <span class="min-w-6">{toStepPrecision(value ?? 0, step)}</span>
         </div>
     {:else}
         {@render input()}
