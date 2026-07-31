@@ -165,6 +165,21 @@ describe("LLMEngine tool calling", () => {
         }
     });
 
+    test("treats an unavailable tool call as recoverable", async () => {
+        const engine = new TestLLMEngine(llmOptions());
+        engine.generation = {
+            text: "",
+            toolCalls: [{ id: "call-1", name: "old_action", arguments: "{}" }],
+        };
+
+        const result = await engine.tryAct(createSession(), [{ name: "current_action" }]);
+
+        expect(result._unsafeUnwrapErr()).toMatchObject({
+            message: "Model called unknown tool 'old_action'",
+            recoverable: true,
+        });
+    });
+
     test("offers wait alongside actions", async () => {
         const engine = new TestLLMEngine(llmOptions({ allowDoNothing: true }));
         engine.generation = {
@@ -265,6 +280,9 @@ describe("LLMEngine tool calling", () => {
 
         const result = await engine.tryAct(createSession(), []);
 
+        expect(result._unsafeUnwrapErr()).toMatchObject({
+            recoverable: false,
+        });
         expect(result._unsafeUnwrapErr()).toBeInstanceOf(ConfigError);
         expect(engine.requests).toHaveLength(0);
     });
@@ -336,6 +354,9 @@ describe("LLMEngine structured output", () => {
 
         const result = await engine.tryAct(createSession(), [{ name: "move" }]);
 
-        expect(result._unsafeUnwrapErr()).toMatchObject({ message: "Model selected unavailable action 'invented_action'" });
+        expect(result._unsafeUnwrapErr()).toMatchObject({
+            message: "Model selected unavailable action 'invented_action'",
+            recoverable: true,
+        });
     });
 });

@@ -178,19 +178,19 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
 
         const generation = genRes.value;
         if (generation.toolCalls.length > 1) {
-            return err(new EngineError("Model returned multiple tool calls", undefined, false));
+            return err(new EngineError("Model returned multiple tool calls"));
         }
         const toolCall = generation.toolCalls[0];
         if (toolCall) {
             if (toolCall.name === WAIT_TOOL_NAME) {
                 if (isForce || !this.options.allowDoNothing) {
-                    return err(new EngineError("Model called wait when waiting was not allowed", undefined, false));
+                    return err(new EngineError("Model called wait when waiting was not allowed"));
                 }
                 return ok("skip");
             }
             const callable = callableActions.find(({ tool }) => tool.function.name === toolCall.name);
             if (!callable) {
-                return err(new EngineError(`Model called unknown tool '${toolCall.name}'`, undefined, false));
+                return err(new EngineError(`Model called unknown tool '${toolCall.name}'`));
             }
             const args = jsonParse(toolCall.arguments)
                 .mapErr(e => new EngineError(`Failed to parse tool arguments: ${e}`, e));
@@ -223,7 +223,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 : err(new EngineError("Model returned no tool call or text", undefined, true));
         }
         if (isForce || !this.options.allowYapping) {
-            return err(new EngineError("Model returned text when speaking was not allowed", undefined, false));
+            return err(new EngineError("Model returned text when speaking was not allowed"));
         }
         EVENT_BUS.emit("api/actor/generated", {
             engineId: this.id,
@@ -264,13 +264,13 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         }
         if (zWait.safeParse(envelope.data.command).success) {
             return isForce
-                ? err(new EngineError("Model waited during a forced action", undefined, false))
+                ? err(new EngineError("Model waited during a forced action"))
                 : ok("skip");
         }
         const say = zSay.safeParse(envelope.data.command);
         if (say.success) {
             return isForce
-                ? err(new EngineError("Model spoke during a forced action", undefined, false))
+                ? err(new EngineError("Model spoke during a forced action"))
                 : ok(say.data);
         }
         const actionCommand = zActionCommand.safeParse(envelope.data.command);
@@ -279,10 +279,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         }
         const action = actions.find(candidate => candidate.name === actionCommand.data.action);
         if (!action) {
-            return err(new EngineError(`Model selected unavailable action '${actionCommand.data.action}'`, undefined, false));
+            return err(new EngineError(`Model selected unavailable action '${actionCommand.data.action}'`));
         }
         if (action.schema && actionCommand.data.data === undefined) {
-            return err(new EngineError(`Model omitted data for action '${action.name}'`, undefined, false));
+            return err(new EngineError(`Model omitted data for action '${action.name}'`));
         }
         return ok({
             name: action.name,
@@ -590,6 +590,6 @@ const zActionCommand = z.strictObject({
 /** Error indicating a configuration issue. */
 export class ConfigError extends EngineError {
     constructor(public readonly message: string, public readonly configPath?: string[]) {
-        super(message);
+        super(message, undefined, false);
     }
 }

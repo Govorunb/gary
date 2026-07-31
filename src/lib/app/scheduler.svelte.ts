@@ -25,6 +25,8 @@ type EngineActionSet = {
     targetsByName: Map<string, EngineActionTarget>;
 };
 
+const MAX_CONSECUTIVE_RECOVERABLE_ERRORS = 5;
+
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
     public muted = $state(false);
@@ -37,6 +39,8 @@ export class Scheduler {
     private readonly registry: Registry;
     #abort: AbortController | null = $state(null);
     #activePriority: ForcePriority | null = null;
+    #failedEngine: Engine<unknown> | null = null;
+    #consecutiveEngineErrors = 0;
     /** A signal telling the scheduler to prompt the active engine to act as soon as possible.
      * This can be flipped true by:
      * - Non-silent context messages
@@ -171,9 +175,12 @@ export class Scheduler {
         this.#activePriority = null;
         this.busy = false;
 
+        if (actRes.isOk()) {
+            this.resetEngineErrors();
+        }
         return actRes
             .asyncAndThrough(act => this.perform(act, force, engine, actionSet.targetsByName))
-            .orTee(e => e instanceof EngineError && this.onError(e));
+            .orTee(e => e instanceof EngineError && this.onError(e, engine));
     }
 
     private activeActionCandidates(): ActionCandidate[] {
@@ -295,19 +302,34 @@ export class Scheduler {
         return out;
     }
 
-    private onError(err: EngineActError) {
-        if (err === "cancelled") {
-            EVENT_BUS.emit('app/scheduler/act/cancelled');
-            return;
+    private onError(err: EngineError, engine: Engine<unknown>) {
+        if (this.#failedEngine !== engine) {
+            this.#failedEngine = engine;
+            this.#consecutiveEngineErrors = 0;
         }
+        this.#consecutiveEngineErrors++;
+        const paused = !err.recoverable
+            || this.#consecutiveEngineErrors >= MAX_CONSECUTIVE_RECOVERABLE_ERRORS;
         const errMsg = (err.cause as Error)?.message;
-        EVENT_BUS.emit('app/scheduler/act/error', { message: err.message, cause: errMsg });
-        this.errored = true;
+        EVENT_BUS.emit('app/scheduler/act/error', {
+            message: err.message,
+            cause: errMsg,
+            recoverable: err.recoverable,
+            consecutiveErrors: this.#consecutiveEngineErrors,
+            paused,
+        });
+        this.errored = paused;
+    }
+
+    private resetEngineErrors() {
+        this.#failedEngine = null;
+        this.#consecutiveEngineErrors = 0;
     }
 
     /** Should only be called through a manual action by the user. */
     public clearError() {
         this.errored = false;
+        this.resetEngineErrors();
     }
 }
 
@@ -425,7 +447,13 @@ export const EVENTS = [
     },
     {
         key: 'app/scheduler/act/error',
-        dataSchema: {} as { message: string; cause?: string; },
+        dataSchema: {} as {
+            message: string;
+            cause?: string;
+            recoverable: boolean;
+            consecutiveErrors: number;
+            paused: boolean;
+        },
         description: "Engine error during acting",
         level: LogLevel.Error,
     },

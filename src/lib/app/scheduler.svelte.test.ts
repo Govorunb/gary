@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
-import { err, okAsync, type Result, ResultAsync } from "neverthrow";
+import { err, errAsync, okAsync, type Result, ResultAsync } from "neverthrow";
 import { Scheduler } from "./scheduler.svelte";
-import type { Engine, EngineAct, EngineActResult } from "./engines/index.svelte";
+import { EngineError, type Engine, type EngineAct, type EngineActResult } from "./engines/index.svelte";
 import type { Action, ActData, ForcePriority } from "$lib/api/v1/spec";
 import type { Game, QueuedGameForce } from "$lib/api/game.svelte";
 import type { Session } from "./session.svelte";
@@ -207,6 +207,74 @@ describe("Scheduler force priority", () => {
             expect(signals[0].aborted).toBe(true);
             expect((await acting).isErr()).toBe(true);
             expect(scheduler.busy).toBe(false);
+        });
+    });
+});
+
+describe("Scheduler engine errors", () => {
+    test("pauses after five consecutive recoverable errors", async () => {
+        const game = createFakeGame("Test Game", "test", [{ name: "move" }]);
+        const engine = {
+            id: "failing-engine",
+            name: "Failing Engine",
+            tryAct: vi.fn(() => errAsync(new EngineError("bad model output"))),
+        } as unknown as Engine<unknown>;
+
+        await withScheduler([game], engine, async scheduler => {
+            for (let i = 0; i < 4; i++) {
+                expect((await scheduler.tryAct()).isErr()).toBe(true);
+                expect(scheduler.errored).toBe(false);
+            }
+
+            expect((await scheduler.tryAct()).isErr()).toBe(true);
+            expect(scheduler.errored).toBe(true);
+        });
+    });
+
+    test("resets recoverable errors after a successful generation", async () => {
+        const game = createFakeGame("Test Game", "test", [{ name: "move" }]);
+        const outcomes: Array<EngineAct | EngineError> = [
+            new EngineError("bad model output"),
+            new EngineError("bad model output"),
+            { name: "move" },
+            new EngineError("bad model output"),
+            new EngineError("bad model output"),
+            new EngineError("bad model output"),
+            new EngineError("bad model output"),
+        ];
+        const engine = {
+            id: "flaky-engine",
+            name: "Flaky Engine",
+            tryAct: vi.fn(() => {
+                const outcome = outcomes.shift()!;
+                return outcome instanceof EngineError ? errAsync(outcome) : okAsync(outcome);
+            }),
+        } as unknown as Engine<unknown>;
+
+        await withScheduler([game], engine, async scheduler => {
+            for (let i = 0; i < 2; i++) {
+                expect((await scheduler.tryAct()).isErr()).toBe(true);
+            }
+            expect((await scheduler.tryAct()).isOk()).toBe(true);
+            for (let i = 0; i < 4; i++) {
+                expect((await scheduler.tryAct()).isErr()).toBe(true);
+            }
+
+            expect(scheduler.errored).toBe(false);
+        });
+    });
+
+    test("pauses immediately for non-recoverable errors", async () => {
+        const game = createFakeGame("Test Game", "test", [{ name: "move" }]);
+        const engine = {
+            id: "misconfigured-engine",
+            name: "Misconfigured Engine",
+            tryAct: vi.fn(() => errAsync(new EngineError("invalid configuration", undefined, false))),
+        } as unknown as Engine<unknown>;
+
+        await withScheduler([game], engine, async scheduler => {
+            expect((await scheduler.tryAct()).isErr()).toBe(true);
+            expect(scheduler.errored).toBe(true);
         });
     });
 });
