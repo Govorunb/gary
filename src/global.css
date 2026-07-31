@@ -140,6 +140,17 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+html[data-battery-saver] *,
+html[data-battery-saver] *::before,
+html[data-battery-saver] *::after {
+    animation-iteration-count: 1;
+    backdrop-filter: none;
+}
+
+html[data-battery-saver] .dialog-backdrop {
+    background-color: rgb(0 0 0 / 40%);
+}
+
 /* shorthand for "flex column/row with gap X" */
 @utility fcol-* {
     @apply flex flex-col;

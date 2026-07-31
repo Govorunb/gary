@@ -128,6 +128,7 @@ export const zAppPrefs = z.strictObject({
     ctxInputSilent: z.boolean().fallback(false),
     manualSendSchemaCollapsed: z.boolean().fallback(true),
     hideSensitiveInfo: z.boolean().fallback(true),
+    batterySaver: z.boolean().fallback(false),
     actionListDensity: z.enum(["default", "compact"]).fallback("default"),
     rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
     character: z.strictObject({

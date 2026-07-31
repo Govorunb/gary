@@ -155,6 +155,18 @@
                     />
                 </div>
             </div>
+            <div class="field">
+                <div class="field-heading">
+                    <span id="battery-saver-label" class="field-label">Battery saver</span>
+                    <TeachingTooltip>
+                        <p>Reduces animations and visual effects to help save battery power.</p>
+                    </TeachingTooltip>
+                    <Switch
+                        bind:checked={userPrefs.app.batterySaver}
+                        aria-labelledby="battery-saver-label"
+                    />
+                </div>
+            </div>
             <div class="field stacked">
                 <label class="field-label" for="action-list-density">Action list density</label>
                 <select

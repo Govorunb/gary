@@ -29,6 +29,10 @@
     __global.REGISTRY = session.registry;
     __global.USER_PREFS = session.userPrefs;
 
+    $effect(() => {
+        document.documentElement.toggleAttribute('data-battery-saver', session.userPrefs.app.batterySaver);
+    });
+
     // delete localstorage (dev hotkey)
     registerAppHotkey(['Backspace', 'Delete', 'Shift', 'L'], clearLocalStorage);
     // trigger safe mode (dev hotkey)

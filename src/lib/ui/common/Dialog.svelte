@@ -49,7 +49,7 @@
     {/if}
     <Portal>
         <Dialog.Backdrop class={[
-            "layer-dialog-backdrop fixed inset-0 transition-opacity",
+            "dialog-backdrop layer-dialog-backdrop fixed inset-0 transition-opacity",
             useBackdropBlur ? "bg-black/20 backdrop-blur-sm" : "bg-black/40",
         ]} />
         <Dialog.Positioner class={positionClasses[position]}>
