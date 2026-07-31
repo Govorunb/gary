@@ -59,6 +59,13 @@ function normalizeToolName(name: string): string {
     return name.replace(HARMONY_CHANNEL_SUFFIX, "");
 }
 
+function responseError(value: unknown): Error | undefined {
+    const error = (value as { error?: unknown } | null)?.error;
+    if (!error) return;
+    const message = (error as { message?: unknown } | null)?.message;
+    return typeof message === "string" ? new Error(message, { cause: error }) : parseError(error);
+}
+
 function isLocalOrPrivateHttpEndpoint(endpoint: string): boolean {
     try {
         const url = new URL(endpoint);
@@ -212,7 +219,17 @@ export class OpenAIClient {
         const resp = (response as RespOrError).choices?.[0];
         if (!resp) {
             EVENT_BUS.emit('app/engines/llm/error_result', { reqId });
-            return err(new EngineError(`${this.name} did not return successful result`, parseError(res.value)));
+            return err(new EngineError(
+                `${this.name} did not return successful result`,
+                responseError(response) ?? parseError(response),
+            ));
+        }
+        if ((resp.finish_reason as string) === "error") {
+            EVENT_BUS.emit('app/engines/llm/error_result', { reqId });
+            return err(new EngineError(
+                `${this.name} generation failed`,
+                responseError(resp) ?? parseError(resp),
+            ));
         }
         if (resp.finish_reason !== "stop" && resp.finish_reason !== "length" && resp.finish_reason !== "tool_calls") {
             EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'finish_reason' });

@@ -152,6 +152,42 @@ describe("OpenAIClient", () => {
         }), expect.any(Object));
     });
 
+    test("surfaces provider errors returned in a completion choice", async () => {
+        const prefs = $state<OpenAIPrefs>({
+            name: "OpenRouter",
+            allowDoNothing: false,
+            allowYapping: false,
+            promptingStrategy: "tools",
+            reasoningEffort: "none",
+            apiKey: "test-key",
+            serverUrl: "https://openrouter.ai/api/v1",
+            modelId: "openai/gpt-oss-120b",
+        });
+        const client = new OpenAIClient({ prefs });
+        openAIMock.create.mockResolvedValue({
+            choices: [{
+                finish_reason: "error",
+                error: {
+                    code: 502,
+                    message: "Tool call validation failed: attempted to call unavailable tool 'serve_customer'",
+                    metadata: { error_type: "provider_unavailable" },
+                },
+                message: { content: null },
+            }],
+        });
+
+        const result = await client.generate(request);
+
+        const error = result._unsafeUnwrapErr();
+        expect(error).not.toBe("cancelled");
+        if (error === "cancelled") throw new Error("Expected an engine error");
+        expect(error.message).toBe("OpenRouter generation failed");
+        expect(error.cause).toMatchObject({
+            message: "Tool call validation failed: attempted to call unavailable tool 'serve_customer'",
+        });
+        expect(error.recoverable).toBe(true);
+    });
+
     test("sends a strict structured output schema", async () => {
         const prefs = $state<OpenAIPrefs>({
             name: "OpenAI",
