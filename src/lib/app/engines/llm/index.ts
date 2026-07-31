@@ -372,7 +372,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (forceContext?.ephemeral_context) {
                 messages.push(this.forceMessage(forceContext));
             }
-            messages.push(this.closerMessage(actions));
+            messages.push(this.closerMessage(actions, callableActions));
 
             if (this.options.promptingStrategy === "json") {
                 return {
@@ -744,9 +744,19 @@ The custom user instructions are as follows:
     }
 
     /** An ephemeral reminder at the end of context. */
-    protected closerMessage(actions: Action[]): OpenAIMessage {
+    protected closerMessage(actions: Action[], callableActions: CallableAction[]): OpenAIMessage {
         const hasActions = !!actions.length;
         const contents = [hasActions ? "It is your turn to act." : "It is your turn to respond."];
+        if (this.options.promptingStrategy === "tools") {
+            if (callableActions.length) {
+                contents.push(
+                    `Currently available client action tools (complete list): ${callableActions.map(({ tool }) => `\`${tool.function.name}\``).join(", ")}.`,
+                    "Do not call a client action tool from an earlier turn unless it appears in this list.",
+                );
+            } else {
+                contents.push("No client action tools are currently available.");
+            }
+        }
         if (this.options.allowDoNothing) {
             contents.push(this.options.promptingStrategy === "tools"
                 ? `You may use the \`${WAIT_TOOL_NAME}\` tool to end the turn without acting or speaking.`

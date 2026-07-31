@@ -184,6 +184,20 @@ describe("LLMEngine tool calling", () => {
         }
     });
 
+    test("repeats the complete current tool inventory at the live edge", async () => {
+        const engine = new TestLLMEngine(llmOptions());
+        engine.generation = {
+            text: "",
+            toolCalls: [{ id: "call-1", name: "current_action", arguments: "{}" }],
+        };
+
+        await engine.tryAct(createSession(), [{ name: "current_action" }]);
+
+        const closer = engine.requests[0].messages.at(-1)?.content;
+        expect(closer).toContain("Currently available client action tools (complete list): `current_action`.");
+        expect(closer).toContain("Do not call a client action tool from an earlier turn");
+    });
+
     test("treats an unavailable tool call as recoverable", async () => {
         const engine = new TestLLMEngine(llmOptions());
         engine.generation = {
