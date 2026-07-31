@@ -9,8 +9,19 @@ import type {
     ChatCompletionToolChoiceOption,
 } from "openai/resources/chat/completions";
 import type { JSONSchema, JSONSchemaDefinition } from "openai/lib/jsonschema";
-import { err, ok, type Result, ResultAsync } from "neverthrow";
+import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
+import {
+    completionReserve,
+    estimateRequestTokens,
+    INITIAL_TOKENS_PER_BYTE,
+    MIN_CALIBRATED_TOKENS_PER_BYTE,
+    reportedPromptTokens,
+    requestByteLength,
+    type ContextBudget,
+    type ContextDiagnostics,
+} from "./context-window";
+import { modelMetadataOverride, zModelMetadataOverrides } from "./model-metadata";
 import {
     Engine,
     EngineError,
@@ -26,6 +37,8 @@ export const zLLMOptions = z.strictObject({
     allowYapping: z.boolean().fallback(false),
     /** How actions and optional commands are constrained in model responses. */
     promptingStrategy: z.enum(["json", "tools"]).fallback("json"),
+    /** User-edited model metadata, keyed by the configured model identifier. */
+    modelMetadata: zModelMetadataOverrides.optional(),
 });
 
 export const DEFAULT_SYSTEM_PROMPT = `\
@@ -87,6 +100,7 @@ export type LLMGeneration = {
         reasoning?: unknown;
         usage?: unknown;
         response?: unknown;
+        context?: ContextDiagnostics;
     };
 };
 export type LLMRequest = {
@@ -94,6 +108,7 @@ export type LLMRequest = {
     tools?: ChatCompletionFunctionTool[];
     toolChoice?: ChatCompletionToolChoiceOption;
     responseSchema?: JSONSchema;
+    maxTokens?: number;
 };
 
 const WAIT_TOOL_NAME = "__wait__";
@@ -115,8 +130,15 @@ type CallableAction = {
     tool: ChatCompletionFunctionTool;
 };
 
+type HistoryUnit = {
+    indexes: number[];
+    messages: OpenAIMessage[];
+    removalPriority: number;
+};
+
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
     abstract name: string;
+    private readonly tokensPerByte = new Map<string, number>();
 
     tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
         return new ResultAsync(this.actCore(session, actions, false, signal));
@@ -152,31 +174,30 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const callableActions = this.options.promptingStrategy === "tools"
             ? this.callableActions(resolvedActions)
             : [];
-        const messages = this.convertContext(session, callableActions);
-        if (forceContext?.ephemeral_context) {
-            messages.push(this.forceMessage(forceContext));
-        }
-        messages.push(this.closerMessage(resolvedActions));
+        const budgetResult = await this.resolveContextBudget();
+        if (budgetResult.isErr()) return err(budgetResult.error);
 
-        if (this.options.promptingStrategy === "json") {
-            return this.actWithStructuredOutput(messages, resolvedActions, isForce, signal);
-        }
+        const prepared = this.prepareRequest(
+            session,
+            callableActions,
+            resolvedActions,
+            isForce,
+            forceContext,
+            budgetResult.value,
+        );
+        if (prepared.isErr()) return err(prepared.error);
 
-        const tools = callableActions.map(({ tool }) => tool);
-        if (!isForce && this.options.allowDoNothing) {
-            tools.push(WAIT_TOOL);
-        }
-        const request: LLMRequest = {
-            messages: this.mergeUserTurns(messages),
-            ...(tools.length ? { tools } : {}),
-            ...(tools.length ? { toolChoice: isForce || !this.options.allowYapping ? "required" : "auto" } : {}),
-        };
+        const { request, diagnostics, calibrationKey } = prepared.value;
         const genRes = await this.generate(request, signal);
         if (genRes.isErr()) {
             return err(genRes.error);
         }
 
-        const generation = genRes.value;
+        const generation = this.recordContextUsage(genRes.value, request, diagnostics, calibrationKey);
+        if (this.options.promptingStrategy === "json") {
+            return this.parseStructuredOutput(generation, resolvedActions, isForce);
+        }
+
         if (generation.toolCalls.length > 1) {
             return err(new EngineError("Model returned multiple tool calls"));
         }
@@ -233,26 +254,19 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         return ok({ say: text, notify: false });
     }
 
-    private async actWithStructuredOutput(
-        messages: OpenAIContext,
+    private parseStructuredOutput(
+        generation: LLMGeneration,
         actions: Action[],
         isForce: boolean,
-        signal?: AbortSignal,
-    ): Promise<Result<EngineActResult, EngineActError>> {
-        const generation = await this.generate({
-            messages: this.mergeUserTurns(messages),
-            responseSchema: this.structuredOutputSchemaForActions(actions, isForce),
-        }, signal);
-        if (generation.isErr()) return err(generation.error);
-
-        const text = generation.value.text.trim();
+    ): Result<EngineActResult, EngineActError> {
+        const text = generation.text.trim();
         if (!text) {
             return err(new EngineError("Model returned no structured output", undefined, true));
         }
         EVENT_BUS.emit("api/actor/generated", {
             engineId: this.id,
             text,
-            metadata: generation.value.metadata,
+            metadata: generation.metadata,
         });
         const parsed = jsonParse(text)
             .mapErr(error => new EngineError(`Failed to parse JSON: ${error}`, error));
@@ -290,7 +304,157 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         });
     }
 
+    protected abstract modelId(): string | undefined;
+
+    protected resolveProviderContextWindow(model: string): ResultAsync<number, EngineActError> {
+        return errAsync(new ConfigError(
+            `${this.name} needs a context window for model '${model}'`,
+            ["modelMetadata", model, "contextWindow"],
+        ));
+    }
+
     protected abstract generate(request: LLMRequest, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError>;
+
+    private async resolveContextBudget(): Promise<Result<ContextBudget, EngineActError>> {
+        const model = this.modelId()?.trim();
+        if (!model) {
+            return err(new ConfigError(`${this.name} is missing a model ID`));
+        }
+        const override = modelMetadataOverride(this.options.modelMetadata, model);
+        if (override) {
+            return ok({
+                contextWindow: override.contextWindow,
+                source: "override",
+                model,
+            });
+        }
+        const discovered = await this.resolveProviderContextWindow(model);
+        return discovered.map(contextWindow => ({
+            contextWindow,
+            source: "provider" as const,
+            model,
+        }));
+    }
+
+    private prepareRequest(
+        session: Session,
+        callableActions: CallableAction[],
+        actions: Action[],
+        isForce: boolean,
+        forceContext: ForceContext | undefined,
+        budget: ContextBudget,
+    ): Result<{
+        request: LLMRequest;
+        diagnostics: ContextDiagnostics;
+        calibrationKey: string;
+    }, EngineActError> {
+        const units = this.historyUnits(session.context.actorView);
+        const pinned = units.find(unit => unit.indexes.includes(session.context.actorView.length - 1))
+            ?? units.at(-1);
+        const retained = new Set(units);
+        const reserve = completionReserve(budget.contextWindow);
+        const promptBudget = budget.contextWindow - reserve;
+        const calibrationKey = budget.model;
+        const density = this.tokensPerByte.get(calibrationKey) ?? INITIAL_TOKENS_PER_BYTE;
+
+        const render = (): LLMRequest => {
+            const messages: OpenAIMessage[] = [{
+                role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
+                content: this.systemPrompt(session, callableActions),
+            }];
+            for (const unit of units) {
+                if (retained.has(unit)) messages.push(...unit.messages);
+            }
+            if (forceContext?.ephemeral_context) {
+                messages.push(this.forceMessage(forceContext));
+            }
+            messages.push(this.closerMessage(actions));
+
+            if (this.options.promptingStrategy === "json") {
+                return {
+                    messages: this.mergeUserTurns(messages),
+                    responseSchema: this.structuredOutputSchemaForActions(actions, isForce),
+                    maxTokens: reserve,
+                };
+            }
+
+            const tools = callableActions.map(({ tool }) => tool);
+            if (!isForce && this.options.allowDoNothing) tools.push(WAIT_TOOL);
+            return {
+                messages: this.mergeUserTurns(messages),
+                ...(tools.length ? { tools } : {}),
+                ...(tools.length ? {
+                    toolChoice: isForce || !this.options.allowYapping ? "required" : "auto",
+                } : {}),
+                maxTokens: reserve,
+            };
+        };
+
+        let request = render();
+        const estimatedBefore = estimateRequestTokens(request, density);
+        let estimated = estimatedBefore;
+        let removedHistoryUnits = 0;
+        const removable = units
+            .filter(unit => unit !== pinned)
+            .toSorted((a, b) =>
+                a.removalPriority - b.removalPriority
+                || Math.min(...a.indexes) - Math.min(...b.indexes)
+            );
+        for (const unit of removable) {
+            if (estimated <= promptBudget) break;
+            retained.delete(unit);
+            removedHistoryUnits++;
+            request = render();
+            estimated = estimateRequestTokens(request, density);
+        }
+
+        if (estimated > promptBudget) {
+            return err(new ConfigError(
+                `${this.name}'s instructions, actions, or newest context exceed the ${budget.contextWindow}-token context window`,
+            ));
+        }
+
+        const diagnostics: ContextDiagnostics = {
+            ...budget,
+            completionReserve: reserve,
+            promptBudget,
+            estimatedPromptTokensBefore: estimatedBefore,
+            estimatedPromptTokens: estimated,
+            removedHistoryUnits,
+        };
+        if (removedHistoryUnits) {
+            EVENT_BUS.emit("app/engines/llm/context_trimmed", {
+                engineId: this.id,
+                ...diagnostics,
+            });
+        }
+        return ok({ request, diagnostics, calibrationKey });
+    }
+
+    private recordContextUsage(
+        generation: LLMGeneration,
+        request: LLMRequest,
+        diagnostics: ContextDiagnostics,
+        calibrationKey: string,
+    ): LLMGeneration {
+        const promptTokens = reportedPromptTokens(generation.metadata?.usage);
+        if (promptTokens) {
+            this.tokensPerByte.set(
+                calibrationKey,
+                Math.max(MIN_CALIBRATED_TOKENS_PER_BYTE, promptTokens / requestByteLength(request)),
+            );
+        }
+        return {
+            ...generation,
+            metadata: {
+                ...generation.metadata,
+                context: {
+                    ...diagnostics,
+                    ...(promptTokens ? { reportedPromptTokens: promptTokens } : {}),
+                },
+            },
+        };
+    }
 
     private structuredOutputSchemaForActions(actions: Action[], isForce: boolean): JSONSchema {
         const actionCommands = actions.map(action => {
@@ -461,19 +625,20 @@ The custom user instructions are as follows:
         return prompts.join("\n\n");
     }
 
-    // TODO: context trimming
-    private convertContext(session: Session, callableActions: CallableAction[]): OpenAIContext {
-        const events = session.context.actorView;
+    private historyUnits(events: ActorContextEvent[]): HistoryUnit[] {
         if (this.options.promptingStrategy === "json") {
-            const msgs = events.map(event => this.convertMessage(event)).filter(Boolean) as OpenAIMessage[];
-            msgs.unshift({
-                role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
-                content: this.systemPrompt(session, callableActions),
+            return events.flatMap((event, index) => {
+                const message = this.convertMessage(event);
+                return message ? [{
+                    indexes: [index],
+                    messages: [message],
+                    removalPriority: this.removalPriority(event),
+                }] : [];
             });
-            return msgs;
         }
+
         const consumedToolResults = new Set<number>();
-        const msgs: OpenAIMessage[] = [];
+        const units: HistoryUnit[] = [];
         for (let i = 0; i < events.length; i++) {
             if (consumedToolResults.has(i)) continue;
             const event = events[i];
@@ -486,19 +651,43 @@ The custom user instructions are as follows:
                 if (resultIndex === -1) continue;
                 const call = this.convertMessage(event);
                 const result = this.convertMessage(events[resultIndex]);
-                if (call && result) msgs.push(call, result);
+                if (call && result) {
+                    units.push({
+                        indexes: [i, resultIndex],
+                        messages: [call, result],
+                        removalPriority: 0,
+                    });
+                }
                 consumedToolResults.add(resultIndex);
                 continue;
             }
             if (event.key === "api/game/act/actor" && event.data.toolCallId) continue;
             const msg = this.convertMessage(event);
-            if (msg) msgs.push(msg);
+            if (msg) {
+                units.push({
+                    indexes: [i],
+                    messages: [msg],
+                    removalPriority: this.removalPriority(event),
+                });
+            }
         }
-        msgs.unshift({
-            role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
-            content: this.systemPrompt(session, callableActions),
-        });
-        return msgs;
+        return units;
+    }
+
+    private removalPriority(event: ActorContextEvent): number {
+        switch (event.key) {
+            case "api/game/connected":
+            case "api/game/disconnected":
+            case "api/game/act/actor":
+                return 0;
+            case "api/game/action_result":
+                return event.data.success ? 0 : 2;
+            case "api/actor/generated":
+            case "api/game/force":
+                return 1;
+            default:
+                return 2;
+        }
     }
 
     protected shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(): "system" | "developer" {

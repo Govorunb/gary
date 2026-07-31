@@ -5,6 +5,7 @@ import { SelfTestHarness } from "$lib/testing/self-test-harness";
 import { okAsync, type ResultAsync } from "neverthrow";
 import { describe, expect, test } from "vitest";
 import type { EngineActError } from "../index.svelte";
+import { EVENT_BUS } from "$lib/app/events/bus";
 import {
     ConfigError,
     LLMEngine,
@@ -18,6 +19,7 @@ function llmOptions(options: Partial<CommonLLMOptions> = {}): CommonLLMOptions {
         allowDoNothing: false,
         allowYapping: false,
         promptingStrategy: "tools",
+        modelMetadata: { test: { contextWindow: 100_000 } },
         ...options,
     };
 }
@@ -40,9 +42,14 @@ class TestLLMEngine extends LLMEngine<CommonLLMOptions> {
     readonly name = "Test LLM";
     generation: LLMGeneration = { text: "", toolCalls: [] };
     requests: LLMRequest[] = [];
+    model = "test";
 
     constructor(options: CommonLLMOptions) {
         super({ engines: { test: options } } as unknown as UserPrefs, "test");
+    }
+
+    protected modelId(): string {
+        return this.model;
     }
 
     protected generate(request: LLMRequest): ResultAsync<LLMGeneration, EngineActError> {
@@ -358,5 +365,172 @@ describe("LLMEngine structured output", () => {
             message: "Model selected unavailable action 'invented_action'",
             recoverable: true,
         });
+    });
+});
+
+describe("LLMEngine context trimming", () => {
+    test("removes protocol bookkeeping before game context", async () => {
+        const session = createSession();
+        (session.context.actorView as any[]).push(
+            {
+                id: "result",
+                timestamp: 1,
+                key: "api/game/action_result",
+                data: {
+                    game: { id: "game-1", name: "Chess" },
+                    act: { id: "action-1", name: "move" },
+                    success: true,
+                    message: "done ".repeat(500),
+                },
+            },
+            {
+                id: "context",
+                timestamp: 2,
+                key: "api/game/context",
+                data: {
+                    game: { id: "game-1", name: "Chess" },
+                    message: "position ".repeat(500),
+                    silent: true,
+                },
+            },
+            {
+                id: "latest",
+                timestamp: 3,
+                key: "ui/context/input",
+                data: { text: "make the best move", silent: false },
+            },
+        );
+        const original = structuredClone(session.context.actorView);
+        const engine = new TestLLMEngine(llmOptions({
+            allowYapping: true,
+            modelMetadata: { test: { contextWindow: 6_800 } },
+        }));
+        engine.generation = { text: "okay", toolCalls: [] };
+
+        const result = await engine.tryAct(session);
+
+        expect(result.isOk()).toBe(true);
+        const wire = JSON.stringify(engine.requests[0].messages);
+        expect(wire).not.toContain("done done");
+        expect(wire).toContain("position position");
+        expect(wire).toContain("make the best move");
+        expect(session.context.actorView).toStrictEqual(original);
+    });
+
+    test("removes tool calls and their results atomically", async () => {
+        const session = createSession();
+        (session.context.actorView as any[]).push(
+            {
+                id: "generated",
+                timestamp: 1,
+                key: "api/actor/generated",
+                data: {
+                    engineId: "test",
+                    text: "",
+                    toolCall: {
+                        id: "call-1",
+                        name: "move",
+                        arguments: JSON.stringify({ note: "old ".repeat(1_000) }),
+                    },
+                },
+            },
+            {
+                id: "sent",
+                timestamp: 2,
+                key: "api/game/act/actor",
+                data: {
+                    game: { id: "game-1", name: "Chess" },
+                    act: { id: "action-1", name: "move" },
+                    toolCallId: "call-1",
+                },
+            },
+            {
+                id: "latest",
+                timestamp: 3,
+                key: "api/game/context",
+                data: {
+                    game: { id: "game-1", name: "Chess" },
+                    message: "Your opponent moved.",
+                    silent: false,
+                },
+            },
+        );
+        const engine = new TestLLMEngine(llmOptions({
+            modelMetadata: { test: { contextWindow: 5_000 } },
+        }));
+        engine.generation = {
+            text: "",
+            toolCalls: [{ id: "call-2", name: "move", arguments: "{}" }],
+        };
+
+        const result = await engine.tryAct(session, [{ name: "move" }]);
+
+        expect(result.isOk()).toBe(true);
+        const wire = JSON.stringify(engine.requests[0].messages);
+        expect(wire).not.toContain("call-1");
+        expect(wire).not.toContain("Action sent to Chess");
+        expect(wire).toContain("Your opponent moved.");
+    });
+
+    test("fails before inference when mandatory content cannot fit", async () => {
+        const engine = new TestLLMEngine(llmOptions({
+            allowYapping: true,
+            modelMetadata: { test: { contextWindow: 1_024 } },
+        }));
+        engine.generation = { text: "okay", toolCalls: [] };
+
+        const result = await engine.tryAct(createSession());
+
+        expect(result._unsafeUnwrapErr()).toBeInstanceOf(ConfigError);
+        expect(result._unsafeUnwrapErr()).toMatchObject({
+            message: expect.stringContaining("exceed the 1024-token context window"),
+        });
+        expect(engine.requests).toHaveLength(0);
+    });
+
+    test("does not apply one model's override to another model", async () => {
+        const engine = new TestLLMEngine(llmOptions({
+            allowYapping: true,
+            modelMetadata: { test: { contextWindow: 100_000 } },
+        }));
+        engine.generation = { text: "okay", toolCalls: [] };
+
+        engine.model = "other";
+        const unknown = await engine.tryAct(createSession());
+        expect(unknown._unsafeUnwrapErr()).toMatchObject({
+            message: "Test LLM needs a context window for model 'other'",
+        });
+
+        engine.model = "test";
+        const restored = await engine.tryAct(createSession());
+        expect(restored.isOk()).toBe(true);
+    });
+
+    test("records the resolved budget and provider prompt usage", async () => {
+        const generatedEvents: any[] = [];
+        const subscription = EVENT_BUS.subscribe(["api/actor/generated"]);
+        subscription.onnext(event => generatedEvents.push(event));
+        const engine = new TestLLMEngine(llmOptions({ allowYapping: true }));
+        engine.generation = {
+            text: "okay",
+            toolCalls: [],
+            metadata: { usage: { prompt_tokens: 321 } },
+        };
+
+        try {
+            const result = await engine.tryAct(createSession());
+
+            expect(result.isOk()).toBe(true);
+            expect(engine.requests[0].maxTokens).toBe(4_096);
+            expect(generatedEvents.at(-1).data.metadata.context).toMatchObject({
+                contextWindow: 100_000,
+                source: "override",
+                model: "test",
+                completionReserve: 4_096,
+                reportedPromptTokens: 321,
+            });
+        } finally {
+            subscription.destroy();
+        }
     });
 });

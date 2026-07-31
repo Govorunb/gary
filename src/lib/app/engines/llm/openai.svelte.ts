@@ -29,6 +29,10 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         this.client = new OpenAIClient({get prefs() { return self.options; }});
     }
 
+    protected modelId(): string | undefined {
+        return this.options.modelId;
+    }
+
     generate(request: LLMRequest, signal?: AbortSignal): ResultAsync<LLMGeneration, EngineActError> {
         return new ResultAsync(this.client.generate(request, undefined, signal));
     }
@@ -132,6 +136,7 @@ export class OpenAIClient {
             model,
             messages: request.messages,
             stream: false,
+            max_tokens: request.maxTokens,
             ...(request.responseSchema ? {
                 response_format: {
                     type: "json_schema",
@@ -256,6 +261,22 @@ export class OpenAIClient {
 }
 
 export const EVENTS = [
+    {
+        key: 'app/engines/llm/context_trimmed',
+        dataSchema: {} as {
+            engineId: string;
+            contextWindow: number;
+            source: "override" | "provider";
+            model: string;
+            completionReserve: number;
+            promptBudget: number;
+            estimatedPromptTokensBefore: number;
+            estimatedPromptTokens: number;
+            removedHistoryUnits: number;
+        },
+        description: "Old LLM context trimmed to fit the model context window",
+        level: LogLevel.Debug,
+    },
     {
         key: 'app/engines/llm/network_error',
         dataSchema: {} as { reqId: string },

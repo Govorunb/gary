@@ -57,7 +57,7 @@ export const scrollNumInput: Attachment<HTMLInputElement> = (el) => {
         if (evt.deltaY === 0) return;
         evt.preventDefault(); // in case the browser has its own input scroll
         evt.deltaY < 0 ? target.stepUp() : target.stepDown();
-        target.dispatchEvent(new Event("input")); // svelte 5 targets 'input' and not 'change'
+        target.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
     };
     return on(el, "wheel", listener); // ignore chromium asking for { passive: true }, it's a trap (can't preventDefault)
 };
