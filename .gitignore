@@ -15,7 +15,3 @@ vite.config.ts.timestamp-*
 .agents
 tmp/
 
-# impeccable skill
-.impeccable/
-DESIGN.md
-PRODUCT.md

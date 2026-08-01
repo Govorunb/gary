@@ -1,4 +1,3 @@
-#![feature(if_let_guard)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
