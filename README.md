@@ -49,6 +49,10 @@ The app will check for updates via [GitHub Releases](https://github.com/Govorunb
 
 If you're coming in from the old Python app, you may have just `git pull`ed in an update that removed your whole app - uhhh, sorry. You can run `git switch python-app` to return to the old branch. Otherwise, if you want to update to the new Tauri app, you don't need to clone the repo anymore - just download and install from Releases.
 
+### Safe mode
+
+If broken preferences somehow ever prevent Gary from starting normally, hold <kbd>Esc</kbd>+<kbd>F1</kbd> while launching to force safe mode. This won't work on Wayland, so use the `--safe-mode` CLI argument there instead.
+
 ### FAQ <sub><sup>(nobody asked any of these so it's neither F nor A)</sup></sub>
 
 <details>
@@ -56,7 +60,7 @@ If you're coming in from the old Python app, you may have just `git pull`ed in a
 
 You can use a local inference provider like LMStudio/Ollama (my recommendation is LMStudio).
 
-Chances are, if you play around with local models, you probably already have a local chat app installed. And, now that local inference providers have gotten fairly okay at structured outputs, there's very little reason for me to manage inference myself. I'd much rather focus on app development.
+Chances are, if you play around with local models, you probably already have a local chat app installed. And, now that local inference providers have gotten fairly okay at structured outputs/tool calling, there's very little reason for me to manage inference myself. I'd much rather focus on app development.
 
 It's a win-win: I get to distribute a 5MB app, and you get to avoid compiling/downloading yet another 3 gigs of CUDA libraries to rot on your disk.
 

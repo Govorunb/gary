@@ -1,5 +1,7 @@
 import { UserPrefs } from "$lib/app/prefs.svelte";
 import type { LayoutLoad } from "./$types";
+import { invoke, isTauri } from "@tauri-apps/api/core";
+import { err } from "neverthrow";
 
 // Tauri doesn't have a Node.js server to do proper SSR
 // so we use adapter-static with a fallback to index.html to put the site in SPA mode
@@ -12,8 +14,9 @@ export const csr = true;
 // afaik the only way to do async init
 // technically blocks the initial render so is it really async anyway
 export const load: LayoutLoad = async () => {
+    const safeMode = isTauri() && await invoke<boolean>("is_safe_mode");
     return {
         // theoretically we can redirect to an error page if prefs fail to load
-        userPrefsData: await UserPrefs.loadData(),
+        userPrefsData: safeMode ? err("Launched in Safe Mode") : await UserPrefs.loadData(),
     }
 }
