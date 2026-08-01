@@ -81,8 +81,8 @@
             {#each activeDiagnostics as diag (diag.id)}
                 <DiagnosticRow {game} {diag} />
             {:else}
-                {@const diagCount = diagnostics.length}
-                {@const OKIcon = diagCount ? Info : Check}
+                {const diagCount = $derived(diagnostics.length)}
+                {const OKIcon = $derived(diagCount ? Info : Check)}
                 <div class="fcol-3 empty-state">
                     <OKIcon />
                     <p>No{diagCount ? (showHidden ? ' hidden ' : ' active ') : ' '}diagnostics</p>

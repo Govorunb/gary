@@ -44,7 +44,7 @@
 
 <radio-picker role="radiogroup">
     {#each items as item, i}
-        {@const dispName = typeof item === "string" ? item : i}
+        {const dispName = typeof item === "string" ? item : i}
         <label {...getItemLabelProps(item, i)}>
             <input type="radio" group={groupName}
                 id="{groupName}_{dispName}"

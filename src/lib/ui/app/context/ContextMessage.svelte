@@ -48,8 +48,8 @@
                 {timestamp.format("LTS")}
             </span>
             {#if source.type === 'client'}
-                {@const id = source.id}
-                {@const game = registry.getGame(id)}
+                {const id = $derived(source.id)}
+                {const game = $derived(registry.getGame(id))}
                 <button class="message-title"
                     tabindex="-1"
                     data-gone={boolAttr(!game)}
@@ -60,8 +60,8 @@
                 </button>
             {/if}
             {#if source.type === 'actor'}
-                {@const id = source.engineId}
-                {@const engine = session.engines[id]}
+                {const id = $derived(source.engineId)}
+                {const engine = $derived(session.engines[id])}
                 <button class="message-title"
                     tabindex="-1"
                     data-gone={boolAttr(!engine)}

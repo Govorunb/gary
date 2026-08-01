@@ -124,9 +124,9 @@
 
                     <div class="list">
                         {#each engines as [id, engine], i (id)}
-                            {@const active = session.activeEngine.id === id}
-                            {@const del = shiftPressed && canDelete(id)}
-                            {@const Icon = del ? Trash2 : Settings2}
+                            {const active = $derived(session.activeEngine.id === id)}
+                            {const del = $derived(shiftPressed && canDelete(id))}
+                            {const Icon = $derived(del ? Trash2 : Settings2)}
 
                             <div class="engine-row group" title="ID: {id}">
                                 <button
@@ -177,7 +177,7 @@
                     </div>
                     <div class="config-body">
                         {#if configEngineId && session.engines[configEngineId]}
-                            {@const ConfigComponent = getEngineConfigComponent(configEngineId)}
+                            {const ConfigComponent = $derived(getEngineConfigComponent(configEngineId))}
                             <ConfigComponent engineId={configEngineId} close={closeConfig} />
                         {:else}
                             <p class="text-neutral-500 p-4">Internal error: Engine {configEngineId} not found</p>

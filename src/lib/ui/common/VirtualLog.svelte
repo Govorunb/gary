@@ -177,7 +177,7 @@
     {:else}
         <div class="virtual-log-spacer" style:height={`${totalSize}px`}>
             {#each virtualItems as virtualItem (virtualItem.key)}
-                {@const item = items[virtualItem.index]}
+                {const item = $derived(items[virtualItem.index])}
                 {#if item !== undefined}
                     <div
                         class="virtual-log-row"

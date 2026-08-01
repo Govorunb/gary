@@ -14,8 +14,8 @@
 
 <EngineConfig {engineId} {schema} {close}>
     {#snippet configForm(dirtyConfig)}
-        {@const isOllama = isOllamaEngine(engineId, dirtyConfig)}
-        {@const isLMStudio = isLMStudioEngine(engineId, dirtyConfig)}
+        {const isOllama = $derived(isOllamaEngine(engineId, dirtyConfig))}
+        {const isLMStudio = $derived(isLMStudioEngine(engineId, dirtyConfig))}
         <StringField
             bind:value={dirtyConfig.name}
             label="Name"

@@ -28,7 +28,7 @@
     bind:selectedIndex {getItemLabelProps}
 >
     {#snippet renderItem(_, i)}
-        {@const Icon = themeIcons[i]}
+        {const Icon = themeIcons[i]}
         <div class="radio-item">
             <Icon />
         </div>

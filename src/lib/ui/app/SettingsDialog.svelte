@@ -336,9 +336,9 @@
                 </p>
             {/if}
             {#if updater.lastCheckResult}
-                {@const update = updater.update}
-                {@const err = updater.lastCheckResult.isErr() && updater.lastCheckResult.error}
-                {@const skipped = update && update.version === updater.skipVersion}
+                {const update = $derived(updater.update)}
+                {const err = $derived(updater.lastCheckResult.isErr() && updater.lastCheckResult.error)}
+                {const skipped = $derived(update && update.version === updater.skipVersion)}
                 <div class="callout" class:warn={err} class:success={update} class:note={skipped}>
                     <p class="text-xs">
                         {#if update}

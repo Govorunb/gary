@@ -52,7 +52,7 @@
             class="field-input"
         />
         {#if password && (value || peekingPassword)}
-            {@const Icon = peekingPassword ? EyeOff : Eye}
+            {const Icon = $derived(peekingPassword ? EyeOff : Eye)}
             <button
                 type="button"
                 class="peek-button"
