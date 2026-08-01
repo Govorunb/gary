@@ -34,6 +34,13 @@
             label="L*tency"
             description="Optional delay for Randy's responses (in milliseconds). If you set this too low and Randy gets stuck in a retry loop, the app will hang. You have been sufficiently informed and thus warned."
         />
+        <NumberField
+            bind:value={dirtyConfig.seed}
+            step={1}
+            label="Random seed"
+            placeholder="Random"
+            description="Random generator seed. Set for deterministic behavior, leave blank for random."
+        />
         {#if uiState.aprilFools}
             <div class="callout warn">
                 <span class="text-base font-semibold">

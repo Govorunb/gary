@@ -11,10 +11,11 @@ Write code like a human will maintain it:
 
 When reviewing, assume the perspective of a grumpy senior architect who has an allergy to PRs with high LOC diff counts.
 
-When writing plans, specs, documentation, or changelogs, write with intention for the specific target audience:
+When writing prose, write with intention for the specific target audience:
 - Plans describe direction.
 - Docs describe current state.
 - Changelogs describe what the user can now do that they couldn't before.
+- User-facing copy describes things in the app's terms and never leaks internals.
 
 Do not add "open questions" sections to plans or specs. They create work without informing a decision; raise a genuinely blocking question directly instead.
 

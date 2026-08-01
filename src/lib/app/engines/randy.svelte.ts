@@ -1,5 +1,5 @@
 import type { Action } from "$lib/api/v1/spec";
-import { generateFromJsonSchema, parseError, pickRandom, sleep } from "../utils";
+import { createJsonSchemaGenerator, parseError, sleep } from "../utils";
 import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "./index.svelte";
 import type { Session } from "../session.svelte";
 import z from "zod";
@@ -13,6 +13,7 @@ export const ENGINE_ID = "randy";
  */
 export class Randy extends Engine<RandyPrefs> {
     readonly name: string = "Randy";
+    private generator = $derived.by(() => createJsonSchemaGenerator(this.options.seed));
 
     constructor(userPrefs: UserPrefs) {
         super(userPrefs, ENGINE_ID);
@@ -34,10 +35,10 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
         if (session.uiState.aprilFools) {
             return errAsync(new EngineError("Randy API key invalid", new Error("Please re-enter the API key in Randy's engine config.")));
         }
-        if (Math.random() < this.options.chanceDoNothing) {
-            return okAsync("skip");
-        }
-        return this.forceAct(session, actions, signal);
+        return ResultAsync.fromPromise(
+            this.shouldSkip(),
+            e => new EngineError("Randy could not decide whether to act", parseError(e))
+        ).andThen(skip => skip ? okAsync("skip" as const) : this.forceAct(session, actions, signal));
     }
 
     forceAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError> {
@@ -51,22 +52,26 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
         return ResultAsync.fromPromise(
             sleep(this.options.latencyMs, signal),
             _ => "cancelled" as EngineActError
-        ).andThen(() => {
-            const action = pickRandom(resolvedActions);
-            return ResultAsync.fromPromise(
-                this.generate(action),
-                e => new EngineError(`Randy could not generate data for ${action.name}`, parseError(e))
-            ).map(data => zEngineAct.decode({
-                    name: action.name,
-                    data: JSON.stringify(data),
-                }));
-        });
+        ).andThen(() => ResultAsync.fromPromise(
+            this.generate(resolvedActions),
+            e => new EngineError("Randy could not generate an action", parseError(e))
+        ));
     }
 
-    private async generate(action: Action): Promise<unknown> {
-        if (!action.schema) return null;
-        return generateFromJsonSchema(action.schema as JsonSchema);
+    private async shouldSkip(): Promise<boolean> {
+        const value = await this.generator.generate({ type: "number", minimum: 0, maximum: 1 });
+        return (value as number) < this.options.chanceDoNothing;
     }
+
+    private async generate(actions: Action[]): Promise<EngineAct> {
+        const index = await this.generator.generate({ type: "integer", minimum: 0, maximum: actions.length - 1 }) as number;
+        const action = actions[index];
+        const data = action.schema
+            ? await this.generator.generate(action.schema as JsonSchema)
+            : null;
+        return zEngineAct.decode({ name: action.name, data: JSON.stringify(data) });
+    }
+
 }
 
 export const zRandyPrefs = z.strictObject({
@@ -79,6 +84,8 @@ export const zRandyPrefs = z.strictObject({
     chanceDoNothing: z.number().min(0).max(1).fallback(0.2),
     /** Randy will sleep for this long before responding (in milliseconds). Don't set too low or the app might freeze. */
     latencyMs: z.number().min(1).max(864000000).default(100),
+    /** Seed for Randy's random decisions. A random seed is chosen when unset. */
+    seed: z.number().int().optional(),
 });
 
 export type RandyPrefs = z.infer<typeof zRandyPrefs>;
