@@ -25,6 +25,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_log::Builder::new()
             .rotation_strategy(RotationStrategy::KeepSome(5))
+            .max_file_size(100_000_000)
             .level(LevelFilter::Trace)
             // filtering out tungstenite/other random rust libs that spam logs
             .filter(|md| ["gary", "webview", "tauri_plugin_"].iter().any(|t| md.target().starts_with(t)))
