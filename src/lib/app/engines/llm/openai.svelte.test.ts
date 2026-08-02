@@ -44,6 +44,34 @@ const context = [{
     content: "act",
 }] satisfies OpenAIContext;
 const request = { messages: context } satisfies LLMRequest;
+const HARMONY_TOKEN_TAILS = [
+    "<|start|>",
+    "<|end|>",
+    "<|message|>",
+    "<|channel|>analysis",
+    "<|channel|>commentary",
+    "<|channel|>final",
+    "<|channel|>json",
+    "<|constrain|>json",
+    "<|return|>",
+    "<|call|>",
+] as const;
+
+function harmonyToolCall(tail: typeof HARMONY_TOKEN_TAILS[number]) {
+    return {
+        choices: [{
+            finish_reason: "tool_calls",
+            message: {
+                content: null,
+                tool_calls: [{
+                    id: "call-1",
+                    type: "function",
+                    function: { name: `move${tail}`, arguments: "{}" },
+                }],
+            },
+        }],
+    };
+}
 
 describe("OpenAIClient", () => {
     beforeEach(() => {
@@ -103,7 +131,7 @@ describe("OpenAIClient", () => {
         }), expect.any(Object));
     });
 
-    test("sends and parses function tools with leaked Harmony tokens", async () => {
+    test.each(HARMONY_TOKEN_TAILS)("strips a leaked Harmony token tail %s from a tool name", async (tail) => {
         const prefs = $state<OpenAIPrefs>({
             name: "OpenAI",
             allowDoNothing: false,
@@ -122,19 +150,7 @@ describe("OpenAIClient", () => {
                 parameters: { type: "object", properties: {} },
             },
         };
-        openAIMock.create.mockResolvedValue({
-            choices: [{
-                finish_reason: "tool_calls",
-                message: {
-                    content: null,
-                    tool_calls: [{
-                        id: "call-1",
-                        type: "function",
-                        function: { name: "move<|channel|>commentary", arguments: "{}" },
-                    }],
-                },
-            }],
-        });
+        openAIMock.create.mockResolvedValue(harmonyToolCall(tail));
 
         const result = await client.generate({
             messages: context,

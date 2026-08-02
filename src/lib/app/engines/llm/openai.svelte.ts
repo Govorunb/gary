@@ -73,10 +73,10 @@ export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
 export type ReasoningEffort = OpenAIPrefs["reasoningEffort"];
 
 const OPENAI_COMPAT_NO_API_KEY = " ";
-const HARMONY_CHANNEL_SUFFIX = /<\|channel\|>(?:analysis|commentary|final)$/;
+const HARMONY_TOKEN_TAIL = /<\|(start|end|message|channel|constrain|return|call)\|>.*$/;
 
 function normalizeToolName(name: string): string {
-    return name.replace(HARMONY_CHANNEL_SUFFIX, "");
+    return name.replace(HARMONY_TOKEN_TAIL, "");
 }
 
 function responseError(value: unknown): Error | undefined {
