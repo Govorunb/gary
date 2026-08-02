@@ -115,6 +115,7 @@ export type LLMRequest = {
 };
 
 const WAIT_TOOL_NAME = "__wait__";
+const MAX_INVALID_TOOL_CALL_RETRIES = 1;
 const WAIT_TOOL: ChatCompletionFunctionTool = {
     type: "function",
     function: {
@@ -180,81 +181,115 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const budgetResult = await this.resolveContextBudget();
         if (budgetResult.isErr()) return err(budgetResult.error);
 
-        const prepared = this.prepareRequest(
-            session,
-            callableActions,
-            resolvedActions,
-            isForce,
-            forceContext,
-            budgetResult.value,
-        );
-        if (prepared.isErr()) return err(prepared.error);
+        for (let attempts = 0; ; attempts++) {
+            const prepared = this.prepareRequest(
+                session,
+                callableActions,
+                resolvedActions,
+                isForce,
+                forceContext,
+                budgetResult.value,
+            );
+            if (prepared.isErr()) return err(prepared.error);
 
-        const { request, diagnostics, calibrationKey } = prepared.value;
-        const genRes = await this.generate(request, signal);
-        if (genRes.isErr()) {
-            return err(genRes.error);
-        }
+            const { request, diagnostics, calibrationKey } = prepared.value;
+            const genRes = await this.generate(request, signal);
+            if (genRes.isErr()) {
+                return err(genRes.error);
+            }
 
-        const generation = this.recordContextUsage(genRes.value, request, diagnostics, calibrationKey);
-        if (this.options.promptingStrategy === "json") {
-            return this.parseStructuredOutput(generation, resolvedActions, isForce);
-        }
+            const generation = this.recordContextUsage(genRes.value, request, diagnostics, calibrationKey);
+            if (this.options.promptingStrategy === "json") {
+                return this.parseStructuredOutput(generation, resolvedActions, isForce);
+            }
 
-        if (generation.toolCalls.length > 1) {
-            return err(new EngineError("Model returned multiple tool calls"));
-        }
-        const toolCall = generation.toolCalls[0];
-        if (toolCall) {
-            if (toolCall.name === WAIT_TOOL_NAME) {
-                if (isForce || !this.options.allowDoNothing) {
-                    return err(new EngineError("Model called wait when waiting was not allowed"));
-                }
-                return ok("skip");
+            const [toolCall, additionalToolCall] = generation.toolCalls;
+            if (toolCall) {
+                const toolResult = additionalToolCall
+                    ? err(new ToolCallError(
+                        "Model returned multiple tool calls",
+                        "Only one tool call is allowed per response. Choose one tool and call it once.",
+                    ))
+                    : this.parseToolCall(toolCall, generation, callableActions, isForce);
+                if (toolResult.isOk()) return toolResult;
+                EVENT_BUS.emit("api/actor/tool_error", {
+                    engineId: this.id,
+                    text: generation.text,
+                    toolCalls: generation.toolCalls,
+                    message: toolResult.error.feedback,
+                });
+                if (attempts >= MAX_INVALID_TOOL_CALL_RETRIES) return err(toolResult.error);
+                continue;
             }
-            const callable = callableActions.find(({ tool }) => tool.function.name === toolCall.name);
-            if (!callable) {
-                return err(new EngineError(`Model called unknown tool '${toolCall.name}'`));
+
+            const text = generation.text.trim();
+            if (!text) {
+                return this.options.allowDoNothing && !isForce
+                    ? ok("skip")
+                    : err(new EngineError("Model returned no tool call or text", undefined, true));
             }
-            const args = jsonParse(toolCall.arguments)
-                .mapErr(e => new EngineError(`Failed to parse tool arguments: ${e}`, e));
-            if (args.isErr()) {
-                return err(args.error);
-            }
-            const wrappedData = callable.action.schema
-                ? z.strictObject({ data: z.unknown() }).safeParse(args.value)
-                : null;
-            if (wrappedData && !wrappedData.success) {
-                return err(new EngineError(`Failed to parse tool arguments: ${wrappedData.error}`, wrappedData.error));
+            if (isForce || !this.options.allowYapping) {
+                return err(new EngineError("Model returned text when speaking was not allowed"));
             }
             EVENT_BUS.emit("api/actor/generated", {
                 engineId: this.id,
-                text: generation.text,
-                toolCall,
+                text,
                 metadata: generation.metadata,
             });
-            return ok({
-                name: callable.action.name,
-                data: wrappedData ? JSON.stringify(wrappedData.data.data) : null,
-                toolCallId: toolCall.id,
-            });
+            return ok({ say: text, notify: false });
         }
+    }
 
-        const text = generation.text.trim();
-        if (!text) {
-            return this.options.allowDoNothing && !isForce
-                ? ok("skip")
-                : err(new EngineError("Model returned no tool call or text", undefined, true));
+    private parseToolCall(
+        toolCall: LLMToolCall,
+        generation: LLMGeneration,
+        callableActions: CallableAction[],
+        isForce: boolean,
+    ): Result<EngineActResult, ToolCallError> {
+        if (toolCall.name === WAIT_TOOL_NAME) {
+            if (isForce || !this.options.allowDoNothing) {
+                return err(new ToolCallError(
+                    "Model called wait when waiting was not allowed",
+                    `The '${WAIT_TOOL_NAME}' tool is not available on this turn. Choose another permitted response.`,
+                ));
+            }
+            return ok("skip");
         }
-        if (isForce || !this.options.allowYapping) {
-            return err(new EngineError("Model returned text when speaking was not allowed"));
+        const callable = callableActions.find(({ tool }) => tool.function.name === toolCall.name);
+        if (!callable) {
+            return err(new ToolCallError(
+                `Model called unknown tool '${toolCall.name}'`,
+                `Tool '${toolCall.name}' is not available on this turn. Use one of the currently available tools.`,
+            ));
+        }
+        const args = jsonParse(toolCall.arguments)
+            .mapErr(e => new ToolCallError(
+                `Failed to parse tool arguments: ${e}`,
+                `Tool arguments must be valid JSON: ${e}`,
+                e,
+            ));
+        if (args.isErr()) return err(args.error);
+        const wrappedData = callable.action.schema
+            ? z.strictObject({ data: z.unknown() }).safeParse(args.value)
+            : null;
+        if (wrappedData && !wrappedData.success) {
+            return err(new ToolCallError(
+                `Failed to parse tool arguments: ${wrappedData.error}`,
+                "Arguments must be an object containing exactly one property named 'data'. Put the action arguments inside 'data'.",
+                wrappedData.error,
+            ));
         }
         EVENT_BUS.emit("api/actor/generated", {
             engineId: this.id,
-            text,
+            text: generation.text,
+            toolCall,
             metadata: generation.metadata,
         });
-        return ok({ say: text, notify: false });
+        return ok({
+            name: callable.action.name,
+            data: wrappedData ? JSON.stringify(wrappedData.data.data) : null,
+            toolCallId: toolCall.id,
+        });
     }
 
     private parseStructuredOutput(
@@ -614,6 +649,8 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                         }],
                     }
                     : { role: "assistant", content: event.data.text };
+            case "api/actor/tool_error":
+                return null;
             case "api/game/act/actor":
                 if (event.data.toolCallId && this.options.promptingStrategy === "tools") {
                     return {
@@ -702,6 +739,28 @@ The custom user instructions are as follows:
         for (let i = 0; i < events.length; i++) {
             if (consumedToolResults.has(i)) continue;
             const event = events[i];
+            if (event.key === "api/actor/tool_error") {
+                units.push({
+                    indexes: [i],
+                    messages: [
+                        {
+                            role: "assistant",
+                            content: event.data.text || null,
+                            tool_calls: event.data.toolCalls.map(toolCall => ({
+                                id: toolCall.id,
+                                type: "function",
+                                function: { name: toolCall.name, arguments: toolCall.arguments },
+                            })),
+                        },
+                        ...event.data.toolCalls.map(toolCall => ({
+                            role: "tool" as const,
+                            tool_call_id: toolCall.id,
+                            content: JSON.stringify({ isError: true, message: event.data.message }),
+                        })),
+                    ],
+                });
+                continue;
+            }
             if (event.key === "api/actor/generated" && event.data.toolCall) {
                 const resultIndex = events.findIndex((candidate, candidateIndex) =>
                     candidateIndex > i
@@ -800,6 +859,12 @@ The custom user instructions are as follows:
 
 function isEngineAct(result: EngineActResult): result is EngineAct {
     return typeof result === "object" && "name" in result;
+}
+
+class ToolCallError extends EngineError {
+    constructor(message: string, public readonly feedback: string, cause?: Error) {
+        super(message, cause);
+    }
 }
 
 function short(id: string) {

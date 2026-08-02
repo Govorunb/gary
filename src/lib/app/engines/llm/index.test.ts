@@ -41,6 +41,7 @@ async function registeredAction(action: Action): Promise<Action> {
 class TestLLMEngine extends LLMEngine<CommonLLMOptions> {
     readonly name = "Test LLM";
     generation: LLMGeneration = { text: "", toolCalls: [] };
+    generations: LLMGeneration[] = [];
     requests: LLMRequest[] = [];
     model = "test";
 
@@ -54,7 +55,7 @@ class TestLLMEngine extends LLMEngine<CommonLLMOptions> {
 
     protected generate(request: LLMRequest): ResultAsync<LLMGeneration, EngineActError> {
         this.requests.push(request);
-        return okAsync(this.generation);
+        return okAsync(this.generations.shift() ?? this.generation);
     }
 }
 
@@ -198,19 +199,125 @@ describe("LLMEngine tool calling", () => {
         expect(closer).toContain("Do not call a client action tool from an earlier turn");
     });
 
-    test("treats an unavailable tool call as recoverable", async () => {
+    test("retries an invalid tool call with context feedback", async () => {
+        const toolErrors: any[] = [];
+        const subscription = EVENT_BUS.subscribe(["api/actor/tool_error"]);
+        subscription.onnext(event => toolErrors.push(event));
         const engine = new TestLLMEngine(llmOptions());
-        engine.generation = {
-            text: "",
-            toolCalls: [{ id: "call-1", name: "old_action", arguments: "{}" }],
-        };
+        const harness = new SelfTestHarness();
+        const action = await registeredAction({
+            name: "move",
+            schema: {
+                type: "object",
+                properties: { square: { type: "string" } },
+            },
+        });
+        engine.generations = [
+            {
+                text: "",
+                toolCalls: [{ id: "call-1", name: "move", arguments: '{"square":"e4"}' }],
+            },
+            {
+                text: "",
+                toolCalls: [{ id: "call-2", name: "move", arguments: '{"data":{"square":"e4"}}' }],
+            },
+        ];
+
+        try {
+            const result = await engine.tryAct(harness.session as unknown as Session, [action]);
+
+            expect(result._unsafeUnwrap()).toMatchObject({ name: "move", data: '{"square":"e4"}' });
+            expect(engine.requests).toHaveLength(2);
+            expect(toolErrors).toHaveLength(1);
+            expect(toolErrors[0].data).toMatchObject({
+                engineId: "test",
+                message: "Arguments must be an object containing exactly one property named 'data'. Put the action arguments inside 'data'.",
+            });
+            expect(engine.requests[1].messages.slice(-3, -1)).toStrictEqual([
+                {
+                    role: "assistant",
+                    content: null,
+                    tool_calls: [{
+                        id: "call-1",
+                        type: "function",
+                        function: { name: "move", arguments: '{"square":"e4"}' },
+                    }],
+                },
+                {
+                    role: "tool",
+                    tool_call_id: "call-1",
+                    content: JSON.stringify({ isError: true, message: toolErrors[0].data.message }),
+                },
+            ]);
+        } finally {
+            subscription.destroy();
+            harness.session.context.dispose();
+            harness.session.eventLog.dispose();
+        }
+    });
+
+    test("returns an invalid tool call error after one retry", async () => {
+        const engine = new TestLLMEngine(llmOptions());
+        engine.generations = [
+            { text: "", toolCalls: [{ id: "call-1", name: "old_action", arguments: "{}" }] },
+            { text: "", toolCalls: [{ id: "call-2", name: "old_action", arguments: "{}" }] },
+        ];
 
         const result = await engine.tryAct(createSession(), [{ name: "current_action" }]);
 
-        expect(result._unsafeUnwrapErr()).toMatchObject({
-            message: "Model called unknown tool 'old_action'",
-            recoverable: true,
-        });
+        expect(result._unsafeUnwrapErr()).toMatchObject({ recoverable: true });
+        expect(engine.requests).toHaveLength(2);
+    });
+
+    test("returns an error result for every rejected parallel tool call", async () => {
+        const engine = new TestLLMEngine(llmOptions());
+        const harness = new SelfTestHarness();
+        engine.generations = [
+            {
+                text: "",
+                toolCalls: [
+                    { id: "call-1", name: "move", arguments: "{}" },
+                    { id: "call-2", name: "move", arguments: "{}" },
+                ],
+            },
+            { text: "", toolCalls: [{ id: "call-3", name: "move", arguments: "{}" }] },
+        ];
+
+        try {
+            await engine.tryAct(harness.session as unknown as Session, [{ name: "move" }]);
+
+            expect(engine.requests[1].messages.slice(-4, -1)).toStrictEqual([
+                {
+                    role: "assistant",
+                    content: null,
+                    tool_calls: [
+                        {
+                            id: "call-1",
+                            type: "function",
+                            function: { name: "move", arguments: "{}" },
+                        },
+                        {
+                            id: "call-2",
+                            type: "function",
+                            function: { name: "move", arguments: "{}" },
+                        },
+                    ],
+                },
+                {
+                    role: "tool",
+                    tool_call_id: "call-1",
+                    content: expect.stringContaining('"isError":true'),
+                },
+                {
+                    role: "tool",
+                    tool_call_id: "call-2",
+                    content: expect.stringContaining('"isError":true'),
+                },
+            ]);
+        } finally {
+            harness.session.context.dispose();
+            harness.session.eventLog.dispose();
+        }
     });
 
     test("offers wait alongside actions", async () => {

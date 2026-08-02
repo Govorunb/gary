@@ -23,6 +23,7 @@ export const ACTOR_CONTEXT_KEYS = [
     "api/game/act/user",
     "api/game/act/actor",
     "api/actor/generated",
+    "api/actor/tool_error",
     "ui/context/input",
 ] as const;
 

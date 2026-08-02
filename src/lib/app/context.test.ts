@@ -30,6 +30,19 @@ describe("ContextManager projection", () => {
         expect(context.actorView[0].key).toBe("api/actor/generated");
     });
 
+    test("projects tool errors only to actor context", () => {
+        const { bus, context } = createContext();
+        bus.emit("api/actor/tool_error", {
+            engineId: "test",
+            text: "",
+            toolCalls: [{ id: "call-1", name: "move", arguments: "{}" }],
+            message: "Invalid arguments",
+        });
+
+        expect(context.userView.length).toBe(0);
+        expect(context.actorView[0].key).toBe("api/actor/tool_error");
+    });
+
     test("uses visibility rules for actor skip", () => {
         const { bus, context } = createContext();
         bus.emit("api/actor/skip", { engineId: "randy" });

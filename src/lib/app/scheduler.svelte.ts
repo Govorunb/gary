@@ -550,5 +550,20 @@ export const ACT_EVENTS = [
         },
         description: "Actor generated text",
         level: LogLevel.Info,
+    },
+    {
+        key: 'api/actor/tool_error',
+        dataSchema: {} as {
+            engineId: string;
+            text: string;
+            toolCalls: Array<{
+                id: string;
+                name: string;
+                arguments: string;
+            }>;
+            message: string;
+        },
+        description: "Actor made an invalid tool call",
+        level: LogLevel.Info,
     }
 ] as const satisfies EventDef<'api/actor'>[];
