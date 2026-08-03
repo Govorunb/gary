@@ -1,10 +1,34 @@
 // essentially just ~~copied over~~ adapted from https://github.com/tauri-apps/plugins-workspace/blob/ce6835d50ff7800dcfb8508a98e9ee83771fb283/plugins/log/src/commands.rs#L12
 // but with an added "target" arg
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 use log::RecordBuilder;
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use tauri::{Manager, Runtime};
+use time::{OffsetDateTime, macros::format_description};
+
+pub fn prepare_launch_log<R: Runtime>(app: &tauri::AppHandle<R>) -> anyhow::Result<()> {
+    let log_dir = app.path().app_log_dir()?;
+    let current = log_dir.join("Gary.log");
+
+    if current.exists() {
+        let metadata = current.metadata()?;
+        let created_at = metadata.created().or_else(|_| metadata.modified())?;
+        let timestamp = format_timestamp(created_at.into());
+        fs::rename(current, log_dir.join(format!("Gary_{timestamp}.log")))?;
+    }
+
+    Ok(())
+}
+
+fn format_timestamp(timestamp: OffsetDateTime) -> String {
+    timestamp
+        .format(format_description!(
+            "[year]-[month]-[day]_[hour]-[minute]-[second]-[subsecond digits:3]"
+        ))
+        .expect("valid static timestamp format")
+}
 
 #[derive(Debug, Clone, Deserialize_repr, Serialize_repr)]
 #[repr(u16)]

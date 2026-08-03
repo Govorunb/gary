@@ -9,7 +9,7 @@ mod app;
 use app::state::{App, AppStateMutex};
 use app::commands::{is_server_running, server_state, start_server, stop_server, open_logs_folder, restart};
 use api::server::{ws_accept, ws_deny, ws_send, ws_close};
-use app::log::gary_log;
+use app::log::{gary_log, prepare_launch_log};
 use app::safe_mode::{is_safe_mode, SafeMode};
 
 
@@ -17,6 +17,11 @@ use app::safe_mode::{is_safe_mode, SafeMode};
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
+        .plugin(
+            tauri::plugin::Builder::<_, ()>::new("launch-log-rotation")
+                .setup(|app, _| Ok(prepare_launch_log(app)?))
+                .build(),
+        )
         .setup(|app| {
             app.manage(SafeMode(app::safe_mode::requested()));
             app.manage(AppStateMutex::new(App::new(app.handle().clone())));
