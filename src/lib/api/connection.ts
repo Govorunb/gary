@@ -58,6 +58,7 @@ export abstract class BaseConnection {
         if (this.#disposed) return;
         // TODO: uh. was this meant to await (git blame for this line is scaring me)
         void this.protocolSend(text);
+        EVENT_BUS.emit('api/conn/send', { id: this.id, text });
         for (const cbSend of this.#onsend) {
             await cbSend(text);
         }
@@ -214,9 +215,8 @@ export class InternalConnection extends BaseConnection {
         return super.connect();
     }
 
-    protected async protocolSend(text: string) {
+    protected async protocolSend(_text: string) {
         this.devAssertNotDisposed();
-        EVENT_BUS.emit('api/conn/internal/send', { id: this.id, text });
     }
 
     public async disconnect() {
@@ -336,9 +336,9 @@ export const EVENTS = [
         level: LogLevel.Info,
     },
     {
-        key: 'api/conn/internal/send',
+        key: 'api/conn/send',
         dataSchema: {} as TextData,
-        description: 'Internal connection sent text',
+        description: 'Sending outbound message',
         level: LogLevel.Verbose,
     },
     {

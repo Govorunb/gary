@@ -35,7 +35,7 @@ export default defineConfig(async () => ({
   },
   resolve: {
     alias: {
-      'global.css': resolve(__dirname, 'src/global.css'),
+      "global.css": resolve(import.meta.dirname, "src/global.css"),
     }
   },
   define: {
