@@ -88,7 +88,7 @@ export const DIAGNOSTIC_ACTIONS: v1.Action[] = [
     },
     {
         name: "prot/schema/additionalProperties",
-        description: "Register an action with a schema missing additionalProperties: false (WARNING)",
+        description: "Register an action with a schema missing additionalProperties: false (INFO)",
         schema: null,
     },
     {

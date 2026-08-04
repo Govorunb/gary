@@ -241,9 +241,23 @@ export class Game {
         }
     }
 
+    private normalizeAction(action: v1.Action): v1.Action {
+        if (!action.schema || "additionalProperties" in action.schema) {
+            return action;
+        }
+        return {
+            ...action,
+            schema: {
+                ...action.schema,
+                additionalProperties: false,
+            },
+        };
+    }
+
     async registerActions(actions: v1.Action[]) {
         const newActions = [];
-        for (const action of actions) {
+        for (const incomingAction of actions) {
+            const action = this.normalizeAction(incomingAction);
             const existing = this.actions.get(action.name);
             let schemaUpdated = false;
             if (!existing) {
@@ -278,7 +292,7 @@ export class Game {
                 }
             }
             if (schemaUpdated) {
-                this.checkActionSchema(action);
+                this.checkActionSchema(incomingAction);
             }
             if (!action.description) {
                 this.diagnostics.trigger("prot/action/no_desc", { action: action.name });

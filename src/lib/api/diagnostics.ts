@@ -196,9 +196,9 @@ Per v1 of the API specification, the incoming action is ignored and the existing
     },
     {
         key: "prot/schema/additionalProperties",
-        severity: DiagnosticSeverity.Warning,
+        severity: DiagnosticSeverity.Info,
         title: "Action schema should have 'additionalProperties: false'",
-        description: `Action schemas should explicitly set 'additionalProperties: false' to reject unknown fields and prevent bugs from typo'd field names.
+        description: `Action schemas should explicitly set 'additionalProperties: false' to reject unknown fields and prevent bugs from typo'd field names. Gary implicitly forbids extra fields, but Neuro may not.
 If you do want freeform extra fields, you should explicitly set 'additionalProperties: true'.`,
         contextSchema: {} as { action: string, schema: v1.Action["schema"] },
     },

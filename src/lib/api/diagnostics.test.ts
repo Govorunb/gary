@@ -294,6 +294,17 @@ describe("prot/schema/additionalProperties", () => {
             action: ACTION.name,
             schema: action.schema,
         });
+        expect(action.schema).toEqual({
+            type: "object",
+            properties: {
+                foo: { type: "string" },
+            },
+        });
+        expect(harness.actions.get(action.name)?.schema).toEqual({
+            ...action.schema,
+            additionalProperties: false,
+        });
+        expect(harness.status).toBe("ok");
     });
 
     test("ignore additionalProperties: true", async ({harness}) => {
