@@ -31,13 +31,13 @@
         LogLevel.Error,
     ] as const;
 
-    const allEvents = $derived(session.eventLog.all);
+    const displayedEvents = $derived(session.eventLog.displayed);
     const visibleEvents = $derived.by(() => {
-        return allEvents
+        return displayedEvents
             .filter((event) => eventLevel(event) >= minimumLevel)
             .filter((event) => !selectedOnly || matchesSelectedGame(event, selectedGame));
     });
-    const totalEvents = $derived(allEvents.length);
+    const totalEvents = $derived(displayedEvents.length);
     const filterLabel = $derived(`${selectedOnly ? "Game" : "All"} ${LogLevel[minimumLevel]}+`);
     const emptyText = $derived.by(() => {
         if (totalEvents === 0) return "No events yet.";
@@ -78,6 +78,11 @@
 
     function closeMenu() {
         menuOpen = false;
+    }
+
+    function clearDisplayedEvents() {
+        session.eventLog.clearDisplayed();
+        closeMenu();
     }
 
     async function copyVisibleEventsJson() {
@@ -178,6 +183,9 @@
                 <button class="menu-item" type="button" onclick={copyVisibleEventsJson}>
                     Copy JSON
                 </button>
+                <button class="menu-item menu-item-danger" type="button" onclick={clearDisplayedEvents}>
+                    Clear Event Log
+                </button>
             </Popover>
         </div>
     </div>
@@ -270,6 +278,14 @@
 
         &:focus-visible {
             @apply outline-none ring-1 ring-neutral-400 dark:ring-neutral-600;
+        }
+    }
+
+    .menu-item-danger {
+        @apply text-error-600 dark:text-error-400;
+
+        &:hover {
+            @apply bg-error-100/50 dark:bg-error-900/30;
         }
     }
 

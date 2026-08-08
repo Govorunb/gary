@@ -13,6 +13,11 @@ export const EVENTS = [
         level: LogLevel.Info,
     },
     {
+        key: 'ui/context/reset',
+        description: "Reset context",
+        level: LogLevel.Info,
+    },
+    {
         key: 'ui/game/send_raw/sent',
         dataSchema: z.object({
             gameId: z.string(),

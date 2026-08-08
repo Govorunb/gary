@@ -1,14 +1,13 @@
 import type { EventInstance, EventKey } from ".";
 import { EVENT_BUS, type EventBus } from "./bus";
 
-export type EventLogDelta =
-    | { type: "append"; event: EventInstance<EventKey> }
-    | { type: "reset" };
+export type EventLogDelta = { type: "append"; event: EventInstance<EventKey> };
 
 type Unsub = () => void;
 
 export class EventLogStore {
     readonly all: EventInstance<EventKey>[] = $state([]);
+    readonly displayed: EventInstance<EventKey>[] = $state([]);
     #subs: Array<(delta: EventLogDelta) => void> = [];
     #subsByKey = new Map<EventKey, Array<(delta: EventLogDelta) => void>>();
     #busSub;
@@ -20,12 +19,12 @@ export class EventLogStore {
 
     append(event: EventInstance<EventKey>) {
         this.all.push(event);
+        this.displayed.push(event);
         this.#emit({ type: "append", event });
     }
 
-    clear() {
-        this.all.length = 0;
-        this.#emit({ type: "reset" });
+    clearDisplayed() {
+        this.displayed.length = 0;
     }
 
     subscribe(cb: (delta: EventLogDelta) => void): Unsub;
@@ -75,15 +74,7 @@ export class EventLogStore {
 
     #emit(delta: EventLogDelta) {
         this.#subs.forEach((cb) => cb(delta));
-
-        if (delta.type === "append") {
-            const cbs = this.#subsByKey.get(delta.event.key);
-            cbs?.forEach((cb) => cb(delta));
-            return;
-        }
-
-        const onreset = new Set<(delta: EventLogDelta) => void>();
-        this.#subsByKey.forEach((cbs) => cbs.forEach((cb) => onreset.add(cb)));
-        onreset.forEach((cb) => cb(delta));
+        const cbs = this.#subsByKey.get(delta.event.key);
+        cbs?.forEach((cb) => cb(delta));
     }
 }

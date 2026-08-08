@@ -43,10 +43,13 @@ export class ContextManager {
     constructor(private readonly eventLog: EventLogStore) {
         this.#ondispose.push(this.eventLog.subscribe(USER_CONTEXT_KEYS, (delta) => this.#onUserDelta(delta)));
         this.#ondispose.push(this.eventLog.subscribe(ACTOR_CONTEXT_KEYS, (delta) => this.#onActorDelta(delta)));
+        this.#ondispose.push(this.eventLog.subscribe(["ui/context/reset"], () => this.#resetViews()));
 
         const userKeys = new Set<string>(USER_CONTEXT_KEYS);
         const actorKeys = new Set<string>(ACTOR_CONTEXT_KEYS);
-        for (const event of this.eventLog.all) {
+        const latestReset = this.eventLog.all.findLastIndex((event) => event.key === "ui/context/reset");
+        for (let i = latestReset + 1; i < this.eventLog.all.length; i++) {
+            const event = this.eventLog.all[i];
             if (userKeys.has(event.key)) {
                 this.userView.push(event as UserContextEvent);
             }
@@ -67,7 +70,7 @@ export class ContextManager {
         };
     }
 
-    reset() {
+    #resetViews() {
         this.userView.length = 0;
         this.actorView.length = 0;
     }
@@ -79,18 +82,10 @@ export class ContextManager {
     }
 
     #onUserDelta(delta: EventLogDelta) {
-        if (delta.type === "reset") {
-            this.userView.length = 0;
-            return;
-        }
         this.userView.push(delta.event as UserContextEvent);
     }
 
     #onActorDelta(delta: EventLogDelta) {
-        if (delta.type === "reset") {
-            this.actorView.length = 0;
-            return;
-        }
         const event = delta.event as ActorContextEvent;
         this.actorView.push(event);
         const shouldPrompt = shouldPromptAct(event);

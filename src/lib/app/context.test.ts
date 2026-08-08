@@ -69,8 +69,8 @@ describe("ContextManager projection", () => {
         expect(prompts).toBe(1);
     });
 
-    test("reset clears user/actor projections", () => {
-        const { bus, context } = createContext();
+    test("reset events clear user/actor projections without clearing history", () => {
+        const { bus, eventLog, context } = createContext();
         bus.emit("ui/context/input", { text: "one", silent: false });
         bus.emit("api/game/force", {
             game: { id: "g1", name: "Chess" },
@@ -81,9 +81,29 @@ describe("ContextManager projection", () => {
 
         expect(context.userView.length).toBe(2);
         expect(context.actorView.length).toBe(2);
-        context.reset();
+        bus.emit("ui/context/reset");
         expect(context.userView.length).toBe(0);
         expect(context.actorView.length).toBe(0);
+        expect(eventLog.all.map((event) => event.key)).toEqual([
+            "ui/context/input",
+            "api/game/force",
+            "ui/context/reset",
+        ]);
+    });
+
+    test("rebuilds projections from events after the latest reset", () => {
+        const bus = new EventBus();
+        const eventLog = new EventLogStore(bus);
+        bus.emit("ui/context/input", { text: "before", silent: false });
+        bus.emit("ui/context/reset");
+        bus.emit("ui/context/input", { text: "between", silent: false });
+        bus.emit("ui/context/reset");
+        bus.emit("ui/context/input", { text: "after", silent: false });
+
+        const context = new ContextManager(eventLog);
+
+        expect(context.userView).toMatchObject([{ key: "ui/context/input", data: { text: "after" } }]);
+        expect(context.actorView).toMatchObject([{ key: "ui/context/input", data: { text: "after" } }]);
     });
 
     test("ignores events outside explicit key subscriptions", () => {

@@ -4,6 +4,7 @@
     import { EllipsisVertical } from "@lucide/svelte";
     import Popover from "$lib/ui/common/Popover.svelte";
     import { formatContextEvent } from "./formatters/registry";
+    import { EVENT_BUS } from "$lib/app/events/bus";
 
     const session = getSession();
 
@@ -13,7 +14,7 @@
         open = false;
     }
     function clearContext() {
-        session.context.reset();
+        EVENT_BUS.emit("ui/context/reset");
         closeMenu();
     }
     function copyContext() {
