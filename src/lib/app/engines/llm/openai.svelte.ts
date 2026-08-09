@@ -27,7 +27,10 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         super(userPrefs, engineId);
 
         const self = this;
-        this.client = new OpenAIClient({get prefs() { return self.options; }});
+        this.client = new OpenAIClient({
+            get prefs() { return self.options; },
+            setReasoningEffort(effort) { self.options.reasoningEffort = effort; },
+        });
     }
 
     protected modelId(): string | undefined {
@@ -72,6 +75,11 @@ export const zOpenAIPrefs = z.looseObject({
 export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
 export type ReasoningEffort = OpenAIPrefs["reasoningEffort"];
 
+type OpenAIPrefsSource = {
+    readonly prefs: OpenAIPrefs;
+    setReasoningEffort(effort: ReasoningEffort): void;
+};
+
 const OPENAI_COMPAT_NO_API_KEY = " ";
 const HARMONY_TOKEN_TAIL = /<\|(start|end|message|channel|constrain|return|call)\|>.*$/;
 
@@ -90,9 +98,11 @@ function responseError(value: unknown): Error | undefined {
 // It started to look a bit too similar after that... the refactoring itch was irresistible
 export class OpenAIClient {
     private readonly client: OpenAI;
-    private readonly options: OpenAIPrefs;
-    constructor(reactivePrefs: {prefs: OpenAIPrefs}) {
-        this.options = $derived(reactivePrefs.prefs);
+    private get options() {
+        return this.prefsSource.prefs;
+    }
+
+    constructor(private readonly prefsSource: OpenAIPrefsSource) {
         this.client = new OpenAI({
             apiKey: this.options.apiKey || OPENAI_COMPAT_NO_API_KEY,
             dangerouslyAllowBrowser: true,
@@ -190,7 +200,7 @@ export class OpenAIClient {
                 res = await sendRequest(preference);
         }
         if (preference === "auto" && res.isErr() && isReasoningEffortError(res.error)) {
-            this.options.reasoningEffort = "low";
+            this.prefsSource.setReasoningEffort("low");
             EVENT_BUS.emit('app/engines/llm/reasoning_effort_fallback', { reqId });
             res = await sendRequest("low");
         }

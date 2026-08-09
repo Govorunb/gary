@@ -12,6 +12,7 @@ type FakeGame = {
     id: string;
     name: string;
     shortId: string;
+    nextForcePriority: ForcePriority | null;
     activeActions: FakeGameAction[];
     sentActions: ActData[];
     getActiveActions(): FakeGameAction[];
@@ -26,6 +27,7 @@ function createFakeGame(name: string, shortId: string, activeActions: Action[]):
         id: `${shortId}-id`,
         name,
         shortId,
+        nextForcePriority: null,
         activeActions: storedActions,
         sentActions,
         getActiveActions: () => storedActions,
@@ -78,6 +80,22 @@ async function withScheduler(
 }
 
 describe("Scheduler action names", () => {
+    test("drains queued work after becoming unmuted", async () => {
+        const action = { name: "move", description: "Move" };
+        const game = createFakeGame("Test Game", "test", [action]);
+        const engine = createEngine(actions => ({ name: actions[0].name }));
+
+        await withScheduler([game], engine, async scheduler => {
+            scheduler.toggleMuted();
+            scheduler.queueForce([{ game: game as unknown as Game, action }]);
+            await Promise.resolve();
+            expect(engine.forceAct).not.toHaveBeenCalled();
+
+            scheduler.toggleMuted();
+            await vi.waitFor(() => expect(engine.forceAct).toHaveBeenCalledOnce());
+        });
+    });
+
     test("passes original action names to engines when names are unique", async () => {
         const jump = { name: "jump", description: "Jump" };
         const duck = { name: "duck", description: "Duck" };

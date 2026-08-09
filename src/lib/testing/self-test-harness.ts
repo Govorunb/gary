@@ -34,6 +34,11 @@ class MockSession {
     readonly userPrefs = mock<UserPrefs, typeof this.mockPrefs>(this.mockPrefs);
     readonly engines: Record<string, any> = {};
     readonly activeEngine: any = null;
+
+    dispose() {
+        this.context.dispose();
+        this.eventLog.dispose();
+    }
 }
 
 export class TestClientGame extends ClientGame {
@@ -50,6 +55,7 @@ export class SelfTestHarness {
     public client: TestClientGame;
     public server: Game;
     public readonly session: MockSession;
+    #disposed = false;
 
     constructor(gameName: string = "test-game", version = "v1") {
         this.session = new MockSession();
@@ -66,6 +72,16 @@ export class SelfTestHarness {
     }
     public async disconnect() {
         await this.server.conn.disconnect();
+    }
+
+    public async dispose() {
+        if (this.#disposed) return;
+        this.#disposed = true;
+        try {
+            await this.disconnect();
+        } finally {
+            this.session.dispose();
+        }
     }
 
     public get diagnostics() {

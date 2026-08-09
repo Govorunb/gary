@@ -3,7 +3,7 @@ import type { UserPrefs } from "$lib/app/prefs.svelte";
 import type { Session } from "$lib/app/session.svelte";
 import { SelfTestHarness } from "$lib/testing/self-test-harness";
 import { okAsync, type ResultAsync } from "neverthrow";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import type { EngineActError } from "../index.svelte";
 import { EVENT_BUS } from "$lib/app/events/bus";
 import {
@@ -13,6 +13,18 @@ import {
     type LLMGeneration,
     type LLMRequest,
 } from ".";
+
+const harnesses: SelfTestHarness[] = [];
+
+function createHarness() {
+    const harness = new SelfTestHarness();
+    harnesses.push(harness);
+    return harness;
+}
+
+afterEach(async () => {
+    await Promise.all(harnesses.splice(0).map(harness => harness.dispose()));
+});
 
 function llmOptions(options: Partial<CommonLLMOptions> = {}): CommonLLMOptions {
     return {
@@ -33,7 +45,7 @@ function createSession(): Session {
 }
 
 async function registeredAction(action: Action): Promise<Action> {
-    const harness = new SelfTestHarness();
+    const harness = createHarness();
     await harness.server.registerActions([action]);
     return harness.server.getAction(action.name)!;
 }
@@ -205,7 +217,7 @@ describe("LLMEngine tool calling", () => {
         const subscription = EVENT_BUS.subscribe(["api/actor/tool_error"]);
         subscription.onnext(event => toolErrors.push(event));
         const engine = new TestLLMEngine(llmOptions());
-        const harness = new SelfTestHarness();
+        const harness = createHarness();
         const action = await registeredAction({
             name: "move",
             schema: {
@@ -252,8 +264,7 @@ describe("LLMEngine tool calling", () => {
             ]);
         } finally {
             subscription.destroy();
-            harness.session.context.dispose();
-            harness.session.eventLog.dispose();
+            await harness.dispose();
         }
     });
 
@@ -272,7 +283,7 @@ describe("LLMEngine tool calling", () => {
 
     test("returns an error result for every rejected parallel tool call", async () => {
         const engine = new TestLLMEngine(llmOptions());
-        const harness = new SelfTestHarness();
+        const harness = createHarness();
         engine.generations = [
             {
                 text: "",
@@ -316,8 +327,7 @@ describe("LLMEngine tool calling", () => {
                 },
             ]);
         } finally {
-            harness.session.context.dispose();
-            harness.session.eventLog.dispose();
+            await harness.dispose();
         }
     });
 

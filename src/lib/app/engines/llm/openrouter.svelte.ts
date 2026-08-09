@@ -15,24 +15,19 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
 
     constructor(userPrefs: UserPrefs) {
         super(userPrefs, ENGINE_ID);
-        const clientPrefs = $state<OpenAIPrefs>({
-            name: this.name,
-            ...this.options,
-            modelId: this.options.model?.trim() || "openrouter/auto",
-            serverUrl: "https://openrouter.ai/api/v1/",
-        });
-        $effect(() => {
-            Object.assign(clientPrefs, {
-                name: this.name,
-                ...this.options,
-                modelId: this.options.model?.trim() || "openrouter/auto",
-                serverUrl: "https://openrouter.ai/api/v1/",
-            });
-        });
-        this.client = new OpenAIClient({ prefs: clientPrefs });
-        $effect(() => {
-            if (clientPrefs.reasoningEffort !== this.options.reasoningEffort)
-                this.options.reasoningEffort = clientPrefs.reasoningEffort;
+        const self = this;
+        this.client = new OpenAIClient({
+            get prefs(): OpenAIPrefs {
+                return {
+                    name: self.name,
+                    ...self.options,
+                    modelId: self.modelId(),
+                    serverUrl: "https://openrouter.ai/api/v1/",
+                };
+            },
+            setReasoningEffort(effort) {
+                self.options.reasoningEffort = effort;
+            },
         });
     }
 

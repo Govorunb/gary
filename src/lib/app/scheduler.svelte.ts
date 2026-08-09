@@ -4,7 +4,6 @@ import type { Registry } from "$lib/api/registry.svelte";
 import { FORCE_PRIORITY, zActData, type Action, type ForcePriority } from "$lib/api/v1/spec";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
-import { untrack } from "svelte";
 import { debounced, LogLevel } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";
 import { EVENT_BUS } from "./events/bus";
@@ -30,12 +29,12 @@ const PENDING_ACT_GRACE_MS = 100;
 
 export class Scheduler {
     /** Explicitly muted by the user through the app UI. */
-    public muted = $state(false);
+    #muted = $state(false);
     /** Busy (or simulating a busy state), e.g. waiting for LLM generation or pretending to wait for TTS. */
-    public busy = $state(false);
+    #busy = $state(false);
     /** Paused due to an engine error that requires user intervention. */
-    public errored = $state(false);
-    public readonly canAct: boolean = $derived(!this.muted && !this.busy && !this.errored);
+    #errored = $state(false);
+    public readonly canAct: boolean = $derived(!this.#muted && !this.#busy && !this.#errored);
 
     private readonly registry: Registry;
     #abort: AbortController | null = $state(null);
@@ -50,21 +49,55 @@ export class Scheduler {
      * And it is flipped false when attempting to act.
      * Note: the act may fail, or the actor may choose not to act; the pending signal is still consumed in either case.
      */
-    public actPending = $state(false);
+    #actPending = $state(false);
     /** Manual and auto-act forces. Client forces are owned by their games. */
     public forceQueue: Array<ActionCandidate[] | null> = $state([]);
     public readonly autoPoker: AutoPoker;
     private readonly pendingActTimer: ReturnType<typeof debounced>;
+    #drainQueued = false;
+    #disposed = false;
 
     constructor(private readonly session: Session) {
         this.registry = this.session.registry;
         this.pendingActTimer = debounced(() => {
-            this.actPending = true;
-            this.drain();
+            this.#actPending = true;
+            this.requestDrain();
         }, PENDING_ACT_GRACE_MS);
-        session.onDispose(() => this.pendingActTimer.cancel());
-        $effect(() => this.drain());
+        session.onDispose(() => {
+            this.#disposed = true;
+            this.pendingActTimer.cancel();
+        });
         this.autoPoker = new AutoPoker(session);
+    }
+
+    public get muted() {
+        return this.#muted;
+    }
+
+    public get busy() {
+        return this.#busy;
+    }
+
+    public get errored() {
+        return this.#errored;
+    }
+
+    public get actPending() {
+        return this.#actPending;
+    }
+
+    public toggleMuted() {
+        this.#muted = !this.#muted;
+        this.requestDrain();
+    }
+
+    private requestDrain() {
+        if (this.#disposed || this.#drainQueued) return;
+        this.#drainQueued = true;
+        queueMicrotask(() => {
+            this.#drainQueued = false;
+            if (!this.#disposed) this.drain();
+        });
     }
 
     private drain() {
@@ -75,7 +108,7 @@ export class Scheduler {
         } else if (this.forceQueue.length) {
             const force = this.forceQueue.shift();
             this.forceAct(force);
-        } else if (this.actPending) {
+        } else if (this.#actPending) {
             this.tryAct();
         }
     }
@@ -94,6 +127,7 @@ export class Scheduler {
     }
     public queueForce(actions: ActionCandidate[] | null) {
         this.forceQueue.push(actions);
+        this.requestDrain();
     }
 
     public requestAct(graceIfNoActions = false) {
@@ -101,7 +135,8 @@ export class Scheduler {
             this.pendingActTimer();
         } else {
             this.pendingActTimer.cancel();
-            this.actPending = true;
+            this.#actPending = true;
+            this.requestDrain();
         }
     }
 
@@ -110,6 +145,7 @@ export class Scheduler {
             && FORCE_PRIORITY[priority] > FORCE_PRIORITY[this.#activePriority]) {
             this.#abort.abort();
         }
+        this.requestDrain();
     }
 
     public cancelAct(): boolean {
@@ -163,7 +199,7 @@ export class Scheduler {
         priority: ForcePriority = "low",
     ) {
         this.pendingActTimer.cancel();
-        this.actPending = false;
+        this.#actPending = false;
         const ignores = this.checkIgnored();
         if (ignores.length) {
             EVENT_BUS.emit('app/scheduler/act/fail/ignored', { force, ignores });
@@ -183,7 +219,7 @@ export class Scheduler {
 
         const engine = this.activeEngine;
 
-        this.busy = true;
+        this.#busy = true;
         const controller = new AbortController();
         this.#abort = controller;
         this.#activePriority = priority;
@@ -192,14 +228,15 @@ export class Scheduler {
             : await this.activeEngine!.tryAct(this.session, actionSet.actions, controller.signal);
         this.#abort = null;
         this.#activePriority = null;
-        this.busy = false;
-
         if (actRes.isOk()) {
             this.resetEngineErrors();
         }
-        return actRes
+        const result = await actRes
             .asyncAndThrough(act => this.perform(act, force, engine, actionSet.targetsByName))
             .orTee(e => e instanceof EngineError && this.onError(e, engine));
+        this.#busy = false;
+        this.requestDrain();
+        return result;
     }
 
     private activeActionCandidates(): ActionCandidate[] {
@@ -337,7 +374,7 @@ export class Scheduler {
             consecutiveErrors: this.#consecutiveEngineErrors,
             paused,
         });
-        this.errored = paused;
+        this.#errored = paused;
     }
 
     private resetEngineErrors() {
@@ -347,8 +384,9 @@ export class Scheduler {
 
     /** Should only be called through a manual action by the user. */
     public clearError() {
-        this.errored = false;
+        this.#errored = false;
         this.resetEngineErrors();
+        this.requestDrain();
     }
 }
 
@@ -382,20 +420,20 @@ export class AutoPoker {
     }
 
     constructor(private session: Session) {
-        this.tryTimer = $derived(debounced(() => untrack(() => {
+        this.tryTimer = debounced(() => {
             EVENT_BUS.emit('app/scheduler/idle/try');
-            this.scheduler.actPending = true;
+            this.scheduler.requestAct();
             this.tryTimer();
-        }), this.tryInterval));
+        }, () => this.tryInterval);
         
-        this.forceTimer = $derived(debounced(() => untrack(() => {
+        this.forceTimer = debounced(() => {
             if (!this.scheduler.hasPendingForce) {
                 EVENT_BUS.emit('app/scheduler/idle/force');
                 this.scheduler.queueForce(null);
             } else {
                 EVENT_BUS.emit('app/scheduler/idle/no_fq');
             }
-        }), this.forceInterval));
+        }, () => this.forceInterval);
 
         $effect(() => {
             if (this.autoAct) {
@@ -403,6 +441,7 @@ export class AutoPoker {
             } else {
                 this.forceTimer.cancel();
             }
+            return () => this.forceTimer.cancel();
         });
         $effect(() => {
             if (this.autoAct && this.scheduler.canAct && !this.scheduler.actPending && !this.scheduler.hasPendingForce) {
@@ -410,6 +449,7 @@ export class AutoPoker {
             } else {
                 this.tryTimer.cancel();
             }
+            return () => this.tryTimer.cancel();
         });
         // HMR
         session.onDispose(() => {

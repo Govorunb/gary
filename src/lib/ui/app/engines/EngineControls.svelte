@@ -29,7 +29,7 @@
 
     function toggleMute() {
         if (!scheduler.errored) {
-            scheduler.muted = !scheduler.muted;
+            scheduler.toggleMuted();
         }
         userInteracted();
     }

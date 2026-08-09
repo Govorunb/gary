@@ -6,20 +6,13 @@
     import { Settings } from "@lucide/svelte";
     import { getUIState, getUpdater } from "$lib/app/utils/di";
     import { registerAppHotkey } from "$lib/app/utils/hotkeys.svelte";
-    import { onMount } from "svelte";
 
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
     const updater = getUpdater();
 
-    onMount(() => {
-        const settingsHotkey = registerAppHotkey(["Control", ","], () => {
-            dialogs.toggleSettingsDialog();
-        });
-
-        return () => {
-            settingsHotkey();
-        }
+    registerAppHotkey(["Control", ","], () => {
+        dialogs.toggleSettingsDialog();
     });
 </script>
 

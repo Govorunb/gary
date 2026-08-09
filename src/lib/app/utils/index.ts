@@ -274,13 +274,21 @@ export function localeTimeWithMs(d: Dayjs): string {
 
 export type Fn = () => void;
 export type DebouncedFn = Fn & { cancel: Fn, now: Fn };
-export function debounced(func: () => void, delayMs: number): DebouncedFn {
+export function debounced(func: () => void, delayMs: number | (() => number)): DebouncedFn {
     let timeout: ReturnType<typeof setTimeout> | null = null;
     function f() {
-        if (timeout) clearTimeout(timeout);
-        timeout = setTimeout(func, delayMs);
+        f.cancel();
+        const delay = typeof delayMs === "function" ? delayMs() : delayMs;
+        timeout = setTimeout(() => {
+            timeout = null;
+            func();
+        }, delay);
     };
-    f.cancel = () => timeout && clearTimeout(timeout);
+    f.cancel = () => {
+        if (timeout === null) return;
+        clearTimeout(timeout);
+        timeout = null;
+    };
     f.now = () => {
         f.cancel();
         func();

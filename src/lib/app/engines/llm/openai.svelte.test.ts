@@ -73,6 +73,15 @@ function harmonyToolCall(tail: typeof HARMONY_TOKEN_TAILS[number]) {
     };
 }
 
+function prefsSource(prefs: OpenAIPrefs) {
+    return {
+        get prefs() { return prefs; },
+        setReasoningEffort(effort: OpenAIPrefs["reasoningEffort"]) {
+            prefs.reasoningEffort = effort;
+        },
+    };
+}
+
 describe("OpenAIClient", () => {
     beforeEach(() => {
         openAIMock.create.mockReset();
@@ -82,8 +91,8 @@ describe("OpenAIClient", () => {
         tauriMock.fetch.mockReset();
     });
 
-    test("uses updated reactive prefs for later requests", async () => {
-        const prefs = $state<OpenAIPrefs>({
+    test("pulls updated prefs for later requests", async () => {
+        const prefs: OpenAIPrefs = {
             name: "OpenRouter",
             allowDoNothing: false,
             allowYapping: false,
@@ -92,8 +101,8 @@ describe("OpenAIClient", () => {
             apiKey: "test-key",
             serverUrl: "https://openrouter.ai/api/v1/",
             modelId: "openrouter/auto",
-        });
-        const client = new OpenAIClient({ prefs });
+        };
+        const client = new OpenAIClient(prefsSource(prefs));
 
         openAIMock.create
             .mockRejectedValueOnce(new Error("400 Reasoning is mandatory for this endpoint and cannot be disabled."))
@@ -142,7 +151,7 @@ describe("OpenAIClient", () => {
             serverUrl: "https://api.openai.com/v1",
             modelId: "gpt-5-mini",
         });
-        const client = new OpenAIClient({ prefs });
+        const client = new OpenAIClient(prefsSource(prefs));
         const tool = {
             type: "function" as const,
             function: {
@@ -179,7 +188,7 @@ describe("OpenAIClient", () => {
             serverUrl: "https://openrouter.ai/api/v1",
             modelId: "openai/gpt-oss-120b",
         });
-        const client = new OpenAIClient({ prefs });
+        const client = new OpenAIClient(prefsSource(prefs));
         openAIMock.create.mockResolvedValue({
             choices: [{
                 finish_reason: "error",
@@ -215,7 +224,7 @@ describe("OpenAIClient", () => {
             serverUrl: "https://api.openai.com/v1",
             modelId: "gpt-5-mini",
         });
-        const client = new OpenAIClient({ prefs });
+        const client = new OpenAIClient(prefsSource(prefs));
         const responseSchema = {
             type: "object" as const,
             properties: { command: { type: "string" as const } },
@@ -259,7 +268,7 @@ describe("OpenAIClient", () => {
             modelId: "llama3",
         });
 
-        new OpenAIClient({ prefs });
+        new OpenAIClient(prefsSource(prefs));
         const customFetch = openAIMock.constructorOptions.at(-1)?.fetch as typeof fetch;
         tauriMock.isTauri.mockReturnValue(true);
         tauriMock.fetch.mockResolvedValueOnce(new Response("{}"));
@@ -288,7 +297,7 @@ describe("OpenAIClient", () => {
             modelId: "openrouter/auto",
         });
 
-        new OpenAIClient({ prefs });
+        new OpenAIClient(prefsSource(prefs));
         const customFetch = openAIMock.constructorOptions.at(-1)?.fetch as typeof fetch;
         tauriMock.isTauri.mockReturnValue(true);
         tauriMock.fetch.mockResolvedValueOnce(new Response("{}"));

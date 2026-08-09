@@ -11,10 +11,13 @@ export const test = baseTest.extend<{harness: SelfTestHarness}>({
         boundedToast.reset();
         vi.useFakeTimers();
         const harness = new SelfTestHarness();
-        await harness.connect();
-        await use(harness);
-        await harness.disconnect();
-        vi.useRealTimers();
-        boundedToast.reset();
+        try {
+            await harness.connect();
+            await use(harness);
+        } finally {
+            await harness.dispose();
+            vi.useRealTimers();
+            boundedToast.reset();
+        }
     }
 });
