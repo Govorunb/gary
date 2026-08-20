@@ -7,7 +7,7 @@
     import { Send, ChevronLeft, ChevronRight, Dice6 } from "@lucide/svelte";
     import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
-    import { getSession, getUserPrefs } from "$lib/app/utils/di";
+    import { getScheduler, getUserPrefs } from "$lib/app/utils/di";
     import Ajv, { type ValidateFunction } from "ajv";
     import { emptyValueFromJsonSchema, generateFromJsonSchema, parseError, tooltip } from "$lib/app/utils";
     import { boolAttr, PressedKeys } from "runed";
@@ -22,6 +22,8 @@
 
     let { open = $bindable(), action, game }: Props = $props();
     const userPrefs = getUserPrefs();
+    const scheduler = getScheduler();
+    const busy = $derived(scheduler.busy);
     const ajv = new Ajv({ validateFormats: false, allErrors: true });
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
@@ -35,6 +37,11 @@
     let validationErrors = $state<string[] | null>(null);
     let latestGenerationRequest = 0;
     const isValid = $derived(!validationErrors);
+    const sendTip = $derived.by(() => {
+        if (busy) return "Engine busy (Shift to stop)";
+        if (isValid) return "Send (Ctrl+Enter)";
+        return shiftPressed ? "Send invalid data?" : "Hold shift to bypass validation";
+    });
     const schemaCollapsed = $derived(userPrefs.app.manualSendSchemaCollapsed);
     const schemaOpen = $derived(!schemaCollapsed);
 
@@ -141,6 +148,7 @@
     }
 
     async function sendAction() {
+        if (busy) return;
         if (!isValid && !shiftPressed) return;
 
         const actionToSend = currentAction;
@@ -239,11 +247,9 @@
             <button
                 class="btn btn-base send-btn"
                 onclick={sendAction}
-                disabled={!isValid && !shiftPressed}
-                data-bypass={boolAttr(!isValid && shiftPressed)}
-                {@attach tooltip(isValid ? "Send (Ctrl+Enter)"
-                    : shiftPressed ? "Send invalid data?"
-                    : "Hold shift to bypass validation")}
+                disabled={busy || (!isValid && !shiftPressed)}
+                data-bypass={boolAttr(!busy && !isValid && shiftPressed)}
+                {@attach tooltip(sendTip)}
             >
                 <Send class="size-4" />
                 Send

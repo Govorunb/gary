@@ -1,5 +1,5 @@
 import type { Session } from "./session.svelte";
-import type { Game, QueuedGameForce } from "$lib/api/game.svelte";
+import type { ActiveForce, Game } from "$lib/api/game.svelte";
 import type { Registry } from "$lib/api/registry.svelte";
 import { FORCE_PRIORITY, zActData, type Action, type ForcePriority } from "$lib/api/v1/spec";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
@@ -172,30 +172,39 @@ export class Scheduler {
         return typeof choice === "object" && 'name' in choice;
     }
 
-    private forceGame(game: Game, force: QueuedGameForce) {
+    private forceGame(game: Game, force: ActiveForce) {
         const candidates = force.actions.map(action => ({ game, action }));
         new ResultAsync(this.actInner(true, candidates, force.data, force.data.priority))
+            .match(
+                () => game.completeForce(),
+                // user stop/preempt
+                e => e === "cancelled" ? game.completeForce() : game.failForce(),
+            )
             .finally(() => {
-                game.completeForce();
                 if (this.autoPoker.autoAct) this.autoPoker.forceTimer();
             });
     }
 
-    private takeGameForce(): { game: Game; force: QueuedGameForce } | null {
-        let selected: Game | null = null;
-        for (const game of this.registry.games) {
-            if (game.nextForcePriority === null) continue;
-            if (!selected || FORCE_PRIORITY[game.nextForcePriority] > FORCE_PRIORITY[selected.nextForcePriority!]) {
-                selected = game;
+    private takeGameForce(): { game: Game; force: ActiveForce } | null {
+        for (;;) {
+            let selected: Game | null = null;
+            for (const game of this.registry.games) {
+                if (game.nextForcePriority === null) continue;
+                if (!selected || FORCE_PRIORITY[game.nextForcePriority] > FORCE_PRIORITY[selected.nextForcePriority!]) {
+                    selected = game;
+                }
             }
+            if (!selected) return null;
+            // game can drop its forces on take (actions unregistered), look again
+            const force = selected.takeForce();
+            if (force) return { game: selected, force };
         }
-        return selected ? { game: selected, force: selected.takeForce()! } : null;
     }
 
     private async actInner(
         force: boolean,
         candidates?: ActionCandidate[] | null,
-        forceContext?: QueuedGameForce["data"],
+        forceContext?: ActiveForce["data"],
         priority: ForcePriority = "low",
     ) {
         this.pendingActTimer.cancel();

@@ -178,36 +178,6 @@ describe("actions/force", () => {
         harness.server.completeForce();
         expect(harness.server.hasQueuedForce).toBe(true);
     });
-
-    test("prioritizes forces and lets critical replace queued lower priorities", async ({harness}) => {
-        await harness.client.hello();
-        await harness.client.registerActions([ACTION]);
-
-        const sendForce = async (priority: v1.ForcePriority, query: string) => {
-            await harness.client.conn.send(v1.zForceAction.decode({
-                game: harness.server.name,
-                data: { query, action_names: [ACTION.name], priority },
-            }));
-        };
-
-        await sendForce("low", "low");
-        await sendForce("high", "high");
-        await sendForce("medium", "medium");
-
-        expect(harness.server.takeForce()?.data.query).toBe("high");
-        harness.server.completeForce();
-        expect(harness.server.takeForce()?.data.query).toBe("medium");
-        harness.server.completeForce();
-        expect(harness.server.takeForce()?.data.query).toBe("low");
-        harness.server.completeForce();
-
-        await sendForce("low", "replace me");
-        await sendForce("critical", "critical");
-
-        expect(harness.server.takeForce()?.data.query).toBe("critical");
-        harness.server.completeForce();
-        expect(harness.server.hasForce).toBe(false);
-    });
 });
 
 describe("action/result", () => {

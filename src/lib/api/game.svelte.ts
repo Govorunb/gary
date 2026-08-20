@@ -17,12 +17,21 @@ export type PendingAction = {
     actData: v1.ActData,
     sentAt: number,
     timeout: ReturnType<typeof setTimeout>,
-    v1Force?: v1.ForceAction,
 };
 export type QueuedGameForce = {
-    actions: v1.Action[];
     data: v1.ForceAction["data"];
+    retryCount?: number;
 };
+// the force in progress. keeps its slot through retries (queued forces wait behind it)
+export type ActiveForce = QueuedGameForce & {
+    actions: v1.Action[];
+    phase: "generating" | "sent" | "retry";
+    actId?: string;
+};
+export type ForceDropReason = "retry_exhausted" | "actions_unregistered" | "not_sent" | "preempted";
+
+const FORCE_RETRY_LIMIT = 3;
+const ACTION_RESULT_TIMEOUT = 20_000; // spec 2026-09
 
 export class Game {
     public readonly actions = $state(new SvelteMap<string, GameAction>());
@@ -36,7 +45,7 @@ export class Game {
         force => v1.FORCE_PRIORITY[force.data.priority],
         this.forceQueueValues,
     );
-    private forceActive = $state(false);
+    private activeForce: ActiveForce | null = $state(null);
     
     public get id() {
         return this.conn.id;
@@ -63,6 +72,7 @@ export class Game {
             EVENT_BUS.emit('api/game/disconnected', { game: { id: this.id, name: this.name } });
             this.clearPendingActions();
             this.forceQueue.clear();
+            this.activeForce = null;
         });
         conn.onmessage((txt) => this.recv(txt));
         conn.onerror((err) => {
@@ -75,25 +85,92 @@ export class Game {
     }
 
     public get hasQueuedForce() {
-        return !this.forceActive && !this.pendingActions.size && this.forceQueue.length > 0;
+        return this.nextForcePriority !== null;
     }
 
     public get hasForce() {
-        return this.forceActive || this.forceQueue.length > 0;
+        return !!this.activeForce || this.forceQueue.length > 0;
     }
 
+    // none when waiting for a result
     public get nextForcePriority(): v1.ForcePriority | null {
-        return this.hasQueuedForce ? this.forceQueue.peek()!.data.priority : null;
+        if (this.pendingActions.size) return null;
+        if (this.activeForce) {
+            return this.activeForce.phase === "retry" ? this.activeForce.data.priority : null;
+        }
+        return this.forceQueue.peek()?.data.priority ?? null;
     }
 
-    public takeForce(): QueuedGameForce | null {
-        if (!this.hasQueuedForce) return null;
-        this.forceActive = true;
-        return this.forceQueue.dequeue()!;
+    // retries stay at the front
+    public takeForce(): ActiveForce | null {
+        if (this.nextForcePriority === null) return null;
+        const retry = this.activeForce;
+        this.activeForce = null;
+        for (let force = retry ?? this.forceQueue.dequeue(); force; force = this.forceQueue.dequeue()) {
+            const actions = this.resolveForceActions(force.data);
+            if (!actions.length) {
+                this.emitForceDropped(force, "actions_unregistered");
+                continue;
+            }
+            this.activeForce = { ...force, actions, phase: "generating" };
+            return this.activeForce;
+        }
+        return null;
     }
 
     public completeForce() {
-        this.forceActive = false;
+        if (this.activeForce?.phase === "generating") this.closeForce("not_sent");
+    }
+
+    // called on engine errors
+    public failForce() {
+        // the game's still waiting on us
+        if (this.activeForce?.phase === "generating") this.retryForce();
+    }
+
+    private closeForce(reason: ForceDropReason | "completed") {
+        const force = this.activeForce!;
+        this.activeForce = null;
+        if (reason !== "completed") this.emitForceDropped(force, reason);
+        this.wakeScheduler();
+    }
+
+    // v1 spec: failed forced actions get retried
+    private retryForce() {
+        const force = this.activeForce!;
+        const retries = force.retryCount ?? 0;
+        if (retries >= FORCE_RETRY_LIMIT) return this.closeForce("retry_exhausted");
+        force.retryCount = retries + 1;
+        force.phase = "retry";
+        this.wakeScheduler();
+    }
+
+    private enqueueForce(force: QueuedGameForce) {
+        const critical = force.data.priority === "critical";
+        const discarded = this.forceQueue.enqueue(force, { discardLower: critical });
+        const active = this.activeForce;
+        if (critical && active?.phase === "retry" && active.data.priority !== "critical") {
+            this.activeForce = null;
+            discarded.push(active);
+        }
+        for (const dropped of discarded) this.emitForceDropped(dropped, "preempted");
+        // unconditional on purpose (not wakeScheduler)
+        this.session.scheduler.onGameForce(force.data.priority);
+    }
+
+    private resolveForceActions(data: v1.ForceAction["data"]) {
+        return data.action_names.map(name => this.getAction(name)!).filter(Boolean);
+    }
+
+    private emitForceDropped(force: QueuedGameForce, reason: ForceDropReason) {
+        EVENT_BUS.emit('api/game/force_dropped', {
+            game: { id: this.id, name: this.name },
+            reason,
+            ...force.data,
+        });
+    }
+
+    private wakeScheduler() {
         if (this.nextForcePriority) {
             this.session.scheduler.onGameForce(this.nextForcePriority);
         }
@@ -324,7 +401,7 @@ export class Game {
                 msg,
             });
         }
-        const actions = msg.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
+        const actions = this.resolveForceActions(msg.data);
         if (msg.data.action_names.length === 0) {
             this.diagnostics.trigger("prot/force/empty", { msgData: msg.data });
             return;
@@ -337,38 +414,56 @@ export class Game {
                 this.diagnostics.trigger("prot/force/some_invalid", { msgData: msg.data, unknownActions: msg.data.action_names.filter(name => !this.getAction(name)) });
             }
         }
-        if (this.forceActive || this.forceQueue.length) {
+        if (this.hasForce) {
             this.diagnostics.trigger("prot/force/multiple", { msgData: msg.data });
         }
-        this.enqueueForce(actions, msg.data);
+        this.enqueueForce({ data: msg.data });
         EVENT_BUS.emit('api/game/force', {
             game: { id: this.id, name: this.name },
             ...msg.data,
         });
     }
 
-    private enqueueForce(actions: v1.Action[], data: v1.ForceAction["data"]) {
-        this.forceQueue.enqueue({ actions, data }, { discardLower: data.priority === "critical" });
-        if (!this.pendingActions.size) {
-            this.session.scheduler.onGameForce(data.priority);
-        }
-    }
-
+    // scheduler only runs one act at a time, so if a force is generating this is its act
     async sendAction(actData: v1.ActData, toolCallId?: string) {
         EVENT_BUS.emit('api/game/act/actor', {
             game: { id: this.id, name: this.name },
             act: actData,
             toolCallId,
         });
+        if (this.activeForce?.phase === "generating") {
+            this.activeForce.phase = "sent";
+            this.activeForce.actId = actData.id;
+        }
+        await this.dispatchAction(actData);
+    }
+
+    private async dispatchAction(actData: v1.ActData) {
         const sentAt = Date.now();
         const timeout = setTimeout(() => {
-            if (this.pendingActions.has(actData.id)) {
-                this.diagnostics.trigger("perf/timeout/action_result", prettyPending({actData, sentAt, timeout}));
-                this.pendingActions.delete(actData.id);
-            }
+            this.diagnostics.trigger("perf/timeout/action_result", prettyPending(pending));
+            pending.timeout = setTimeout(
+                () => this.settleAction(pending, false),
+                ACTION_RESULT_TIMEOUT - TIMEOUTS["perf/timeout/action_result"]
+            );
         }, TIMEOUTS["perf/timeout/action_result"]);
-        this.pendingActions.set(actData.id, { actData, sentAt, timeout });
+        const pending: PendingAction = { actData, sentAt, timeout };
+        this.pendingActions.set(actData.id, pending);
         await this.conn.send(v1.zAct.decode({data: actData}));
+    }
+
+    private settleAction({ actData: { id }, timeout }: PendingAction, success: boolean) {
+        clearTimeout(timeout);
+        this.pendingActions.delete(id);
+        if (this.activeForce?.actId === id) {
+            if (this.version === "v1" && !success) {
+                this.retryForce();
+            } else {
+                this.closeForce("completed");
+            }
+        } else {
+            this.wakeScheduler();
+        }
     }
 
     sendSpeechFinished() {
@@ -382,13 +477,11 @@ export class Game {
             this.diagnostics.trigger("prot/result/unexpected", { msgData: msg.data });
             return;
         }
-        const { actData, sentAt, timeout, v1Force } = pending;
-        clearTimeout(timeout);
+        const { actData, sentAt } = pending;
         const diff = Date.now() - sentAt;
         if (diff > TIMEOUTS["perf/late/action_result"]) {
             this.diagnostics.trigger("perf/late/action_result", prettyPending(pending));
         }
-        this.pendingActions.delete(id);
         if (!success && !message) {
             this.diagnostics.trigger("prot/result/error_nomessage");
         }
@@ -398,13 +491,7 @@ export class Game {
             success,
             message,
         });
-        // v1 spec: Neuro will retry failed `actions/force`s
-        if (this.version === "v1" && v1Force) {
-            const actions = v1Force.data.action_names.map(name => this.getAction(name)!).filter(Boolean);
-            this.enqueueForce(actions, v1Force.data); // spec says "immediately" so i guess we doom loop
-        } else if (this.nextForcePriority) {
-            this.session.scheduler.onGameForce(this.nextForcePriority);
-        }
+        this.settleAction(pending, success);
     }
 
     async manualSend(action: string, data?: string) {
@@ -413,7 +500,7 @@ export class Game {
             data,
         });
         EVENT_BUS.emit('api/game/act/user', { game: { id: this.id, name: this.name }, act: actData });
-        await this.sendAction(actData);
+        await this.dispatchAction(actData);
     }
 
     toString() {
@@ -498,6 +585,12 @@ export const EVENTS = [
         dataSchema: {} as GameEventData & v1.ForceAction['data'],
         description: "Game forced an action",
         level: LogLevel.Info,
+    },
+    {
+        key: 'api/game/force_dropped',
+        dataSchema: {} as GameEventData & v1.ForceAction['data'] & { reason: ForceDropReason },
+        description: "Force dropped without a successful action",
+        level: LogLevel.Warning,
     },
     {
         key: 'api/game/v1/name',

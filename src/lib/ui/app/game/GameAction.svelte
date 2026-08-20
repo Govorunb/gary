@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Dices, Send } from "@lucide/svelte";
-    import { getUIState, getUserPrefs } from "$lib/app/utils/di";
+    import { getScheduler, getUIState, getUserPrefs } from "$lib/app/utils/di";
     import CopyButton from "../../common/CopyButton.svelte";
     import CodeMirror from "../../common/CodeMirror.svelte";
     import { generateFromJsonSchema, parseError, preventDefault, tooltip } from "$lib/app/utils";
@@ -17,8 +17,11 @@
     let { action, game }: Props = $props();
     const uiState = getUIState();
     const userPrefs = getUserPrefs();
+    const scheduler = getScheduler();
 
     const active = $derived(action.active);
+    const busy = $derived(scheduler.busy);
+    const busyTip = (tip: string) => tooltip(busy ? "Engine busy (Shift to stop)" : tip);
 
     let open = $state(false);
     let schemaOpen = $state(false);
@@ -58,6 +61,7 @@
         if (evt.defaultPrevented || !(evt.ctrlKey || evt.metaKey)) return;
 
         evt.preventDefault();
+        if (busy) return;
         if (hasSchema) {
             send();
         } else {
@@ -78,23 +82,26 @@
             {#if hasSchema}
                 <button
                     class="action-btn"
+                    disabled={busy}
                     onclick={preventDefault(send)}
-                    {@attach tooltip("Send (manual) - Ctrl/Cmd-click header")}
+                    {@attach busyTip("Send (manual) - Ctrl/Cmd-click header")}
                 >
                     <Send class="size-4" />
                 </button>
                 <button
                     class="action-btn"
+                    disabled={busy}
                     onclick={preventDefault(sendRandom)}
-                    {@attach tooltip("Send (random data)")}
+                    {@attach busyTip("Send (random data)")}
                 >
                     <Dices class="size-4" />
                 </button>
             {:else}
                 <button
                     class="action-btn"
+                    disabled={busy}
                     onclick={preventDefault(() => doSend())}
-                    {@attach tooltip("Send - Ctrl/Cmd-click header")}
+                    {@attach busyTip("Send - Ctrl/Cmd-click header")}
                 >
                     <Send class="size-4" />
                 </button>
@@ -156,9 +163,12 @@
 
     .action-btn {
         @apply p-1.5 rounded-md transition-colors;
-        &:hover {
+        &:hover:not(:disabled) {
             @apply bg-neutral-200 dark:bg-surface-700;
             @apply text-neutral-900 dark:text-neutral-100;
+        }
+        &:disabled {
+            @apply opacity-40 cursor-not-allowed;
         }
     }
     .action-description {

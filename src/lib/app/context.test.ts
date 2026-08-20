@@ -64,9 +64,11 @@ describe("ContextManager projection", () => {
         bus.emit("ui/context/input", { text: "poke", silent: false });
         bus.emit("api/actor/skip", { engineId: "randy" });
         bus.emit("api/game/connected", { game: { id: "g1", name: "Chess" } });
+        bus.emit("api/game/action_result", { game: { id: "g1", name: "Chess" }, act: { id: "a1", name: "move" }, success: false });
+        bus.emit("api/game/action_result", { game: { id: "g1", name: "Chess" }, act: { id: "a2", name: "move" }, success: true });
 
-        expect(seen).toBe(2);
-        expect(prompts).toBe(1);
+        expect(seen).toBe(4);
+        expect(prompts).toBe(2);
     });
 
     test("reset events clear user/actor projections without clearing history", () => {

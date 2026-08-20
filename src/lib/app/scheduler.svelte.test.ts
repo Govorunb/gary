@@ -3,7 +3,7 @@ import { err, errAsync, okAsync, type Result, ResultAsync } from "neverthrow";
 import { Scheduler } from "./scheduler.svelte";
 import { EngineError, type Engine, type EngineAct, type EngineActResult } from "./engines/index.svelte";
 import type { Action, ActData, ForcePriority } from "$lib/api/v1/spec";
-import type { Game, QueuedGameForce } from "$lib/api/game.svelte";
+import type { ActiveForce, Game } from "$lib/api/game.svelte";
 import type { Session } from "./session.svelte";
 
 type FakeGameAction = Action & { active: boolean };
@@ -189,13 +189,45 @@ describe("Scheduler action names", () => {
 });
 
 describe("Scheduler force priority", () => {
+    test("associates a game force with the action sent for it", async () => {
+        const action = { name: "move", description: "Move" };
+        const game = createFakeGame("Test Game", "test", [action]) as FakeGame & Game;
+        const force: ActiveForce = {
+            actions: [action],
+            data: { query: "Move now", action_names: [action.name], priority: "low" },
+            phase: "generating",
+        };
+        let queued: ActiveForce | null = force;
+        const sendAction = vi.spyOn(game, "sendAction");
+        const completeForce = vi.fn();
+
+        Object.defineProperties(game, {
+            nextForcePriority: { get: () => queued?.data.priority ?? null },
+            takeForce: { value: vi.fn(() => {
+                const taken = queued;
+                queued = null;
+                return taken;
+            }) },
+            completeForce: { value: completeForce },
+        });
+
+        await withScheduler([game], createEngine(actions => ({ name: actions[0].name })), async scheduler => {
+            scheduler.onGameForce("low");
+            await vi.waitFor(() => expect(sendAction).toHaveBeenCalledOnce());
+
+            expect(sendAction).toHaveBeenCalledWith(expect.objectContaining({ name: action.name }), undefined);
+            expect(completeForce).toHaveBeenCalledOnce();
+        });
+    });
+
     test("takes the highest-priority force across games", async () => {
         const action = { name: "move", description: "Move" };
         const low = createFakeGame("Low", "low", [action]) as FakeGame & Game;
         const critical = createFakeGame("Critical", "critical", [action]) as FakeGame & Game;
-        const queuedForce = (priority: ForcePriority): QueuedGameForce => ({
+        const queuedForce = (priority: ForcePriority): ActiveForce => ({
             actions: [action],
             data: { query: priority, action_names: [action.name], priority },
+            phase: "generating",
         });
         const lowForce = queuedForce("low");
         const criticalForce = queuedForce("critical");
@@ -211,7 +243,7 @@ describe("Scheduler force priority", () => {
 
         await withScheduler([low, critical], createEngine(actions => ({ name: actions[0].name })), scheduler => {
             const selected = (scheduler as unknown as {
-                takeGameForce(): { game: Game; force: QueuedGameForce } | null;
+                takeGameForce(): { game: Game; force: ActiveForce } | null;
             }).takeGameForce();
 
             expect(selected).toStrictEqual({ game: critical, force: criticalForce });
