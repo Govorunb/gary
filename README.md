@@ -92,9 +92,13 @@ Note: Often, providers offer their services for free/cheap by gathering and reta
 </details>
 
 <details>
-<summary><b>It gets so much slower as the session goes on!</b>/<b>My session went on for a while and then it broke!</b></summary>
+<summary><b>It gets so much slower/more expensive as the session goes on!</b>/<b>My session went on for a while and then the model got dumber!</b></summary>
 
-Models have context windows that are limited in capacity. The more text in the context window, the slower it is to process - and when the limit is reached, the model can't process at all. You'll need to periodically reset the context by clicking the menu button next to the "Context Log" heading. This means the model's knowledge will be starting over from scratch! Try to find a good moment to reset the context. You can also add periodic reminders of game rules to your game (e.g. on starting a new round).
+Models have context windows that are limited in capacity. The more text in the context window, the more expensive it is to process - and when the limit is reached, the model can't process at all.
+
+There's two parts to the "getting dumber" part of it:
+1. For many models, intelligence degrades as the context window fills up. I don't know the exact mechanism (there's likely more than one), but my guess is that there's more training data for small-context-window conversations (with only a few turns), so longer ones are more "out of distribution". And, it's just easier to answer a question with fresh context vs one full of distracting random stuff and irrelevant past messages.
+2. Compaction/trimming. To avoid hitting the context window limit, Gary will periodically trim the context. This means the model may occasionally drop a bunch of knowledge from its working memory! You might want to send reminders of game rules from your integration on certain breakpoints (e.g. on starting a new round). Neuro will likely differ here since the official context management strategy isn't published.
 </details>
 
 ### Tips
@@ -104,7 +108,11 @@ Use Randy or manual sends to test the protocol, and smaller models to lightly te
 
 If a smaller model fails, make sure you're able to reproduce the problem with a stronger model before changing your integration. Larger models can tolerate a lot more ambiguity and inconsistency.
 
-#### Prompting (descriptions, context)
+<details>
+<summary>Not sure how to prompt LLMs in general?</summary>
+
+Make sure you've read the [official best practices](https://github.com/VedalAI/neuro-sdk/blob/main/API/BEST_PRACTICES.md) first.
+
 - Use direct and concise language
     - Having less text to process makes the LLM faster and more focused
     - Aim for high information density - consider running your prompts through a summarizer
@@ -114,25 +122,10 @@ If a smaller model fails, make sure you're able to reproduce the problem with a 
 - Natural language (e.g. `Consider your goals`) is okay - it is a language model, after all
     - That said, language models are not humans - watch this short [video](https://www.youtube.com/watch?v=7xTGNNLPyMI) for a very brief overview of how LLMs work
 - Test important prompt changes with more than one capable model
-  - If you're using small models, assume Neuro will be more intelligent. Mitigations for some failure modes like not being able to pick options out of a list may not help Neuro, and may actually actively hinder her
+  - If you're using small models, assume Neuro will be more intelligent. Mitigations for some failure modes (e.g. a small model failing to pick options out of a list) may not help Neuro, and may actually actively hinder her
   - More on this - each model has a "preferred prompting style" that best works for the individual model. There is basically no way to know this for Neuro, but using multiple different models will help you phrase your prompts more "neutrally"
 
-#### Managing context
-
-When generating, LLMs generally pay more attention to the very first and the very last parts of the context. Therefore, consider the following:
-- Send a description of the game and its rules on startup
-- Keep context messages relevant to upcoming actions/decisions
-    - Consider reminding the model of any relevant state immediately before asking it to make a choice
-- Send reminders of rules/tips/state at breakpoints, e.g. starting a new round
-
-If an action fails because of game state (e.g. trying to place an item in an occupied slot), you should attempt, preferably in this particular order:
-1. Disallow the illegal action (by removing the illegal parameter from the schema, or by unregistering the action entirely)
-    - This is the best option for correctness as there's no chance for mistakes at all (unless Neuro decides to ignore the schema)
-    - :information_source: Unregistering actions may have a l*tency cost (keywords to ask your AI about: `changing tools list in system prompt busts the cache prefix`)
-2. Suggest a suitable alternative in the result message
-    - For example, `"Battery C is currently charging and cannot be removed. Batteries A and B are charged and available."`
-3. Send additional context as a state reminder on failure so the model can retry with more knowledge
-4. Or, register a query-like action (e.g. `check_inventory`) that allows the model to ask about the state at any time and just hope for the best
+</details>
 
 ### JSON schema support
 Not all JSON schema keywords are supported by all providers. Unfortunately, I can't predict how every provider will handle this, so requests may error out - or, worse yet, your action schemas may silently get ignored.
@@ -155,8 +148,10 @@ There may be cases where other backends (including Neuro) may behave differently
     - Processing other sources of information like vision/audio/chat (for obvious reasons)
     - Gary is not real and will never message you on Discord at 3 AM to tell you he's lonely 😔
     - Myriad other things like response timings, text filters, allowed JSON schema keywords, long-term memories, etc
-- Gary can send `actions/reregister_all` to v1 clients on every connect when the compatibility setting is enabled (instead of just **re**connects, as in the spec).
-    - Reminder: this command is deprecated and non-standard. Your game/SDK implementation should proactively register actions on connect instead of relying on a prompt from the server (which may not ever come).
+- Gary has no support for [voice chat](https://github.com/VedalAI/neuro-sdk/blob/main/API/VOICE_CHAT.md) (for obvious reasons)
+- Gary doesn't speak through audio, so `speech_finished` is sent immediately when the speech text is generated
+  - This won't be sent if yapping is disallowed in engine config
+- `actions/reregister_all` is [officially deprecated](https://github.com/VedalAI/neuro-sdk/blob/main/API/BEST_PRACTICES.md#disconnecting-and-reconnecting) but if you're working with an older integration, there's a compatibility setting for it in the server config
 
 #### Acknowledgements
 Thanks to all these lovely games for having Neuro integration so I didn't have to develop this blind:
