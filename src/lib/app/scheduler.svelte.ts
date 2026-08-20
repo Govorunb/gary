@@ -314,6 +314,7 @@ export class Scheduler {
                 msg: choice.say,
                 notify: choice.notify,
             });
+            void Promise.allSettled(this.registry.games.map(game => game.sendSpeechFinished()));
             if (choice.notify) {
                 toast.info(`Gary says: ${choice.say}`);
             }

@@ -371,6 +371,10 @@ export class Game {
         await this.conn.send(v1.zAct.decode({data: actData}));
     }
 
+    sendSpeechFinished() {
+        return this.conn.send(v1.zSpeechFinished.decode({data: {isFinal: true}}));
+    }
+
     async actionResult(msg: v1.ActionResult) {
         const { id, success, message } = msg.data;
         const pending = this.pendingActions.get(id);

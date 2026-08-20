@@ -15,9 +15,11 @@ type FakeGame = {
     nextForcePriority: ForcePriority | null;
     activeActions: FakeGameAction[];
     sentActions: ActData[];
+    speechFinishedCount: number;
     getActiveActions(): FakeGameAction[];
     getAction(actionName: string): FakeGameAction | undefined;
     sendAction(actData: ActData): Promise<void>;
+    sendSpeechFinished(): Promise<void>;
 };
 
 function createFakeGame(name: string, shortId: string, activeActions: Action[]): FakeGame {
@@ -30,16 +32,21 @@ function createFakeGame(name: string, shortId: string, activeActions: Action[]):
         nextForcePriority: null,
         activeActions: storedActions,
         sentActions,
+        speechFinishedCount: 0,
         getActiveActions: () => storedActions,
         getAction: (actionName: string) => storedActions.find(action => action.name === actionName),
         sendAction(actData: ActData) {
             sentActions.push(actData);
             return Promise.resolve();
         },
+        sendSpeechFinished() {
+            this.speechFinishedCount++;
+            return Promise.resolve();
+        },
     };
 }
 
-function createEngine(select: (actions: Action[]) => EngineAct): Engine<unknown> {
+function createEngine(select: (actions: Action[]) => EngineActResult): Engine<unknown> {
     return {
         id: "test-engine",
         name: "Test Engine",
@@ -80,6 +87,20 @@ async function withScheduler(
 }
 
 describe("Scheduler action names", () => {
+    test("notifies every game when the engine says something", async () => {
+        const firstGame = createFakeGame("First Game", "first", [{ name: "move" }]);
+        const secondGame = createFakeGame("Second Game", "second", []);
+        const engine = createEngine(() => ({ say: "hello", notify: false }));
+
+        await withScheduler([firstGame, secondGame], engine, async scheduler => {
+            const result = await scheduler.tryAct();
+
+            expect(result.isOk()).toBe(true);
+            expect(firstGame.speechFinishedCount).toBe(1);
+            expect(secondGame.speechFinishedCount).toBe(1);
+        });
+    });
+
     test("drains queued work after becoming unmuted", async () => {
         const action = { name: "move", description: "Move" };
         const game = createFakeGame("Test Game", "test", [action]);

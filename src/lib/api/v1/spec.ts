@@ -130,14 +130,25 @@ export const zReregisterAll = z.strictObject({
     command: zConst("actions/reregister_all"),
 })
 
+export const zSpeechFinished = z.strictObject({
+    command: zConst("speech_finished"),
+    data: z.strictObject({
+        isFinal: z.boolean(),
+        cancelled: z.boolean().optional(),
+        reason: z.string().optional(),
+    }),
+});
+
 export const zNeuroMessage = z.discriminatedUnion("command", [
     zStartupAck,
     zAct,
     zReregisterAll,
+    zSpeechFinished,
 ])
 
 export type StartupAck = z.infer<typeof zStartupAck>;
 export type Act = z.infer<typeof zAct>;
 export type ActData = z.infer<typeof zActData>;
 export type ReregisterAll = z.infer<typeof zReregisterAll>;
+export type SpeechFinished = z.infer<typeof zSpeechFinished>;
 export type NeuroMessage = z.infer<typeof zNeuroMessage>;

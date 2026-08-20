@@ -6,6 +6,7 @@ import {
 } from "./registry.svelte";
 import { EVENT_BUS } from "$lib/app/events/bus";
 import { zApiPrefs, type ApiPrefs } from "$lib/app/prefs.svelte";
+import { zSpeechFinished } from "./v1/spec";
 
 class TestConnection extends BaseConnection {
     sent: string[] = [];
@@ -63,4 +64,14 @@ describe("v1 re-register compatibility", () => {
     test("does not send to non-v1 clients even when enabled", () => {
         expect(shouldSendDeprecatedV1ReregisterAll("v2", apiPrefs(true))).toBe(false);
     });
+});
+
+test("serializes completed speech with the required final marker", async () => {
+    const conn = new TestConnection("speech-finished", "v1");
+
+    await conn.send(zSpeechFinished.decode({ data: { isFinal: true } }));
+
+    expect(conn.sent).toStrictEqual([
+        JSON.stringify({ command: "speech_finished", data: { isFinal: true } }),
+    ]);
 });

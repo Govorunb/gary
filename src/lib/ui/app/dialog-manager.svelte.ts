@@ -1,13 +1,12 @@
 import type { Game } from "$lib/api/game.svelte";
 import type { Action } from "$lib/api/v1/spec";
-import type { EngineId } from "./engines/EngineConfig.svelte";
 
 export type DialogState =
     | { type: "manualSend", action: Action, game: Game }
     | { type: "rawMessage", game: Game }
     | { type: "diagnostics", game: Game }
     | { type: "update" }
-    | { type: "enginePicker", engineId: EngineId | null }
+    | { type: "enginePicker", engineId: string | null }
     | { type: "settings" };
 
 export type DialogType = DialogState["type"];
@@ -63,7 +62,7 @@ export class DialogManager {
         this.openDialog({ type: "enginePicker", engineId: null });
     }
 
-    openEngineConfig(engineId: EngineId) {
+    openEngineConfig(engineId: string) {
         this.openDialog({ type: "enginePicker", engineId });
     }
 
