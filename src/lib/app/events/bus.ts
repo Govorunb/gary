@@ -3,6 +3,14 @@ import type { EventData, EventInstance, EventKey, DatalessKey, HasDataKey } from
 import { createListener, DefaultMap } from "../utils";
 import { untrack } from "svelte";
 
+// Class instances keep immutable event payloads out of Svelte's deep proxies.
+class EventRecord {
+    readonly id = uuid();
+    readonly timestamp = Date.now();
+
+    constructor(readonly key: EventKey, readonly data: unknown) {}
+}
+
 export class EventBus {
     #allSubs: Set<EventSub<EventKey>> = new Set();
     #subs: DefaultMap<EventKey, Set<EventSub<any>>> = new DefaultMap(() => new Set());
@@ -14,12 +22,7 @@ export class EventBus {
     }
     
     #emit<K extends EventKey>(key: K, data?: EventData<K>) {
-        const e = {
-            id: uuid(),
-            timestamp: Date.now(),
-            key,
-            data
-        } as EventInstance<K>; // can't `satisfies` :(
+        const e = new EventRecord(key, data) as EventInstance<K>;
         this.#allSubs.forEach(sub => sub.next(e));
         this.#subs.get(key).forEach(sub => sub.next(e));
     }

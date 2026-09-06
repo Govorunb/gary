@@ -8,7 +8,7 @@ type Unsub = () => void;
 export const MAX_DISPLAYED_EVENTS = 1_000;
 
 export class EventLogStore {
-    readonly all: EventInstance<EventKey>[] = $state([]);
+    readonly all: EventInstance<EventKey>[] = [];
     #displayed: readonly EventInstance<EventKey>[] = $state.raw([]);
     #subs: Array<(delta: EventLogDelta) => void> = [];
     #subsByKey = new Map<EventKey, Array<(delta: EventLogDelta) => void>>();
