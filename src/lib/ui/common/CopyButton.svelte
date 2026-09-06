@@ -35,7 +35,7 @@
     }
 </script>
 
-<button class="copy-button"
+<button class="icon-btn copy-button"
     onclick={preventDefault(copy)}
     data-copied={boolAttr(copied)}
     {@attach tooltip(`Copy${description}`)}
@@ -50,22 +50,7 @@
 <style lang="postcss">
     @reference "global.css";
 
-    .copy-button {
-        @apply p-1.5 rounded-md shrink-0;
-        @apply text-neutral-700 dark:text-neutral-200;
-        @apply transition-colors duration-150;
-
-        &:hover {
-            @apply bg-neutral-200 dark:bg-surface-700;
-            @apply text-neutral-900 dark:text-neutral-50;
-        }
-
-        &:focus-visible {
-            @apply outline-none ring-2 ring-sky-400;
-        }
-
-        &[data-copied] {
-            @apply bg-primary-200/50 dark:bg-primary-700/50 text-white;
-        }
+    .copy-button[data-copied] {
+        @apply text-lvl-ok;
     }
 </style>

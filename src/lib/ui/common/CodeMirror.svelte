@@ -79,8 +79,7 @@
 
     .codemirror-container {
         @apply flex-1 overflow-auto;
-        @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
-        @apply bg-neutral-50 dark:bg-neutral-900;
+        @apply rounded-lg ring-1 ring-inset ring-edge bg-layer-0;
         @apply text-xs;
         & :global(.cm-editor) {
             @apply h-full;

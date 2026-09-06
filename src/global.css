@@ -2,7 +2,53 @@
 
 @import '@skeletonlabs/skeleton';
 @import '@skeletonlabs/skeleton-svelte';
-@import '@skeletonlabs/skeleton/themes/cerberus';
+@import './theme.css';
+
+/*
+    Semantic tokens. New components use these, not raw scale steps.
+    Light and dark are defined side by side with light-dark(); the color
+    scheme is set on :root by the theme manager (.light / .dark class).
+    Hue 258 is the surface hue from theme.css so tints match the scales.
+*/
+@theme static {
+    --font-sans: "Inter", "Noto Sans", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+    /* Layers, back to front. 0 is the window, 1 is a column, 2+ are things on a column. */
+    --color-layer-0: light-dark(oklch(0.97 0.006 258), oklch(0.17 0.02 258));
+    --color-layer-1: light-dark(oklch(1 0 0), oklch(0.215 0.02 258));
+    --color-layer-2: light-dark(oklch(0.98 0.004 258), oklch(0.25 0.02 258));
+    --color-layer-3: light-dark(oklch(0.955 0.008 258), oklch(0.29 0.022 258));
+    --color-layer-4: light-dark(oklch(0.925 0.012 258), oklch(0.34 0.024 258));
+
+    /* Ink, strongest to faintest. 0 headings, 1 body, 2 secondary, 3 hints and timestamps. */
+    --color-ink-0: light-dark(oklch(0.21 0.03 258), oklch(0.95 0.01 258));
+    --color-ink-1: light-dark(oklch(0.32 0.03 258), oklch(0.84 0.015 258));
+    --color-ink-2: light-dark(oklch(0.50 0.03 258), oklch(0.66 0.02 258));
+    --color-ink-3: light-dark(oklch(0.68 0.025 258), oklch(0.50 0.02 258));
+
+    /* Edges. edge is the visible seam, edge-soft is for inset rings on inputs. */
+    --color-edge: light-dark(oklch(0.89 0.012 258), oklch(0.31 0.025 258));
+    --color-edge-soft: light-dark(oklch(0.93 0.008 258), oklch(0.27 0.02 258));
+
+    /* The top bar and the one accent. */
+    --color-bar: light-dark(oklch(0.905 0.03 258), oklch(0.27 0.07 262));
+    /* Pills on the top bar. Light needs an opaque near-white; dark just dims toward layer-0. */
+    --color-bar-control: light-dark(oklch(0.985 0.005 258), color-mix(in oklab, var(--color-layer-0) 45%, transparent));
+    --color-bar-control-hover: light-dark(oklch(1 0 0), color-mix(in oklab, var(--color-layer-0) 70%, transparent));
+    --color-accent: light-dark(var(--color-primary-600), var(--color-primary-400));
+
+    /* Context log sources. Same hue in both schemes, darker step in light. */
+    --color-src-system: light-dark(var(--color-warning-700), var(--color-warning-500));
+    --color-src-client: light-dark(var(--color-primary-700), var(--color-primary-400));
+    --color-src-user: light-dark(var(--color-success-700), var(--color-success-400));
+    --color-src-actor: light-dark(var(--color-secondary-700), var(--color-secondary-400));
+
+    /* Event levels and run state. */
+    --color-lvl-ok: light-dark(var(--color-success-700), var(--color-success-400));
+    --color-lvl-warn: light-dark(var(--color-warning-700), var(--color-warning-500));
+    --color-lvl-err: light-dark(var(--color-error-600), var(--color-error-400));
+}
 
 :root {
     --z-mobile-sidebar-backdrop: 20;
@@ -22,12 +68,11 @@
 
     body {
         @apply min-h-screen;
-        @apply font-sans text-base font-normal leading-5 antialiased;
-        @apply bg-surface-100 dark:bg-surface-900;
-        @apply text-neutral-900 dark:text-neutral-100;
+        @apply font-sans text-sm font-normal leading-5 antialiased;
+        @apply bg-layer-0 text-ink-1;
     }
     .note {
-        @apply text-xs text-neutral-500 dark:text-neutral-300;
+        @apply text-xs text-ink-2;
     }
     /* absolute hack */
     .cm-editor {
@@ -41,90 +86,173 @@
             }
         }
     }
-    .cm-gutters {
-        @apply border-surface-200! dark:border-surface-700!;
-    }
-    .cm-gutter {
-        @apply bg-surface-100 dark:bg-surface-900;
-    }
-    .cm-activeLine {
-        @apply bg-secondary-100/30! dark:bg-secondary-700/10!;
-    }
-    .cm-activeLineGutter {
-        @apply bg-secondary-100/50! dark:bg-secondary-700/20!;
-    }
-    .cm-selectionBackground {
-        @apply bg-primary-100/50! dark:bg-primary-400/50!;
-    }
     h2 {
-        @apply text-2xl font-bold;
-        @apply text-neutral-800 dark:text-neutral-50;
-        @apply select-none;
+        @apply text-lg font-semibold text-ink-0 select-none;
     }
     h3 {
-        @apply text-lg font-bold;
-        @apply text-neutral-800 dark:text-neutral-50;
-        @apply select-none;
+        @apply text-base font-semibold text-ink-0 select-none;
     }
-    .btn-base {
-        @apply inline-flex items-center gap-2;
-        @apply px-3! py-1.5! rounded-md! text-sm! font-medium;
-        @apply transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
+    /* Title row of a dashboard column. Children: title text, badges, then a spacer and icon buttons. */
+    .column-header {
+        @apply frow-2 items-center shrink-0 h-10 px-3;
+        @apply text-sm font-semibold text-ink-0 select-none;
+        & .spacer { @apply flex-1; }
+    }
+    /* Square icon-only button that lives in headers and rows. */
+    .icon-btn {
+        @apply inline-flex items-center justify-center size-7 rounded-md shrink-0;
+        @apply text-ink-2 transition-colors;
+        &:hover:not(:disabled) { @apply bg-layer-3 text-ink-0; }
+        &:disabled { @apply opacity-40 cursor-not-allowed; }
+        &:focus-visible { @apply outline-none ring-2 ring-accent; }
+        & > :where(svg) { @apply size-4; }
+    }
+    .badge {
+        @apply inline-flex items-center px-1.5 h-[18px] rounded-full;
+        @apply text-[11px] font-medium leading-none;
+        @apply bg-layer-3 text-ink-2;
+        &.warn { @apply text-lvl-warn; background-color: color-mix(in oklab, var(--color-lvl-warn) 18%, transparent); }
+        &.err { @apply text-lvl-err; background-color: color-mix(in oklab, var(--color-lvl-err) 18%, transparent); }
+    }
+    /* Buttons. btn is the quiet default, btn-primary the one action on a screen, btn-danger the destructive one. */
+    .btn {
+        @apply inline-flex items-center gap-1.5 h-8 px-3 rounded-md;
+        @apply text-sm font-medium text-ink-1 bg-layer-3 transition-colors;
+        &:hover:not(:disabled) { @apply bg-layer-4 text-ink-0; }
+        &:disabled { @apply opacity-50 cursor-not-allowed; }
+        &:focus-visible { @apply outline-none ring-2 ring-accent; }
+        & > :where(svg) { @apply size-4; }
+        &.btn-primary {
+            @apply bg-accent text-white;
+            &:hover:not(:disabled) { @apply bg-accent text-white; filter: brightness(1.1); }
+        }
+        &.btn-danger {
+            @apply text-lvl-err;
+            background-color: color-mix(in oklab, var(--color-lvl-err) 14%, transparent);
+            &:hover:not(:disabled) { @apply text-lvl-err; background-color: color-mix(in oklab, var(--color-lvl-err) 22%, transparent); }
+        }
+    }
+    /* Form fields: container, label, control, help text. */
+    .field { @apply fcol-1; }
+    .field-label {
+        @apply text-sm font-medium text-ink-1;
+        & .required { @apply text-lvl-err; }
+    }
+    .field-input {
+        @apply w-full px-3 py-1.5 rounded-md text-sm text-ink-0;
+        @apply bg-layer-2 ring-1 ring-inset ring-edge placeholder:text-ink-3;
+        @apply disabled:opacity-50 disabled:cursor-not-allowed;
+        &:focus { @apply outline-none ring-2 ring-accent; }
+    }
+    /* Selects draw their own chevron so it sits at the same inset as the text. */
+    select.field-input {
+        @apply appearance-none pr-9 bg-no-repeat;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+        background-position: right 0.75rem center;
+        background-size: 1rem;
+    }
+    .field-description { @apply text-xs text-ink-2; }
+    /* Keycap. layer-4 is the surface furthest from panels and popovers in both themes, and the ring is ink-based so it shows on any layer. */
+    .hotkey {
+        @apply inline-flex items-center px-1.5 py-0.5 rounded;
+        @apply font-mono text-xs whitespace-nowrap text-ink-0 bg-layer-4;
+        --keycap-edge: color-mix(in oklab, var(--color-ink-0) 22%, transparent);
+        box-shadow: inset 0 0 0 1px var(--keycap-edge), 0 1px 0 var(--keycap-edge);
+    }
+    /* Rows of a popover menu. */
+    .menu-item {
+        @apply frow-1.5 items-center w-full px-3 py-2 rounded-sm;
+        @apply text-left text-sm text-ink-1 transition-colors duration-150;
+        &:hover { @apply bg-layer-4; }
+        &:focus-visible { @apply outline-none ring-1 ring-edge; }
+        &.menu-item-danger {
+            @apply text-lvl-err;
+            &:hover { background-color: color-mix(in oklab, var(--color-lvl-err) 12%, transparent); }
+        }
+    }
+    /* A details element whose summary is a row, like an expanded action: background shows the open state, no frame. */
+    .details-box {
+        @apply fcol-2;
+        & > summary {
+            @apply frow-1.5 items-center h-8 px-2 -mx-2 rounded-md cursor-pointer select-none;
+            @apply text-sm font-semibold text-ink-1 transition-colors;
+            list-style: none;
+            &::-webkit-details-marker { display: none; }
+            &:hover { @apply bg-layer-2 text-ink-0; }
+            &:focus-visible { @apply outline-none ring-2 ring-inset ring-accent; }
+        }
+        &[open] > summary { @apply bg-layer-2 text-ink-0; }
+    }
+    /* Floating help text (teaching tooltips, shift indicator). */
+    .tooltip-panel {
+        @apply fcol-1 p-3 rounded-md max-w-xs;
+        @apply bg-layer-3 ring-1 ring-edge shadow-xl;
+        @apply text-xs text-ink-1;
     }
     .dialog-content {
         @apply fcol-4;
         @apply min-w-lg max-w-[50vw] max-h-[80vh] overflow-hidden;
-        @apply bg-white dark:bg-surface-900;
+        @apply bg-layer-1 ring-1 ring-edge;
         @apply rounded-2xl shadow-2xl;
-        @apply p-5 text-sm;
-        @apply text-neutral-900 dark:text-neutral-50;
+        @apply p-5 text-sm text-ink-1;
     }
     .dialog-header {
         @apply flex items-center justify-between;
-        @apply pb-2 border-b border-neutral-200 dark:border-neutral-700 rounded;
+        @apply pb-2 border-b border-edge rounded;
     }
     .dialog-header .header-actions {
         @apply flex items-center gap-2;
     }
+    /* Thin, always-drawn scrollbars. Styling them also opts out of overlay scrollbars, which hide at rest. */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        @apply rounded-full;
+        background-color: color-mix(in oklab, var(--color-ink-0) 18%, transparent);
+        &:hover { background-color: color-mix(in oklab, var(--color-ink-0) 30%, transparent); }
+    }
+    /* The body reaches into the right padding so a .dialog-scroll inside it can put its scrollbar there without being clipped. */
     .dialog-body {
         @apply flex flex-col gap-3;
-        @apply flex-1 overflow-hidden;
+        @apply flex-1 overflow-hidden -mr-3 pr-3;
+    }
+    /* Scrolling region inside a dialog. Its scrollbar sits in the dialog padding, clear of the content. */
+    .dialog-scroll {
+        @apply flex-1 min-h-0 overflow-y-auto pr-3 -mr-3;
     }
     .dialog-footer {
         @apply frow-2 items-center justify-between w-full pt-2;
-        @apply border-t border-neutral-200 dark:border-neutral-700 rounded;
+        @apply border-t border-edge rounded;
     }
+    /* Inline notice. Same anatomy as a context row: tone bar on the left, faint tint, no frame. */
     .callout {
-        @apply p-3 rounded-lg;
-        @apply bg-neutral-50 dark:bg-neutral-900/20;
-        @apply border border-neutral-200 dark:border-neutral-700;
-        
-        &.warn {
-            @apply bg-warning-50 dark:bg-warning-900/20;
-            @apply border-warning-200 dark:border-warning-800;
-        }
-        &.success {
-            @apply bg-success-50/40 dark:bg-success-800/20;
-            @apply border-success-200 dark:border-success-800;
-        }
-        &.note {
-            @apply bg-sky-50 dark:bg-sky-900/20;
-            @apply border-sky-200 dark:border-sky-800;
-        }
+        --tone: var(--color-ink-3);
+        @apply py-2 pl-3 pr-3 rounded-r-md border-l-[3px];
+        border-color: var(--tone);
+        background-color: color-mix(in oklab, var(--tone) 8%, transparent);
+        &.warn { --tone: var(--color-lvl-warn); }
+        &.err { --tone: var(--color-lvl-err); }
+        &.success { --tone: var(--color-lvl-ok); }
+        &.note { --tone: var(--color-accent); }
     }
     .attention {
-        @apply border-2 border-amber-500 dark:border-amber-400;
+        @apply ring-2 ring-lvl-warn;
     }
     .popover-content {
         @apply fcol-0 p-2;
-        @apply bg-neutral-100 dark:bg-surface-800 rounded-lg;
-        @apply shadow-xl ring-1 ring-neutral-200 dark:ring-neutral-800;
+        @apply bg-layer-3 rounded-lg;
+        @apply shadow-xl ring-1 ring-edge;
         @apply min-w-fit;
     }
     .global-popover-arrow {
         @apply -z-1;
         --arrow-size: calc(var(--spacing) * 4);
-        --arrow-background: light-dark(var(--color-surface-100), var(--color-surface-800));
+        --arrow-background: var(--color-layer-3);
     }
 
 }
@@ -139,6 +267,22 @@
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* CodeMirror injects its own unlayered styles after ours, so these stay unlayered and repeat .cm-editor to out-rank them. */
+.cm-editor.cm-editor .cm-gutters {
+    border-color: var(--color-edge);
+    background-color: var(--color-layer-2);
+}
+.cm-editor.cm-editor .cm-activeLine {
+    background-color: color-mix(in oklab, var(--color-accent) 6%, transparent);
+}
+.cm-editor.cm-editor .cm-activeLineGutter {
+    background-color: color-mix(in oklab, var(--color-accent) 10%, transparent);
+}
+.cm-editor.cm-editor.cm-editor .cm-selectionBackground,
+.cm-editor.cm-editor.cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground {
+    background-color: color-mix(in oklab, var(--color-accent) 30%, transparent);
+}
 
 html[data-battery-saver] *,
 html[data-battery-saver] *::before,
@@ -192,4 +336,50 @@ html[data-battery-saver] .dialog-backdrop {
 
 @utility layer-dialog {
     z-index: var(--z-dialog);
+}
+
+::selection {
+    background-color: color-mix(in oklab, var(--color-accent) 30%, transparent);
+}
+
+/* Toasts on the tokens. Sonner reads these variables; the html prefix out-ranks its own theme rules. */
+html [data-sonner-toaster][data-sonner-theme] {
+    --normal-bg: var(--color-layer-3);
+    --normal-bg-hover: var(--color-layer-4);
+    --normal-border: var(--color-edge);
+    --normal-border-hover: var(--color-edge);
+    --normal-text: var(--color-ink-0);
+    --border-radius: 0.5rem;
+    /* Same anatomy as a callout: neutral surface, tone bar on the left, colored icon. No tinted fills. */
+    --success-bg: var(--color-layer-3);
+    --success-border: var(--color-edge);
+    --success-text: var(--color-ink-0);
+    --info-bg: var(--color-layer-3);
+    --info-border: var(--color-edge);
+    --info-text: var(--color-ink-0);
+    --warning-bg: var(--color-layer-3);
+    --warning-border: var(--color-edge);
+    --warning-text: var(--color-ink-0);
+    --error-bg: var(--color-layer-3);
+    --error-border: var(--color-edge);
+    --error-text: var(--color-ink-0);
+    & [data-description] { color: var(--color-ink-1); }
+    /* Close sits inside the top-right corner instead of straddling the tone bar. */
+    --toast-close-button-start: unset;
+    --toast-close-button-end: 6px;
+    --toast-close-button-transform: translateY(6px);
+    & [data-close-button] {
+        border-color: transparent;
+        color: var(--color-ink-2);
+        &:hover { color: var(--color-ink-0); background: var(--color-layer-4); }
+    }
+    & [data-sonner-toast] {
+        --tone: var(--color-ink-3);
+        border-left: 3px solid var(--tone);
+        &[data-type="success"] { --tone: var(--color-lvl-ok); }
+        &[data-type="info"] { --tone: var(--color-accent); }
+        &[data-type="warning"] { --tone: var(--color-lvl-warn); }
+        &[data-type="error"] { --tone: var(--color-lvl-err); }
+        & [data-icon] { color: var(--tone); }
+    }
 }

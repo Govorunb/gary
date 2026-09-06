@@ -26,7 +26,7 @@
             {@render icon()}
         </button>
     {/snippet}
-    <div class="teaching-tooltip-content">
+    <div class="tooltip-panel">
         {@render children()}
     </div>
 </Tooltip>
@@ -35,15 +35,7 @@
     @reference "global.css";
 
     .teaching-tooltip-trigger {
-        @apply text-neutral-400;
-        @apply cursor-default;
-        &:hover {
-            @apply text-neutral-600 dark:text-neutral-200;
-        }
-    }
-
-    .teaching-tooltip-content {
-        @apply fcol-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
-        @apply text-xs text-neutral-500 dark:text-neutral-300;
+        @apply text-ink-3 cursor-default transition-colors;
+        &:hover { @apply text-ink-1; }
     }
 </style>
