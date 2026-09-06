@@ -6,35 +6,32 @@
     import { Settings } from "@lucide/svelte";
     import { getUIState, getUpdater } from "$lib/app/utils/di";
     import { registerAppHotkey } from "$lib/app/utils/hotkeys.svelte";
-
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
     const updater = getUpdater();
 
-    registerAppHotkey(["Control", ","], () => {
-        dialogs.toggleSettingsDialog();
-    });
+    registerAppHotkey(["Control", ","], () => dialogs.toggleSettingsDialog());
 </script>
 
 <header>
-    <div class="justify-self-start">
+    <div class="justify-self-start min-w-0">
         <PowerButton />
     </div>
     <div class="justify-self-center">
         <EngineControls />
     </div>
-    <div class="justify-self-end frow-4">
+    <div class="justify-self-end frow-2 items-center">
         {#if updater.hasPendingUpdate}
-            <button class="btn preset-outlined-primary-200-800 align-top" onclick={() => updater.promptForUpdate()}>
+            <button class="update-btn" onclick={() => updater.promptForUpdate()}>
                 Update to {updater.update?.version ?? "latest version"}
             </button>
         {/if}
-         <button
-             class="btn p-2 hover:bg-surface-500/20"
-             onclick={() => dialogs.openSettingsDialog()}
-             title="Settings"
-         >
-            <Settings class="size-5" />
+        <button
+            class="icon-btn bar-btn"
+            onclick={() => dialogs.openSettingsDialog()}
+            title="Settings"
+        >
+            <Settings class="size-[18px]!" />
         </button>
     </div>
 </header>
@@ -48,13 +45,21 @@
     @reference "global.css";
 
     header {
-        @apply grid grid-cols-[1fr_auto_1fr] items-center gap-1 px-4 py-3;
-        @apply bg-primary-200 dark:bg-primary-900;
-        @apply text-neutral-900 dark:text-neutral-100;
+        @apply relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 h-12 px-2.5 shrink-0;
+        @apply bg-bar text-ink-0 select-none;
     }
-
+    .bar-btn {
+        @apply size-8;
+        &:hover:not(:disabled) {
+            background-color: var(--color-bar-control);
+        }
+    }
+    .update-btn {
+        @apply h-8 px-3 rounded-md text-sm font-medium text-accent transition-colors;
+        background-color: var(--color-bar-control);
+        &:hover { background-color: var(--color-bar-control-hover); }
+    }
     main {
-        @apply flex flex-1 overflow-hidden;
-        @apply bg-surface-100 dark:bg-surface-900;
+        @apply flex flex-1 overflow-hidden bg-layer-0;
     }
 </style>

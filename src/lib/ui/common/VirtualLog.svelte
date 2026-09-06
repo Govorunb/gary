@@ -17,6 +17,7 @@
         overscan?: number;
         stickToBottom?: boolean;
         bottomThreshold?: number;
+        gap?: number;
         class?: string;
         children: Snippet<[item: T, index: number]>;
         empty?: Snippet<[]>;
@@ -29,6 +30,7 @@
         overscan = 8,
         stickToBottom = true,
         bottomThreshold = 96,
+        gap = 8,
         class: className,
         children,
         empty,
@@ -64,6 +66,7 @@
         const currentScrollEl = scrollEl;
         const currentEstimateSize = estimateSize;
         const currentOverscan = overscan;
+        const currentGap = gap;
         const scrollTopBeforeUpdate = currentScrollEl?.scrollTop ?? 0;
 
         virtualizer.setOptions({
@@ -72,7 +75,7 @@
             getItemKey: (index) => getKey(items[index]!, index),
             estimateSize: () => currentEstimateSize,
             overscan: currentOverscan,
-            gap: 8,
+            gap: currentGap,
             scrollToFn: elementScroll,
             observeElementRect,
             observeElementOffset,
@@ -82,6 +85,8 @@
         virtualizer._willUpdate();
         if (shouldResetMeasurements(count)) {
             virtualizer.measure();
+            // Rows that stayed mounted keep their node but may have a new index or size. Measure them once the DOM has settled.
+            void tick().then(() => scrollEl?.querySelectorAll<HTMLDivElement>(".virtual-log-row").forEach((row) => virtualizer.measureElement(row)));
         }
         updateVirtualState(virtualizer);
 
@@ -141,13 +146,31 @@
         wasNearBottom = distanceFromBottom <= bottomThreshold;
     }
 
+    let pinnedIndex: number | null = null;
+
+    /** Scrolls the item into the middle of the view. Wins over follow-bottom for appends in flight. */
+    export function scrollToIndex(index: number) {
+        pinnedIndex = index;
+        wasNearBottom = false;
+        void tick().then(scrollToPinned);
+        setTimeout(() => pinnedIndex = null, 200);
+    }
+
+    function scrollToPinned() {
+        if (pinnedIndex === null) return;
+        virtualizer.scrollToIndex(pinnedIndex, { align: "center" });
+        updateBottomState();
+    }
+
     function scrollToBottom() {
+        if (pinnedIndex !== null) return scrollToPinned();
         if (items.length === 0) return;
         virtualizer.scrollToIndex(items.length - 1, { align: "end" });
         updateBottomState();
     }
 
     function restoreScrollTop(scrollTop: number) {
+        if (pinnedIndex !== null) return scrollToPinned();
         if (!scrollEl) return;
         scrollEl.scrollTop = scrollTop;
         updateBottomState();

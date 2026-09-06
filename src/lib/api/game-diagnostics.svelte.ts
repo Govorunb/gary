@@ -132,12 +132,21 @@ const EVENT_DATA = {
     inst: {} as { diag: GameDiagnostic<DiagnosticKey>; severity: DiagnosticSeverity; report: boolean; suppressed: boolean },
 } as const;
 
+const SEVERITY_LEVEL: Record<DiagnosticSeverity, LogLevel> = {
+    [DiagnosticSeverity.Info]: LogLevel.Info,
+    [DiagnosticSeverity.Warning]: LogLevel.Warning,
+    [DiagnosticSeverity.Error]: LogLevel.Error,
+    [DiagnosticSeverity.Fatal]: LogLevel.Fatal,
+};
+
 export const EVENTS = [
     {
         key: 'app/diagnostics/triggered',
         dataSchema: {} as typeof EVENT_DATA.game & typeof EVENT_DATA.inst,
         description: "Diagnostic triggered",
-        level: LogLevel.Info,
+        // Level follows severity so the event log doubles as a warning light. Suppressed ones are muted.
+        level: ({ severity, suppressed }: typeof EVENT_DATA.inst) => suppressed ? LogLevel.Info : SEVERITY_LEVEL[severity],
+        silent: true, // triggerDiagnostic toasts with the game name and dedupes by identity
     },
     {
         key: 'app/diagnostics/dismissed',
@@ -180,7 +189,17 @@ export const EVENTS = [
     },
 ] as const satisfies EventDef<'app/diagnostics'>[];
 
+function describeDiagnostic({ game, diag }: typeof EVENT_DATA.game & typeof EVENT_DATA.inst) {
+    const ctx = diag.context as Record<string, unknown> | undefined;
+    const action = ctx?.action ?? ctx?.action_name;
+    return {
+        title: DIAGNOSTICS_BY_KEY[diag.key].title,
+        description: typeof action === "string" ? `${game.name} · ${action}` : game.name,
+    };
+}
+
 export const DISPLAY = {
+    "app/diagnostics/triggered": describeDiagnostic,
     "app/diagnostics/unknown/trigger": ({ key }) => ({
         title: `Failed to trigger diagnostic '${key}' - unknown diagnostic`,
         description: bugToast.description,

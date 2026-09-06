@@ -4,7 +4,9 @@
     import type { Game } from "$lib/api/game.svelte";
     import { EVENTS_BY_KEY, redactSensitiveData, type EventDef, type EventInstance, type EventKey } from "$lib/app/events";
     import { LogLevel } from "$lib/app/utils";
-    import { getSession } from "$lib/app/utils/di";
+    import { getSession, getUIState } from "$lib/app/utils/di";
+    import { eventLevel } from "$lib/app/events";
+    import { filterEvents } from "./event-filter";
     import Popover from "$lib/ui/common/Popover.svelte";
     import VirtualLog from "$lib/ui/common/VirtualLog.svelte";
     import EventLogRow from "./EventLogRow.svelte";
@@ -16,10 +18,19 @@
     let { selectedGame }: Props = $props();
 
     const session = getSession();
+    const uiState = getUIState();
+    const filter = $derived(uiState.eventLogFilter);
 
-    let selectedOnly = $state(false);
-    let minimumLevel = $state(LogLevel.Info);
     let menuOpen = $state(false);
+    let log = $state<VirtualLog<EventInstance<EventKey>>>();
+    // Scroll to the event a rail glyph was clicked on, once the log is on screen.
+    $effect(() => {
+        const target = uiState.eventLogScrollTarget;
+        if (!target || !log) return;
+        const index = visibleEvents.findIndex((event) => event.id === target);
+        uiState.eventLogScrollTarget = null;
+        if (index !== -1) log.scrollToIndex(index);
+    });
     let clock = $state(Date.now());
     let clockInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -32,16 +43,23 @@
     ] as const;
 
     const displayedEvents = $derived(session.eventLog.displayed);
-    const visibleEvents = $derived.by(() => {
-        return displayedEvents
-            .filter((event) => eventLevel(event) >= minimumLevel)
-            .filter((event) => !selectedOnly || matchesSelectedGame(event, selectedGame));
-    });
+    const visibleEvents = $derived(filterEvents(displayedEvents, filter, selectedGame));
     const totalEvents = $derived(displayedEvents.length);
-    const filterLabel = $derived(`${selectedOnly ? "Game" : "All"} ${LogLevel[minimumLevel]}+`);
+    const filterLabel = $derived(`${filter.selectedOnly ? "Game" : "All"} ${LogLevel[filter.minimumLevel]}+`);
+    // Warning light for the column header: how many warning-or-worse events are in the log.
+    const attention = $derived.by(() => {
+        let warn = 0;
+        let err = 0;
+        for (const event of displayedEvents) {
+            const level = eventLevel(event);
+            if (level >= LogLevel.Error) err++;
+            else if (level >= LogLevel.Warning) warn++;
+        }
+        return { warn, err };
+    });
     const emptyText = $derived.by(() => {
         if (totalEvents === 0) return "No events yet.";
-        if (selectedOnly && !selectedGame) return "Select a game to use selected-game filtering.";
+        if (filter.selectedOnly && !selectedGame) return "Select a game to use selected-game filtering.";
         return "No events match these filters.";
     });
     const selectedScopeLabel = $derived(selectedGame ? selectedGame.name : "No game selected");
@@ -57,24 +75,6 @@
             clockInterval = null;
         };
     });
-
-    function eventLevel(event: EventInstance<EventKey>): LogLevel {
-        return event.levelOverride ?? EVENTS_BY_KEY[event.key].level ?? LogLevel.Info;
-    }
-
-    function matchesSelectedGame(event: EventInstance<EventKey>, game: Game | null): boolean {
-        if (!game) return false;
-
-        const data = event.data as Record<string, unknown> | undefined;
-        if (!data || typeof data !== "object") return false;
-
-        const eventGame = data.game as { id?: unknown } | undefined;
-        if (eventGame?.id === game.conn.id) return true;
-        if (data.gameId === game.conn.id) return true;
-        if (data.id === game.conn.id) return true;
-
-        return false;
-    }
 
     function closeMenu() {
         menuOpen = false;
@@ -116,11 +116,15 @@
 </script>
 
 <section class="event-log" aria-label="Event log">
-    <div class="event-log-header">
-        <div class="title-group">
-            <h2>Event Log</h2>
-            <p>{visibleEvents.length} of {totalEvents} shown</p>
-        </div>
+    <div class="column-header">
+        <span>Events</span>
+        {#if attention.err > 0}
+            <span class="badge err" title="{attention.err} error(s)">{attention.err}</span>
+        {/if}
+        {#if attention.warn > 0}
+            <span class="badge warn" title="{attention.warn} warning(s)">{attention.warn}</span>
+        {/if}
+        <span class="spacer"></span>
 
         <div class="header-actions">
             <Popover>
@@ -132,7 +136,7 @@
                         aria-label="Filter event log"
                         title="Filter event log"
                     >
-                        <Filter class="size-4" />
+                        <Filter class="size-3.5" />
                         <span>{filterLabel}</span>
                     </button>
                 {/snippet}
@@ -141,11 +145,11 @@
                     <div class="filter-group">
                         <p class="filter-heading">Scope</p>
                         <label>
-                            <input type="radio" name="event-log-scope" checked={!selectedOnly} onchange={() => selectedOnly = false} />
+                            <input type="radio" name="event-log-scope" checked={!filter.selectedOnly} onchange={() => filter.selectedOnly = false} />
                             <span>All events</span>
                         </label>
                         <label title={selectedScopeLabel}>
-                            <input type="radio" name="event-log-scope" checked={selectedOnly} onchange={() => selectedOnly = true} />
+                            <input type="radio" name="event-log-scope" checked={filter.selectedOnly} onchange={() => filter.selectedOnly = true} />
                             <span>Selected game only</span>
                         </label>
                     </div>
@@ -157,8 +161,8 @@
                                 <input
                                     type="radio"
                                     name="event-log-level"
-                                    checked={minimumLevel === level}
-                                    onchange={() => minimumLevel = level}
+                                    checked={filter.minimumLevel === level}
+                                    onchange={() => filter.minimumLevel = level}
                                 />
                                 <span>{LogLevel[level]}+</span>
                             </label>
@@ -171,12 +175,12 @@
                 {#snippet trigger(props)}
                     <button
                         {...props}
-                        class="menu-trigger"
+                        class="icon-btn"
                         type="button"
                         aria-label="Event log menu"
                         title="Event log menu"
                     >
-                        <EllipsisVertical class="size-4" />
+                        <EllipsisVertical />
                     </button>
                 {/snippet}
 
@@ -191,11 +195,13 @@
     </div>
 
     <VirtualLog
+        bind:this={log}
         class="event-feed"
         items={visibleEvents}
         getKey={(event) => event.id}
-        estimateSize={56}
+        estimateSize={44}
         overscan={12}
+        gap={2}
     >
         {#snippet children(event)}
             <EventLogRow {event} {clock} />
@@ -213,118 +219,51 @@
     @reference "global.css";
 
     .event-log {
-        @apply fcol-3 h-full min-h-0 p-2;
-        @apply bg-neutral-50 dark:bg-neutral-900;
+        @apply fcol-0 h-full min-h-0;
     }
-
-    .event-log-header {
-        @apply frow-2 min-w-0 items-start justify-between;
-        @apply border-b border-neutral-200/70 pb-2 dark:border-neutral-700/60;
+    .column-header {
+        @apply pr-2;
     }
-
-    .title-group {
-        @apply min-w-0 fcol-0.5;
-
-        & h2 {
-            @apply text-xl;
-        }
-
-        & p {
-            @apply truncate text-xs text-neutral-500 dark:text-neutral-400;
-        }
-    }
-
     .header-actions {
-        @apply frow-1.5 shrink-0 items-center;
+        @apply frow-1 shrink-0 items-center;
     }
-
     .filter-button {
-        @apply frow-1.5 shrink-0 items-center rounded-md px-2 py-1.5;
-        @apply border border-neutral-200/80 bg-white/80 text-xs font-medium text-neutral-700 shadow-sm;
-        @apply transition-colors;
-        @apply dark:border-neutral-700 dark:bg-surface-800/80 dark:text-neutral-100;
-
+        @apply frow-1.5 shrink-0 items-center h-7 px-2 rounded-md;
+        @apply text-xs font-medium text-ink-2 transition-colors;
         &:hover {
-            @apply bg-neutral-100 dark:bg-surface-700;
+            @apply bg-layer-3 text-ink-0;
         }
-
         &:focus-visible {
-            @apply outline-none ring-2 ring-primary-500;
+            @apply outline-none ring-2 ring-accent;
         }
     }
-
-    .menu-trigger {
-        @apply flex size-8 shrink-0 items-center justify-center rounded-md;
-        @apply border border-neutral-200/80 bg-white/80 text-neutral-700 shadow-sm;
-        @apply transition-colors;
-        @apply dark:border-neutral-700 dark:bg-surface-800/80 dark:text-neutral-100;
-
-        &:hover {
-            @apply bg-neutral-100 dark:bg-surface-700;
-        }
-
-        &:focus-visible {
-            @apply outline-none ring-2 ring-primary-500;
-        }
-    }
-
-    .menu-item {
-        @apply w-full rounded-sm px-3 py-2;
-        @apply text-left text-sm text-neutral-700 transition-colors duration-150 dark:text-neutral-300;
-
-        &:hover {
-            @apply bg-neutral-200/70 dark:bg-neutral-700/70;
-        }
-
-        &:focus-visible {
-            @apply outline-none ring-1 ring-neutral-400 dark:ring-neutral-600;
-        }
-    }
-
-    .menu-item-danger {
-        @apply text-error-600 dark:text-error-400;
-
-        &:hover {
-            @apply bg-error-100/50 dark:bg-error-900/30;
-        }
-    }
-
     .filter-panel {
         @apply fcol-3 w-56 p-1;
     }
-
     .filter-group {
         @apply fcol-1;
     }
-
     .filter-heading {
-        @apply px-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400;
+        @apply px-2 text-xs font-semibold text-ink-2;
     }
-
     .filter-group label {
         @apply frow-2 cursor-pointer items-center rounded-md px-2 py-1.5 text-sm;
-        @apply text-neutral-700 transition-colors dark:text-neutral-200;
-
+        @apply text-ink-1 transition-colors;
         &:hover {
-            @apply bg-neutral-200/70 dark:bg-neutral-700/70;
+            @apply bg-layer-4;
         }
-
         &:has(input:focus-visible) {
-            @apply ring-2 ring-primary-500;
+            @apply ring-2 ring-accent;
         }
-
         & input {
-            @apply size-3.5 accent-primary-500;
+            @apply size-3.5 accent-accent;
         }
     }
-
     .event-feed {
-        @apply min-h-0 flex-1 pr-1;
+        @apply min-h-0 flex-1 px-2 pb-2;
     }
-
     .empty-state {
         @apply fcol-2 min-h-32 items-center justify-center rounded-lg border border-dashed;
-        @apply border-neutral-300/80 px-3 text-center text-sm text-neutral-500;
-        @apply dark:border-neutral-700 dark:text-neutral-400;
+        @apply border-edge px-3 text-center text-sm text-ink-2;
     }
 </style>

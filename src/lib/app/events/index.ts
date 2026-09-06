@@ -29,8 +29,10 @@ export interface EventDef<Prefix extends string = ''> {
     */
     dataSchema?: z.ZodType | any;
     description?: string;
-    /** Default log level for the event. Used for display (toasts, event log). */
-    level?: LogLevel; // default Info
+    /** Log level for the event, fixed or computed from its data. Used for display (toasts, event log). */
+    level?: LogLevel | ((data: any) => LogLevel); // default Info
+    /** The emitter shows its own toast for this event, so the reporter must not. */
+    silent?: boolean;
 }
 
 // if not defined, defaults to eventDescription
@@ -81,6 +83,11 @@ export const EVENTS_BY_KEY = Object.fromEntries(
 
 export type EventByKey<K extends EventKey> = Extract<Events, { key: K }>;
 
+export function eventLevel(event: EventInstance<EventKey>): LogLevel {
+    const level = (EVENTS_BY_KEY[event.key] as EventDef).level ?? LogLevel.Info;
+    return typeof level === "function" ? level(event.data) : level;
+}
+
 export type EventData<K extends EventKey> = 'dataSchema' extends keyof EventByKey<K>
     ? UnwrapZod<EventByKey<K>['dataSchema']>
     : never;
@@ -94,7 +101,6 @@ export type EventInstances = {
         readonly timestamp: number,
         readonly key: K,
         readonly data: EventData<K>,
-        readonly levelOverride?: LogLevel,
     }
 }[EventKey];
 
