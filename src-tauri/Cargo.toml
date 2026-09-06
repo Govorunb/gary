@@ -34,7 +34,7 @@ tauri = { version = "2", features = [
 tauri-plugin-log = { version = "2", features = ["colored"] }
 uuid = { version = "1.18", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["full"] }
-tokio-tungstenite = { version = "0.28" }
+tokio-tungstenite = { version = "0.30" }
 thiserror = "2"
 anyhow = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
@@ -57,4 +57,4 @@ gdk = "0.18"
 glib = "0.18"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
