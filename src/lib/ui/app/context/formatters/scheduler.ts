@@ -9,17 +9,20 @@ export const SCHEDULER_CONTEXT_FORMATTERS = {
         source: { type: "actor", engineId: event.data.engineId },
         silent: true,
         text: "Engine chose not to act",
+        metrics: event.data.metrics,
     }),
     "api/actor/say": (event) => ({
         source: { type: "actor", engineId: event.data.engineId },
         silent: !event.data.notify,
         text: `Gary ${event.data.notify ? "wants attention" : "says"}: ${event.data.msg}`,
+        metrics: event.data.metrics,
     }),
     "api/actor/act": (event) => ({
         source: { type: "actor", engineId: event.data.engineId },
         silent: false,
         text: `Act${event.data.force ? " (forced)" : ""}: ${event.data.act.name} (ID ${short(event.data.act.id)})`
             + (event.data.act.data ? `\nData: ${event.data.act.data}` : " (no data)"),
+        metrics: event.data.metrics,
     }),
     "api/actor/generated": (event, target) => {
         if (target !== "actor") {

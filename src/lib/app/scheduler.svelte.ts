@@ -34,6 +34,7 @@ export class Scheduler {
     #busy = $state(false);
     /** Paused due to an engine error that requires user intervention. */
     #errored = $state(false);
+    #generatedTokens: number | undefined;
     public readonly canAct: boolean = $derived(!this.#muted && !this.#busy && !this.#errored);
 
     private readonly registry: Registry;
@@ -63,9 +64,12 @@ export class Scheduler {
             this.#actPending = true;
             this.requestDrain();
         }, PENDING_ACT_GRACE_MS);
+        const generated = EVENT_BUS.subscribe(['api/actor/generated']);
+        generated.onnext(e => this.#generatedTokens = totalTokens(e.data.metadata?.usage));
         session.onDispose(() => {
             this.#disposed = true;
             this.pendingActTimer.cancel();
+            generated.destroy();
         });
         this.autoPoker = new AutoPoker(session);
     }
@@ -232,16 +236,19 @@ export class Scheduler {
         const controller = new AbortController();
         this.#abort = controller;
         this.#activePriority = priority;
+        this.#generatedTokens = undefined;
+        const started = Date.now();
         const actRes = force
             ? await this.activeEngine!.forceAct(this.session, actionSet.actions, controller.signal, forceContext)
             : await this.activeEngine!.tryAct(this.session, actionSet.actions, controller.signal);
+        const metrics: ActMetrics = { latencyMs: Date.now() - started, tokens: this.#generatedTokens };
         this.#abort = null;
         this.#activePriority = null;
         if (actRes.isOk()) {
             this.resetEngineErrors();
         }
         const result = await actRes
-            .asyncAndThrough(act => this.perform(act, force, engine, actionSet.targetsByName))
+            .asyncAndThrough(act => this.perform(act, force, engine, actionSet.targetsByName, metrics))
             .orTee(e => e instanceof EngineError && this.onError(e, engine));
         this.#busy = false;
         this.requestDrain();
@@ -305,15 +312,15 @@ export class Scheduler {
         return { actions, targetsByName };
     }
 
-    private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget>): ResultAsync<EngineActResult, ActError> {
+    private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget>, metrics: ActMetrics): ResultAsync<EngineActResult, ActError> {
         if (typeof choice === 'object' && 'name' in choice) {
-            return this.performAct(choice, force, engine, targetsByName);
+            return this.performAct(choice, force, engine, targetsByName, metrics);
         }
         if (force) {
             return errAsync(new LogicError(`Engine chose to ${choice === "skip" ? choice : "yap"} in forced act. Please don't tell the developer. I will cry`));
         }
         if (choice === "skip") {
-            EVENT_BUS.emit('api/actor/skip', { engineId: engine.id });
+            EVENT_BUS.emit('api/actor/skip', { engineId: engine.id, metrics });
             return okAsync(choice);
         }
         if ('say' in choice) {
@@ -322,6 +329,7 @@ export class Scheduler {
                 engineId: engine.id,
                 msg: choice.say,
                 notify: choice.notify,
+                metrics,
             });
             void Promise.allSettled(this.registry.games.map(game => game.sendSpeechFinished()));
             if (choice.notify) {
@@ -332,7 +340,7 @@ export class Scheduler {
         return errAsync(new LogicError(`Reached unreachable fallthrough in 'perform': Did you add a new engine return option?`));
     }
 
-    private performAct(act: EngineAct, forced: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget>): ResultAsync<EngineAct, ActError> {
+    private performAct(act: EngineAct, forced: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget>, metrics: ActMetrics): ResultAsync<EngineAct, ActError> {
         const target = targetsByName.get(act.name);
         if (!target) {
             EVENT_BUS.emit('app/scheduler/act/fail/action_not_found', { force: forced, act });
@@ -347,6 +355,7 @@ export class Scheduler {
             force: forced,
             game: game.name,
             act: actData,
+            metrics,
         });
         return ResultAsync.fromPromise(game.sendAction(actData, act.toolCallId), (e) => LogicError.sendErr(e as Error))
             .orTee(() => EVENT_BUS.emit('app/scheduler/act/fail/failed_to_send', { force: forced }))
@@ -557,17 +566,20 @@ export const DISPLAY = {
     }),
 } as PresentDefs<Keys<typeof EVENTS>>;
 
+/** How long the engine took to decide, and what it cost when the engine reports usage. */
+export type ActMetrics = { latencyMs: number; tokens?: number };
+
 // FIXME: move to lib/app/engines
 export const ACT_EVENTS = [
     {
         key: 'api/actor/skip',
-        dataSchema: {} as { engineId: string; },
+        dataSchema: {} as { engineId: string; metrics: ActMetrics },
         description: "Actor skipped acting",
         level: LogLevel.Info,
     },
     {
         key: 'api/actor/say',
-        dataSchema: {} as { engineId: string; msg: string; notify: boolean; },
+        dataSchema: {} as { engineId: string; msg: string; notify: boolean; metrics: ActMetrics },
         description: "Actor spoke",
         level: LogLevel.Info,
     },
@@ -578,6 +590,7 @@ export const ACT_EVENTS = [
             force: boolean;
             game: string;
             act: ReturnType<typeof zActData.decode>;
+            metrics: ActMetrics;
         },
         description: "Actor selected an action",
         level: LogLevel.Info,
@@ -617,3 +630,11 @@ export const ACT_EVENTS = [
         level: LogLevel.Info,
     }
 ] as const satisfies EventDef<'api/actor'>[];
+
+/** OpenAI-style usage: total if reported, otherwise prompt plus completion. */
+function totalTokens(usage: unknown): number | undefined {
+    const u = usage as { total_tokens?: unknown; prompt_tokens?: unknown; completion_tokens?: unknown } | null | undefined;
+    if (typeof u?.total_tokens === "number") return u.total_tokens;
+    if (typeof u?.prompt_tokens === "number") return u.prompt_tokens + (typeof u.completion_tokens === "number" ? u.completion_tokens : 0);
+    return undefined;
+}
