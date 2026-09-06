@@ -45,22 +45,6 @@
 
     .menu-divider {
         @apply mx-2 h-px;
-        @apply bg-neutral-200 dark:bg-neutral-700;
-    }
-
-    .menu-item {
-        @apply frow-1.5 items-center;
-        @apply w-full px-3 py-2;
-        @apply rounded-sm text-sm;
-        @apply text-neutral-700 dark:text-neutral-300;
-        @apply transition-colors duration-150;
-
-        &:hover {
-            @apply bg-neutral-200/70 dark:bg-neutral-700/70;
-        }
-
-        &:focus-visible {
-            @apply outline-none ring-1 ring-neutral-400 dark:ring-neutral-600;
-        }
+        @apply bg-layer-4;
     }
 </style>

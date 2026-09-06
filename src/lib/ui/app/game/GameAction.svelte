@@ -24,7 +24,6 @@
     const busyTip = (tip: string) => tooltip(busy ? "Engine busy (Shift to stop)" : tip);
 
     let open = $state(false);
-    let schemaOpen = $state(false);
     const schemaJson = $derived(action.schema && JSON.stringify(action.schema, null, 2));
     const hasSchema = $derived(!!action.schema);
 
@@ -33,7 +32,6 @@
     }
 
     const evtData = $derived({gameId: game.id, actionName: action.name});
-
     function doSend(data?: string) {
         EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!data });
         game.manualSend(action.name, data)
@@ -59,7 +57,6 @@
 
     function quickSend(evt: MouseEvent) {
         if (evt.defaultPrevented || !(evt.ctrlKey || evt.metaKey)) return;
-
         evt.preventDefault();
         if (busy) return;
         if (hasSchema) {
@@ -71,116 +68,109 @@
 </script>
 
 <details
-    class="root accordion group"
+    class="action group"
     bind:open
     data-active={boolAttr(active)}
     data-compact={boolAttr(userPrefs.app.actionListDensity === "compact")}
 >
     <summary onclick={quickSend}>
-        <span>{action.name}</span>
-        <div class="actions">
+        <span class="name">{action.name}</span>
+        <div class="row-actions">
             {#if hasSchema}
                 <button
-                    class="action-btn"
+                    class="icon-btn"
                     disabled={busy}
                     onclick={preventDefault(send)}
-                    {@attach busyTip("Send (manual) - Ctrl/Cmd-click header")}
+                    {@attach busyTip("Send (manual) - Ctrl/Cmd-click row")}
                 >
-                    <Send class="size-4" />
+                    <Send />
                 </button>
                 <button
-                    class="action-btn"
+                    class="icon-btn"
                     disabled={busy}
                     onclick={preventDefault(sendRandom)}
                     {@attach busyTip("Send (random data)")}
                 >
-                    <Dices class="size-4" />
+                    <Dices />
                 </button>
             {:else}
                 <button
-                    class="action-btn"
+                    class="icon-btn"
                     disabled={busy}
                     onclick={preventDefault(() => doSend())}
-                    {@attach busyTip("Send - Ctrl/Cmd-click header")}
+                    {@attach busyTip("Send - Ctrl/Cmd-click row")}
                 >
-                    <Send class="size-4" />
+                    <Send />
                 </button>
             {/if}
         </div>
     </summary>
-    <div class="action-description">
-        <p>{action.description}</p>
-    </div>
-    {#if schemaJson}
-        <details class="accordion" bind:open={schemaOpen}>
-            <summary>
-                <span>Schema</span>
-                <div class="actions">
+    <div class="body">
+        {#if action.description}
+            <p class="description">{action.description}</p>
+        {/if}
+        {#if schemaJson}
+            <div class="schema">
+                <div class="schema-header">
+                    <span>Schema</span>
                     <CopyButton data={schemaJson} desc="schema" />
                 </div>
-            </summary>
-            <CodeMirror code={schemaJson} open={schemaOpen} readonly />
-        </details>
-    {/if}
+                <CodeMirror code={schemaJson} {open} readonly />
+            </div>
+        {/if}
+    </div>
 </details>
-
-
 
 <style lang="postcss">
     @reference "global.css";
 
-    details.accordion {
-        @apply rounded-lg;
-        @apply border border-neutral-200/70;
-        @apply bg-white/80 shadow-sm transition;
-        @apply dark:border-neutral-700 dark:bg-neutral-900/60;
+    details.action {
+        @apply rounded-md transition-colors;
+        &[open] {
+            @apply bg-layer-2;
+        }
+        &:not([data-active]) {
+            @apply opacity-60;
+        }
         & > summary {
-            @apply frow-2 cursor-pointer items-center justify-between;
-            @apply px-4 py-1.5 text-sm font-medium text-neutral-700 transition;
-            & > span:first-child {
-                @apply flex-1;
-            }
-            .group:hover &, &:focus-within {
-                & > span:first-child {
-                    @apply min-w-0 truncate;
-                }
-            }
+            @apply frow-2 cursor-pointer items-center h-7 pl-2 pr-1 rounded-md;
+            @apply text-sm text-ink-1 select-none;
+            list-style: none;
+            &::-webkit-details-marker { display: none; }
             &:hover {
-                @apply bg-neutral-100/80 dark:bg-neutral-800/70;
+                @apply bg-layer-2 text-ink-0;
             }
-            @apply focus:outline-none;
             &:focus-visible {
-                @apply ring-2 ring-sky-400;
+                @apply outline-none ring-2 ring-inset ring-accent;
             }
-            @apply dark:text-neutral-200;
+        }
+        &[open] > summary {
+            @apply text-ink-0;
+        }
+        &[data-compact] > summary {
+            @apply h-6;
         }
     }
-
-    .actions {
-        @apply flex items-center px-1 transition-opacity;
+    .name {
+        @apply flex-1 min-w-0 truncate;
+    }
+    .row-actions {
+        @apply frow-0 items-center shrink-0 transition-opacity;
         @apply opacity-0 group-hover:opacity-100 focus-within:opacity-100;
+        details[open] & { @apply opacity-100; }
+        & :global(.icon-btn) { @apply size-6; }
     }
-
-    .action-btn {
-        @apply p-1.5 rounded-md transition-colors;
-        &:hover:not(:disabled) {
-            @apply bg-neutral-200 dark:bg-surface-700;
-            @apply text-neutral-900 dark:text-neutral-100;
-        }
-        &:disabled {
-            @apply opacity-40 cursor-not-allowed;
-        }
+    .body {
+        @apply fcol-2 px-2 pb-2 pt-0.5;
     }
-    .action-description {
-        @apply space-y-2 px-4 pb-4 pt-2;
-        @apply text-neutral-600 dark:text-neutral-200;
+    .description {
+        @apply text-xs text-ink-2 whitespace-pre-wrap;
     }
-
-    .root:not([data-active]) {
-        @apply opacity-60;
+    .schema {
+        @apply fcol-1;
     }
-
-    .root[data-compact] summary {
-        @apply py-0.5;
+    .schema-header {
+        @apply frow-2 items-center justify-between;
+        @apply text-xs font-semibold text-ink-3 select-none;
     }
 </style>
