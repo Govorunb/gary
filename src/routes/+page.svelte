@@ -12,6 +12,8 @@
     const updater = getUpdater();
 
     registerAppHotkey(["Control", ","], () => dialogs.toggleSettingsDialog());
+    registerAppHotkey(["F1"], () => dialogs.toggleHotkeysDialog());
+    registerAppHotkey(["Control", "/"], () => dialogs.toggleHotkeysDialog());
 </script>
 
 <header>
