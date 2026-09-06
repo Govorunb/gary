@@ -365,6 +365,51 @@ describe("LLMEngine tool calling", () => {
         expect(JSON.stringify(engine.requests[1].messages)).not.toContain("pick the winning move");
     });
 
+    test("pairs long tool histories without searching the history for every call", async () => {
+        const session = createSession();
+        for (let i = 0; i < 100; i++) {
+            session.context.actorView.push(
+                {
+                    id: `generated-${i}`,
+                    timestamp: i * 2,
+                    key: "api/actor/generated",
+                    data: {
+                        engineId: "test", text: "",
+                        toolCall: { id: `call-${i}`, name: "move", arguments: "{}" },
+                    },
+                },
+                {
+                    id: `result-${i}`,
+                    timestamp: i * 2 + 1,
+                    key: "api/game/act/actor",
+                    data: {
+                        game: { id: "game", name: "Chess" },
+                        act: { id: `action-${i}`, name: "move" },
+                        toolCallId: `call-${i}`,
+                    },
+                },
+            );
+        }
+        let reads = 0;
+        Object.assign(session.context, {
+            actorView: new Proxy(session.context.actorView, {
+                get(target, key, receiver) {
+                    if (typeof key === "string" && /^\d+$/.test(key)) reads++;
+                    return Reflect.get(target, key, receiver);
+                },
+            }),
+        });
+        const engine = new TestLLMEngine(llmOptions({ allowYapping: true }));
+        engine.generation = { text: "okay", toolCalls: [] };
+
+        expect((await engine.tryAct(session)).isOk()).toBe(true);
+        const results = engine.requests[0].messages.filter(message => message.role === "tool");
+        expect(results.map(message => message.tool_call_id)).toEqual(
+            Array.from({ length: 100 }, (_, i) => `call-${i}`),
+        );
+        expect(reads).toBeLessThan(session.context.actorView.length * 8);
+    });
+
     test("replays action calls with their tool result", async () => {
         const session = createSession();
         (session.context.actorView as any[]).push(
@@ -567,6 +612,15 @@ describe("LLMEngine context trimming", () => {
         expect(firstWire).toContain("live-19");
         expect(session.context.actorView).toStrictEqual(original);
 
+        let retiredReads = 0;
+        Object.assign(session.context, {
+            actorView: new Proxy(session.context.actorView, {
+                get(target, key, receiver) {
+                    if (typeof key === "string" && /^[0-3]$/.test(key)) retiredReads++;
+                    return Reflect.get(target, key, receiver);
+                },
+            }),
+        });
         (session.context.actorView as any[]).push({
             id: "event-20",
             timestamp: 1_020,
@@ -578,6 +632,7 @@ describe("LLMEngine context trimming", () => {
         expect(secondWire).not.toContain("old-prefix");
         expect(secondWire).toContain("live-4");
         expect(secondWire).toContain("new-live-event");
+        expect(retiredReads).toBe(0);
 
         (session.context.actorView as any[]).splice(0, session.context.actorView.length, {
             id: "reset-event",
