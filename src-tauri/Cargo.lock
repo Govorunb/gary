@@ -1346,7 +1346,7 @@ dependencies = [
 
 [[package]]
 name = "gary"
-version = "1.0.0-beta.11"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "axum",
