@@ -10,15 +10,25 @@
     let maximized = $state(false);
 
     onMount(() => {
-        const sync = () => win.isMaximized().then((m) => maximized = m);
+        const linux = navigator.userAgent.includes("Linux");
+        const sync = async () => {
+            maximized = await win.isMaximized();
+            if (linux) {
+                const fullscreen = await win.isFullscreen();
+                document.documentElement.toggleAttribute("data-rounded-window", !maximized && !fullscreen);
+            }
+        };
         void sync();
         const unlisten = win.onResized(sync);
-        return () => void unlisten.then((fn) => fn());
+        return () => {
+            document.documentElement.removeAttribute("data-rounded-window");
+            void unlisten.then((fn) => fn());
+        };
     });
 </script>
 
 <div class="window-controls" data-style={style}>
-    <button class="caption-btn" onclick={() => win.minimize()} title="Minimize" aria-label="Minimize">
+    <button class="caption-btn minimize" onclick={() => win.minimize()} title="Minimize" aria-label="Minimize">
         <Minus />
     </button>
     <button class="caption-btn" onclick={() => win.toggleMaximize()} title={maximized ? "Restore" : "Maximize"} aria-label={maximized ? "Restore" : "Maximize"}>
@@ -67,6 +77,7 @@
             @apply size-6 rounded-full;
             background-color: color-mix(in oklab, var(--color-ink-0) 12%, transparent);
             & > :global(svg) { @apply size-3.5; }
+            &.minimize > :global(svg) { transform: translateY(3px); }
             &:hover {
                 @apply text-ink-0;
                 background-color: color-mix(in oklab, var(--color-ink-0) 22%, transparent);

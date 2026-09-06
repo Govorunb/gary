@@ -14,6 +14,7 @@
     "core:window:allow-minimize",
     "core:window:allow-close",
     "core:window:allow-is-maximized",
+    "core:window:allow-is-fullscreen",
     "opener:default",
     {
       "identifier": "http:default",

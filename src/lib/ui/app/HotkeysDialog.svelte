@@ -13,8 +13,7 @@
         {
             title: "Anywhere",
             keys: [
-                [["F1"], "This list"],
-                [["Ctrl", "/"], "This list"],
+                [["F1", "or", "Ctrl", "/"], "This list"],
                 [["Ctrl", ","], "Settings"],
                 [["Ctrl", "E"], "Engine picker"],
                 [["Alt", "C"], "Add to context"],
@@ -24,8 +23,8 @@
         {
             title: "Top bar",
             keys: [
-                [["Shift", "click Act"], "Force act"],
-                [["Shift", "click Busy"], "Stop the current act"],
+                [["Shift", 'click "Act"'], "Force act"],
+                [["Shift", 'click "Busy"'], "Stop the current act"],
                 [["Shift", "click power"], "Stop the server without confirming"],
             ],
         },
@@ -64,7 +63,7 @@
         {
             title: "Diagnostics",
             keys: [
-                [["Shift", "click Dismiss all"], "Delete all diagnostics instead of dismissing"],
+                [["Shift", 'click "Dismiss all"'], "Delete all diagnostics instead of dismissing"],
             ],
         },
     ];
@@ -83,11 +82,15 @@
                 {#each group.keys as [keys, does]}
                     <dt>
                         {#each keys as key, i}
-                            {#if key === "to"}
-                                <span class="plus">to</span>
+                            {#if key === "to" || key === "or"}
+                                <span class="plus">{key}</span>
                             {:else}
-                                {#if i > 0 && keys[i - 1] !== "to"}<span class="plus">+</span>{/if}
-                                <Hotkey>{key}</Hotkey>
+                                {#if i > 0 && keys[i - 1] !== "to" && keys[i - 1] !== "or"}<span class="plus">+</span>{/if}
+                                {#if key.startsWith("click ")}
+                                    <span class="text-xs text-ink-2">{key}</span>
+                                {:else}
+                                    <Hotkey>{key}</Hotkey>
+                                {/if}
                             {/if}
                         {/each}
                     </dt>

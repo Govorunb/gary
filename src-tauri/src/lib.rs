@@ -24,9 +24,37 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
+            let window = app.get_webview_window("main").expect("main window is configured");
+            #[cfg(target_os = "linux")]
+            {
+                use gtk::prelude::*;
+
+                // GTK needs client-side decorations to draw a shadow. Keep its titlebar
+                // hidden because the webview provides one, and configure it before showing.
+                let gtk_window = window.gtk_window()?;
+                let titlebar = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+                titlebar.set_no_show_all(true);
+                gtk_window.set_titlebar(Some(&titlebar));
+                gtk_window.set_decorated(true);
+                window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)))?;
+                let css = gtk::CssProvider::new();
+                css.load_from_data(b"
+                    window.gary { background-color: transparent; }
+                    window.gary decoration { border-radius: 12px; }
+                    window.gary.maximized decoration,
+                    window.gary.fullscreen decoration { border-radius: 0; }
+                ")?;
+                gtk_window.style_context().add_class("gary");
+                gtk::StyleContext::add_provider_for_screen(
+                    &gtk::prelude::WidgetExt::screen(&gtk_window).expect("window has a screen"),
+                    &css,
+                    gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+                );
+            }
             app.manage(SafeMode(app::safe_mode::requested()));
             app.manage(AppStateMutex::new(App::new(app.handle().clone())));
             app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap();
+            window.show()?;
             Ok(())
         })
         .plugin(tauri_plugin_log::Builder::new()
