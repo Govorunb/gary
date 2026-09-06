@@ -28,6 +28,15 @@
     "active": true,
     "targets": ["deb", "appimage", "nsis"],
     "createUpdaterArtifacts": true,
+    "category": "DeveloperTool",
+    "homepage": "https://github.com/Govorunb/gary",
+    "shortDescription": "Develop and test game integrations for the Neuro-sama SDK",
+    "longDescription": "A feature-rich app that helps you develop and test game integrations for the Neuro-sama SDK. A wide range of tools and environments to test your game integration, in one app: a random generator to automatically choose actions, manual action sending with an option to send raw WebSocket messages, real LLMs through OpenAI-compatible inference providers, and diagnostics with automatic checks for common pitfalls and off-spec behavior.",
+    "linux": {
+      "deb": {
+        "files": { "/usr/share/metainfo/dev.govorunb.gary.metainfo.xml": "gary.metainfo.xml" }
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
