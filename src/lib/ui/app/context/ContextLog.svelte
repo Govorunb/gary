@@ -10,20 +10,17 @@
     import Popover from "$lib/ui/common/Popover.svelte";
     import { Search, Filter, X } from "@lucide/svelte";
     import { tick } from "svelte";
+    import { MAX_USER_CONTEXT_EVENTS } from "$lib/app/context.svelte";
     import { SvelteSet } from "svelte/reactivity";
     import { formatContextEvent } from "./formatters/registry";
     import type { ContextRow, ContextSource } from "./formatters/types";
 
     const session = getSession();
 
-    // Search and filter narrow what is shown; they never touch what the model sees.
+    // Search and filter cover the retained conversation; they never touch what the model sees.
     let searchOpen = $state(false);
     let query = $state("");
     let searchInput = $state<HTMLInputElement>();
-    const PAGE_SIZE = 1_000;
-    let historyLimit = $state(PAGE_SIZE);
-    let log = $state<VirtualLog<ContextRow>>();
-    const historyStart = $derived(query.trim() ? 0 : Math.max(0, session.context.userView.length - historyLimit));
     const SOURCES: { type: ContextSource["type"]; label: string }[] = [
         { type: "client", label: "Games" },
         { type: "actor", label: "Model" },
@@ -42,11 +39,6 @@
     function closeSearch() {
         searchOpen = false;
         query = "";
-    }
-    async function showEarlierContext() {
-        historyLimit += PAGE_SIZE;
-        await tick();
-        log?.scrollToIndex(0);
     }
     function toggleSource(type: ContextSource["type"]) {
         if (!hidden.delete(type)) hidden.add(type);
@@ -79,7 +71,7 @@
     const rows = $derived.by(() => {
         const out: ContextRow[] = [];
         let prev: ContextSource | null = null;
-        for (const event of session.context.userView.slice(historyStart)) {
+        for (const event of session.context.userView) {
             const rendered = formatContextEvent(event, "user");
             const source: ContextSource = rendered?.source ?? { type: "system" };
             const row = { event, rendered, source, continues: false };
@@ -140,19 +132,14 @@
                 </OutLink>
                 .
             </p>
+            <p>The latest {MAX_USER_CONTEXT_EVENTS.toLocaleString()} messages are kept here, including for search and copy. Earlier messages are recorded in the app logs.</p>
             <p>Click client names to jump to their game tab.</p>
             <p><Hotkey>Alt+C</Hotkey> to add to context.</p>
         </TeachingTooltip>
         <ContextLogMenu />
     </div>
-    {#if historyStart > 0}
-        <button class="earlier-context" onclick={showEarlierContext}>
-            Load earlier context ({historyStart.toLocaleString()} messages)
-        </button>
-    {/if}
     <div class="log">
         <VirtualLog
-            bind:this={log}
             class="h-full"
             items={rows}
             getKey={(row) => row.event.id}
@@ -177,11 +164,6 @@
     .column-header {
         @apply pr-2;
         & .icon-btn[data-active] { @apply text-accent; }
-    }
-    .earlier-context {
-        @apply shrink-0 px-3 py-1.5 text-xs text-ink-2 border-b border-edge;
-        &:hover { @apply bg-layer-2 text-ink-0; }
-        &:focus-visible { @apply outline-none ring-2 ring-inset ring-accent; }
     }
     .search-input {
         @apply flex-1 min-w-0 h-7 px-2 rounded-md;
