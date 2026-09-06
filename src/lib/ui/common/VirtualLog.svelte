@@ -90,7 +90,8 @@
         }
         updateVirtualState(virtualizer);
 
-        if (stickToBottom && count > previousCount) {
+        const lastKey = count > 0 ? getKey(items[count - 1]!, count - 1) : null;
+        if (stickToBottom && count >= previousCount && lastKey !== previousLastKey) {
             const shouldFollow = untrack(() => wasNearBottom);
             if (shouldFollow) {
                 void tick().then(scrollToBottom);
@@ -101,7 +102,7 @@
 
         previousCount = count;
         previousFirstKey = count > 0 ? getKey(items[0]!, 0) : null;
-        previousLastKey = count > 0 ? getKey(items[count - 1]!, count - 1) : null;
+        previousLastKey = lastKey;
     });
 
     const measureRow: Action<HTMLDivElement> = (node) => {

@@ -5,9 +5,11 @@ export type EventLogDelta = { type: "append"; event: EventInstance<EventKey> };
 
 type Unsub = () => void;
 
+export const MAX_DISPLAYED_EVENTS = 1_000;
+
 export class EventLogStore {
     readonly all: EventInstance<EventKey>[] = $state([]);
-    readonly displayed: EventInstance<EventKey>[] = $state([]);
+    #displayed: readonly EventInstance<EventKey>[] = $state.raw([]);
     #subs: Array<(delta: EventLogDelta) => void> = [];
     #subsByKey = new Map<EventKey, Array<(delta: EventLogDelta) => void>>();
     #busSub;
@@ -17,14 +19,18 @@ export class EventLogStore {
         this.#busSub.onnext((event) => this.append(event));
     }
 
+    get displayed() {
+        return this.#displayed;
+    }
+
     append(event: EventInstance<EventKey>) {
         this.all.push(event);
-        this.displayed.push(event);
+        this.#displayed = [...this.#displayed.slice(-(MAX_DISPLAYED_EVENTS - 1)), event];
         this.#emit({ type: "append", event });
     }
 
     clearDisplayed() {
-        this.displayed.length = 0;
+        this.#displayed = [];
     }
 
     subscribe(cb: (delta: EventLogDelta) => void): Unsub;

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, tick } from "svelte";
+    import { onMount, tick, untrack } from "svelte";
     import DashboardSidebar from "$lib/ui/app/DashboardSidebar.svelte";
     import ContextLog from "$lib/ui/app/context/ContextLog.svelte";
     import ConnectClientPopover from "$lib/ui/app/game/ConnectClientPopover.svelte";
@@ -49,8 +49,16 @@
     // An open log acknowledges incoming events, including ones excluded by the user's filters.
     const eventLogVisible = $derived(isNarrowViewport ? rightMobileOpen : !rightCollapsed);
     $effect(() => {
-        if (!eventLogVisible) return;
-        for (const event of session.eventLog.displayed) uiState.seenEvents.add(event.id);
+        const displayedIds = new Set(session.eventLog.displayed.map((event) => event.id));
+        const acknowledge = eventLogVisible;
+        untrack(() => {
+            for (const id of uiState.seenEvents) {
+                if (!displayedIds.has(id)) uiState.seenEvents.delete(id);
+            }
+            if (acknowledge) {
+                for (const id of displayedIds) uiState.seenEvents.add(id);
+            }
+        });
     });
     // The rail follows the newest event like the expanded log does.
     function followNewest(el: HTMLElement) {

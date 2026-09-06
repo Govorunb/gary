@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { ContextManager } from "./context.svelte";
 import { EventBus } from "./events/bus";
-import { EventLogStore } from "./events/log.svelte";
+import { EventLogStore, MAX_DISPLAYED_EVENTS } from "./events/log.svelte";
 
 function createContext() {
     const bus = new EventBus();
@@ -11,6 +11,32 @@ function createContext() {
 }
 
 describe("ContextManager projection", () => {
+    test("retains live and rebuilt context when older events leave the display", () => {
+        const { bus, eventLog, context } = createContext();
+        let appends = 0;
+        context.onActorViewAppend(() => appends++);
+        const count = MAX_DISPLAYED_EVENTS + 10;
+        for (let i = 0; i < count; i++) {
+            bus.emit("ui/context/input", { text: String(i), silent: true });
+        }
+
+        expect(eventLog.displayed).toHaveLength(MAX_DISPLAYED_EVENTS);
+        expect(eventLog.displayed).toEqual(eventLog.all.slice(-MAX_DISPLAYED_EVENTS));
+        expect(eventLog.all).toHaveLength(count);
+        expect(context.userView).toEqual(eventLog.all);
+        expect(context.actorView).toEqual(eventLog.all);
+        expect(appends).toBe(count);
+
+        eventLog.clearDisplayed();
+        const rebuilt = new ContextManager(eventLog);
+        expect(eventLog.displayed).toHaveLength(0);
+        expect(rebuilt.userView).toEqual(context.userView);
+        expect(rebuilt.actorView).toEqual(context.actorView);
+        rebuilt.dispose();
+        context.dispose();
+        eventLog.dispose();
+    });
+
     test("projects user input into both views", () => {
         const { bus, context } = createContext();
         bus.emit("ui/context/input", { text: "hello", silent: false });
