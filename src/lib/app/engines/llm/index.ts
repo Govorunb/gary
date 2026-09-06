@@ -18,7 +18,6 @@ import {
     completionReserve,
     estimateRequestTokens,
     INITIAL_TOKENS_PER_BYTE,
-    MIN_CALIBRATED_TOKENS_PER_BYTE,
     reportedPromptTokens,
     requestByteLength,
     type ContextBudget,
@@ -537,7 +536,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         if (promptTokens) {
             this.tokensPerByte.set(
                 calibrationKey,
-                Math.max(MIN_CALIBRATED_TOKENS_PER_BYTE, promptTokens / requestByteLength(request)),
+                promptTokens / requestByteLength(request),
             );
         }
         return {

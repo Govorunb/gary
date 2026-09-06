@@ -27,7 +27,7 @@
     let peekingPassword = $state(false);
 </script>
 
-<div class="field-container">
+<div class="field">
     {#if label}
         <label for={inputId} class="field-label">
             {#if typeof label === "string"}
@@ -76,50 +76,22 @@
 <style lang="postcss">
     @reference "global.css";
 
-    .field-container {
-        @apply fcol-1;
-    }
 
-    .field-label {
-        @apply text-sm font-medium text-neutral-700 dark:text-neutral-300;
-    }
 
-    .required {
-        @apply text-red-500;
-    }
 
     .field-input {
-        @apply px-3 py-2 pr-10 border border-neutral-300 rounded-md;
-        @apply dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100;
-        @apply disabled:opacity-50 disabled:cursor-not-allowed;
-
-        &:focus {
-            @apply outline-none ring-2 ring-primary-500 border-transparent;
-        }
-    }
-
-    .field-description {
-        @apply text-xs text-neutral-500 dark:text-neutral-400;
+        @apply pr-9;
     }
 
     .input-wrapper {
         @apply relative w-full;
-        & input {
-            @apply w-full;
-        }
     }
 
     .peek-button {
-        @apply absolute right-2 top-1/2;
-        @apply transform -translate-y-1/2 p-1 rounded-md;
-        @apply text-neutral-500 dark:text-neutral-400;
-        @apply bg-transparent border-none cursor-pointer;
-        @apply focus:outline-2 outline-primary-500;
-        @apply z-10;
-
-        &:hover {
-            @apply text-neutral-700;
-            @apply dark:text-neutral-200;
-        }
+        @apply absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-md;
+        @apply text-ink-3 transition-colors;
+        &:hover { @apply text-ink-1; }
+        &:focus-visible { @apply outline-none ring-2 ring-accent; }
+        & > :global(svg) { @apply size-4; }
     }
 </style>

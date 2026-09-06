@@ -22,7 +22,7 @@
             class="menu-item"
             onclick={() => uiState.dialogs.openRawMessageDialog(game)}
         >
-            <span class="text-secondary-500 dark:text-secondary-200">
+            <span class="text-src-actor">
                 <Braces size={14} />
             </span>
                 Send Raw Message
@@ -45,32 +45,11 @@
     }
 
     .id-text {
-        @apply text-sm text-neutral-600 dark:text-neutral-300 whitespace-nowrap;
+        @apply text-sm text-ink-2 whitespace-nowrap;
     }
 
     .id-value {
-        @apply font-mono font-medium text-neutral-800 dark:text-neutral-200 truncate;
-    }
-
-    .menu-item {
-        @apply frow-1.5 items-center;
-        @apply w-full px-3 py-2;
-        @apply rounded-sm;
-        @apply text-left text-sm;
-        @apply transition-colors duration-150;
-        &:hover {
-            @apply bg-neutral-200/70 dark:bg-neutral-700/70;
-        }
-        &:focus-visible {
-            @apply outline-none ring-1 ring-neutral-400 dark:ring-neutral-600;
-        }
-    }
-
-    .menu-item-danger {
-        @apply text-error-600 dark:text-error-400;
-        &:hover {
-            @apply bg-error-100/50 dark:bg-error-900/30;
-        }
+        @apply font-mono font-medium text-ink-1 truncate;
     }
 
 </style>

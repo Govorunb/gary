@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata. Software centers read this from the deb; apt and the AppImage ignore it. -->
+<component type="desktop-application">
+  <id>dev.govorunb.gary</id>
+  <name>Gary</name>
+  <summary>Develop and test game integrations for the Neuro-sama SDK</summary>
+  <developer id="dev.govorunb"><name>Govorunb</name></developer>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <url type="homepage">https://github.com/Govorunb/gary</url>
+  <url type="bugtracker">https://github.com/Govorunb/gary/issues</url>
+  <launchable type="desktop-id">Gary.desktop</launchable>
+  <pkgname>gary</pkgname>
+  <description>
+    <p>A feature-rich app that helps you develop and test game integrations for the Neuro-sama SDK. A wide range of tools and environments to test your game integration, in one app.</p>
+    <ul>
+      <li>A random generator to automatically choose actions, for primitive or "hands-off" testing</li>
+      <li>Manual action sending, with an option to send raw WebSocket messages for low-level testing</li>
+      <li>For advanced testing, use a real LLM through OpenAI-compatible inference providers</li>
+      <li>Diagnostics - easy automatic checks for common pitfalls and off-spec behavior</li>
+    </ul>
+  </description>
+  <content_rating type="oars-1.1"/>
+</component>

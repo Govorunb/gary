@@ -19,7 +19,7 @@
 			<ArrowUp size={20} />
 		</button>
 	{/snippet}
-	<div class="shift-indicator-content">
+	<div class="tooltip-panel">
 		<p>
 			When this indicator is visible, holding <Hotkey>Shift</Hotkey> may show more options or change behavior.
 		</p>
@@ -31,23 +31,9 @@
 	@reference 'global.css';
 
 	.shift-indicator {
-		@apply flex items-center justify-center;
-		@apply rounded-md;
-		@apply text-neutral-400 dark:text-neutral-600;
-		@apply transition-colors;
-		@apply cursor-default;
-
-		&:hover {
-			@apply text-neutral-600 dark:text-neutral-400;
-		}
-
-		&.pressed {
-			@apply text-secondary-600 dark:text-secondary-400;
-		}
-	}
-
-	.shift-indicator-content {
-		@apply fcol-1 bg-neutral-100 dark:bg-surface-800 rounded-md p-4 shadow-xl;
-		@apply text-xs text-neutral-500 dark:text-neutral-300;
+		@apply flex items-center justify-center rounded-md;
+		@apply text-ink-3 transition-colors cursor-default;
+		&:hover { @apply text-ink-2; }
+		&.pressed { @apply text-src-actor; }
 	}
 </style>

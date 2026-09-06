@@ -8,7 +8,7 @@
     import DiagnosticRow from './DiagnosticRow.svelte';
     import Hotkey from '../common/Hotkey.svelte';
     import { tooltip } from '$lib/app/utils';
-    import { SegmentedControl } from '@skeletonlabs/skeleton-svelte';
+    import RadioButtons from '$lib/ui/common/RadioButtons.svelte';
 
     type Props = {
         open: boolean;
@@ -40,7 +40,6 @@
             game.diagnostics.dismissAll();
         }
     }
-    const filterValue = $derived(showHidden ? 'hidden' : 'active');
 </script>
 
 <Dialog bind:open>
@@ -59,25 +58,17 @@
     {#snippet body()}
         {#if diagnostics.length}
             <div class="vis-filter">
-                <SegmentedControl
-                    value={filterValue}
-                    onValueChange={(details) => showHidden = details.value === 'hidden'}
+                <RadioButtons
+                    items={["Active", "Hidden"]}
+                    bind:selectedIndex={() => showHidden ? 1 : 0, (i) => showHidden = i === 1}
                 >
-                    <SegmentedControl.Control>
-                        <SegmentedControl.Indicator class="indicator" />
-                        <SegmentedControl.Item value="active">
-                            <SegmentedControl.ItemText>Active ({visibleDiagnostics.length})</SegmentedControl.ItemText>
-                            <SegmentedControl.ItemHiddenInput />
-                        </SegmentedControl.Item>
-                        <SegmentedControl.Item value="hidden">
-                            <SegmentedControl.ItemText>Hidden ({hiddenDiagnostics.length})</SegmentedControl.ItemText>
-                            <SegmentedControl.ItemHiddenInput />
-                        </SegmentedControl.Item>
-                    </SegmentedControl.Control>
-                </SegmentedControl>
+                    {#snippet renderItem(item, i)}
+                        <span>{item} ({i ? hiddenDiagnostics.length : visibleDiagnostics.length})</span>
+                    {/snippet}
+                </RadioButtons>
             </div>
         {/if}
-        <div class="fcol-scroll-2">
+        <div class="dialog-scroll diagnostic-list">
             {#each activeDiagnostics as diag (diag.id)}
                 <DiagnosticRow {game} {diag} />
             {:else}
@@ -86,7 +77,7 @@
                 <div class="fcol-3 empty-state">
                     <OKIcon />
                     <p>No{diagCount ? (showHidden ? ' hidden ' : ' active ') : ' '}diagnostics</p>
-                    <p class="text-sm text-neutral-500">
+                    <p class="text-sm text-ink-3">
                         {!diagCount
                             ? 'This game is running without any issues.'
                             : `All ${diagCount} diagnostic(s) are ${showHidden ? "active" : "suppressed or dismissed"}.`}
@@ -98,7 +89,7 @@
     {#snippet footer()}
         <div class="footer-actions">
             <button
-                class={['btn', 'btn-base', showClearBtn ? "preset-tonal-warning" : "preset-tonal-surface"]}
+                class={['btn', showClearBtn && 'btn-danger']}
                 onclick={clearBtn}
                 disabled={!activeDiagnostics.length}
                 {@attach tooltip(showClearBtn ? "This will permanently remove all diagnostics!" : "")}
@@ -106,7 +97,7 @@
                 {showClearBtn ? "Clear" : showHidden ? "Restore" : "Dismiss"} all
             </button>
         </div>
-        <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Close</button>
+        <button class="btn" onclick={closeDialog}>Close</button>
     {/snippet}
 </Dialog>
 
@@ -117,12 +108,12 @@
         @apply frow-2 items-center;
     }
 
-    .vis-filter :global(.indicator) {
-        @apply contrast-50 dark:contrast-75;
+    .diagnostic-list {
+        @apply fcol-0;
+        & > :global(* + *) { @apply border-t border-edge; }
     }
 
     .empty-state {
-        @apply items-center justify-center py-12;
-        @apply text-neutral-500 dark:text-neutral-400;
+        @apply items-center justify-center py-12 text-ink-2;
     }
 </style>

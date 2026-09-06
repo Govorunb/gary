@@ -513,6 +513,31 @@ describe("LLMEngine structured output", () => {
 });
 
 describe("LLMEngine context trimming", () => {
+    test("uses reported token density to avoid premature compaction", async () => {
+        const session = createSession();
+        const engine = new TestLLMEngine(llmOptions({
+            allowYapping: true,
+            modelMetadata: { test: { contextWindow: 8_192 } },
+        }));
+        engine.generation = {
+            text: "okay",
+            toolCalls: [],
+            metadata: { usage: { prompt_tokens: 800 } },
+        };
+        expect((await engine.tryAct(session)).isOk()).toBe(true);
+
+        (session.context.actorView as any[]).push(...Array.from({ length: 20 }, (_, index) => ({
+            id: `event-${index}`,
+            timestamp: 1_000 + index,
+            key: "ui/context/input",
+            data: { text: `history-${index} ${"ordinary game context ".repeat(25)}`, silent: false },
+        })));
+        expect((await engine.tryAct(session)).isOk()).toBe(true);
+        const wire = JSON.stringify(engine.requests[1].messages);
+        expect(wire).toContain("history-0 ");
+        expect(wire).toContain("history-19 ");
+    });
+
     test("compacts a contiguous prefix and remembers the boundary", async () => {
         const session = createSession();
         (session.context.actorView as any[]).push(...Array.from({ length: 20 }, (_, index) => ({

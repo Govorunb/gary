@@ -2,7 +2,7 @@ import type { ExternalToast } from "svelte-sonner";
 import { isTauri } from "@tauri-apps/api/core";
 import { safeInvoke, LogLevel } from ".";
 import { EVENT_BUS } from "../events/bus";
-import { EVENTS_BY_KEY, EVENTS_DISPLAY, type EventDef, type EventInstance, type EventKey } from "../events";
+import { EVENTS_BY_KEY, EVENTS_DISPLAY, eventLevel, type EventDef, type EventInstance, type EventKey } from "../events";
 import { boundedToast } from "./bounded-toast";
 
 export interface Reporter {
@@ -34,7 +34,7 @@ class DefaultReporter implements Reporter {
 
     reportEvent(e: EventInstance<EventKey>) {
         const def = EVENTS_BY_KEY[e.key] as EventDef;
-        let level = e.levelOverride ?? def.level ?? LogLevel.Info;
+        let level = eventLevel(e);
 
         let text: string;
         try {
@@ -50,9 +50,10 @@ class DefaultReporter implements Reporter {
 
         this.log({ message: text }, level);
 
+        if (def.silent) return;
         const havePresenter = e.key in EVENTS_DISPLAY;
         const presenter = EVENTS_DISPLAY[e.key];
-        const shouldPresent = havePresenter || e.levelOverride !== undefined || level >= this.autoToastLevel;
+        const shouldPresent = havePresenter || level >= this.autoToastLevel;
 
         if (!presenter && !def.description) {
             if (shouldPresent) {

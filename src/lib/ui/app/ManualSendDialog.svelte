@@ -179,14 +179,14 @@
     {/snippet}
     {#snippet body()}
         <div class="action-info">
-            <p class="text-sm text-neutral-600 dark:text-neutral-400">{currentAction.description}</p>
+            <p class="text-sm">{currentAction.description}</p>
         </div>
         {#if schemaJson}
             <div class="editor-section">
                 <div class="editor-header">
                     <div class="editor-label">Action Data</div>
                     <button
-                        class="schema-toggle"
+                        class="btn"
                         onclick={toggleCollapsed}
                         {@attach tooltip(schemaCollapsed ? "Show schema" : "Hide schema")}
                     >
@@ -208,7 +208,7 @@
                             maxHeight="24rem"
                         />
                         {#if validationErrors}
-                            <div class="error-message">
+                            <div class="callout err error-message">
                                 {#each validationErrors as error}
                                     <span class="text-xs">{error}</span>
                                 {/each}
@@ -233,7 +233,7 @@
     {#snippet footer()}
         <div class="frow-2">
             {#if schemaJson}
-                <button class="btn btn-base subtle-btn"
+                <button class="btn"
                     onclick={reroll}
                     {@attach tooltip("Replace editor contents with random data (Alt+R)")}
                 >
@@ -243,9 +243,9 @@
             {/if}
         </div>
         <div class="frow-2">
-            <button class="btn btn-base subtle-btn" onclick={closeDialog}>Cancel</button>
+            <button class="btn" onclick={closeDialog}>Cancel</button>
             <button
-                class="btn btn-base send-btn"
+                class="btn btn-primary send-btn"
                 onclick={sendAction}
                 disabled={busy || (!isValid && !shiftPressed)}
                 data-bypass={boolAttr(!busy && !isValid && shiftPressed)}
@@ -262,9 +262,7 @@
     @reference "global.css";
 
     .action-info {
-        @apply p-3 rounded-lg;
-        @apply bg-neutral-100 dark:bg-neutral-800;
-        @apply text-neutral-700 dark:text-neutral-300;
+        @apply text-ink-2 whitespace-pre-line;
     }
 
     .editor-section {
@@ -297,44 +295,15 @@
         @apply hidden;
     }
 
-    .schema-toggle {
-        @apply frow-1 items-center;
-        @apply px-2 py-1.5 rounded-md text-base font-medium;
-        @apply bg-neutral-100 dark:bg-neutral-800;
-        @apply text-neutral-700 dark:text-neutral-300;
-        @apply border border-neutral-200 dark:border-neutral-700;
-        @apply transition-colors;
-        &:hover {
-            @apply bg-neutral-200 dark:bg-neutral-700;
-            @apply text-neutral-900 dark:text-neutral-100;
-        }
-    }
-
     .editor-label {
-        @apply text-lg font-medium;
-        @apply self-end;
-        @apply text-neutral-700 dark:text-neutral-300;
+        @apply text-sm font-semibold self-end text-ink-0;
     }
 
     .error-message {
-        @apply fcol-1 p-2 rounded-md;
-        @apply bg-red-50 dark:bg-red-900/20;
-        @apply text-red-700 dark:text-red-400;
-        @apply border border-red-200 dark:border-red-800;
+        @apply fcol-1 p-2 text-lvl-err;
     }
 
-    .subtle-btn {
-        @apply bg-neutral-100 dark:bg-neutral-800;
-        @apply text-neutral-700 dark:text-neutral-300;
-        &:hover {
-            @apply bg-neutral-200 dark:bg-neutral-700;
-        }
-    }
-
-    .send-btn {
-        @apply bg-sky-500 text-white;
-        @apply hover:bg-sky-600;
-        @apply disabled:opacity-50 disabled:cursor-not-allowed;
-        @apply data-bypass:bg-amber-600/60;
+    .send-btn[data-bypass] {
+        @apply bg-lvl-warn;
     }
 </style>

@@ -70,7 +70,7 @@
 
 <Dialog bind:open position="center">
     {#snippet title()}
-        <p class="text-xl font-bold">Update Available</p>
+        <h3>Update Available</h3>
     {/snippet}
     {#snippet body()}
         <p class="update-message">
@@ -87,14 +87,14 @@
         <p>Restart the app at your convenience to finish the update.</p>
     {/snippet}
     {#snippet footer()}
-        <button class="btn btn-base skip-btn" onclick={skip}>
+        <button class="btn" onclick={skip}>
             Skip this version
         </button>
         <div class="flex-1 self-stretch"></div>
-        <button class="btn btn-base cancel-btn" onclick={cancel}>
+        <button class="btn" onclick={cancel}>
             Cancel
         </button>
-        <button class="btn btn-base preset-filled-primary-500" onclick={doUpdate} disabled={updating}>
+        <button class="btn btn-primary" onclick={doUpdate} disabled={updating}>
             {updating ? "Updating..." : "Update"}
         </button>
     {/snippet}
@@ -104,32 +104,18 @@
     @reference "global.css";
 
     .update-message {
-        @apply text-base;
-        @apply text-neutral-700 dark:text-neutral-300;
+        @apply text-base text-ink-1;
     }
 
     .release-notes {
-        @apply p-3 rounded-lg;
-        @apply bg-neutral-100 dark:bg-neutral-800;
-        @apply border border-neutral-200 dark:border-neutral-700;
+        @apply pl-3 border-l-2 border-edge;
     }
 
     .release-notes-title {
-        @apply font-medium text-sm;
-        @apply text-neutral-700 dark:text-neutral-300;
-        @apply mb-1;
+        @apply mb-1 text-sm font-medium text-ink-1;
     }
 
     .release-notes-content {
-        @apply text-sm;
-        @apply text-neutral-600 dark:text-neutral-400;
-        @apply whitespace-pre-wrap;
-    }
-
-    .skip-btn, .cancel-btn {
-        @apply bg-neutral-100 text-neutral-700;
-        @apply hover:bg-neutral-200;
-        @apply dark:bg-neutral-800 dark:text-neutral-300;
-        @apply dark:hover:bg-neutral-700;
+        @apply text-sm text-ink-2 whitespace-pre-wrap;
     }
 </style>

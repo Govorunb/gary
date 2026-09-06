@@ -1,12 +1,20 @@
 import type { Session } from "$lib/app/session.svelte";
-import { clamp, isApril1st } from "$lib/app/utils";
+import { clamp, isApril1st, LogLevel } from "$lib/app/utils";
+import { SvelteSet } from "svelte/reactivity";
 import { DialogManager } from "./dialog-manager.svelte";
+// Type-only: event-filter pulls in the event registry, and this module loads before it.
+import type { EventLogFilter } from "./workspace/event-filter";
 
 export type DashboardSidebarSide = "left" | "right";
 
 export class UIState {
     selectedGameTab: number = $state(0);
     mobileOpenSidebar: DashboardSidebarSide | null = $state(null);
+    eventLogFilter: EventLogFilter = $state({ selectedOnly: false, minimumLevel: LogLevel.Warning });
+    /** Events acknowledged while the event log was open, regardless of filters or scroll position. */
+    readonly seenEvents = new SvelteSet<string>();
+    /** Event the log should scroll to once it is open. Consumed by the event log. */
+    eventLogScrollTarget: string | null = $state(null);
     readonly dialogs = new DialogManager();
     aprilFools: boolean;
 
@@ -65,6 +73,16 @@ export class UIState {
 
     closeMobileSidebar() {
         this.mobileOpenSidebar = null;
+    }
+
+    /** Opens the event log (as a drawer on narrow viewports) scrolled to the given event. */
+    revealEvent(eventId: string, narrowViewport: boolean) {
+        this.eventLogScrollTarget = eventId;
+        if (narrowViewport) {
+            this.openMobileSidebar("right");
+        } else {
+            this.setSidebarCollapsed("right", false);
+        }
     }
 
     selectGameTab(gameId: string) {

@@ -65,27 +65,18 @@
 
 radio-picker {
     @apply inline-flex overflow-visible rounded-full;
-    @apply border border-neutral-200/80 bg-neutral-100;
-    @apply text-sm text-neutral-700 shadow-sm;
-    @apply dark:border-surface-800/80 dark:bg-surface-900 dark:text-surface-200;
+    @apply bg-layer-2 ring-1 ring-inset ring-edge text-sm text-ink-1;
 
     & label {
-        @apply relative frow-2 cursor-pointer select-none items-center font-medium;
-        @apply px-2.5 py-1;
-        @apply size-full;
+        @apply relative frow-2 cursor-pointer select-none items-center font-medium whitespace-nowrap;
+        @apply px-2.5 py-1 size-full transition-colors;
         @apply first:rounded-l-full last:rounded-r-full;
-        @apply dark:active:bg-neutral-800/80;
 
-        &:hover {
-            @apply bg-neutral-200;
-            @apply dark:bg-neutral-700;
-        }
-        &:has(input:focus-visible) {
-            @apply outline-2 outline-tertiary-500 outline-offset-1;
-        }
+        &:hover { @apply bg-layer-3 text-ink-0; }
+        &:has(input:focus-visible) { @apply outline-2 outline-accent outline-offset-1; }
         &:has(input:checked) {
-            @apply bg-primary-500/20;
-            @apply dark:bg-primary-600;
+            @apply text-accent;
+            background-color: color-mix(in oklab, var(--color-accent) 18%, transparent);
         }
     }
 }

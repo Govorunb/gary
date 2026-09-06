@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getUIState, getUpdater } from "$lib/app/utils/di";
     import DiagnosticsDialog from "./DiagnosticsDialog.svelte";
+    import HotkeysDialog from "./HotkeysDialog.svelte";
     import ManualSendDialog from "./ManualSendDialog.svelte";
     import RawMessageDialog from "./RawMessageDialog.svelte";
     import SettingsDialog from "./SettingsDialog.svelte";
@@ -31,4 +32,6 @@
     <UpdateDialog bind:open={() => true, (open) => !open && dialogs.closeDialog("update")} />
 {:else if activeDialog?.type === "settings"}
     <SettingsDialog bind:open={() => true, (open) => !open && dialogs.closeDialog("settings")} />
+{:else if activeDialog?.type === "hotkeys"}
+    <HotkeysDialog bind:open={() => true, (open) => !open && dialogs.closeDialog("hotkeys")} />
 {/if}

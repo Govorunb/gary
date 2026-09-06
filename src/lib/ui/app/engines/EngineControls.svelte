@@ -131,71 +131,44 @@
 
 <style lang="postcss">
     @reference "global.css";
-
     .engine-controls {
-        @apply frow-3 items-center;
+        @apply frow-2 items-center;
     }
-
     .act-btn {
-        @apply frow-2 font-semibold text-base;
-        @apply p-2 rounded-lg transition-all;
-        @apply bg-neutral-100 dark:bg-neutral-800;
-        @apply border border-neutral-200/50 dark:border-neutral-700/50;
-        @apply shadow-sm;
-
+        @apply frow-1.5 items-center h-8 px-2.5 rounded-md;
+        @apply text-sm font-medium text-ink-0 transition-all;
+        background-color: var(--color-bar-control);
+        & > :global(svg) { @apply size-4; }
         &:hover:not(:disabled) {
-            @apply bg-neutral-200 dark:bg-neutral-700;
+            background-color: var(--color-bar-control-hover);
         }
         &:active:not(:disabled) {
-            @apply bg-neutral-300 dark:bg-neutral-600;
+            background-color: var(--color-bar-control-hover);
         }
         &:disabled {
             @apply opacity-60;
         }
-
         &:focus-visible {
-            @apply ring-2 ring-primary-500 outline-none;
+            @apply ring-2 ring-accent outline-none;
         }
     }
-
     .act-icon-slot {
-        @apply relative inline-grid size-6 shrink-0 place-items-center;
+        @apply relative inline-grid size-4 shrink-0 place-items-center;
     }
-
     .act-icon-slot :global(.act-icon) {
-        @apply absolute;
+        @apply absolute size-4;
         visibility: hidden;
     }
-
     .act-icon-slot :global(.act-icon[data-visible]) {
         visibility: visible;
     }
-
     .mute-btn[data-muted] {
-        @apply text-warning-600 dark:text-warning-400;
-
-        &:hover {
-            @apply text-warning-700 dark:text-warning-300;
-        }
+        @apply text-lvl-warn;
     }
     .mute-btn[data-errored] {
-        @apply text-error-600 dark:text-error-400;
-        @apply ring-2 ring-error-200 dark:ring-error-800;
-
-        &:hover {
-            @apply text-error-700 dark:text-error-300;
-            @apply ring-error-400 dark:ring-error-600;
-        }
+        @apply text-lvl-err ring-[1.5px] ring-inset ring-lvl-err;
     }
-
-    .autoact-btn {
-        @apply transition-all;
-        &[data-checked] {
-            @apply ring-3 ring-inset ring-primary-200 dark:ring-primary-500;
-            @apply text-secondary-700 dark:text-secondary-200;
-        }
-        &:active {
-            @apply ring-2 ring-inset ring-primary-300 dark:ring-primary-700;
-        }
+    .autoact-btn[data-checked] {
+        @apply text-accent ring-[1.5px] ring-inset ring-accent;
     }
 </style>

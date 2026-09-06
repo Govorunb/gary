@@ -29,7 +29,7 @@
 
 <Popover modal {open} onOpenChange={(d) => open = d.open}>
     {#snippet trigger(props)}
-        <button {...props} class="menu-trigger" {@attach tooltip("Menu")}>
+        <button {...props} class="icon-btn" {@attach tooltip("Menu")}>
             <EllipsisVertical />
         </button>
     {/snippet}
@@ -44,35 +44,10 @@
 <style lang="postcss">
     @reference "global.css";
 
-    .menu-trigger {
-        @apply p-2 rounded-md;
-        @apply bg-neutral-50 text-neutral-700;
-        @apply dark:bg-neutral-900/30 dark:text-neutral-300;
-        @apply transition-colors;
-        &:hover {
-            @apply bg-neutral-100;
-            @apply dark:bg-neutral-800/50;
-        }
-    }
-
-    .menu-item {
-        @apply w-full px-3 py-2;
-        @apply rounded-sm;
-        @apply text-left text-sm;
-        @apply text-neutral-700 dark:text-neutral-300;
-        @apply transition-colors duration-150;
-        &:hover {
-            @apply bg-neutral-200/70 dark:bg-neutral-700/70;
-        }
-        &:focus-visible {
-            @apply outline-none ring-1 ring-neutral-400 dark:ring-neutral-600;
-        }
-    }
-
     .menu-item-danger {
-        @apply text-error-600 dark:text-error-400;
+        @apply text-lvl-err;
         &:hover {
-            @apply bg-error-100/50 dark:bg-error-900/30;
+            @apply bg-lvl-err/12;
         }
     }
 </style>

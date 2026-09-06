@@ -135,9 +135,7 @@
     }
 
     .sidebar-panel {
-        @apply h-full overflow-visible;
-        @apply bg-surface-100/90 shadow-sm ring-1 ring-neutral-200/70;
-        @apply dark:bg-surface-900/80 dark:ring-neutral-700/50;
+        @apply h-full overflow-visible bg-layer-1;
     }
 
     .sidebar-expanded {
@@ -188,16 +186,15 @@
 
     .sidebar-toggle {
         @apply inline-flex items-center justify-center rounded-md;
-        @apply border border-neutral-200/80 bg-white/95 p-1.5 text-neutral-700 shadow-sm;
+        @apply border border-edge bg-layer-3 p-1 text-ink-1 shadow-sm;
         @apply pointer-events-none transition-colors;
-        @apply dark:border-neutral-700 dark:bg-surface-800/90 dark:text-neutral-100;
 
         &:hover {
-            @apply bg-neutral-100 dark:bg-surface-700;
+            @apply bg-layer-4 text-ink-0;
         }
 
         &:focus-visible {
-            @apply outline-none ring-2 ring-primary-500;
+            @apply outline-none ring-2 ring-accent;
         }
     }
 
@@ -230,6 +227,7 @@
             visibility: hidden;
             width: min(24rem, calc(100vw - 6rem));
             transition: transform 180ms ease;
+            @apply shadow-2xl ring-1 ring-edge;
         }
 
         .dashboard-sidebar[data-side="left"] .sidebar-expanded {

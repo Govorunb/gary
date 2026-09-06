@@ -7,7 +7,8 @@ export type DialogState =
     | { type: "diagnostics", game: Game }
     | { type: "update" }
     | { type: "enginePicker", engineId: string | null }
-    | { type: "settings" };
+    | { type: "settings" }
+    | { type: "hotkeys" };
 
 export type DialogType = DialogState["type"];
 
@@ -79,6 +80,14 @@ export class DialogManager {
             this.closeDialog("settings");
         } else {
             this.openSettingsDialog();
+        }
+    }
+
+    toggleHotkeysDialog() {
+        if (this.isOpen("hotkeys")) {
+            this.closeDialog("hotkeys");
+        } else {
+            this.openDialog({ type: "hotkeys" });
         }
     }
 

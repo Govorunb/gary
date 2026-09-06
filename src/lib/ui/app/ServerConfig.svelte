@@ -47,30 +47,17 @@
         @apply fcol-3 w-96 max-w-[calc(100vw-2rem)] min-w-0;
     }
 
-    .server-config :global(.field-input) {
-        @apply w-full;
-    }
-
     .compatibility-section {
-        @apply fcol-2 pt-3;
-        @apply border-t border-neutral-200 dark:border-neutral-700;
+        @apply fcol-2 pt-3 border-t border-edge;
     }
 
     .section-label {
-        @apply text-xs font-semibold uppercase;
-        @apply text-neutral-500 dark:text-neutral-400;
+        @apply text-xs font-semibold uppercase text-ink-2;
     }
 
     :global(.compatibility-row) {
-        @apply frow-3 items-start justify-between;
-
         :global([data-part="label"]) {
-            @apply frow-1 items-start;
+            @apply frow-1.5 items-center;
         }
-    }
-
-    .field-label {
-        @apply text-sm font-medium select-none;
-        @apply text-neutral-700 dark:text-neutral-300;
     }
 </style>

@@ -94,7 +94,7 @@
         <p class="diagnostic-desc">{def.description}</p>
     {/if}
     {#if hasContext}
-        <details class="context-details" bind:open={ctxOpen}>
+        <details class="details-box context-details" bind:open={ctxOpen}>
             <summary>
                 <ChevronDown size="14" class="chevron-icon" />
                 <span>Details</span>
@@ -111,19 +111,19 @@
         </details>
     {/if}
     <div class="actions">
-        <button class="action-btn"
+        <button class="icon-btn action-btn"
             onclick={() => isDismissed ? restoreSingle() : dismissSingle()}
             {@attach tooltip((isDismissed ? "Restore" : "Dismiss") + " this diagnostic")}
         >
             <Btn1Icon size="16" />
         </button>
-        <button class="action-btn"
+        <button class="icon-btn action-btn"
             onclick={() => isDismissed ? restoreDiagnostic() : dismissDiagnostic()}
             {@attach tooltip((isDismissed ? "Restore" : "Dismiss") + " all current diagnostics of this kind")}
         >
             <Btn2Icon size="16" />
         </button>
-        <button class={["action-btn", isSuppressed ? "unsuppress" : "suppress"]}
+        <button class={["icon-btn action-btn", isSuppressed ? "unsuppress" : "suppress"]}
             onclick={() => isSuppressed ? unsuppressDiagnostic() : suppressDiagnostic()}
             {@attach tooltip((isSuppressed ? "Show" : "Never show") + " this diagnostic kind again")}
         >
@@ -136,12 +136,23 @@
     @reference "global.css";
 
     .diagnostic-item {
-        @apply relative p-3 rounded-lg;
-        @apply border transition-colors;
+        --tone: var(--color-ink-3);
+        @apply relative px-2 py-2 rounded-md transition-colors;
         display: grid;
         grid-template-columns: auto 1fr;
         grid-template-rows: auto auto auto;
         gap: 0.25rem 0.75rem;
+
+        &.severity-error, &.severity-fatal { --tone: var(--color-lvl-err); }
+        &.severity-warning { --tone: var(--color-lvl-warn); }
+        &.severity-info { --tone: var(--color-accent); }
+        &:hover, &:focus-within { @apply bg-layer-2; }
+        /* Warnings and errors carry a faint tint, like event rows. */
+        &.severity-warning, &.severity-error, &.severity-fatal {
+            background-color: color-mix(in oklab, var(--tone) 7%, transparent);
+            &:hover, &:focus-within { background-color: color-mix(in oklab, var(--tone) 12%, transparent); }
+        }
+        @apply data-dismissed:opacity-60;
 
         &.context-closed .diagnostic-icon {
             grid-row: 1 / span 3;
@@ -154,20 +165,20 @@
         .diagnostic-icon {
             grid-column: 1;
             @apply shrink-0 flex items-center justify-center;
+            color: var(--tone);
             transition: all 150ms ease;
         }
 
         .diagnostic-title {
             grid-row: 1;
             grid-column: 2;
-            @apply font-medium;
+            @apply font-medium text-ink-0;
         }
 
         .diagnostic-desc {
             grid-row: 2;
             grid-column: 2;
-            @apply text-neutral-600 dark:text-neutral-400;
-            @apply text-xs whitespace-pre-line;
+            @apply text-xs text-ink-2 whitespace-pre-line;
         }
 
         .context-details {
@@ -186,69 +197,23 @@
             @apply opacity-0 group-hover:opacity-100 focus-within:opacity-100;
             @apply group-data-shift:opacity-100;
         }
-
-        &.severity-error, &.severity-fatal {
-            @apply bg-red-50 dark:bg-red-900/20;
-            @apply border-red-200 dark:border-red-800;
-        }
-
-        &.severity-warning {
-            @apply bg-amber-50 dark:bg-amber-900/20;
-            @apply border-amber-200 dark:border-amber-800;
-        }
-
-        &.severity-info {
-            @apply bg-sky-50 dark:bg-sky-900/20;
-            @apply border-sky-200 dark:border-sky-800;
-        }
-        @apply data-dismissed:opacity-60;
-    }
-
-    .diagnostic-icon.severity-error, .diagnostic-icon.severity-fatal {
-        @apply text-red-600 dark:text-red-400;
-    }
-
-    .diagnostic-icon.severity-warning {
-        @apply text-amber-600 dark:text-amber-400;
-    }
-
-    .diagnostic-icon.severity-info {
-        @apply text-sky-600 dark:text-sky-400;
     }
 
     .action-btn {
-        @apply p-1.5 rounded-md transition-colors text-neutral-400;
-        &:hover {
-            @apply bg-neutral-200 dark:bg-surface-700;
-            @apply text-neutral-900 dark:text-neutral-100;
-        }
-        &.suppress {
-            &:hover {
-                @apply text-warning-700 dark:text-warning-300;
-                @apply bg-warning-100 dark:bg-warning-900/20;
-            }
-        }
-        &.unsuppress {
-            &:hover {
-                @apply text-emerald-700 dark:text-emerald-300;
-                @apply bg-emerald-100 dark:bg-emerald-900/20;
-            }
-        }
+        @apply size-6 text-ink-3;
+        &.suppress:hover { @apply text-lvl-warn; }
+        &.unsuppress:hover { @apply text-lvl-ok; }
     }
 
+    /* Plain disclosure, like the event log: text link, then a framed editor in the row's padding. */
     .context-details {
-        @apply mt-1 border border-neutral-200 dark:border-neutral-700 rounded-md;
-        padding: 0.5rem;
-        &[open] summary {
-            @apply pb-2;
+        @apply mt-1 gap-1.5;
+        & > summary {
+            @apply h-6 mx-0 px-0 text-xs font-medium text-accent bg-transparent;
+            &:hover { @apply bg-transparent text-ink-0; }
         }
-        & summary {
-            @apply frow-1.5 items-center cursor-pointer select-none;
-            @apply text-xs font-medium text-sky-700 dark:text-sky-300;
-            @apply hover:text-sky-800 dark:hover:text-sky-200;
-        }
+        &[open] > summary { @apply bg-transparent text-accent; }
     }
-
 
     .context-editor {
         @apply w-full;

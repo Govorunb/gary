@@ -23,7 +23,7 @@
             {@render children()}
         </Switch.Label>
     {/if}
-    <Switch.Control class="bg-surface-100-900 data-[state=checked]:bg-primary-500">
+    <Switch.Control class="bg-layer-4 data-[state=checked]:bg-accent">
         <Switch.Thumb />
     </Switch.Control>
     {#if children && flipLabel}

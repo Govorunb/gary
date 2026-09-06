@@ -146,7 +146,7 @@
 
                                 <div class="actions" data-shift={shiftPressed}>
                                     <button
-                                        class="action-btn"
+                                        class="icon-btn action-btn"
                                         class:delete={del}
                                         class:config={!del}
                                         onclick={() => del ? deleteEngine(id) : openConfig(id)}
@@ -169,7 +169,7 @@
             {:else}
                 <div class="view-container" in:fly={{ x: 20, duration: 200, delay: 50 }} out:fade={{ duration: 150 }}>
                     <div class="header with-back">
-                        <button class="back-btn" onclick={closeConfig}>
+                        <button class="icon-btn" onclick={closeConfig} aria-label="Back">
                             <ArrowLeft class="size-5" />
                         </button>
                         <h3>{session.engines[configEngineId].name}</h3>
@@ -180,7 +180,7 @@
                             {const ConfigComponent = $derived(getEngineConfigComponent(configEngineId))}
                             <ConfigComponent engineId={configEngineId} close={closeConfig} />
                         {:else}
-                            <p class="text-neutral-500 p-4">Internal error: Engine {configEngineId} not found</p>
+                            <p class="text-ink-3 p-4">Internal error: Engine {configEngineId} not found</p>
                         {/if}
                     </div>
                 </div>
@@ -193,27 +193,21 @@
     @reference "global.css";
 
     .trigger {
-        @apply frow-2 items-center px-3 py-1.5 rounded-lg;
-        @apply text-lg font-medium text-neutral-900 dark:text-neutral-100;
-        @apply transition-all shadow-sm border border-neutral-200/50 dark:border-neutral-700/50;
-        @apply bg-neutral-100 active:bg-neutral-300;
-        @apply dark:bg-neutral-800 dark:active:bg-neutral-600;
-
+        @apply frow-1.5 items-center h-8 px-2.5 rounded-md;
+        @apply text-sm font-medium text-ink-1 transition-colors;
         &:hover {
-            @apply bg-neutral-200 dark:bg-neutral-700;
+            @apply text-ink-0;
+            background-color: var(--color-bar-control);
         }
-
         &:focus-visible {
-            @apply ring-2 ring-primary-500 outline-none;
+            @apply ring-2 ring-accent outline-none;
         }
     }
 
     .engine-picker-content {
         @apply w-md overflow-hidden;
-        @apply bg-white dark:bg-surface-900;
-        @apply rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800;
+        @apply bg-layer-1 rounded-2xl shadow-2xl ring-1 ring-edge;
         @apply grid; /* Stack children */
-
         & > * {
             grid-area: 1 / 1;
         }
@@ -224,12 +218,10 @@
     }
 
     .header {
-        @apply flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800;
-
+        @apply flex items-center justify-between px-4 py-3 border-b border-edge;
         & h3 {
-            @apply text-base font-semibold text-neutral-900 dark:text-neutral-100;
+            @apply text-base font-semibold text-ink-0;
         }
-
         &.with-back {
             @apply gap-2;
         }
@@ -245,19 +237,17 @@
 
     .engine-row {
         @apply flex items-center p-1 rounded-lg transition-colors;
-        @apply hover:bg-neutral-50 dark:hover:bg-surface-800;
+        &:hover { @apply bg-layer-2; }
     }
 
     .engine-select {
         @apply flex-1 frow-3 items-center px-2 py-1.5 rounded-md text-left;
-        @apply text-sm font-medium text-neutral-700 dark:text-neutral-300 outline-none;
-
+        @apply text-sm font-medium text-ink-1 outline-none;
         &.active {
-            @apply text-neutral-900 dark:text-white;
+            @apply text-ink-0;
         }
-
         &:focus-visible {
-            @apply bg-neutral-100 dark:bg-surface-700;
+            @apply ring-2 ring-accent;
         }
     }
 
@@ -267,11 +257,9 @@
 
     .status-indicator {
         @apply size-5 rounded-full flex items-center justify-center;
-        @apply border border-neutral-300 dark:border-neutral-600;
-        @apply transition-colors;
-
+        @apply text-xs text-ink-2 ring-1 ring-inset ring-edge transition-colors;
         &.active {
-            @apply bg-primary-500 border-primary-500 shadow-sm shadow-primary-500/30;
+            @apply bg-accent ring-accent;
         }
     }
 
@@ -281,46 +269,27 @@
         @apply data-[shift=true]:opacity-100;
     }
 
-    .action-btn {
-        @apply p-2 rounded-md text-neutral-400 transition-colors;
-
+    .action-btn.delete {
+        @apply text-lvl-err;
         &:hover {
-            @apply text-neutral-900 dark:text-neutral-100;
-            @apply bg-neutral-200 dark:bg-surface-700;
-        }
-
-        &.delete {
-            @apply text-error-500;
-
-            &:hover {
-                @apply text-error-600 bg-error-50 dark:bg-error-900/20;
-            }
+            @apply text-lvl-err;
+            background-color: color-mix(in oklab, var(--color-lvl-err) 14%, transparent);
         }
     }
 
     .footer {
-        @apply p-2 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-surface-900/50;
+        @apply p-2 border-t border-edge;
     }
 
     .add-button {
         @apply w-full frow-2 items-center justify-center px-3 py-2 rounded-lg;
-        @apply border border-dashed border-neutral-300 dark:border-neutral-700;
-        @apply text-sm font-medium text-neutral-500 dark:text-neutral-400;
-        @apply transition-all;
-
+        @apply border border-dashed border-edge;
+        @apply text-sm font-medium text-ink-2 transition-colors;
         &:hover {
-            @apply bg-white dark:bg-surface-800;
-            @apply text-primary-500 dark:text-primary-400;
-            @apply border-primary-300 dark:border-primary-700;
+            @apply bg-layer-2 text-accent border-accent;
         }
-    }
-
-    .back-btn {
-        @apply p-1 -ml-1 rounded-md text-neutral-500 transition-colors;
-
-        &:hover {
-            @apply bg-neutral-100 dark:bg-surface-800;
-            @apply text-neutral-900 dark:text-neutral-100;
+        &:focus-visible {
+            @apply outline-none ring-2 ring-accent;
         }
     }
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Gary",
-  "version": "1.0.0-beta.11",
+  "version": "1.0.1",
   "identifier": "dev.govorunb.gary",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -14,7 +14,11 @@
       {
         "title": "Gary",
         "width": 1280,
-        "height": 720
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 420,
+        "decorations": false,
+        "visible": false
       }
     ],
     "security": {
@@ -25,6 +29,15 @@
     "active": true,
     "targets": ["deb", "appimage", "nsis"],
     "createUpdaterArtifacts": true,
+    "category": "DeveloperTool",
+    "homepage": "https://github.com/Govorunb/gary",
+    "shortDescription": "Develop and test game integrations for the Neuro-sama SDK",
+    "longDescription": "A feature-rich app that helps you develop and test game integrations for the Neuro-sama SDK. A wide range of tools and environments to test your game integration, in one app: a random generator to automatically choose actions, manual action sending with an option to send raw WebSocket messages, real LLMs through OpenAI-compatible inference providers, and diagnostics with automatic checks for common pitfalls and off-spec behavior.",
+    "linux": {
+      "deb": {
+        "files": { "/usr/share/metainfo/dev.govorunb.gary.metainfo.xml": "gary.metainfo.xml" }
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -1,168 +1,63 @@
 <script lang="ts">
     import { boolAttr } from "runed";
-    import { EllipsisVertical } from "@lucide/svelte";
-    import GameAction from "./GameAction.svelte";
-    import GameMenu from "./GameMenu.svelte";
-    import Popover from "$lib/ui/common/Popover.svelte";
     import type { Game } from "$lib/api/game.svelte";
-    import { getUIState } from "$lib/app/utils/di";
-    import { tooltip } from "$lib/app/utils";
+    import type { HTMLButtonAttributes } from "svelte/elements";
 
-    interface Props {
+    interface Props extends HTMLButtonAttributes {
         game: Game;
         isSelected: boolean;
+        onselect: () => void;
     }
 
-    const uiState = getUIState();
+    // Extra attributes come from the context menu popover, which anchors to the tab.
+    let { game, isSelected, onselect, ...rest }: Props = $props();
 
-    let { game, isSelected }: Props = $props();
-    let gameMenuOpen = $state(false);
-
-    const seenActions = $derived([...game.actions.values()]);
-    const activeActions = $derived(seenActions.filter(a => a.active));
-
-    $effect(() => {
-        if (uiState.anyDialogOpen) {
-            gameMenuOpen = false;
-        }
-    });
-
-    function statusTip(game: Game) {
-        switch (game.status) {
-            case "ok": return "OK";
-            case "warn":
-            case "error":
-                return `${game.diagnostics.diagnostics.length} diagnostic(s)`;
-        }
+    // Tabs overflow sideways, so the selected one has to be brought into view however it got selected.
+    function keepVisible(el: HTMLElement) {
+        if (isSelected) el.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
 </script>
 
-<details class="game-tab" name="games-accordion" open={isSelected}>
-    <summary class="game-tab-header">
-        <div class="game-info">
-            <span class="game-name">{game.name}</span>
-        </div>
-        <div class="game-controls">
-            <!-- svelte-ignore a11y_consider_explicit_label : tooltip() sets title -->
-            <button class="status-indicator p-2"
-                data-connected={!game.conn.closed}
-                data-status={game.status}
-                {@attach tooltip(statusTip(game) + ". Click to view diagnostics")}
-                onclick={() => uiState.dialogs.openDiagnosticsDialog(game)}
-            >
-                <div class="status-dot"></div>
-            </button>
-            <Popover open={gameMenuOpen} onOpenChange={(d) => gameMenuOpen = d.open}
-                onFocusOutside={(_) => gameMenuOpen = false}
-            >
-                {#snippet trigger(props)}
-                    <button {...props} class="menu-trigger">
-                        <EllipsisVertical />
-                    </button>
-                {/snippet}
-                <GameMenu {game} />
-            </Popover>
-        </div>
-    </summary>
-
-    <div class="game-content action-list">
-        {#each activeActions as action (action.name)}
-            <GameAction {action} {game} />
-        {/each}
-    </div>
-</details>
+<button
+    {...rest}
+    class="game-tab"
+    type="button"
+    role="tab"
+    aria-selected={isSelected}
+    data-selected={boolAttr(isSelected)}
+    data-connected={boolAttr(!game.conn.closed)}
+    data-status={game.status}
+    onclick={onselect}
+    title={game.name}
+    {@attach keepVisible}
+>
+    <span class="status-dot"></span>
+    <span class="game-name">{game.name}</span>
+</button>
 
 <style lang="postcss">
     @reference "global.css";
 
-    details.game-tab {
-        @apply fcol-0 overflow-y-hidden;
-        @apply rounded-lg shadow-sm transition-all;
-        @apply border border-neutral-200/70 dark:border-neutral-700;
-        @apply bg-white/80 dark:bg-neutral-900/60;
-
-        &[open] {
-            @apply border-sky-300 dark:border-sky-600;
-            @apply shadow-md flex-1;
-        }
-
-        &:not([open]):hover {
-            @apply bg-neutral-50/80 dark:bg-neutral-800/70;
-        }
-
-        summary.game-tab-header {
-            @apply frow-2 cursor-pointer items-center justify-between;
-            @apply px-3 py-2 text-sm font-medium text-neutral-700 transition;
-            @apply focus:outline-none;
-            &:focus-visible {
-                @apply ring-2 ring-sky-400 ring-inset;
-            }
-            @apply dark:text-neutral-200;
-        }
-
-        /* whoever decided not to make this pseudoelement a header in the docs - dishonor upon your family */
-        &::details-content {
-            @apply overflow-y-scroll;
-        }
-    }
-
-    .game-info {
-        @apply frow-2 items-center flex-1 min-w-0 text-lg font-medium;
-    }
-
-    .game-name {
-        @apply truncate max-w-[calc(100%-1rem)];
-    }
-
-    .game-controls {
-        @apply frow-2 items-center shrink-0;
-    }
-
-    .status-indicator {
-        @apply flex items-center justify-center;
-
-        .status-dot {
-            @apply bg-neutral-200;
-        }
-
-        &:not([data-connected]) {
-            @apply brightness-75;
-        }
-
-        &[data-status="ok"] .status-dot {
-            @apply bg-green-500;
-        }
-
-        &[data-status="warn"] .status-dot {
-            @apply bg-warning-500;
-        }
-
-        &[data-status="error"] .status-dot {
-            @apply bg-red-500;
-        }
-    }
-
-    .status-dot {
-        @apply w-2 h-2 rounded-full;
-        @apply transition-colors;
-    }
-
-    .menu-trigger {
-        @apply p-1 rounded-md;
-        @apply text-neutral-500;
-        @apply transition-colors;
+    .game-tab {
+        @apply frow-1.5 items-center shrink-0 h-7 px-2.5 rounded-md;
+        @apply text-sm font-medium text-ink-2 transition-colors;
         &:hover {
-            @apply bg-neutral-100;
-            @apply dark:bg-neutral-800/50;
-            @apply text-neutral-700 dark:text-neutral-300;
+            @apply text-ink-1 bg-layer-2;
+        }
+        &[data-selected] {
+            @apply text-ink-0 bg-layer-3;
+        }
+        &:focus-visible {
+            @apply outline-none ring-2 ring-accent;
         }
     }
-
-    .game-content {
-        @apply border-t border-neutral-200/50 dark:border-neutral-700/50;
+    .game-name {
+        @apply truncate max-w-40;
     }
-
-    .action-list {
-        @apply fcol-1 p-2;
+    .status-dot {
+        @apply size-1.5 rounded-full shrink-0 bg-ink-3 transition-colors;
+        .game-tab[data-connected][data-status="ok"] & { @apply bg-lvl-ok; }
+        .game-tab[data-connected][data-status="warn"] & { @apply bg-lvl-warn; }
+        .game-tab[data-connected][data-status="error"] & { @apply bg-lvl-err; }
     }
 </style>

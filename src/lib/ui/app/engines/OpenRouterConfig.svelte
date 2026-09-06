@@ -57,7 +57,7 @@
         </StringField>
         {#if dirtyConfig.apiKey}
             <button
-                class="btn btn-base preset-filled-secondary-100-900"
+                class="btn self-start"
                 onclick={() => testApiKey(dirtyConfig)}
                 disabled={isTestingApiKey}
             >
@@ -112,7 +112,7 @@
             label="Allow yapping"
             description="Let the model choose to speak instead of acting (unless forced)"
         />
-        <details class="advanced-details">
+        <details class="details-box advanced-details">
             <summary>Advanced</summary>
             <SelectField
                 bind:value={dirtyConfig.promptingStrategy}
@@ -148,18 +148,6 @@
     @reference "global.css";
 
     .advanced-details {
-        @apply mt-1 border border-neutral-200 dark:border-neutral-700 rounded-md;
-        padding: 0.5rem;
-        &[open] summary {
-            @apply pb-2;
-        }
-        & summary {
-            @apply frow-1.5 items-center cursor-pointer select-none;
-            @apply text-sm font-semibold;
-            @apply transition-[filter];
-            &:hover {
-                @apply brightness-125 dark:brightness-75;
-            }
-        }
+        @apply fcol-4 mt-1;
     }
 </style>

@@ -2,7 +2,7 @@
 
 A feature-rich app that helps you develop and test game integrations for the [Neuro-sama SDK](https://github.com/VedalAI/neuro-sdk). It's similar to [Tony](https://github.com/Pasu4/neuro-api-tony) and [Jippity](https://github.com/EnterpriseScratchDev/neuro-api-jippity), but aims to be a generalist testing app (able to do "everything" to some degree).
 
-![app screenshot](docs/screenshot.png)
+![Gary running the built-in JSON Schema Test, with Randy's actions and results](docs/screenshot.png)
 
 ## Features
 
@@ -17,7 +17,7 @@ A wide range of tools and environments to test your game integration, in one app
 - Diagnostics - easy automatic checks for common pitfalls and off-spec behavior.
 
 The overall goal is to close and/or document the gap to the production system, letting you develop and test with confidence.
-The app offers (in my opinion) a comfortable UI with hotkeys for ~~speedrunners~~ power users.
+The app offers (in my opinion) a comfortable UI with hotkeys for ~~speedrunners~~ power users (press F1 for the list).
 
 Compared to the previous Python app:
 - Lighter and easier install (with auto-update)
@@ -25,10 +25,7 @@ Compared to the previous Python app:
 - Supports switching engines at runtime without having to restart
 - Much more powerful, intuitive, and more stable UI <sub><sup>(erm... except if you're [on Linux](#miscellaneous-jank) at the moment)</sup></sub>
 
-That said...
-> [!Note]
-> The app is currently in beta. Some areas or systems may change their behavior and/or internals (especially internals).
-> The project is in active development so ~~don't be mean please 🥺👉👈~~ I'm open to feedback and contributions.
+The project is in active development. Feedback and contributions are welcome.
 
 ## Quick start
 Head over to [Releases](https://github.com/Govorunb/gary/releases/latest), download an installer appropriate for your platform/architecture, and install the app.
@@ -41,7 +38,9 @@ If you're not familiar with the Neuro-sama SDK, you should read a bit from the [
 2. Select and configure the engine that will perform actions automatically
 3. Manually execute actions if desired
 
-![screenshot highlighting engine controls in the top bar and an individual action on the left sidebar](docs/usage.png)
+![Gary dashboard with numbered annotations: 1 server controls, 2 engine controls, 3 manual action sending](docs/usage.png)
+
+Expand an action to inspect its description and schema. For actions with a schema, click the send icon to enter data manually; Gary validates the JSON before sending it. Actions without a schema send immediately.
 
 ### Updating
 

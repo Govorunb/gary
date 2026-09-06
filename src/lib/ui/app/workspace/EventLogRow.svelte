@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Bug, Check, ChevronDown, CircleX, Eye, Info, Logs, Skull, TriangleAlert } from "@lucide/svelte";
     import dayjs from "dayjs";
-    import { EVENTS_BY_KEY, EVENTS_DISPLAY, hasSensitiveSchemaField, type EventDef, type EventInstance, type EventKey } from "$lib/app/events";
+    import { EVENTS_BY_KEY, EVENTS_DISPLAY, eventLevel, hasSensitiveSchemaField, type EventDef, type EventInstance, type EventKey } from "$lib/app/events";
     import { LogLevel } from "$lib/app/utils";
     import { getUserPrefs } from "$lib/app/utils/di";
     import CodeMirror from "$lib/ui/common/CodeMirror.svelte";
@@ -29,7 +29,7 @@
         [LogLevel.Fatal]: { icon: Skull, label: "Fatal", class: "level-fatal" },
     };
 
-    const level = $derived(event.levelOverride ?? EVENTS_BY_KEY[event.key].level ?? LogLevel.Info);
+    const level = $derived(eventLevel(event));
     const config = $derived(levelConfig[level]);
     const LevelIcon = $derived(config.icon);
     const presented = $derived(getPresentedEvent(event));
@@ -91,17 +91,14 @@
 </script>
 
 {#snippet eventHeader(disclosure = false)}
-    <div class="event-rail">
-        <span class="level-icon" title={config.label} aria-label={`Log level: ${config.label}`}>
-            <LevelIcon class="size-3.5" />
-        </span>
-        <time class="event-time" title={absoluteTimestamp} datetime={new Date(event.timestamp).toISOString()}>{timestamp}</time>
-    </div>
+    <span class="level-icon" title={config.label} aria-label={`Log level: ${config.label}`}>
+        <LevelIcon class="size-3.5" />
+    </span>
 
     <div class="event-main">
         <div class="event-summary">
             <h3 class="event-title">{title}</h3>
-
+            <time class="event-time" title={absoluteTimestamp} datetime={new Date(event.timestamp).toISOString()}>{timestamp}</time>
             {#if disclosure}
                 <span class="details-affordance" aria-hidden="true">
                     <ChevronDown class={["chevron-icon size-3.5", detailsOpen ? "open" : undefined]} />
@@ -160,150 +157,102 @@
     @reference "global.css";
 
     .event-row {
-        @apply min-h-10 min-w-0 shrink-0 rounded-lg border p-1.5 pr-2;
-        @apply border-neutral-200/80 bg-white/70 text-neutral-800;
-        @apply transition-colors;
-        @apply dark:border-neutral-700/70 dark:bg-surface-800/55 dark:text-neutral-100;
-
+        --lvl: var(--color-ink-3);
+        @apply min-w-0 shrink-0 rounded-md transition-colors;
         &:hover,
         &:focus-within {
-            @apply border-neutral-300 bg-white;
-            @apply dark:border-neutral-600 dark:bg-surface-800;
+            @apply bg-layer-2;
         }
     }
-
-    details.event-row {
-        @apply p-0;
+    .level-warning,
+    .level-error,
+    .level-fatal {
+        background-color: color-mix(in oklab, var(--lvl) 7%, transparent);
+        &:hover, &:focus-within {
+            background-color: color-mix(in oklab, var(--lvl) 12%, transparent);
+        }
     }
-
     .event-header {
-        @apply grid min-h-7 min-w-0 items-start gap-2;
-        grid-template-columns: 1.5rem minmax(0, 1fr);
+        @apply grid min-w-0 items-start gap-2 px-2 py-1.5;
+        grid-template-columns: 0.875rem minmax(0, 1fr);
     }
-
     details.event-row > summary.event-header {
-        @apply cursor-pointer select-none rounded-lg p-1.5 pr-2;
+        @apply cursor-pointer select-none rounded-md;
         list-style: none;
-
         &::-webkit-details-marker {
             display: none;
         }
-
         &:focus-visible {
-            @apply outline-none ring-2 ring-primary-500;
+            @apply outline-none ring-2 ring-inset ring-accent;
         }
     }
-
     .event-main {
-        @apply min-w-0 fcol-1;
+        @apply min-w-0 fcol-0.5;
     }
-
-    .event-rail {
-        @apply flex h-full min-h-7 w-6 flex-col items-center justify-start gap-0.5 self-start;
-    }
-
     .event-summary {
-        @apply grid min-w-0 items-center gap-1.5;
-        grid-template-columns: minmax(0, 1fr) max-content;
+        @apply frow-1.5 min-w-0 items-center;
     }
-
     .level-icon {
-        @apply flex size-5 items-center justify-center rounded-md;
+        @apply flex size-3.5 items-center justify-center mt-[3px];
+        color: var(--lvl);
     }
-
     .event-time {
-        @apply w-6 text-center text-[0.625rem] font-semibold leading-3 tabular-nums;
-        @apply text-neutral-500 dark:text-neutral-400;
+        @apply text-[11px] leading-4 tabular-nums text-ink-3 shrink-0;
     }
-
     .event-title {
-        @apply min-w-0 truncate text-sm font-semibold leading-5;
-        @apply text-neutral-800 dark:text-neutral-50;
+        @apply min-w-0 truncate text-[13px] font-medium leading-5 text-ink-0;
     }
-
     .event-description {
-        @apply min-w-0 text-xs leading-4;
-        @apply text-neutral-600 dark:text-neutral-300;
+        @apply min-w-0 font-mono text-[11px] leading-4 text-ink-2;
         display: -webkit-box;
         -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 3;
         overflow: hidden;
         overflow-wrap: anywhere;
     }
-
     .details-affordance {
-        @apply frow-1.5 size-5 items-center justify-center justify-self-end rounded-md;
-        @apply text-neutral-500 transition-colors dark:text-neutral-300;
+        @apply flex size-4 items-center justify-center ml-auto rounded text-ink-3 transition-colors;
     }
-
     details.event-row > summary:hover .details-affordance {
-        @apply bg-neutral-100 text-neutral-700 dark:bg-neutral-700/60 dark:text-neutral-100;
+        @apply text-ink-1;
     }
-
     .chevron-icon {
         @apply transition-transform;
     }
-
     .chevron-icon.open {
         @apply rotate-180;
     }
-
     .details-editor {
-        @apply relative mx-1.5 mb-1.5 min-w-0;
+        @apply relative mx-2 mb-2 min-w-0;
     }
-
     .details-code {
         @apply min-w-0;
     }
-
     .details-code.blurred {
         @apply pointer-events-none select-none;
         filter: blur(3px);
     }
-
     .sensitive-overlay {
         @apply absolute inset-0 z-10 fcol-1 items-center justify-center rounded-lg px-3 py-2 text-center;
-        @apply border border-warning-200/80 bg-warning-50/90 text-warning-900 shadow-sm;
-        @apply transition-colors;
-        @apply dark:border-warning-700/70 dark:bg-surface-900/90 dark:text-warning-100;
-
+        @apply bg-layer-3 ring-1 ring-lvl-warn/60 text-ink-1 shadow-sm transition-colors;
         &:hover {
-            @apply bg-warning-100 dark:bg-surface-800;
+            @apply bg-layer-4;
         }
-
         &:focus-visible {
-            @apply outline-none ring-2 ring-warning-400;
+            @apply outline-none ring-2 ring-lvl-warn;
         }
     }
-
     .sensitive-title {
         @apply text-sm font-semibold leading-5;
     }
-
     .sensitive-action {
-        @apply frow-1.5 items-center text-xs font-medium leading-4;
-        @apply text-warning-800 dark:text-warning-200;
+        @apply frow-1.5 items-center text-xs font-medium leading-4 text-lvl-warn;
     }
-
-    .level-verbose .level-icon,
-    .level-debug .level-icon {
-        @apply bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300;
-    }
-
-    .level-info .level-icon {
-        @apply bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300;
-    }
-
-    .level-success .level-icon {
-        @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300;
-    }
-
-    .level-warning .level-icon {
-        @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300;
-    }
-
-    .level-error .level-icon,
-    .level-fatal .level-icon {
-        @apply bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300;
-    }
+    .level-verbose,
+    .level-debug { --lvl: var(--color-ink-3); }
+    .level-info { --lvl: var(--color-accent); }
+    .level-success { --lvl: var(--color-lvl-ok); }
+    .level-warning { --lvl: var(--color-lvl-warn); }
+    .level-error,
+    .level-fatal { --lvl: var(--color-lvl-err); }
 </style>

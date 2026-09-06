@@ -118,13 +118,13 @@
     }
 </script>
 
-<details class="metadata-details" bind:open>
+<details class="details-box metadata-details" bind:open>
     <summary>
         <span>Model metadata</span>
         {#if override}
-            <span class="source-badge">Override</span>
+            <span class="badge source-badge override">Override</span>
         {:else if providerMetadata}
-            <span class="source-badge provider">Provider</span>
+            <span class="badge source-badge">Provider</span>
         {/if}
     </summary>
 
@@ -155,7 +155,7 @@
                 {#if loadMetadata}
                     <button
                         type="button"
-                        class="btn btn-base preset-tonal-surface"
+                        class="btn"
                         onclick={refreshCurrentModel}
                         disabled={isLoading}
                     >
@@ -165,7 +165,7 @@
                 {#if override && providerMetadata}
                     <button
                         type="button"
-                        class="btn btn-base preset-tonal-surface"
+                        class="btn"
                         onclick={useProviderValue}
                     >
                         Use provider value
@@ -179,37 +179,20 @@
 <style lang="postcss">
     @reference "global.css";
 
-    .metadata-details {
-        @apply border border-neutral-200 dark:border-neutral-700 rounded-md;
-    }
-
-    summary {
-        @apply frow-2 items-center cursor-pointer select-none;
-        @apply px-3 py-2 text-sm font-medium;
-
-        &:focus-visible {
-            @apply outline-none ring-2 ring-inset ring-primary-500;
-        }
-    }
-
     .source-badge {
-        @apply ml-auto px-2 py-0.5 rounded-full;
-        @apply text-xs font-medium;
-        @apply bg-secondary-100 text-secondary-800;
-        @apply dark:bg-secondary-900/40 dark:text-secondary-200;
-
-        &.provider {
-            @apply bg-neutral-100 text-neutral-700;
-            @apply dark:bg-neutral-800 dark:text-neutral-200;
+        @apply ml-auto;
+        &.override {
+            @apply text-src-actor;
+            background-color: color-mix(in oklab, var(--color-src-actor) 18%, transparent);
         }
     }
 
     .metadata-content {
-        @apply fcol-2 px-3 pb-3;
+        @apply fcol-2 px-1 pb-1;
     }
 
     code {
-        @apply text-neutral-700 dark:text-neutral-200;
+        @apply text-ink-1;
     }
 
     .metadata-actions {
@@ -217,12 +200,11 @@
     }
 
     .metadata-error {
-        @apply text-xs text-red-700 dark:text-red-300;
+        @apply text-xs text-lvl-err;
     }
 
     .metadata-skeleton {
-        @apply h-4 w-48 rounded;
-        @apply bg-neutral-200 dark:bg-neutral-700 animate-pulse;
+        @apply h-4 w-48 rounded bg-layer-4 animate-pulse;
     }
 
     @media (prefers-reduced-motion: reduce) {

@@ -45,7 +45,7 @@ describe("ContextManager projection", () => {
 
     test("uses visibility rules for actor skip", () => {
         const { bus, context } = createContext();
-        bus.emit("api/actor/skip", { engineId: "randy" });
+        bus.emit("api/actor/skip", { engineId: "randy", metrics: { latencyMs: 0 } });
 
         expect(context.userView.length).toBe(1);
         expect(context.actorView.length).toBe(0);
@@ -62,7 +62,7 @@ describe("ContextManager projection", () => {
         });
 
         bus.emit("ui/context/input", { text: "poke", silent: false });
-        bus.emit("api/actor/skip", { engineId: "randy" });
+        bus.emit("api/actor/skip", { engineId: "randy", metrics: { latencyMs: 0 } });
         bus.emit("api/game/connected", { game: { id: "g1", name: "Chess" } });
         bus.emit("api/game/action_result", { game: { id: "g1", name: "Chess" }, act: { id: "a1", name: "move" }, success: false });
         bus.emit("api/game/action_result", { game: { id: "g1", name: "Chess" }, act: { id: "a2", name: "move" }, success: true });

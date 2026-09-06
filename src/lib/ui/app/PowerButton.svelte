@@ -6,7 +6,9 @@
     import Popover from "$lib/ui/common/Popover.svelte";
     import { boolAttr } from "runed";
     import { isTauri } from "@tauri-apps/api/core";
-    import CopyButton from "../common/CopyButton.svelte";
+    import { Copy, Check } from "@lucide/svelte";
+    import { toast } from "svelte-sonner";
+    import { tooltip } from "$lib/app/utils";
     import { EVENT_BUS } from "$lib/app/events/bus";
     import { LOCAL_SERVER_HOST } from "$lib/app/prefs.svelte";
 
@@ -49,9 +51,23 @@
     })
 
     const address = $derived(`ws://${LOCAL_SERVER_HOST}:${userPrefs.api.server.port}`);
+    const addressTip = $derived.by(() => {
+        if (!haveTauri) return "Tauri backend not available";
+        const state = running
+            ? (userPrefs.api.server.bindAllInterfaces ? "Listening on all interfaces" : "Server running")
+            : "Server offline";
+        return `${state}. Click to copy address`;
+    });
+    let copied = $state(false);
+    function copyAddress() {
+        navigator.clipboard.writeText(address);
+        toast.success("Copied address to clipboard", { duration: 1500 });
+        copied = true;
+        setTimeout(() => copied = false, 1500);
+    }
 </script>
 
-<div class="frow-3 items-center">
+<div class="frow-2.5 items-center min-w-0">
     <div class="power-button-container">
         <button
             class="power-button"
@@ -61,7 +77,7 @@
             title={powerBtnTooltip}
             disabled={!haveTauri}
         >
-            <CirclePower size={40} />
+            <CirclePower size={34} />
         </button>
         <Popover>
             {#snippet trigger(props)}
@@ -70,7 +86,7 @@
                     title={optionsBtnTooltip}
                     aria-label={optionsBtnTooltip}
                     >
-                    <SlidersHorizontal size=20 class="pointer-events-none" />
+                    <SlidersHorizontal size={16} class="pointer-events-none" />
                 </button>
             {/snippet}
             <div class="fcol-2 p-2">
@@ -78,25 +94,19 @@
             </div>
         </Popover>
     </div>
-    <p class="text-sm not-lg:hidden">
-        Server
-        {#if haveTauri}
-            {#if running}
-                {#if userPrefs.api.server.bindAllInterfaces}
-                    listening for network connections on port {userPrefs.api.server.port}
-                {:else}
-                    up on
-                    <span class="whitespace-nowrap">
-                        {address}<CopyButton data={address} desc="URL" iconSize={13} />
-                    </span>
-                {/if}
-            {:else}
-                offline
-            {/if}
+    <button
+        class="address not-lg:hidden"
+        data-running={boolAttr(running)}
+        onclick={copyAddress}
+        {@attach tooltip(addressTip)}
+    >
+        <span class="truncate">{address}</span>
+        {#if copied}
+            <Check size={12} />
         {:else}
-            not available
+            <Copy size={12} />
         {/if}
-    </p>
+    </button>
 </div>
 <Dialog bind:open={confirmModalOpen}>
     {#snippet content(props)}
@@ -105,8 +115,8 @@
             <p>Are you sure you want to stop the server? There are still open connections.</p>
             <p class="note">Shift-click to bypass this confirmation.</p>
             <div class="frow-2 justify-end">
-                <button class="btn preset-tonal-warning" onclick={() => togglePower(true)}>Disconnect all games</button>
-                <button class="btn preset-tonal-surface" onclick={() => confirmModalOpen = false}>Cancel</button>
+                <button class="btn btn-danger" onclick={() => togglePower(true)}>Disconnect all games</button>
+                <button class="btn" onclick={() => confirmModalOpen = false}>Cancel</button>
             </div>
         </div>
     {/snippet}
@@ -114,56 +124,51 @@
 
 <style lang="postcss">
     @reference "global.css";
-
     .power-button-container {
-        @apply relative items-center frow-2;
-        @apply rounded-xl px-2 py-0.5;
-        @apply max-h-10;
-        @apply bg-neutral-100 dark:bg-neutral-800/80;
+        @apply relative frow-0.5 items-center;
+        @apply h-9 pl-0.5 pr-1 rounded-full;
+        background-color: var(--color-bar-control);
     }
-
     .power-button {
-        @apply frow-0 items-center justify-center rounded-full;
-        @apply size-13;
-        @apply shadow-inner transition-all duration-150;
-        @apply bg-neutral-100 dark:bg-neutral-800;
+        @apply frow-0 items-center justify-center rounded-full size-9;
+        @apply transition-all duration-150;
         @apply disabled:cursor-not-allowed;
         &:not(:disabled) {
-            @apply hover:scale-101 active:scale-99;
+            @apply hover:scale-102 active:scale-98;
         }
-        @apply text-red-400 dark:text-red-700;
+        /* Off is red on purpose: starting the server is the first thing a new user has to find. */
+        @apply text-lvl-err;
         &[data-running] {
-            @apply text-green-400 dark:text-green-700;
+            @apply text-lvl-ok;
         }
         &:disabled {
-            @apply text-surface-100 dark:text-surface-900;
+            @apply text-ink-3 opacity-50;
         }
         & > * {
             @apply pointer-events-none;
         }
     }
-
     .options-button {
-        @apply frow-0 size-8 items-center justify-center rounded-full;
-        @apply border border-transparent;
-        @apply text-neutral-700 shadow-sm transition;
-        @apply disabled:cursor-not-allowed;
-        /* in light mode, distinguished by shadow; in dark - by ring */
-        @variant dark {
-            @apply bg-neutral-800 text-neutral-200;
-            @apply ring ring-primary-400/10;
-        }
+        @apply frow-0 size-7 items-center justify-center rounded-full;
+        @apply text-ink-2 transition-colors;
         &:hover:not(:disabled) {
-            @apply bg-neutral-200/80 dark:bg-neutral-800/70;
-            @apply dark:ring-primary-400/40;
+            @apply text-ink-0;
+            background-color: color-mix(in oklab, var(--color-ink-0) 10%, transparent);
         }
     }
-
+    .address {
+        @apply frow-1.5 items-center min-w-0 h-7 px-2 rounded-md;
+        @apply font-mono text-xs text-ink-2 transition-colors;
+        &:not([data-running]) { @apply opacity-50; }
+        &:hover {
+            @apply text-ink-0;
+            background-color: var(--color-bar-control);
+        }
+    }
     .confirm-content {
         @apply fcol-2 min-w-[24rem] max-w-[90vw] overflow-hidden;
-        @apply bg-white dark:bg-surface-900;
+        @apply bg-layer-1 ring-1 ring-edge;
         @apply rounded-2xl shadow-2xl;
-        @apply p-5 text-sm;
-        @apply text-neutral-900 dark:text-neutral-50;
+        @apply p-5 text-sm text-ink-1;
     }
 </style>

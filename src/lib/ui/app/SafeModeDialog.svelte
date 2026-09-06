@@ -73,14 +73,14 @@
 
 
             <p class="note whitespace-pre-line">
-                Please note: <b class="text-warning-900-100">do not share this text with people you don't trust</b>. It contains data you may want to keep private, such as:
+                Please note: <b class="text-lvl-warn">do not share this text with people you don't trust</b>. It contains data you may want to keep private, such as:
             </p>
             <ul class="note list-disc list-inside pl-4">
                 <li>Custom engines (including names, URLs/IPs, and <b class="text-sm">API keys</b>)</li>
                 <li>The names of some or all games you've ever connected to</li>
             </ul>
 
-            <details class="editor-details" bind:open={editorOpen}>
+            <details class="details-box editor-details" bind:open={editorOpen}>
                 <summary>
                     {#if editorOpen}
                         <EyeOff />
@@ -102,18 +102,18 @@
             </details>
 
             <div class="frow-2">
-                <button class="btn btn-base preset-outlined-surface-300-700"
+                <button class="btn"
                     onclick={() => navigator.clipboard.writeText(editorContent)}
                 >
                     Copy to clipboard
                 </button>
-                <button class="btn btn-base preset-outlined-surface-300-700"
+                <button class="btn"
                     onclick={async () => editorContent = await navigator.clipboard.readText()}
                 >
                     Paste from clipboard
                 </button>
                 {#if originalData !== editorContent}
-                    <button class="btn btn-base preset-outlined-warning-300-700"
+                    <button class="btn btn-danger"
                         onclick={async () => editorContent = originalData}
                     >
                         Revert changes
@@ -122,7 +122,7 @@
             </div>
 
             {#if validationError}
-                <div class="validation-error">
+                <div class="callout err validation-error">
                     {validationError}
                 </div>
             {/if}
@@ -132,10 +132,9 @@
         <p class="note">As a last resort, you can reset to defaults: type "RESET" in the editor above and Shift-click the "Import and load" button.</p>
         <div class="flex-1 self-stretch"></div>
         <button
-            class="btn preset-filled-surface-50-950"
+            class={["btn", resetOverride ? "btn-danger" : "btn-primary"]}
             onclick={importFixedJson}
             disabled={!!validationError && !resetOverride}
-            class:override={resetOverride}
         >
             {importBtnText}
         </button>
@@ -145,16 +144,16 @@
 <style lang="postcss">
     @reference "global.css";
 
-    .title {
-        @apply text-amber-700 dark:text-amber-300;
+    .title, .error-message {
+        @apply text-lvl-warn;
     }
 
     .error-message {
-        @apply text-base font-semibold text-warning-700 dark:text-warning-300;
+        @apply text-base font-semibold;
     }
 
     .import-label {
-        @apply font-medium text-neutral-700 dark:text-neutral-300;
+        @apply font-medium text-ink-1;
     }
 
     .editor-container {
@@ -162,31 +161,12 @@
     }
 
     .editor-details {
-        @apply mt-1 border border-neutral-200 dark:border-neutral-700 rounded-md;
-        padding: 0.5rem;
-        &[open] summary {
-            @apply pb-2;
-        }
-        & summary {
-            @apply frow-1.5 items-center cursor-pointer select-none;
-            @apply text-sm font-semibold;
-            @apply transition-[filter];
-            &:hover {
-                @apply brightness-125 dark:brightness-75;
-            }
-        }
+        @apply mt-1;
+        & summary > :global(svg) { @apply size-4; }
     }
 
     .validation-error {
-        @apply p-3 rounded-md;
-        @apply bg-red-50 dark:bg-red-900/30;
-        @apply border border-red-200 dark:border-red-800;
-        @apply text-red-700 dark:text-red-300;
-        @apply text-xs font-mono whitespace-pre-wrap;
+        @apply text-xs font-mono whitespace-pre-wrap text-lvl-err;
         @apply max-h-48 overflow-y-auto;
-    }
-
-    button.override {
-        @apply bg-error-50 dark:bg-error-950;
     }
 </style>
