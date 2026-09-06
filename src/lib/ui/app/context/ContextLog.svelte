@@ -20,6 +20,10 @@
     let searchOpen = $state(false);
     let query = $state("");
     let searchInput = $state<HTMLInputElement>();
+    const PAGE_SIZE = 1_000;
+    let historyLimit = $state(PAGE_SIZE);
+    let log = $state<VirtualLog<ContextRow>>();
+    const historyStart = $derived(query.trim() ? 0 : Math.max(0, session.context.userView.length - historyLimit));
     const SOURCES: { type: ContextSource["type"]; label: string }[] = [
         { type: "client", label: "Games" },
         { type: "actor", label: "Model" },
@@ -38,6 +42,11 @@
     function closeSearch() {
         searchOpen = false;
         query = "";
+    }
+    async function showEarlierContext() {
+        historyLimit += PAGE_SIZE;
+        await tick();
+        log?.scrollToIndex(0);
     }
     function toggleSource(type: ContextSource["type"]) {
         if (!hidden.delete(type)) hidden.add(type);
@@ -70,7 +79,7 @@
     const rows = $derived.by(() => {
         const out: ContextRow[] = [];
         let prev: ContextSource | null = null;
-        for (const event of session.context.userView) {
+        for (const event of session.context.userView.slice(historyStart)) {
             const rendered = formatContextEvent(event, "user");
             const source: ContextSource = rendered?.source ?? { type: "system" };
             const row = { event, rendered, source, continues: false };
@@ -136,8 +145,14 @@
         </TeachingTooltip>
         <ContextLogMenu />
     </div>
+    {#if historyStart > 0}
+        <button class="earlier-context" onclick={showEarlierContext}>
+            Load earlier context ({historyStart.toLocaleString()} messages)
+        </button>
+    {/if}
     <div class="log">
         <VirtualLog
+            bind:this={log}
             class="h-full"
             items={rows}
             getKey={(row) => row.event.id}
@@ -162,6 +177,11 @@
     .column-header {
         @apply pr-2;
         & .icon-btn[data-active] { @apply text-accent; }
+    }
+    .earlier-context {
+        @apply shrink-0 px-3 py-1.5 text-xs text-ink-2 border-b border-edge;
+        &:hover { @apply bg-layer-2 text-ink-0; }
+        &:focus-visible { @apply outline-none ring-2 ring-inset ring-accent; }
     }
     .search-input {
         @apply flex-1 min-w-0 h-7 px-2 rounded-md;
