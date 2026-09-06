@@ -143,7 +143,7 @@
                     maxHeight="24rem"
                 />
                 {#if validationErrors}
-                    <div class="validation-warnings">
+                    <div class="callout warn validation-warnings">
                         <div class="warning-header">Validation Warnings:</div>
                         {#each validationErrors as error}
                             <div class="warning-item">{error}</div>
@@ -161,7 +161,7 @@
                     id="preset-select"
                     bind:value={selectedPreset}
                     onchange={(e) => applyPreset((e.target as HTMLSelectElement).value)}
-                    class="preset-select"
+                    class="field-input preset-select"
                     aria-label="Select message template"
                 >
                     {#each Object.entries(messagePresets) as [key, preset] (key)}
@@ -185,9 +185,9 @@
             </div>
         </div>
         <div class="frow-2">
-            <button class="btn btn-base preset-tonal-surface" onclick={closeDialog}>Cancel</button>
+            <button class="btn" onclick={closeDialog}>Cancel</button>
             <button
-                class="btn btn-base preset-filled-primary-500"
+                class="btn btn-primary"
                 onclick={sendMessage}
                 {@attach tooltip("Send (Ctrl+Enter)")}
             >
@@ -210,14 +210,11 @@
     }
 
     .validation-warnings {
-        @apply fcol-1 p-2 rounded-md;
-        @apply bg-amber-50 dark:bg-amber-900/20;
-        @apply text-amber-700 dark:text-amber-400;
-        @apply border border-amber-200 dark:border-amber-800;
+        @apply fcol-1 p-2 text-lvl-warn;
     }
 
     .warning-header {
-        @apply text-xs font-medium text-amber-800 dark:text-amber-300;
+        @apply text-xs font-medium;
     }
 
     .warning-item {
@@ -229,10 +226,6 @@
     }
 
     .preset-select {
-        @apply w-full px-3 py-2 pr-8 appearance-none;
-        @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
-        @apply bg-white dark:bg-neutral-800;
-        @apply text-neutral-900 dark:text-neutral-100;
-        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
+        @apply w-auto;
     }
 </style>

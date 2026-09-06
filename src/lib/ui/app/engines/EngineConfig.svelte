@@ -73,7 +73,7 @@
     </div>
 
     {#if !isValid}
-        <div class="validation-error">
+        <div class="callout err validation-error">
             {validationErrors.join("\n")}
         </div>
     {/if}
@@ -82,11 +82,11 @@
         <div class="config-footer">
             <span class="note opacity-60">There are unsaved changes.</span>
             <div class="flex-1"></div>
-            <button class="btn btn-base preset-tonal-surface" onclick={reset}>
+            <button class="btn" onclick={reset}>
                 Reset
             </button>
             <button
-                class="btn btn-base preset-filled-primary-500"
+                class="btn btn-primary"
                 onclick={handleSave}
                 disabled={!isValid}
                 title="Ctrl+Enter"
@@ -105,12 +105,11 @@
     }
 
     .validation-error {
-        @apply p-3 bg-red-50 border border-red-200 text-red-700 rounded-md;
-        @apply dark:bg-red-900/20 dark:border-red-800 dark:text-red-300;
+        @apply text-sm text-lvl-err whitespace-pre-line;
     }
 
     .config-footer {
         @apply frow-2 items-center justify-end p-4;
-        @apply border-t border-neutral-200 dark:border-neutral-700;
+        @apply border-t border-edge;
     }
 </style>

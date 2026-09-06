@@ -8,7 +8,7 @@
     import { app } from "@tauri-apps/api";
     import { APP_VERSION, clearLocalStorage, debounced, isApril1st, jsonParse, safeInvoke } from "$lib/app/utils";
     import { ResultAsync } from "neverthrow";
-    import { boolAttr, TextareaAutosize } from "runed";
+    import { TextareaAutosize } from "runed";
     import OutLink from "../common/OutLink.svelte";
     import Switch from "$lib/ui/common/Switch.svelte";
     import TeachingTooltip from "../common/TeachingTooltip.svelte";
@@ -123,7 +123,7 @@
         <Hotkey>Ctrl+,</Hotkey>
     {/snippet}
     {#snippet body()}
-        <div class="dialog-body-scroll">
+        <div class="dialog-scroll dialog-body-scroll">
             {#each [
                 GeneralSection,
                 UpdatesSection,
@@ -171,7 +171,7 @@
                 <label class="field-label" for="action-list-density">Action list density</label>
                 <select
                     id="action-list-density"
-                    class="settings-select"
+                    class="field-input"
                     bind:value={userPrefs.app.actionListDensity}
                 >
                     <option value="default">Default</option>
@@ -189,7 +189,7 @@
                 </div>
                 <select
                     id="character-preset"
-                    class="settings-select"
+                    class="field-input"
                     bind:value={selectedCharacterPreset}
                     onchange={(e) => setCharacterPreset((e.target as HTMLSelectElement).value)}
                 >
@@ -203,13 +203,13 @@
                         <label class="field-label" for="character-id">Character ID</label>
                         <input
                             id="character-id"
-                            class="settings-input"
+                            class="field-input"
                             bind:value={userPrefs.app.character.characterId}
                         />
                         <label class="field-label" for="display-name">Display name</label>
                         <input
                             id="display-name"
-                            class="settings-input"
+                            class="field-input"
                             bind:value={userPrefs.app.character.displayName}
                         />
                     </div>
@@ -229,7 +229,7 @@
                 <textarea
                     bind:value={userInstructions}
                     bind:this={sysPromptTextArea}
-                    class="input-field"
+                    class="field-input"
                     id="user-instructions"
                     onblur={saveUserInstructions}
                 ></textarea>
@@ -251,12 +251,12 @@
                     <p>Backup/restore raw JSON data to/from clipboard:</p>
                     <div class="field">
                         <div class="frow-2">
-                            <button class="btn btn-base preset-outlined-surface-300-700"
+                            <button class="btn"
                                 onclick={exportPrefs}
                             >
                                 Export data
                             </button>
-                            <button class="btn btn-base preset-outlined-surface-300-700"
+                            <button class="btn"
                                 onclick={importPrefs}
                             >
                                 Import data
@@ -264,9 +264,9 @@
                         </div>
                     </div>
                     {#if prefsBackupFeedback}
-                        <div class="prefs-iex-status"
-                            data-success={boolAttr(prefsBackupStatus === "success")}
-                            data-error={boolAttr(prefsBackupStatus === "error")}
+                        <div class="callout prefs-iex-status"
+                            class:success={prefsBackupStatus === "success"}
+                            class:err={prefsBackupStatus === "error"}
                         >
                             <div class="status-content">
                                 {prefsBackupFeedback}
@@ -308,7 +308,7 @@
 
             <div class="fcol-1">
                 <p class="font-light">Automatically check for updates on app launch:</p>
-                <select class="settings-select" bind:value={userPrefs.app.updates.autoCheckInterval}>
+                <select class="field-input" bind:value={userPrefs.app.updates.autoCheckInterval}>
                     <option value="everyLaunch">Every launch</option>
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -317,7 +317,7 @@
                 </select>
             </div>
             <div class="frow-2 items-center">
-                <button class="btn btn-base preset-outlined-surface-300-700"
+                <button class="btn"
                     onclick={checkForUpdates}
                     disabled={updater.checkingForUpdates}
                 >
@@ -347,7 +347,7 @@
                             {:else}
                                 <span class="text-sm frow-2 items-center">
                                     Version {update.version} is available!
-                                    <button class="btn btn-base preset-outlined-surface-300-700"
+                                    <button class="btn"
                                         onclick={() => updater.promptForUpdate()}
                                     >
                                         See more
@@ -373,12 +373,12 @@
             <h2>Troubleshooting</h2>
 
             <div class="row">
-                <button class="btn btn-base preset-outlined-surface-300-700"
+                <button class="btn"
                     onclick={() => safeInvoke("open_logs_folder")}
                 >
                     Open logs folder <ExternalLink size=20 />
                 </button>
-                <button class="btn btn-base preset-tonal-error"
+                <button class="btn btn-danger"
                     onclick={clearLocalStorage}
                 >
                     Reset app preferences
@@ -392,14 +392,16 @@
     @reference "global.css";
 
     .dialog-body-scroll {
-        @apply fcol-3 flex-1 overflow-y-auto;
+        @apply fcol-3;
     }
 
     .settings-section {
-        @apply fcol-3;
-        @apply p-4 rounded-lg;
-        @apply bg-surface-50 dark:bg-surface-800;
-        @apply border border-neutral-200 dark:border-neutral-700;
+        @apply fcol-3 pt-4 border-t border-edge;
+        &:first-child { @apply pt-0 border-t-0; }
+        /* Same voice as the dashboard column titles. */
+        & > :global(h2) {
+            @apply text-sm font-semibold text-ink-0;
+        }
     }
 
     .field {
@@ -411,62 +413,21 @@
     }
 
     .field-label {
-        @apply text-sm font-medium select-none;
-        @apply text-neutral-700 dark:text-neutral-300;
+        @apply select-none;
     }
 
     .field-heading {
         @apply inline-flex items-center gap-1.5;
     }
 
-    .settings-select,
-    .settings-input {
-        @apply w-full px-3 py-2 pr-8 appearance-none;
-        @apply border border-neutral-300 dark:border-neutral-600 rounded-lg;
-        @apply bg-white dark:bg-neutral-800;
-        @apply text-neutral-900 dark:text-neutral-100;
-        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400;
-
-        &:hover {
-            @apply border-neutral-400 dark:border-neutral-500;
-        }
-    }
-
-    .input-field {
-        @apply rounded-md px-3 py-2 text-sm;
-        @apply bg-white border border-neutral-300;
-        @apply dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100;
-        @apply focus:outline-none focus:ring-2 focus:ring-primary-500;
-    }
-
-    .settings-input {
-        @apply pr-3;
-    }
-
     .custom-character-fields {
         @apply grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 items-center;
-        @apply p-3 rounded-md;
-        @apply bg-neutral-50 dark:bg-neutral-900/30;
-        @apply border border-neutral-200 dark:border-neutral-700;
+        @apply pl-3 border-l-2 border-edge;
     }
 
     .prefs-iex-status {
-        @apply text-xs rounded-md px-3 py-2;
-        @apply border whitespace-pre-line;
-        @apply transition-all duration-200;
-        @apply frow-2 items-start justify-between;
-
-        &[data-error] {
-            @apply bg-red-50 dark:bg-red-900/30;
-            @apply border-red-200 dark:border-red-800;
-            @apply text-red-700 dark:text-red-300;
-        }
-
-        &[data-success] {
-            @apply bg-green-50 dark:bg-green-900/30;
-            @apply border-green-200 dark:border-green-800;
-            @apply text-green-700 dark:text-green-300;
-        }
+        @apply frow-2 items-start justify-between px-3 py-2 text-xs whitespace-pre-line;
+        color: var(--tone);
     }
 
     .status-content {
