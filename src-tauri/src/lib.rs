@@ -11,6 +11,7 @@ use app::commands::{is_server_running, server_state, start_server, stop_server, 
 use api::server::{ws_accept, ws_deny, ws_send, ws_close};
 use app::log::{gary_log, prepare_launch_log};
 use app::safe_mode::{is_safe_mode, SafeMode};
+use app::window_menu::show_window_menu;
 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -43,7 +44,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             is_server_running, server_state, start_server, stop_server,
             ws_accept, ws_deny, ws_send, ws_close,
-            gary_log, open_logs_folder, restart, is_safe_mode
+            gary_log, open_logs_folder, restart, is_safe_mode, show_window_menu
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

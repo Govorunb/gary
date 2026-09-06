@@ -4,9 +4,22 @@
     import EngineControls from "$lib/ui/app/engines/EngineControls.svelte";
     import DialogHost from "$lib/ui/app/DialogHost.svelte";
     import StoppedNotice from "$lib/ui/app/StoppedNotice.svelte";
+    import WindowControls from "$lib/ui/app/WindowControls.svelte";
+    import ResizeHandles from "$lib/ui/app/ResizeHandles.svelte";
     import { Settings } from "@lucide/svelte";
     import { getUIState, getUpdater } from "$lib/app/utils/di";
     import { registerAppHotkey } from "$lib/app/utils/hotkeys.svelte";
+    import { invoke, isTauri } from "@tauri-apps/api/core";
+
+    // The top bar doubles as the window's title bar in Tauri: drag to move, double-click to maximize,
+    // right-click for the platform's window menu.
+    const framed = isTauri();
+    function windowMenu(evt: MouseEvent) {
+        if (!framed || (evt.target as HTMLElement).closest("button, input, textarea, a")) return;
+        evt.preventDefault();
+        void invoke("show_window_menu");
+    }
+
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
     const updater = getUpdater();
@@ -16,7 +29,8 @@
     registerAppHotkey(["Control", "/"], () => dialogs.toggleHotkeysDialog());
 </script>
 
-<header>
+<!-- svelte-ignore a11y_no_static_element_interactions : right-click only opens the platform window menu -->
+<header data-tauri-drag-region="deep" oncontextmenu={windowMenu}>
     <div class="justify-self-start min-w-0">
         <PowerButton />
     </div>
@@ -36,6 +50,9 @@
         >
             <Settings class="size-[18px]!" />
         </button>
+        {#if framed}
+            <WindowControls />
+        {/if}
     </div>
     <StoppedNotice />
 </header>
@@ -44,6 +61,9 @@
 </main>
 
 <DialogHost />
+{#if framed}
+    <ResizeHandles />
+{/if}
 
 <style lang="postcss">
     @reference "global.css";

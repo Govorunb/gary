@@ -14,7 +14,10 @@
       {
         "title": "Gary",
         "width": 1280,
-        "height": 720
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 420,
+        "decorations": false
       }
     ],
     "security": {

@@ -1352,6 +1352,9 @@ dependencies = [
  "axum",
  "device_query",
  "futures-util",
+ "gdk",
+ "glib",
+ "gtk",
  "log",
  "serde",
  "serde_json",
@@ -1367,6 +1370,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite 0.28.0",
  "uuid",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
