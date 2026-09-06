@@ -3,6 +3,7 @@
     import PowerButton from "$lib/ui/app/PowerButton.svelte";
     import EngineControls from "$lib/ui/app/engines/EngineControls.svelte";
     import DialogHost from "$lib/ui/app/DialogHost.svelte";
+    import StoppedNotice from "$lib/ui/app/StoppedNotice.svelte";
     import { Settings } from "@lucide/svelte";
     import { getUIState, getUpdater } from "$lib/app/utils/di";
     import { registerAppHotkey } from "$lib/app/utils/hotkeys.svelte";
@@ -34,6 +35,7 @@
             <Settings class="size-[18px]!" />
         </button>
     </div>
+    <StoppedNotice />
 </header>
 <main>
     <GaryDashboard />

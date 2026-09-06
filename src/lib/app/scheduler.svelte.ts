@@ -34,6 +34,7 @@ export class Scheduler {
     #busy = $state(false);
     /** Paused due to an engine error that requires user intervention. */
     #errored = $state(false);
+    #errorReason = $state<string | null>(null);
     #generatedTokens: number | undefined;
     public readonly canAct: boolean = $derived(!this.#muted && !this.#busy && !this.#errored);
 
@@ -84,6 +85,11 @@ export class Scheduler {
 
     public get errored() {
         return this.#errored;
+    }
+
+    /** Why the engine stopped, while it is stopped on error. */
+    public get errorReason() {
+        return this.#errorReason;
     }
 
     public get actPending() {
@@ -394,6 +400,7 @@ export class Scheduler {
             paused,
         });
         this.#errored = paused;
+        if (paused) this.#errorReason = errMsg ? `${err.message}: ${errMsg}` : err.message;
     }
 
     private resetEngineErrors() {
@@ -404,6 +411,7 @@ export class Scheduler {
     /** Should only be called through a manual action by the user. */
     public clearError() {
         this.#errored = false;
+        this.#errorReason = null;
         this.resetEngineErrors();
         this.requestDrain();
     }
