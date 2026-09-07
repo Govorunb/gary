@@ -1,3 +1,4 @@
+import { DisplayHistory } from "./utils/display-history.svelte";
 import type { EventInstance } from "./events";
 import type { EventLogDelta, EventLogStore } from "./events/log.svelte";
 
@@ -37,7 +38,7 @@ export const MAX_USER_CONTEXT_EVENTS = 1_000;
 export const MAX_ACTOR_CONTEXT_EVENTS = 10_000;
 
 export class ContextManager {
-    #userView: readonly UserContextEvent[] = $state.raw([]);
+    #userView = new DisplayHistory<UserContextEvent>(MAX_USER_CONTEXT_EVENTS);
     readonly actorView: ActorContextEvent[] = [];
     #toolCalls = new Set<string>();
 
@@ -51,7 +52,11 @@ export class ContextManager {
     }
 
     get userView() {
-        return this.#userView;
+        return this.#userView.items;
+    }
+
+    whenDisplayed() {
+        return this.#userView.whenPublished();
     }
 
     /** Release a compacted prefix and any tool results whose calls were in that prefix. */
@@ -84,19 +89,20 @@ export class ContextManager {
     }
 
     #resetViews() {
-        this.#userView = [];
+        this.#userView.clear();
         this.actorView.length = 0;
         this.#toolCalls.clear();
     }
 
     dispose() {
+        this.#userView.dispose();
         this.#ondispose.forEach(dispose => dispose());
         this.#ondispose.length = 0;
         this.#onActorEvent.length = 0;
     }
 
     #onUserDelta(delta: EventLogDelta) {
-        this.#userView = [...this.#userView.slice(-(MAX_USER_CONTEXT_EVENTS - 1)), delta.event as UserContextEvent];
+        this.#userView.append(delta.event as UserContextEvent);
     }
 
     #onActorDelta(delta: EventLogDelta) {

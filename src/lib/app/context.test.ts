@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ContextManager, MAX_USER_CONTEXT_EVENTS, MAX_ACTOR_CONTEXT_EVENTS } from "./context.svelte";
 import { EventBus } from "./events/bus";
 import { EventLogStore, MAX_DISPLAYED_EVENTS } from "./events/log.svelte";
@@ -10,6 +10,9 @@ function createContext() {
     return { bus, eventLog, context };
 }
 
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
+
 describe("ContextManager projection", () => {
     test("bounds the conversation display without truncating active engine context", () => {
         const { bus, eventLog, context } = createContext();
@@ -20,6 +23,7 @@ describe("ContextManager projection", () => {
             bus.emit("ui/context/input", { text: String(i), silent: true });
         }
 
+        vi.runAllTimers();
         expect(eventLog.displayed).toHaveLength(MAX_DISPLAYED_EVENTS);
         expect(context.userView).toHaveLength(MAX_USER_CONTEXT_EVENTS);
         expect(context.userView[0].data).toMatchObject({ text: "10" });
@@ -67,6 +71,7 @@ describe("ContextManager projection", () => {
             "ui/context/input", "api/actor/generated", "api/game/act/actor",
         ]);
         expect(context.actorView.at(-1)?.data).toMatchObject({ toolCallId: "retained-call" });
+        vi.runAllTimers();
         expect(context.userView).toHaveLength(1);
 
         bus.emit("ui/context/reset");
@@ -78,6 +83,7 @@ describe("ContextManager projection", () => {
         const { bus, context } = createContext();
         bus.emit("ui/context/input", { text: "hello", silent: false });
 
+        vi.runAllTimers();
         expect(context.userView.length).toBe(1);
         expect(context.actorView.length).toBe(1);
         expect(context.userView[0].key).toBe("ui/context/input");
@@ -88,6 +94,7 @@ describe("ContextManager projection", () => {
         const { bus, context } = createContext();
         bus.emit("api/actor/generated", { engineId: "randy", text: "{\"command\":\"wait\"}" });
 
+        vi.runAllTimers();
         expect(context.userView.length).toBe(0);
         expect(context.actorView.length).toBe(1);
         expect(context.actorView[0].key).toBe("api/actor/generated");
@@ -102,6 +109,7 @@ describe("ContextManager projection", () => {
             message: "Invalid arguments",
         });
 
+        vi.runAllTimers();
         expect(context.userView.length).toBe(0);
         expect(context.actorView[0].key).toBe("api/actor/tool_error");
     });
@@ -110,6 +118,7 @@ describe("ContextManager projection", () => {
         const { bus, context } = createContext();
         bus.emit("api/actor/skip", { engineId: "randy", metrics: { latencyMs: 0 } });
 
+        vi.runAllTimers();
         expect(context.userView.length).toBe(1);
         expect(context.actorView.length).toBe(0);
         expect(context.userView[0].key).toBe("api/actor/skip");
@@ -144,11 +153,13 @@ describe("ContextManager projection", () => {
             priority: "medium",
         });
 
+        vi.runAllTimers();
         expect(context.userView.length).toBe(2);
         expect(context.actorView.length).toBe(2);
         bus.emit("ui/context/reset");
         expect(context.userView.length).toBe(0);
         expect(context.actorView.length).toBe(0);
+        vi.runAllTimers();
         expect(eventLog.displayed.map((event) => event.key)).toEqual([
             "ui/context/input",
             "api/game/force",
@@ -159,6 +170,7 @@ describe("ContextManager projection", () => {
     test("ignores events outside explicit key subscriptions", () => {
         const { bus, context } = createContext();
         bus.emit("app/session/created", { session: { id: "s1", name: "default" } });
+        vi.runAllTimers();
         expect(context.userView.length).toBe(0);
         expect(context.actorView.length).toBe(0);
     });

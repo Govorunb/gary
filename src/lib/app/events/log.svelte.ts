@@ -1,3 +1,4 @@
+import { DisplayHistory } from "../utils/display-history.svelte";
 import type { EventInstance, EventKey } from ".";
 import { EVENT_BUS, type EventBus } from "./bus";
 
@@ -8,7 +9,7 @@ type Unsub = () => void;
 export const MAX_DISPLAYED_EVENTS = 1_000;
 
 export class EventLogStore {
-    #displayed: readonly EventInstance<EventKey>[] = $state.raw([]);
+    #displayed = new DisplayHistory<EventInstance<EventKey>>(MAX_DISPLAYED_EVENTS);
     #subs: Array<(delta: EventLogDelta) => void> = [];
     #subsByKey = new Map<EventKey, Array<(delta: EventLogDelta) => void>>();
     #busSub;
@@ -19,16 +20,20 @@ export class EventLogStore {
     }
 
     get displayed() {
-        return this.#displayed;
+        return this.#displayed.items;
     }
 
     append(event: EventInstance<EventKey>) {
-        this.#displayed = [...this.#displayed.slice(-(MAX_DISPLAYED_EVENTS - 1)), event];
+        this.#displayed.append(event);
         this.#emit({ type: "append", event });
     }
 
+    whenDisplayed() {
+        return this.#displayed.whenPublished();
+    }
+
     clearDisplayed() {
-        this.#displayed = [];
+        this.#displayed.clear();
     }
 
     subscribe(cb: (delta: EventLogDelta) => void): Unsub;
@@ -71,6 +76,7 @@ export class EventLogStore {
     }
 
     dispose() {
+        this.#displayed.dispose();
         this.#busSub.destroy();
         this.#subs.length = 0;
         this.#subsByKey.clear();

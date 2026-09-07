@@ -2,6 +2,8 @@ import { InternalConnection, ConnectionClient } from "$lib/api/connection";
 import { DiagnosticsExampleGame } from "$lib/app/diagnostics-example";
 import { SchemaTestGame } from "$lib/app/schema-test";
 import type { Registry } from "$lib/api/registry.svelte";
+import { ContextTestGame } from "$lib/app/context-test";
+import type { Session } from "$lib/app/session.svelte";
 import { tick } from "svelte";
 
 export async function startSchemaTest(registry: Registry) {
@@ -23,4 +25,13 @@ export async function startDiagnosticsExample(registry: Registry) {
     await tick();
     await conn.connect();
     await diagnosticsExampleGame.lifecycle();
+}
+
+export async function startContextTest(session: Session) {
+    const conn = new InternalConnection(`${Date.now().toString().reverse()}-context-test`, "v1");
+    const game = new ContextTestGame(new ConnectionClient(conn), session);
+    session.registry.createGame(conn);
+    await tick();
+    await conn.connect();
+    await game.lifecycle();
 }

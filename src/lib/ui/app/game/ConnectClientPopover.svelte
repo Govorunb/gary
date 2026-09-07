@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { getRegistry } from "$lib/app/utils/di";
+    import { getRegistry, getSession } from "$lib/app/utils/di";
     import Popover from "$lib/ui/common/Popover.svelte";
     import type { Snippet } from "svelte";
     import type { SvelteHTMLElements } from "svelte/elements";
-    import { startDiagnosticsExample, startSchemaTest } from "./internal-connections";
+    import { startContextTest, startDiagnosticsExample, startSchemaTest } from "./internal-connections";
 
     type SnippetOfHTML<T extends keyof SvelteHTMLElements> = Snippet<[SvelteHTMLElements[T]]>;
 
@@ -14,6 +14,7 @@
     let { trigger }: Props = $props();
 
     const registry = getRegistry();
+    const session = getSession();
 
     const schemaTest = () => startSchemaTest(registry);
     const diagnosticsExample = () => startDiagnosticsExample(registry);
@@ -25,6 +26,9 @@
         <div class="menu-divider"></div>
         <button class="menu-item" onclick={schemaTest}>
             Schema Test
+        </button>
+        <button class="menu-item" onclick={() => startContextTest(session)}>
+            Context Test
         </button>
         <button class="menu-item" onclick={diagnosticsExample}>
             Diagnostics Example

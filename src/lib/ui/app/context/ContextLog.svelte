@@ -6,16 +6,16 @@
     import ContextLogMenu from "$lib/ui/app/context/ContextLogMenu.svelte";
     import ContextInput from "./ContextInput.svelte";
     import Hotkey from "$lib/ui/common/Hotkey.svelte";
-    import VirtualLog from "$lib/ui/common/VirtualLog.svelte";
     import Popover from "$lib/ui/common/Popover.svelte";
     import { Search, Filter, X } from "@lucide/svelte";
-    import { tick } from "svelte";
+    import { tick, untrack } from "svelte";
     import { MAX_USER_CONTEXT_EVENTS } from "$lib/app/context.svelte";
     import { SvelteSet } from "svelte/reactivity";
     import { formatContextEvent } from "./formatters/registry";
     import type { ContextRow, ContextSource } from "./formatters/types";
 
     const session = getSession();
+    let scrollEl: HTMLDivElement;
 
     // Search and filter cover the retained conversation; they never touch what the model sees.
     let searchOpen = $state(false);
@@ -68,19 +68,35 @@
         }
     }
 
+    const cachedRows = new WeakMap<ContextRow["event"], ContextRow>();
     const rows = $derived.by(() => {
         const out: ContextRow[] = [];
         let prev: ContextSource | null = null;
         for (const event of session.context.userView) {
-            const rendered = formatContextEvent(event, "user");
-            const source: ContextSource = rendered?.source ?? { type: "system" };
-            const row = { event, rendered, source, continues: false };
+            let row = cachedRows.get(event);
+            if (!row) {
+                const rendered = formatContextEvent(event, "user");
+                row = { event, rendered, source: rendered?.source ?? { type: "system" }, continues: false };
+                cachedRows.set(event, row);
+            }
             if (!matches(row)) continue;
-            row.continues = prev !== null && sameSource(prev, source);
+            const continues: boolean = prev !== null && sameSource(prev, row.source);
+            if (row.continues !== continues) {
+                row = { ...row, continues };
+                cachedRows.set(event, row);
+            }
             out.push(row);
-            prev = source;
+            prev = row.source;
         }
         return out;
+    });
+
+    $effect.pre(() => {
+        rows;
+        const el = scrollEl;
+        if (!el) return;
+        const nearBottom = untrack(() => el.scrollHeight - el.clientHeight - el.scrollTop <= 96);
+        if (nearBottom) void tick().then(() => { el.scrollTop = el.scrollHeight; });
     });
 </script>
 
@@ -138,19 +154,10 @@
         </TeachingTooltip>
         <ContextLogMenu />
     </div>
-    <div class="log">
-        <VirtualLog
-            class="h-full"
-            items={rows}
-            getKey={(row) => row.event.id}
-            estimateSize={56}
-            overscan={10}
-            gap={0}
-        >
-            {#snippet children(row)}
-                <ContextMessage {row} />
-            {/snippet}
-        </VirtualLog>
+    <div class="log" bind:this={scrollEl}>
+        {#each rows as row (row.event.id)}
+            <ContextMessage {row} />
+        {/each}
     </div>
     <ContextInput />
 </div>
@@ -184,6 +191,6 @@
         & input { @apply size-3.5 accent-accent; }
     }
     .log {
-        @apply fcol-0 flex-1 min-h-0;
+        @apply flex-1 min-h-0 overflow-y-auto;
     }
 </style>
