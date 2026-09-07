@@ -141,7 +141,6 @@ type HistoryUnit = {
 export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engine<TOptions> {
     abstract name: string;
     private readonly tokensPerByte = new Map<string, number>();
-    private readonly compactionBoundaries = new WeakMap<Session, Map<string, string>>();
 
     tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
         return new ResultAsync(this.actCore(session, actions, false, signal));
@@ -392,8 +391,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const compactionThreshold = Math.floor(promptBudget * COMPACTION_TRIGGER_RATIO);
         const calibrationKey = budget.model;
         const density = this.tokensPerByte.get(calibrationKey) ?? INITIAL_TOKENS_PER_BYTE;
-        const compactionKey = `${budget.model}\0${this.options.promptingStrategy}`;
-        let retainedStart = this.compactionStart(session, events, units, compactionKey);
+        let retainedStart = 0;
 
         const render = (start: number): LLMRequest => {
             const messages: OpenAIMessage[] = [{
@@ -431,7 +429,6 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         let request = render(retainedStart);
         const estimatedBefore = estimateRequestTokens(request, density);
         let estimated = estimatedBefore;
-        const previousRetainedStart = retainedStart;
 
         if (estimated > compactionThreshold && units.length) {
             retainedStart = this.liveEdgeStart(events, units, retainedStart);
@@ -450,8 +447,9 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 `${this.name}'s instructions, actions, or newest context exceed the ${budget.contextWindow}-token context window`,
             ));
         }
-        if (retainedStart > previousRetainedStart) {
-            this.rememberCompaction(session, events, units, compactionKey, retainedStart);
+        if (retainedStart > 0) {
+            const firstRetainedIndex = Math.min(...units[retainedStart].indexes);
+            session.context.trimActorBefore(events[firstRetainedIndex].id);
         }
 
         const diagnostics: ContextDiagnostics = {
@@ -462,31 +460,13 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             estimatedPromptTokens: estimated,
             removedHistoryUnits: retainedStart,
         };
-        if (retainedStart > previousRetainedStart) {
+        if (retainedStart > 0) {
             EVENT_BUS.emit("app/engines/llm/context_trimmed", {
                 engineId: this.id,
                 ...diagnostics,
             });
         }
         return ok({ request, diagnostics, calibrationKey });
-    }
-
-    private compactionStart(
-        session: Session,
-        events: ActorContextEvent[],
-        units: HistoryUnit[],
-        key: string,
-    ): number {
-        const boundaries = this.compactionBoundaries.get(session);
-        const firstRetainedEventId = boundaries?.get(key);
-        if (!firstRetainedEventId) return 0;
-
-        const eventIndex = events.findIndex(event => event.id === firstRetainedEventId);
-        const unitIndex = units.findIndex(unit => unit.indexes.includes(eventIndex));
-        if (eventIndex !== -1 && unitIndex !== -1) return unitIndex;
-
-        boundaries?.delete(key);
-        return 0;
     }
 
     private liveEdgeStart(
@@ -508,22 +488,6 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             timeStart++;
         }
         return Math.max(countStart, timeStart);
-    }
-
-    private rememberCompaction(
-        session: Session,
-        events: ActorContextEvent[],
-        units: HistoryUnit[],
-        key: string,
-        retainedStart: number,
-    ) {
-        let boundaries = this.compactionBoundaries.get(session);
-        if (!boundaries) {
-            boundaries = new Map();
-            this.compactionBoundaries.set(session, boundaries);
-        }
-        const firstEventIndex = Math.min(...units[retainedStart].indexes);
-        boundaries.set(key, events[firstEventIndex].id);
     }
 
     private recordContextUsage(
@@ -733,6 +697,18 @@ The custom user instructions are as follows:
             });
         }
 
+        const nextToolResult = new Map<string, number>();
+        const toolResultIndexes = new Map<number, number>();
+        for (let i = events.length - 1; i >= 0; i--) {
+            const event = events[i];
+            if (event.key === "api/game/act/actor" && event.data.toolCallId) {
+                nextToolResult.set(event.data.toolCallId, i);
+            } else if (event.key === "api/actor/generated" && event.data.toolCall) {
+                const resultIndex = nextToolResult.get(event.data.toolCall.id);
+                if (resultIndex !== undefined) toolResultIndexes.set(i, resultIndex);
+            }
+        }
+
         const consumedToolResults = new Set<number>();
         const units: HistoryUnit[] = [];
         for (let i = 0; i < events.length; i++) {
@@ -761,12 +737,8 @@ The custom user instructions are as follows:
                 continue;
             }
             if (event.key === "api/actor/generated" && event.data.toolCall) {
-                const resultIndex = events.findIndex((candidate, candidateIndex) =>
-                    candidateIndex > i
-                    && candidate.key === "api/game/act/actor"
-                    && candidate.data.toolCallId === event.data.toolCall?.id
-                );
-                if (resultIndex === -1) continue;
+                const resultIndex = toolResultIndexes.get(i);
+                if (resultIndex === undefined) continue;
                 const call = this.convertMessage(event);
                 const result = this.convertMessage(events[resultIndex]);
                 if (call && result) {

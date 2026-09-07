@@ -81,7 +81,7 @@ describe("force lifecycle", () => {
         harness.server.completeForce();
 
         expect(harness.server.hasForce).toBe(false);
-        expect(harness.session.eventLog.all.filter(e => e.key === "api/game/act/actor")).toHaveLength(0);
+        expect(harness.session.eventLog.displayed.filter(e => e.key === "api/game/act/actor")).toHaveLength(0);
     });
 
     test("a forced action that times out is retried like a failure", async ({harness}) => {

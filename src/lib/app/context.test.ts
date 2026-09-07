@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { ContextManager } from "./context.svelte";
+import { ContextManager, MAX_USER_CONTEXT_EVENTS, MAX_ACTOR_CONTEXT_EVENTS } from "./context.svelte";
 import { EventBus } from "./events/bus";
 import { EventLogStore, MAX_DISPLAYED_EVENTS } from "./events/log.svelte";
 
@@ -11,30 +11,67 @@ function createContext() {
 }
 
 describe("ContextManager projection", () => {
-    test("retains live and rebuilt context when older events leave the display", () => {
+    test("bounds the conversation display without truncating active engine context", () => {
         const { bus, eventLog, context } = createContext();
         let appends = 0;
         context.onActorViewAppend(() => appends++);
-        const count = MAX_DISPLAYED_EVENTS + 10;
+        const count = MAX_USER_CONTEXT_EVENTS + 10;
         for (let i = 0; i < count; i++) {
             bus.emit("ui/context/input", { text: String(i), silent: true });
         }
 
         expect(eventLog.displayed).toHaveLength(MAX_DISPLAYED_EVENTS);
-        expect(eventLog.displayed).toEqual(eventLog.all.slice(-MAX_DISPLAYED_EVENTS));
-        expect(eventLog.all).toHaveLength(count);
-        expect(context.userView).toEqual(eventLog.all);
-        expect(context.actorView).toEqual(eventLog.all);
+        expect(context.userView).toHaveLength(MAX_USER_CONTEXT_EVENTS);
+        expect(context.userView[0].data).toMatchObject({ text: "10" });
+        expect(context.actorView).toHaveLength(count);
         expect(appends).toBe(count);
-
         eventLog.clearDisplayed();
-        const rebuilt = new ContextManager(eventLog);
-        expect(eventLog.displayed).toHaveLength(0);
-        expect(rebuilt.userView).toEqual(context.userView);
-        expect(rebuilt.actorView).toEqual(context.actorView);
-        rebuilt.dispose();
-        context.dispose();
-        eventLog.dispose();
+        expect(context.actorView).toHaveLength(count);
+        expect(context.userView).toHaveLength(MAX_USER_CONTEXT_EVENTS);
+    });
+
+    test("bounds actor context even when no engine is compacting it", () => {
+        const { bus, context } = createContext();
+        for (let i = 0; i < MAX_ACTOR_CONTEXT_EVENTS * 2; i++) {
+            bus.emit("ui/context/input", { text: String(i), silent: true });
+            expect(context.actorView.length).toBeLessThanOrEqual(MAX_ACTOR_CONTEXT_EVENTS);
+        }
+        expect(context.actorView[0].data).not.toMatchObject({ text: "0" });
+        expect(context.actorView.at(-1)?.data).toMatchObject({ text: String(MAX_ACTOR_CONTEXT_EVENTS * 2 - 1) });
+    });
+
+    test("removes results of discarded tool calls, including results arriving later", () => {
+        const { bus, context } = createContext();
+        bus.emit("api/actor/generated", {
+            engineId: "test", text: "",
+            toolCall: { id: "old-call", name: "move", arguments: "{}" },
+        });
+        bus.emit("ui/context/input", { text: "keep this", silent: true });
+        const retainedId = context.actorView.at(-1)!.id;
+        const result = {
+            game: { id: "game", name: "Chess" },
+            act: { id: "action", name: "move" },
+            toolCallId: "old-call",
+        };
+        bus.emit("api/game/act/actor", result);
+        bus.emit("api/actor/generated", {
+            engineId: "test", text: "",
+            toolCall: { id: "retained-call", name: "move", arguments: "{}" },
+        });
+        bus.emit("api/game/act/actor", { ...result, toolCallId: "retained-call" });
+
+        context.trimActorBefore(retainedId);
+        bus.emit("api/game/act/actor", result);
+
+        expect(context.actorView.map(event => event.key)).toEqual([
+            "ui/context/input", "api/actor/generated", "api/game/act/actor",
+        ]);
+        expect(context.actorView.at(-1)?.data).toMatchObject({ toolCallId: "retained-call" });
+        expect(context.userView).toHaveLength(1);
+
+        bus.emit("ui/context/reset");
+        bus.emit("api/game/act/actor", { ...result, toolCallId: "retained-call" });
+        expect(context.actorView).toHaveLength(0);
     });
 
     test("projects user input into both views", () => {
@@ -97,7 +134,7 @@ describe("ContextManager projection", () => {
         expect(prompts).toBe(2);
     });
 
-    test("reset events clear user/actor projections without clearing history", () => {
+    test("reset events clear context without clearing the event display", () => {
         const { bus, eventLog, context } = createContext();
         bus.emit("ui/context/input", { text: "one", silent: false });
         bus.emit("api/game/force", {
@@ -112,26 +149,11 @@ describe("ContextManager projection", () => {
         bus.emit("ui/context/reset");
         expect(context.userView.length).toBe(0);
         expect(context.actorView.length).toBe(0);
-        expect(eventLog.all.map((event) => event.key)).toEqual([
+        expect(eventLog.displayed.map((event) => event.key)).toEqual([
             "ui/context/input",
             "api/game/force",
             "ui/context/reset",
         ]);
-    });
-
-    test("rebuilds projections from events after the latest reset", () => {
-        const bus = new EventBus();
-        const eventLog = new EventLogStore(bus);
-        bus.emit("ui/context/input", { text: "before", silent: false });
-        bus.emit("ui/context/reset");
-        bus.emit("ui/context/input", { text: "between", silent: false });
-        bus.emit("ui/context/reset");
-        bus.emit("ui/context/input", { text: "after", silent: false });
-
-        const context = new ContextManager(eventLog);
-
-        expect(context.userView).toMatchObject([{ key: "ui/context/input", data: { text: "after" } }]);
-        expect(context.actorView).toMatchObject([{ key: "ui/context/input", data: { text: "after" } }]);
     });
 
     test("ignores events outside explicit key subscriptions", () => {

@@ -35,9 +35,9 @@ test("not sharing harness state", async () => {
 test("dispose detaches the harness event log", async () => {
     const harness = new SelfTestHarness();
     await harness.dispose();
-    const eventCount = harness.session.eventLog.all.length;
+    const eventCount = harness.session.eventLog.displayed.length;
 
     EVENT_BUS.emit("api/conn/internal/disconnect", { id: "after-dispose" });
 
-    expect(harness.session.eventLog.all).toHaveLength(eventCount);
+    expect(harness.session.eventLog.displayed).toHaveLength(eventCount);
 });

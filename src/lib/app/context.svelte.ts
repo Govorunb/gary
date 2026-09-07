@@ -33,31 +33,44 @@ export type ActorContextEventKey = typeof ACTOR_CONTEXT_KEYS[number];
 export type UserContextEvent = EventInstance<UserContextEventKey>;
 export type ActorContextEvent = EventInstance<ActorContextEventKey>;
 
+export const MAX_USER_CONTEXT_EVENTS = 1_000;
+export const MAX_ACTOR_CONTEXT_EVENTS = 10_000;
+
 export class ContextManager {
-    readonly userView: UserContextEvent[] = $state([]);
-    readonly actorView: ActorContextEvent[] = $state([]);
+    #userView: readonly UserContextEvent[] = $state.raw([]);
+    readonly actorView: ActorContextEvent[] = [];
+    #toolCalls = new Set<string>();
 
     #ondispose: (() => void)[] = [];
     #onActorEvent: Array<(event: ActorContextEvent, shouldPromptAct: boolean) => void> = [];
 
-    constructor(private readonly eventLog: EventLogStore) {
-        this.#ondispose.push(this.eventLog.subscribe(USER_CONTEXT_KEYS, (delta) => this.#onUserDelta(delta)));
-        this.#ondispose.push(this.eventLog.subscribe(ACTOR_CONTEXT_KEYS, (delta) => this.#onActorDelta(delta)));
-        this.#ondispose.push(this.eventLog.subscribe(["ui/context/reset"], () => this.#resetViews()));
+    constructor(eventLog: EventLogStore) {
+        this.#ondispose.push(eventLog.subscribe(USER_CONTEXT_KEYS, (delta) => this.#onUserDelta(delta)));
+        this.#ondispose.push(eventLog.subscribe(ACTOR_CONTEXT_KEYS, (delta) => this.#onActorDelta(delta)));
+        this.#ondispose.push(eventLog.subscribe(["ui/context/reset"], () => this.#resetViews()));
+    }
 
-        const userKeys = new Set<string>(USER_CONTEXT_KEYS);
-        const actorKeys = new Set<string>(ACTOR_CONTEXT_KEYS);
-        const latestReset = this.eventLog.all.findLastIndex((event) => event.key === "ui/context/reset");
-        for (let i = latestReset + 1; i < this.eventLog.all.length; i++) {
-            const event = this.eventLog.all[i];
-            if (userKeys.has(event.key)) {
-                this.userView.push(event as UserContextEvent);
-            }
-            if (actorKeys.has(event.key)) {
-                const actorEvent = event as ActorContextEvent;
-                this.actorView.push(actorEvent);
+    get userView() {
+        return this.#userView;
+    }
+
+    /** Release a compacted prefix and any tool results whose calls were in that prefix. */
+    trimActorBefore(eventId: string) {
+        const index = this.actorView.findIndex(event => event.id === eventId);
+        if (index > 0) this.#trimActor(index);
+    }
+
+    #trimActor(count: number) {
+        const retained = this.actorView.slice(count);
+        this.#toolCalls.clear();
+        for (const event of retained) {
+            if (event.key === "api/actor/generated" && event.data.toolCall) {
+                this.#toolCalls.add(event.data.toolCall.id);
             }
         }
+        this.actorView.splice(0, this.actorView.length, ...retained.filter(event =>
+            event.key !== "api/game/act/actor" || !event.data.toolCallId || this.#toolCalls.has(event.data.toolCallId)
+        ));
     }
 
     onActorViewAppend(cb: (event: ActorContextEvent, shouldPromptAct: boolean) => void): () => void {
@@ -71,8 +84,9 @@ export class ContextManager {
     }
 
     #resetViews() {
-        this.userView.length = 0;
+        this.#userView = [];
         this.actorView.length = 0;
+        this.#toolCalls.clear();
     }
 
     dispose() {
@@ -82,12 +96,18 @@ export class ContextManager {
     }
 
     #onUserDelta(delta: EventLogDelta) {
-        this.userView.push(delta.event as UserContextEvent);
+        this.#userView = [...this.#userView.slice(-(MAX_USER_CONTEXT_EVENTS - 1)), delta.event as UserContextEvent];
     }
 
     #onActorDelta(delta: EventLogDelta) {
         const event = delta.event as ActorContextEvent;
+        if (event.key === "api/game/act/actor" && event.data.toolCallId && !this.#toolCalls.has(event.data.toolCallId)) return;
+        if (event.key === "api/actor/generated" && event.data.toolCall) this.#toolCalls.add(event.data.toolCall.id);
         this.actorView.push(event);
+        if (this.actorView.length > MAX_ACTOR_CONTEXT_EVENTS) {
+            // Leave headroom so paused sessions do not copy the whole buffer on every event.
+            this.#trimActor(Math.ceil(MAX_ACTOR_CONTEXT_EVENTS / 5));
+        }
         const shouldPrompt = shouldPromptAct(event);
         this.#onActorEvent.forEach(cb => cb(event, shouldPrompt));
     }

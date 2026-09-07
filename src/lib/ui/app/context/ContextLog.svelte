@@ -10,13 +10,14 @@
     import Popover from "$lib/ui/common/Popover.svelte";
     import { Search, Filter, X } from "@lucide/svelte";
     import { tick } from "svelte";
+    import { MAX_USER_CONTEXT_EVENTS } from "$lib/app/context.svelte";
     import { SvelteSet } from "svelte/reactivity";
     import { formatContextEvent } from "./formatters/registry";
     import type { ContextRow, ContextSource } from "./formatters/types";
 
     const session = getSession();
 
-    // Search and filter narrow what is shown; they never touch what the model sees.
+    // Search and filter cover the retained conversation; they never touch what the model sees.
     let searchOpen = $state(false);
     let query = $state("");
     let searchInput = $state<HTMLInputElement>();
@@ -131,6 +132,7 @@
                 </OutLink>
                 .
             </p>
+            <p>The latest {MAX_USER_CONTEXT_EVENTS.toLocaleString()} messages are kept here, including for search and copy. Earlier messages are recorded in the app logs.</p>
             <p>Click client names to jump to their game tab.</p>
             <p><Hotkey>Alt+C</Hotkey> to add to context.</p>
         </TeachingTooltip>

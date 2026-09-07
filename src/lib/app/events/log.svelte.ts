@@ -8,7 +8,6 @@ type Unsub = () => void;
 export const MAX_DISPLAYED_EVENTS = 1_000;
 
 export class EventLogStore {
-    readonly all: EventInstance<EventKey>[] = $state([]);
     #displayed: readonly EventInstance<EventKey>[] = $state.raw([]);
     #subs: Array<(delta: EventLogDelta) => void> = [];
     #subsByKey = new Map<EventKey, Array<(delta: EventLogDelta) => void>>();
@@ -24,7 +23,6 @@ export class EventLogStore {
     }
 
     append(event: EventInstance<EventKey>) {
-        this.all.push(event);
         this.#displayed = [...this.#displayed.slice(-(MAX_DISPLAYED_EVENTS - 1)), event];
         this.#emit({ type: "append", event });
     }
