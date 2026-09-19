@@ -24,6 +24,7 @@
     const registry = getRegistry();
     const uiState = getUIState();
     let menuOpen = $state(false);
+    let menuPoint = $state<{ x: number; y: number } | null>(null);
     let menuButton: HTMLButtonElement;
 
     function copy(text: string) {
@@ -34,6 +35,7 @@
 
     function openMenu(evt: MouseEvent) {
         evt.preventDefault();
+        menuPoint = { x: evt.clientX, y: evt.clientY };
         menuOpen = true;
     }
 
@@ -100,24 +102,25 @@
         {/if}
         <span class="message-text" title={row.continues ? timestamp.format("LTS") : undefined}>{rendered?.text ?? ""}</span>
     </div>
-    <button class="icon-btn message-menu" bind:this={menuButton}
-        aria-label="Message menu" title="Message menu"
-        aria-haspopup="dialog" aria-expanded={menuOpen}
-        onclick={openMenu}
+    <Popover open={menuOpen} onOpenChange={(d) => menuOpen = d.open}
+        positioning={{
+            placement: menuPoint ? "bottom-start" : "bottom-end",
+            getAnchorRect: () => menuPoint ? { ...menuPoint, width: 0, height: 0 } : null,
+        }}
+        finalFocusEl={() => menuButton}
     >
-        <EllipsisVertical />
-    </button>
-    {#if menuOpen}
-        <Popover open onOpenChange={(d) => menuOpen = d.open}
-            positioning={{ placement: "bottom-end", getAnchorRect: () => menuButton.getBoundingClientRect() }}
-            finalFocusEl={() => menuButton}
-        >
-            {#snippet trigger(_props)}{/snippet}
-            <button class="menu-item" onclick={() => copy(rendered?.text ?? "")}>Copy text</button>
-            <button class="menu-item" onclick={() => copy(event.id)}>Copy event ID</button>
-            <button class="menu-item" onclick={() => copy(JSON.stringify(contextRowData(row), null, 2))}>Copy as JSON</button>
-        </Popover>
-    {/if}
+        {#snippet trigger(props)}
+            <button {...props} class="icon-btn message-menu" bind:this={menuButton}
+                aria-label="Message menu" title="Message menu"
+                onclick={(evt) => { menuPoint = null; props.onclick?.(evt); }}
+            >
+                <EllipsisVertical />
+            </button>
+        {/snippet}
+        <button class="menu-item" onclick={() => copy(rendered?.text ?? "")}>Copy text</button>
+        <button class="menu-item" onclick={() => copy(event.id)}>Copy event ID</button>
+        <button class="menu-item" onclick={() => copy(JSON.stringify(contextRowData(row), null, 2))}>Copy as JSON</button>
+    </Popover>
     {#if metricsText}
         <span class="message-metrics" {@attach tooltip("Engine latency · tokens used")}>{metricsText}</span>
     {/if}
@@ -167,7 +170,7 @@
         @apply text-[11px] text-ink-3 tabular-nums cursor-default;
     }
     .message-text {
-        @apply whitespace-pre-wrap text-ink-1;
+        @apply pl-0.75 whitespace-pre-wrap text-ink-1;
     }
     .message-menu {
         @apply size-5 opacity-0;
