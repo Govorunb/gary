@@ -146,7 +146,7 @@
             </p>
 
             {#if isLoading}
-                <div class="metadata-skeleton" aria-label="Loading model metadata"></div>
+                <div class="metadata-skeleton" role="status" aria-label="Loading model metadata"></div>
             {:else if loadError}
                 <p class="metadata-error" role="status">{loadError}</p>
             {/if}

@@ -23,7 +23,6 @@
     const visibleDiagnostics = $derived(diagnostics.filter(d => !d.dismissed));
     const hiddenDiagnostics = $derived(diagnostics.filter(d => d.dismissed));
     const activeDiagnostics = $derived(showHidden ? hiddenDiagnostics : visibleDiagnostics);
-    const inactiveDiagnostics = $derived(showHidden ? visibleDiagnostics : hiddenDiagnostics);
 
     const showClearBtn = $derived(activeDiagnostics.length && shiftPressed);
 

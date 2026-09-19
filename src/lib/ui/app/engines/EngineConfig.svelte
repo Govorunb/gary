@@ -1,10 +1,10 @@
 <script lang="ts" module>
-    import { type UserPrefsData } from '$lib/app/prefs.svelte';
-    import { type ZodType } from 'zod';
+    import type { UserPrefsData } from '$lib/app/prefs.svelte';
+    import type { ZodType } from 'zod';
     import OpenRouterConfig from './OpenRouterConfig.svelte';
     import OpenAIConfig from './OpenAIConfig.svelte';
     import RandyConfig from './RandyConfig.svelte';
-    import { type Component } from 'svelte';
+    import type { Component } from 'svelte';
 
     export type Engines = UserPrefsData["engines"];
     export type EngineId = string;
@@ -23,7 +23,7 @@
 
 <script lang="ts" generics="E extends EngineId">
     import { getUserPrefs } from '$lib/app/utils/di';
-    import { type Snippet } from 'svelte';
+    import type { Snippet } from 'svelte';
     import { formatZodError } from '$lib/app/utils';
     import { PressedKeys } from 'runed';
 

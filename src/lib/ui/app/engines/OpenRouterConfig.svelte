@@ -2,7 +2,7 @@
     import {
         zOpenRouterPrefs,
         type OpenRouterPrefs,
-        ENGINE_ID,
+        type ENGINE_ID,
         getOpenRouterModelMetadata,
         OpenRouter,
     } from '$lib/app/engines/llm/openrouter.svelte';

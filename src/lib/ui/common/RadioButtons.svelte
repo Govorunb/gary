@@ -24,7 +24,7 @@
         if (!event.currentTarget.checked) return;
 
         const iStr = event.currentTarget.attributes.getNamedItem('data-index')!.value;
-        const i = parseInt(iStr);
+        const i = parseInt(iStr, 10);
         selectIndex(i);
     }
 

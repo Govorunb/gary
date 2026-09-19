@@ -36,6 +36,7 @@
         if (!view) {
             const extensions = [
                 basicSetup,
+                EditorView.contentAttributes.of({ "aria-label": "Code editor" }),
                 json(),
                 lineWrap ? EditorView.lineWrapping : [],
                 ...(readonly ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : []),
@@ -71,7 +72,6 @@
     style:min-height={minHeight}
     style:max-height={maxHeight}
     bind:this={editorEl}
-    aria-label="Code editor"
 ></div>
 
 <style lang="postcss">

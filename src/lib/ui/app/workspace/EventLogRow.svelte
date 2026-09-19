@@ -37,7 +37,7 @@
     const description = $derived(presented.description);
     const timestamp = $derived(formatEventTime(event.timestamp, clock));
     const absoluteTimestamp = $derived(dayjs(event.timestamp).format("MMM D, YYYY h:mm:ss A"));
-    const detailJson = $derived(formatDetails(event, level));
+    const detailJson = $derived(formatDetails(event));
     const hasDetails = $derived(event.data !== undefined);
     const hasSensitiveDetails = $derived(hasDetails && hasSensitiveSchemaField((EVENTS_BY_KEY[event.key] as EventDef).dataSchema));
     const sensitiveDetailsHidden = $derived(hasSensitiveDetails && userPrefs.app.hideSensitiveInfo && !sensitiveInfoRevealed);
@@ -64,7 +64,7 @@
         }
     }
 
-    function formatDetails(evt: EventInstance<EventKey>, evtLevel: LogLevel): string {
+    function formatDetails(evt: EventInstance<EventKey>): string {
         return JSON.stringify(
             {
                 data: evt.data,
@@ -91,7 +91,7 @@
 </script>
 
 {#snippet eventHeader(disclosure = false)}
-    <span class="level-icon" title={config.label} aria-label={`Log level: ${config.label}`}>
+    <span class="level-icon" role="img" title={config.label} aria-label={`Log level: ${config.label}`}>
         <LevelIcon class="size-3.5" />
     </span>
 

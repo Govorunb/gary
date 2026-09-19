@@ -1,7 +1,7 @@
 <script lang="ts">
     import EnginePicker from "./EnginePicker.svelte";
     import { getSession, getUIState } from "$lib/app/utils/di";
-    import { HandFist, Pointer, Pause, BugPlay, Play, Hourglass, Infinity, Square } from "@lucide/svelte";
+    import { HandFist, Pointer, Pause, BugPlay, Play, Hourglass, Infinity as InfinityIcon, Square } from "@lucide/svelte";
     import { tooltip } from "$lib/app/utils";
     import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
     import { boolAttr } from "runed";
@@ -124,7 +124,7 @@
         {@attach tooltip("Act automatically")}
         data-checked={boolAttr(scheduler.autoPoker.autoAct)}
     >
-        <Infinity />
+        <InfinityIcon />
         <span class="not-md:hidden">Auto-act</span>
     </button>
 </div>
