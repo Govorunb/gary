@@ -4,8 +4,11 @@
     import { boolAttr } from "runed";
     import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
     import dayjs from "dayjs";
-    import { Bot, Gamepad2, Settings, User } from "@lucide/svelte";
+    import { Bot, EllipsisVertical, Gamepad2, Settings, User } from "@lucide/svelte";
     import type { ContextRow, ContextSource } from "./formatters/types";
+
+    import Popover from "$lib/ui/common/Popover.svelte";
+    import { copyContextText, contextRowData } from "./copy";
 
     interface Props {
         row: ContextRow;
@@ -20,6 +23,19 @@
     const session = getSession();
     const registry = getRegistry();
     const uiState = getUIState();
+    let menuOpen = $state(false);
+    let menuButton: HTMLButtonElement;
+
+    function copy(text: string) {
+        void copyContextText(text);
+        menuOpen = false;
+        menuButton.focus();
+    }
+
+    function openMenu(evt: MouseEvent) {
+        evt.preventDefault();
+        menuOpen = true;
+    }
 
     const sourceIcons: Record<ContextSource["type"], typeof Settings> = {
         system: Settings,
@@ -39,7 +55,9 @@
     const detailsHeld = $derived(pressedKeys.has("Shift") && !uiState.anyDialogOpen);
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions : the menu is also available through its button -->
 <div class={["message", source.type]}
+    oncontextmenu={openMenu}
     class:silent={rendered?.silent === true /* boolean | "noAct" */}
     data-continues={boolAttr(row.continues)}
     data-details={boolAttr(detailsHeld)}
@@ -82,6 +100,24 @@
         {/if}
         <span class="message-text" title={row.continues ? timestamp.format("LTS") : undefined}>{rendered?.text ?? ""}</span>
     </div>
+    <button class="icon-btn message-menu" bind:this={menuButton}
+        aria-label="Message menu" title="Message menu"
+        aria-haspopup="dialog" aria-expanded={menuOpen}
+        onclick={openMenu}
+    >
+        <EllipsisVertical />
+    </button>
+    {#if menuOpen}
+        <Popover open onOpenChange={(d) => menuOpen = d.open}
+            positioning={{ placement: "bottom-end", getAnchorRect: () => menuButton.getBoundingClientRect() }}
+            finalFocusEl={() => menuButton}
+        >
+            {#snippet trigger(_props)}{/snippet}
+            <button class="menu-item" onclick={() => copy(rendered?.text ?? "")}>Copy text</button>
+            <button class="menu-item" onclick={() => copy(event.id)}>Copy event ID</button>
+            <button class="menu-item" onclick={() => copy(JSON.stringify(contextRowData(row), null, 2))}>Copy as JSON</button>
+        </Popover>
+    {/if}
     {#if metricsText}
         <span class="message-metrics" {@attach tooltip("Engine latency · tokens used")}>{metricsText}</span>
     {/if}
@@ -93,7 +129,7 @@
     .message {
         --src: var(--color-ink-3);
         @apply relative grid gap-x-2 pl-3 pr-3 pt-1.5 pb-1.5 wrap-anywhere;
-        grid-template-columns: 1.25rem minmax(0, 1fr);
+        grid-template-columns: 1.25rem minmax(0, 1fr) 1.25rem;
         background-color: color-mix(in oklab, var(--src) 4%, transparent);
         border-top: 1px solid var(--color-layer-0);
         &::before {
@@ -133,8 +169,13 @@
     .message-text {
         @apply whitespace-pre-wrap text-ink-1;
     }
+    .message-menu {
+        @apply size-5 opacity-0;
+        .message:hover &, .message:focus-within &, &[aria-expanded="true"] { @apply opacity-100; }
+        @media (hover: none) { @apply opacity-100; }
+    }
     .message-metrics {
-        @apply absolute top-1 right-3 font-mono text-[11px] text-ink-3 tabular-nums cursor-default;
+        @apply absolute top-1 right-10 font-mono text-[11px] text-ink-3 tabular-nums cursor-default;
         @apply opacity-0 transition-opacity;
         .message:hover &, .message[data-details] & { @apply opacity-100; }
     }

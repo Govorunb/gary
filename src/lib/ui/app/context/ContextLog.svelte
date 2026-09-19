@@ -149,10 +149,11 @@
                 .
             </p>
             <p>The latest {MAX_USER_CONTEXT_EVENTS.toLocaleString()} messages are kept here, including for search and copy. Earlier messages are recorded in the app logs.</p>
+            <p>Copy uses the current search and filters. Right-click a message for copy options.</p>
             <p>Click client names to jump to their game tab.</p>
             <p><Hotkey>Alt+C</Hotkey> to add to context.</p>
         </TeachingTooltip>
-        <ContextLogMenu />
+        <ContextLogMenu {rows} />
     </div>
     <div class="log" bind:this={scrollEl}>
         {#each rows as row (row.event.id)}

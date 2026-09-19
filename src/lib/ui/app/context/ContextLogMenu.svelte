@@ -1,12 +1,12 @@
 <script lang="ts">
     import { tooltip } from "$lib/app/utils";
-    import { getSession } from "$lib/app/utils/di";
     import { EllipsisVertical } from "@lucide/svelte";
     import Popover from "$lib/ui/common/Popover.svelte";
-    import { formatContextEvent } from "./formatters/registry";
+    import type { ContextRow } from "./formatters/types";
+    import { copyContextText, contextRowData } from "./copy";
     import { EVENT_BUS } from "$lib/app/events/bus";
 
-    const session = getSession();
+    const { rows }: { rows: ContextRow[] } = $props();
 
     let open = $state(false);
 
@@ -17,12 +17,11 @@
         EVENT_BUS.emit("ui/context/reset");
         closeMenu();
     }
-    function copyContext() {
-        const withRenderedText = session.context.userView.map(event => ({
-            ...event,
-            text: formatContextEvent(event, "user")?.text ?? "",
-        }));
-        navigator.clipboard.writeText(JSON.stringify(withRenderedText));
+    function copyContext(format: "text" | "json") {
+        const text = format === "json"
+            ? JSON.stringify(rows.map(contextRowData), null, 2)
+            : rows.map(row => row.rendered?.text ?? "").join("\n\n");
+        void copyContextText(text);
         closeMenu();
     }
 </script>
@@ -33,7 +32,10 @@
             <EllipsisVertical />
         </button>
     {/snippet}
-    <button class="menu-item" onclick={copyContext}>
+    <button class="menu-item" onclick={() => copyContext("text")} disabled={!rows.length}>
+        Copy as text
+    </button>
+    <button class="menu-item" onclick={() => copyContext("json")} disabled={!rows.length}>
         Copy as JSON
     </button>
     <button class="menu-item menu-item-danger" onclick={clearContext}>
