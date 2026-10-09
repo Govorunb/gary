@@ -30,6 +30,8 @@ The project is in active development. Feedback and contributions are welcome.
 ## Quick start
 Head over to [Releases](https://github.com/Govorunb/gary/releases/latest), download an installer appropriate for your platform/architecture, and install the app.
 
+On Linux, Gary needs Ubuntu 24.04, Debian 13, Fedora 40, or a newer distro. On Debian/Ubuntu, prefer the `.deb` over the AppImage, since it uses your system's libraries.
+
 Out of the box, you can use Randy, send actions manually a-la Tony, or connect to an OpenAI-compatible API.
 
 If you're not familiar with the Neuro-sama SDK, you should read a bit from the [architecture docs](docs/ARCHITECTURE.md) and the [unofficial](https://ktrain5169.github.io/neuro-sdk-docs/overview/) and [official](https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md) SDK docs to get a quick rundown. Otherwise, the basics of using the app are as follows:
