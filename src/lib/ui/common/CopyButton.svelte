@@ -2,7 +2,7 @@
     import { Check, Clipboard } from "@lucide/svelte";
     import { toast } from "svelte-sonner";
     import { boolAttr } from "runed";
-    import { preventDefault, tooltip } from "$lib/app/utils";
+    import { preventDefault, tooltip } from "#lib/app/utils/index.js";
 
 
     type Props = {

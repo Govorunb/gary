@@ -1,13 +1,13 @@
 <script lang="ts">
-    import Dialog from "$lib/ui/common/Dialog.svelte";
-    import ShiftIndicator from "$lib/ui/common/ShiftIndicator.svelte";
-    import { getUserPrefs } from "$lib/app/utils/di";
+    import Dialog from "#lib/ui/common/Dialog.svelte";
+    import ShiftIndicator from "#lib/ui/common/ShiftIndicator.svelte";
+    import { getUserPrefs } from "#lib/app/utils/di.js";
     import { toast } from "svelte-sonner";
-    import CodeMirror from "$lib/ui/common/CodeMirror.svelte";
+    import CodeMirror from "#lib/ui/common/CodeMirror.svelte";
     import { Eye, EyeOff } from "@lucide/svelte";
-    import { USER_PREFS, zUserPrefs } from "$lib/app/prefs.svelte";
-    import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
-    import { formatZodError, jsonParse, safeParse } from "$lib/app/utils";
+    import { USER_PREFS, zUserPrefs } from "#lib/app/prefs.svelte.js";
+    import { pressedKeys } from "#lib/app/utils/hotkeys.svelte.js";
+    import { formatZodError, jsonParse, safeParse } from "#lib/app/utils/index.js";
 
     const userPrefs = getUserPrefs();
 

@@ -1,8 +1,8 @@
-import type { Action, ForceAction } from "$lib/api/v1/spec";
-import type { ActorContextEvent } from "$lib/app/context.svelte";
-import { EVENT_BUS } from "$lib/app/events/bus";
-import type { Session } from "$lib/app/session.svelte";
-import { jsonParse, snapshotState } from "$lib/app/utils";
+import type { Action, ForceAction } from "#lib/api/v1/spec.js";
+import type { ActorContextEvent } from "#lib/app/context.svelte.js";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
+import type { Session } from "#lib/app/session.svelte.js";
+import { jsonParse, snapshotState } from "#lib/app/utils/index.js";
 import type {
     ChatCompletionMessageParam,
     ChatCompletionFunctionTool,

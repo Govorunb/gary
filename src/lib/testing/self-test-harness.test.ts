@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
-import * as v1 from "$lib/api/v1/spec";
-import { SelfTestHarness } from "$lib/testing/self-test-harness";
-import { EVENT_BUS } from "$lib/app/events/bus";
+import * as v1 from "#lib/api/v1/spec.js";
+import { SelfTestHarness } from "#lib/testing/self-test-harness.js";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
 
 test("not sharing harness state", async () => {
     const harness1 = new SelfTestHarness();

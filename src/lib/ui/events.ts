@@ -1,6 +1,6 @@
 import z from "zod";
-import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
-import { LogLevel } from "$lib/app/utils";
+import type { EventDef, Keys, PresentDefs } from "#lib/app/events/index.js";
+import { LogLevel } from "#lib/app/utils/index.js";
 
 export const EVENTS = [
     {

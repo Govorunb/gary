@@ -1,9 +1,9 @@
 <script lang="ts">
     import EnginePicker from "./EnginePicker.svelte";
-    import { getSession, getUIState } from "$lib/app/utils/di";
+    import { getSession, getUIState } from "#lib/app/utils/di.js";
     import { HandFist, Pointer, Pause, BugPlay, Play, Hourglass, Infinity as InfinityIcon, Square } from "@lucide/svelte";
-    import { tooltip } from "$lib/app/utils";
-    import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
+    import { tooltip } from "#lib/app/utils/index.js";
+    import { pressedKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import { boolAttr } from "runed";
 
     type State = "errored" | "muted" | "unmuted";

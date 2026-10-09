@@ -5,11 +5,11 @@
         type ENGINE_ID,
         getOpenRouterModelMetadata,
         OpenRouter,
-    } from '$lib/app/engines/llm/openrouter.svelte';
-    import { StringField, BooleanField, SelectField } from '$lib/ui/common/form';
+    } from '#lib/app/engines/llm/openrouter.svelte.js';
+    import { StringField, BooleanField, SelectField } from '#lib/ui/common/form/index.js';
     import type { ConfigProps } from './EngineConfig.svelte';
     import { toast } from 'svelte-sonner';
-    import OutLink from '$lib/ui/common/OutLink.svelte';
+    import OutLink from '#lib/ui/common/OutLink.svelte';
     import EngineConfig from './EngineConfig.svelte';
     import { LoaderCircle } from '@lucide/svelte';
     import ModelMetadata from './ModelMetadata.svelte';

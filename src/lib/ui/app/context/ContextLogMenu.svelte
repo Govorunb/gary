@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { tooltip } from "$lib/app/utils";
+    import { tooltip } from "#lib/app/utils/index.js";
     import { EllipsisVertical } from "@lucide/svelte";
-    import Popover from "$lib/ui/common/Popover.svelte";
+    import Popover from "#lib/ui/common/Popover.svelte";
     import type { ContextRow } from "./formatters/types";
     import { copyContextText, contextRowData } from "./copy";
-    import { EVENT_BUS } from "$lib/app/events/bus";
+    import { EVENT_BUS } from "#lib/app/events/bus.js";
 
     const { rows }: { rows: ContextRow[] } = $props();
 

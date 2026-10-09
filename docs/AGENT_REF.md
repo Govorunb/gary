@@ -40,7 +40,7 @@ When implementing fallible operations:
 - Handle errors immediately - return the error, passing it up; or, if the caller doesn't expect a Result, publish it on the event bus as a warning/error event and swallow it locally
 - The point of `neverthrow` is to avoid throwing. Functions returning `Result` or `ResultAsync` should **never** throw. Report pre-existing violations when relevant to the task.
 
-We have neverthrow utility wrappers over common commands (exported from `$lib/app/utils`):
+We have neverthrow utility wrappers over common commands (exported from `#lib/app/utils/index.js`):
 - `JSON.parse(text)` -> `jsonParse(text)`
 - Zod `zodSchema.safeParse(obj)` -> `safeParse(zodSchema, obj)`
 - Tauri `invoke(command, data)` -> `safeInvoke(command, data)`

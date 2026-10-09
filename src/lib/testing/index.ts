@@ -1,6 +1,6 @@
-import r from "$lib/app/utils/reporting";
-import { LogLevel } from "$lib/app/utils";
-import { boundedToast } from "$lib/app/utils/bounded-toast";
+import r from "#lib/app/utils/reporting.js";
+import { LogLevel } from "#lib/app/utils/index.js";
+import { boundedToast } from "#lib/app/utils/bounded-toast.js";
 import { test as baseTest, vi } from "vitest";
 import { SelfTestHarness } from "./self-test-harness";
 

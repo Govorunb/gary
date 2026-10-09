@@ -1,13 +1,13 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { isTauri } from "@tauri-apps/api/core";
 import { settled } from "svelte";
-import type { Registry, WSConnectionRequest } from "$lib/api/registry.svelte";
+import type { Registry, WSConnectionRequest } from "#lib/api/registry.svelte.js";
 import type { Session } from "./session.svelte";
 import { getServerBindHost, type UserPrefs } from "./prefs.svelte";
 import { listenSub, safeInvoke, LogLevel } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";
 import { EVENT_BUS } from "./events/bus";
-import { TauriServerConnection } from "$lib/api/connection";
+import { TauriServerConnection } from "#lib/api/connection.js";
 import { toast } from "svelte-sonner";
 
 type ServerConnections = string[] | null;

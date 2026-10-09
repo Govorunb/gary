@@ -1,16 +1,16 @@
 <script lang="ts">
-    import { getSession, getUserPrefs, getUIState } from '$lib/app/utils/di';
-    import Dialog from '$lib/ui/common/Dialog.svelte';
-    import ShiftIndicator from '$lib/ui/common/ShiftIndicator.svelte';
+    import { getSession, getUserPrefs, getUIState } from '#lib/app/utils/di.js';
+    import Dialog from '#lib/ui/common/Dialog.svelte';
+    import ShiftIndicator from '#lib/ui/common/ShiftIndicator.svelte';
     import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
     import { getEngineConfigComponent } from './EngineConfig.svelte';
     import { PressedKeys } from 'runed';
-    import { ENGINE_ID as RANDY_ID } from '$lib/app/engines/randy.svelte';
-    import { ENGINE_ID as OPENROUTER_ID } from '$lib/app/engines/llm/openrouter.svelte';
+    import { ENGINE_ID as RANDY_ID } from '#lib/app/engines/randy.svelte.js';
+    import { ENGINE_ID as OPENROUTER_ID } from '#lib/app/engines/llm/openrouter.svelte.js';
     import { fade, fly } from 'svelte/transition';
-    import TeachingTooltip from '$lib/ui/common/TeachingTooltip.svelte';
-    import Hotkey from '$lib/ui/common/Hotkey.svelte';
-    import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
+    import TeachingTooltip from '#lib/ui/common/TeachingTooltip.svelte';
+    import Hotkey from '#lib/ui/common/Hotkey.svelte';
+    import { registerAppHotkey } from '#lib/app/utils/hotkeys.svelte.js';
     import { toast } from 'svelte-sonner';
 
     const session = getSession();

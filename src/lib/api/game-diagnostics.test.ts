@@ -1,4 +1,4 @@
-import { test } from "$lib/testing";
+import { test } from "#lib/testing/index.js";
 import { describe, expect, vi } from "vitest";
 import { toast } from "svelte-sonner";
 

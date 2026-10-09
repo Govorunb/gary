@@ -2,7 +2,7 @@ import { check as tauriCheckUpdate, type Update } from "@tauri-apps/plugin-updat
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import dayjs, { type OpUnitType } from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
-import type { UIState } from "$lib/ui/app/ui-state.svelte";
+import type { UIState } from "#lib/ui/app/ui-state.svelte.js";
 import { isTauri } from "@tauri-apps/api/core";
 import { pickRandom, sleep, type Await, LogLevel } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";

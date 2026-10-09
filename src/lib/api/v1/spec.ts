@@ -1,6 +1,6 @@
 import { v4 as uuid4 } from "uuid";
 import * as z from 'zod';
-import { zConst } from "$lib/app/utils";
+import { zConst } from "#lib/app/utils/index.js";
 
 export const zAction = z.strictObject({
     name: z.string().nonempty(),

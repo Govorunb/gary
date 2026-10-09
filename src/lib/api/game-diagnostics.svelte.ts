@@ -1,7 +1,7 @@
-import { EVENT_BUS } from "$lib/app/events/bus";
-import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
-import { shortId, LogLevel } from "$lib/app/utils";
-import { boundedToast } from "$lib/app/utils/bounded-toast";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
+import type { EventDef, Keys, PresentDefs } from "#lib/app/events/index.js";
+import { shortId, LogLevel } from "#lib/app/utils/index.js";
+import { boundedToast } from "#lib/app/utils/bounded-toast.js";
 import { type GameDiagnostic, DiagnosticSeverity, type DiagnosticKey, DIAGNOSTICS_BY_KEY, type DiagData } from "./diagnostics";
 import type { Game } from "./game.svelte";
 

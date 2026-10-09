@@ -1,17 +1,17 @@
 <script lang="ts">
-    import type { Action } from "$lib/api/v1/spec";
-    import type { Game } from "$lib/api/game.svelte";
-    import Dialog from '$lib/ui/common/Dialog.svelte';
-    import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
-    import ShiftIndicator from '$lib/ui/common/ShiftIndicator.svelte';
+    import type { Action } from "#lib/api/v1/spec.js";
+    import type { Game } from "#lib/api/game.svelte.js";
+    import Dialog from '#lib/ui/common/Dialog.svelte';
+    import CodeMirror from '#lib/ui/common/CodeMirror.svelte';
+    import ShiftIndicator from '#lib/ui/common/ShiftIndicator.svelte';
     import { Send, ChevronLeft, ChevronRight, Dice6 } from "@lucide/svelte";
-    import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
-    import Hotkey from "$lib/ui/common/Hotkey.svelte";
-    import { getScheduler, getUserPrefs } from "$lib/app/utils/di";
+    import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
+    import Hotkey from "#lib/ui/common/Hotkey.svelte";
+    import { getScheduler, getUserPrefs } from "#lib/app/utils/di.js";
     import Ajv, { type ValidateFunction } from "ajv";
-    import { emptyValueFromJsonSchema, generateFromJsonSchema, parseError, tooltip } from "$lib/app/utils";
+    import { emptyValueFromJsonSchema, generateFromJsonSchema, parseError, tooltip } from "#lib/app/utils/index.js";
     import { boolAttr, PressedKeys } from "runed";
-    import { EVENT_BUS } from "$lib/app/events/bus";
+    import { EVENT_BUS } from "#lib/app/events/bus.js";
     import type { JsonSchema } from "json-schema-faker";
 
     type Props = {

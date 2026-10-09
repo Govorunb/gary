@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import type { Action } from "$lib/api/v1/spec";
+import type { Action } from "#lib/api/v1/spec.js";
 import type { UserPrefs } from "../prefs.svelte";
 import type { Session } from "../session.svelte";
 import { Randy, type RandyPrefs } from "./randy.svelte";

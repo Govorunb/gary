@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { THEMES, type Theme } from "$lib/app/theme.svelte";
+    import { THEMES, type Theme } from "#lib/app/theme.svelte.js";
     import RadioButtons from "./RadioButtons.svelte";
     import { Monitor, Sun, Moon } from "@lucide/svelte";
 

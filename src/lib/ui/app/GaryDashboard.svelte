@@ -1,16 +1,16 @@
 <script lang="ts">
     import { onMount, tick, untrack } from "svelte";
-    import DashboardSidebar from "$lib/ui/app/DashboardSidebar.svelte";
-    import ContextLog from "$lib/ui/app/context/ContextLog.svelte";
-    import ConnectClientPopover from "$lib/ui/app/game/ConnectClientPopover.svelte";
-    import GameTabs from "$lib/ui/app/game/GameTabs.svelte";
-    import Workspace from "$lib/ui/app/workspace/Workspace.svelte";
-    import { getRegistry, getSession, getUIState } from "$lib/app/utils/di";
+    import DashboardSidebar from "#lib/ui/app/DashboardSidebar.svelte";
+    import ContextLog from "#lib/ui/app/context/ContextLog.svelte";
+    import ConnectClientPopover from "#lib/ui/app/game/ConnectClientPopover.svelte";
+    import GameTabs from "#lib/ui/app/game/GameTabs.svelte";
+    import Workspace from "#lib/ui/app/workspace/Workspace.svelte";
+    import { getRegistry, getSession, getUIState } from "#lib/app/utils/di.js";
     import { Plus, TriangleAlert, CircleX, Check, Info } from "@lucide/svelte";
-    import { EVENTS_BY_KEY, EVENTS_DISPLAY, type EventDef, type EventInstance, type EventKey } from "$lib/app/events";
-    import { LogLevel, tooltip } from "$lib/app/utils";
-    import { eventLevel } from "$lib/app/events";
-    import { filterEvents } from "$lib/ui/app/workspace/event-filter";
+    import { EVENTS_BY_KEY, EVENTS_DISPLAY, type EventDef, type EventInstance, type EventKey } from "#lib/app/events/index.js";
+    import { LogLevel, tooltip } from "#lib/app/utils/index.js";
+    import { eventLevel } from "#lib/app/events/index.js";
+    import { filterEvents } from "#lib/ui/app/workspace/event-filter.js";
 
     const registry = getRegistry();
     const session = getSession();

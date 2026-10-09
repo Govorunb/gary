@@ -1,7 +1,7 @@
 import type { Session } from "./session.svelte";
-import type { ActiveForce, Game } from "$lib/api/game.svelte";
-import type { Registry } from "$lib/api/registry.svelte";
-import { FORCE_PRIORITY, zActData, type Action, type ForcePriority } from "$lib/api/v1/spec";
+import type { ActiveForce, Game } from "#lib/api/game.svelte.js";
+import type { Registry } from "#lib/api/registry.svelte.js";
+import { FORCE_PRIORITY, zActData, type Action, type ForcePriority } from "#lib/api/v1/spec.js";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { debounced, LogLevel } from "./utils";

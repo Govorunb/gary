@@ -3,7 +3,7 @@
     import type { Snippet } from "svelte";
     import type { SvelteHTMLElements } from "svelte/elements";
     import type { DialogRootProps } from "@skeletonlabs/skeleton-svelte";
-    import { hasHardwareAcceleration } from "$lib/app/utils/hardware-acceleration";
+    import { hasHardwareAcceleration } from "#lib/app/utils/hardware-acceleration.js";
     import { onMount } from "svelte";
 
     type SnippetOfHTML<T extends keyof SvelteHTMLElements> = Snippet<[SvelteHTMLElements[T]]>;

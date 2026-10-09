@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { getLMStudioModelMetadata, isLMStudioEngine } from '$lib/app/engines/llm/lm-studio';
-    import { getOllamaModelMetadata, isOllamaEngine } from '$lib/app/engines/llm/ollama';
-    import { zOpenAIPrefs } from '$lib/app/engines/llm/openai.svelte';
-    import { StringField, BooleanField, UrlField, SelectField } from '$lib/ui/common/form';
-    import Hotkey from '$lib/ui/common/Hotkey.svelte';
-    import OutLink from '$lib/ui/common/OutLink.svelte';
+    import { getLMStudioModelMetadata, isLMStudioEngine } from '#lib/app/engines/llm/lm-studio.js';
+    import { getOllamaModelMetadata, isOllamaEngine } from '#lib/app/engines/llm/ollama.js';
+    import { zOpenAIPrefs } from '#lib/app/engines/llm/openai.svelte.js';
+    import { StringField, BooleanField, UrlField, SelectField } from '#lib/ui/common/form/index.js';
+    import Hotkey from '#lib/ui/common/Hotkey.svelte';
+    import OutLink from '#lib/ui/common/OutLink.svelte';
     import EngineConfig from './EngineConfig.svelte';
     import ModelMetadata from './ModelMetadata.svelte';
 

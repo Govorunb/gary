@@ -1,14 +1,14 @@
 <script lang="ts">
-    import Dialog from '$lib/ui/common/Dialog.svelte';
-    import TeachingTooltip from '$lib/ui/common/TeachingTooltip.svelte';
-    import ShiftIndicator from '$lib/ui/common/ShiftIndicator.svelte';
-    import type { Game } from "$lib/api/game.svelte";
+    import Dialog from '#lib/ui/common/Dialog.svelte';
+    import TeachingTooltip from '#lib/ui/common/TeachingTooltip.svelte';
+    import ShiftIndicator from '#lib/ui/common/ShiftIndicator.svelte';
+    import type { Game } from "#lib/api/game.svelte.js";
     import { Info, Check } from '@lucide/svelte';
-    import { pressedKeys } from '$lib/app/utils/hotkeys.svelte';
+    import { pressedKeys } from '#lib/app/utils/hotkeys.svelte.js';
     import DiagnosticRow from './DiagnosticRow.svelte';
     import Hotkey from '../common/Hotkey.svelte';
-    import { tooltip } from '$lib/app/utils';
-    import RadioButtons from '$lib/ui/common/RadioButtons.svelte';
+    import { tooltip } from '#lib/app/utils/index.js';
+    import RadioButtons from '#lib/ui/common/RadioButtons.svelte';
 
     type Props = {
         open: boolean;

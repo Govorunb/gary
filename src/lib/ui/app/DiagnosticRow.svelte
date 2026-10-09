@@ -1,12 +1,12 @@
 <script lang="ts">
-    import type { Game } from "$lib/api/game.svelte";
+    import type { Game } from "#lib/api/game.svelte.js";
     import { CircleX, Info, Skull, TriangleAlert, Check, CheckCheck, EyeOff, Eye, Undo, Undo2, ChevronDown } from '@lucide/svelte';
-    import { DIAGNOSTICS_BY_KEY, DiagnosticSeverity, type DiagnosticKey, type GameDiagnostic } from '$lib/api/diagnostics';
-    import { tooltip } from '$lib/app/utils';
+    import { DIAGNOSTICS_BY_KEY, DiagnosticSeverity, type DiagnosticKey, type GameDiagnostic } from '#lib/api/diagnostics.js';
+    import { tooltip } from '#lib/app/utils/index.js';
     import { boolAttr } from 'runed';
-    import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
+    import CodeMirror from '#lib/ui/common/CodeMirror.svelte';
     import dayjs from 'dayjs';
-    import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
+    import { pressedKeys } from "#lib/app/utils/hotkeys.svelte.js";
 
     type Props = {
         game: Game;

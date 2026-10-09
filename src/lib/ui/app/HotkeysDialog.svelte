@@ -1,6 +1,6 @@
 <script lang="ts">
-    import Dialog from "$lib/ui/common/Dialog.svelte";
-    import Hotkey from "$lib/ui/common/Hotkey.svelte";
+    import Dialog from "#lib/ui/common/Dialog.svelte";
+    import Hotkey from "#lib/ui/common/Hotkey.svelte";
 
     type Props = {
         open: boolean;

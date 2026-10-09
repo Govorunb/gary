@@ -1,13 +1,13 @@
 <script lang="ts">
-    import { getRegistry, getSession, getUIState } from "$lib/app/utils/di";
-    import { tooltip } from "$lib/app/utils";
+    import { getRegistry, getSession, getUIState } from "#lib/app/utils/di.js";
+    import { tooltip } from "#lib/app/utils/index.js";
     import { boolAttr } from "runed";
-    import { pressedKeys } from "$lib/app/utils/hotkeys.svelte";
+    import { pressedKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import dayjs from "dayjs";
     import { Bot, EllipsisVertical, Gamepad2, Settings, User } from "@lucide/svelte";
     import type { ContextRow, ContextSource } from "./formatters/types";
 
-    import Popover from "$lib/ui/common/Popover.svelte";
+    import Popover from "#lib/ui/common/Popover.svelte";
     import { copyContextText, contextRowData } from "./copy";
 
     interface Props {

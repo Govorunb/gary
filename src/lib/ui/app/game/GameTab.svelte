@@ -1,6 +1,6 @@
 <script lang="ts">
     import { boolAttr } from "runed";
-    import type { Game } from "$lib/api/game.svelte";
+    import type { Game } from "#lib/api/game.svelte.js";
     import type { HTMLButtonAttributes } from "svelte/elements";
 
     interface Props extends HTMLButtonAttributes {

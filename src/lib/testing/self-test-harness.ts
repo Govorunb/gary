@@ -1,10 +1,10 @@
-import { Game } from "$lib/api/game.svelte";
-import { ClientGame, type ActionResult } from "$lib/api/client-game";
-import { InternalConnection, ConnectionClient } from "$lib/api/connection";
-import { type UserPrefs, zGamePrefs, zUserPrefs } from "$lib/app/prefs.svelte";
-import { ContextManager } from "$lib/app/context.svelte";
-import { EventLogStore } from "$lib/app/events/log.svelte";
-import type { ActionCandidate, Scheduler } from "$lib/app/scheduler.svelte";
+import { Game } from "#lib/api/game.svelte.js";
+import { ClientGame, type ActionResult } from "#lib/api/client-game.js";
+import { InternalConnection, ConnectionClient } from "#lib/api/connection.js";
+import { type UserPrefs, zGamePrefs, zUserPrefs } from "#lib/app/prefs.svelte.js";
+import { ContextManager } from "#lib/app/context.svelte.js";
+import { EventLogStore } from "#lib/app/events/log.svelte.js";
+import type { ActionCandidate, Scheduler } from "#lib/app/scheduler.svelte.js";
 
 
 function mock<T, U extends Partial<T>>(mock: U): U & { [K in Exclude<keyof T, keyof U>]: never } {

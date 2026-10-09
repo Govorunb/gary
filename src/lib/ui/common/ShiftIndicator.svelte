@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { pressedKeys } from '$lib/app/utils/hotkeys.svelte';
+	import { pressedKeys } from '#lib/app/utils/hotkeys.svelte.js';
 	import Hotkey from './Hotkey.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import { ArrowUp } from '@lucide/svelte';

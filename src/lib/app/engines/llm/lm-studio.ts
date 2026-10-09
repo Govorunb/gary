@@ -1,4 +1,4 @@
-import { parseError } from "$lib/app/utils";
+import { parseError } from "#lib/app/utils/index.js";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import z from "zod";
 import { ConfigError } from ".";

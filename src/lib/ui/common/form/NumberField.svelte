@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { toStepPrecision, shortId, scrollNumInput } from '$lib/app/utils';
+    import { toStepPrecision, shortId, scrollNumInput } from '#lib/app/utils/index.js';
     import type { HTMLInputAttributes } from 'svelte/elements';
 
     interface Props extends Omit<HTMLInputAttributes, 'type' | 'value' | 'id'> {

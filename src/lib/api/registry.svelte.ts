@@ -1,12 +1,12 @@
 import { Channel } from "@tauri-apps/api/core";
 import { TauriServerConnection, type ServerWSEvent, type AcceptArgs, type BaseConnection } from "./connection";
 import * as v1 from "./v1/spec";
-import { safeInvoke, LogLevel } from "$lib/app/utils";
-import type { Session } from "$lib/app/session.svelte";
+import { safeInvoke, LogLevel } from "#lib/app/utils/index.js";
+import type { Session } from "#lib/app/session.svelte.js";
 import { Game } from "./game.svelte";
-import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
-import { EVENT_BUS } from "$lib/app/events/bus";
-import type { ApiPrefs } from "$lib/app/prefs.svelte";
+import type { EventDef, Keys, PresentDefs } from "#lib/app/events/index.js";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
+import type { ApiPrefs } from "#lib/app/prefs.svelte.js";
 
 export type WSConnectionRequest = { id: string; } & (
     { version: "v1"; game: undefined; }

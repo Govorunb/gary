@@ -1,10 +1,10 @@
 <script lang="ts">
     import { Bug, Check, ChevronDown, CircleX, Eye, Info, Logs, Skull, TriangleAlert } from "@lucide/svelte";
     import dayjs from "dayjs";
-    import { EVENTS_BY_KEY, EVENTS_DISPLAY, eventLevel, hasSensitiveSchemaField, type EventDef, type EventInstance, type EventKey } from "$lib/app/events";
-    import { LogLevel } from "$lib/app/utils";
-    import { getUserPrefs } from "$lib/app/utils/di";
-    import CodeMirror from "$lib/ui/common/CodeMirror.svelte";
+    import { EVENTS_BY_KEY, EVENTS_DISPLAY, eventLevel, hasSensitiveSchemaField, type EventDef, type EventInstance, type EventKey } from "#lib/app/events/index.js";
+    import { LogLevel } from "#lib/app/utils/index.js";
+    import { getUserPrefs } from "#lib/app/utils/di.js";
+    import CodeMirror from "#lib/ui/common/CodeMirror.svelte";
     import { formatEventTime } from "./event-time";
 
     type Props = {

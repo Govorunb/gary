@@ -1,9 +1,9 @@
 import { tick } from "svelte";
-import { ClientGame, type ActionResult } from "$lib/api/client-game";
-import type { ConnectionClient } from "$lib/api/connection";
-import { zContext, type Action } from "$lib/api/v1/spec";
-import type { Session } from "$lib/app/session.svelte";
-import { parseError } from "$lib/app/utils";
+import { ClientGame, type ActionResult } from "#lib/api/client-game.js";
+import type { ConnectionClient } from "#lib/api/connection.js";
+import { zContext, type Action } from "#lib/api/v1/spec.js";
+import type { Session } from "#lib/app/session.svelte.js";
+import { parseError } from "#lib/app/utils/index.js";
 
 const RUNS = [
     { name: "fill_1000", count: 1_000, lines: 1 },

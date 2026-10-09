@@ -1,4 +1,4 @@
-import { zActData, type Action, type ForceAction } from "$lib/api/v1/spec";
+import { zActData, type Action, type ForceAction } from "#lib/api/v1/spec.js";
 import type { Session } from "../session.svelte";
 import type { UserPrefs } from "../prefs.svelte";
 import type { ResultAsync } from "neverthrow";

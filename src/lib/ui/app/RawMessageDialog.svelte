@@ -1,15 +1,15 @@
 <script lang="ts">
-    import type { Game } from "$lib/api/game.svelte";
-    import Dialog from '$lib/ui/common/Dialog.svelte';
-    import CodeMirror from '$lib/ui/common/CodeMirror.svelte';
+    import type { Game } from "#lib/api/game.svelte.js";
+    import Dialog from '#lib/ui/common/Dialog.svelte';
+    import CodeMirror from '#lib/ui/common/CodeMirror.svelte';
     import { Send, TriangleAlert } from "@lucide/svelte";
-    import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
-    import Hotkey from "$lib/ui/common/Hotkey.svelte";
-    import { getUserPrefs } from "$lib/app/utils/di";
-    import { zNeuroMessage } from "$lib/api/v1/spec";
-    import { formatZodError, jsonParse, parseError, safeParse, tooltip } from "$lib/app/utils";
+    import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
+    import Hotkey from "#lib/ui/common/Hotkey.svelte";
+    import { getUserPrefs } from "#lib/app/utils/di.js";
+    import { zNeuroMessage } from "#lib/api/v1/spec.js";
+    import { formatZodError, jsonParse, parseError, safeParse, tooltip } from "#lib/app/utils/index.js";
     import { PressedKeys } from "runed";
-    import { EVENT_BUS } from "$lib/app/events/bus";
+    import { EVENT_BUS } from "#lib/app/events/bus.js";
 
     type Props = {
         open: boolean;

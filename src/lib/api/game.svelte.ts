@@ -1,5 +1,5 @@
-import type { Session } from "$lib/app/session.svelte";
-import { formatZodError, jsonParse, localeTimeWithMs, safeParse, LogLevel, PriorityQueue } from "$lib/app/utils";
+import type { Session } from "#lib/app/session.svelte.js";
+import { formatZodError, jsonParse, localeTimeWithMs, safeParse, LogLevel, PriorityQueue } from "#lib/app/utils/index.js";
 import { SvelteMap } from "svelte/reactivity";
 import { GameDiagnostics } from "./game-diagnostics.svelte";
 import { TIMEOUTS } from "./diagnostics";
@@ -9,8 +9,8 @@ import dayjs from "dayjs";
 import { dequal } from "dequal/lite";
 import { findUnsupportedSchemaKeywords } from "./helpers";
 import type { JSONSchema } from "openai/lib/jsonschema";
-import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
-import { EVENT_BUS } from "$lib/app/events/bus";
+import type { EventDef, Keys, PresentDefs } from "#lib/app/events/index.js";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
 
 export type GameAction = v1.Action & { active: boolean };
 export type PendingAction = {

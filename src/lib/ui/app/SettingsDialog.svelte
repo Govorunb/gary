@@ -1,16 +1,16 @@
 <script lang="ts">
-    import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
-    import Dialog from "$lib/ui/common/Dialog.svelte";
-    import ThemePicker from "$lib/ui/common/ThemePicker.svelte";
+    import { getUpdater, getUserPrefs } from "#lib/app/utils/di.js";
+    import Dialog from "#lib/ui/common/Dialog.svelte";
+    import ThemePicker from "#lib/ui/common/ThemePicker.svelte";
     import { ExternalLink, X } from "@lucide/svelte";
     import Hotkey from "../common/Hotkey.svelte";
     import dayjs from "dayjs";
     import { app } from "@tauri-apps/api";
-    import { APP_VERSION, clearLocalStorage, debounced, isApril1st, jsonParse, safeInvoke } from "$lib/app/utils";
+    import { APP_VERSION, clearLocalStorage, debounced, isApril1st, jsonParse, safeInvoke } from "#lib/app/utils/index.js";
     import { ResultAsync } from "neverthrow";
     import { TextareaAutosize } from "runed";
     import OutLink from "../common/OutLink.svelte";
-    import Switch from "$lib/ui/common/Switch.svelte";
+    import Switch from "#lib/ui/common/Switch.svelte";
     import TeachingTooltip from "../common/TeachingTooltip.svelte";
 
     type Props = {

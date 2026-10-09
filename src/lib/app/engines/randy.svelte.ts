@@ -1,4 +1,4 @@
-import type { Action } from "$lib/api/v1/spec";
+import type { Action } from "#lib/api/v1/spec.js";
 import { createJsonSchemaGenerator, parseError, sleep } from "../utils";
 import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "./index.svelte";
 import type { Session } from "../session.svelte";

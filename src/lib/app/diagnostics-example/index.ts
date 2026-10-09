@@ -1,9 +1,9 @@
-import { jsonParse, shortId } from "$lib/app/utils";
-import type { ConnectionClient } from "$lib/api/connection";
+import { jsonParse, shortId } from "#lib/app/utils/index.js";
+import type { ConnectionClient } from "#lib/api/connection.js";
 import { ClientGame } from "../../api/client-game";
 import type { ActionResult } from '../../api/client-game';
 import { DIAGNOSTIC_ACTIONS_MAP } from "./actions";
-import * as v1 from "$lib/api/v1/spec";
+import * as v1 from "#lib/api/v1/spec.js";
 
 export class DiagnosticsExampleGame extends ClientGame {
     private readonly actions = DIAGNOSTIC_ACTIONS_MAP;

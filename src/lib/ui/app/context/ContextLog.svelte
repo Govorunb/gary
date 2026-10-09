@@ -1,15 +1,15 @@
 <script lang="ts">
-    import { getSession } from "$lib/app/utils/di";
-    import OutLink from "$lib/ui/common/OutLink.svelte";
-    import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
-    import ContextMessage from "$lib/ui/app/context/ContextMessage.svelte";
-    import ContextLogMenu from "$lib/ui/app/context/ContextLogMenu.svelte";
+    import { getSession } from "#lib/app/utils/di.js";
+    import OutLink from "#lib/ui/common/OutLink.svelte";
+    import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
+    import ContextMessage from "#lib/ui/app/context/ContextMessage.svelte";
+    import ContextLogMenu from "#lib/ui/app/context/ContextLogMenu.svelte";
     import ContextInput from "./ContextInput.svelte";
-    import Hotkey from "$lib/ui/common/Hotkey.svelte";
-    import Popover from "$lib/ui/common/Popover.svelte";
+    import Hotkey from "#lib/ui/common/Hotkey.svelte";
+    import Popover from "#lib/ui/common/Popover.svelte";
     import { Search, Filter, X } from "@lucide/svelte";
     import { tick, untrack } from "svelte";
-    import { MAX_USER_CONTEXT_EVENTS } from "$lib/app/context.svelte";
+    import { MAX_USER_CONTEXT_EVENTS } from "#lib/app/context.svelte.js";
     import { SvelteSet } from "svelte/reactivity";
     import { formatContextEvent } from "./formatters/registry";
     import type { ContextRow, ContextSource } from "./formatters/types";

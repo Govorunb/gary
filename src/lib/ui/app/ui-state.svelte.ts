@@ -1,5 +1,5 @@
-import type { Session } from "$lib/app/session.svelte";
-import { clamp, isApril1st, LogLevel } from "$lib/app/utils";
+import type { Session } from "#lib/app/session.svelte.js";
+import { clamp, isApril1st, LogLevel } from "#lib/app/utils/index.js";
 import { SvelteSet } from "svelte/reactivity";
 import { DialogManager } from "./dialog-manager.svelte";
 // Type-only: event-filter pulls in the event registry, and this module loads before it.

@@ -1,6 +1,6 @@
-import type { Game } from "$lib/api/game.svelte";
-import { eventLevel, type EventInstance, type EventKey } from "$lib/app/events";
-import type { LogLevel } from "$lib/app/utils";
+import type { Game } from "#lib/api/game.svelte.js";
+import { eventLevel, type EventInstance, type EventKey } from "#lib/app/events/index.js";
+import type { LogLevel } from "#lib/app/utils/index.js";
 
 /** The event log's filter. Shared with the collapsed rail so both show the same events. */
 export type EventLogFilter = {

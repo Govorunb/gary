@@ -1,14 +1,14 @@
-import { ContextManager } from "$lib/app/context.svelte";
-import { EventLogStore } from "$lib/app/events/log.svelte";
-import { EventBus } from "$lib/app/events/bus";
-import type { Action } from "$lib/api/v1/spec";
-import type { UserPrefs } from "$lib/app/prefs.svelte";
-import type { Session } from "$lib/app/session.svelte";
-import { SelfTestHarness } from "$lib/testing/self-test-harness";
+import { ContextManager } from "#lib/app/context.svelte.js";
+import { EventLogStore } from "#lib/app/events/log.svelte.js";
+import { EventBus } from "#lib/app/events/bus.js";
+import type { Action } from "#lib/api/v1/spec.js";
+import type { UserPrefs } from "#lib/app/prefs.svelte.js";
+import type { Session } from "#lib/app/session.svelte.js";
+import { SelfTestHarness } from "#lib/testing/self-test-harness.js";
 import { okAsync, type ResultAsync } from "neverthrow";
 import { afterEach, describe, expect, test } from "vitest";
 import type { EngineActError } from "../index.svelte";
-import { EVENT_BUS } from "$lib/app/events/bus";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
 import {
     ConfigError,
     LLMEngine,

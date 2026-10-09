@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { zRandyPrefs, type ENGINE_ID } from '$lib/app/engines/randy.svelte';
-    import { NumberField, StringField } from '$lib/ui/common/form';
+    import { zRandyPrefs, type ENGINE_ID } from '#lib/app/engines/randy.svelte.js';
+    import { NumberField, StringField } from '#lib/ui/common/form/index.js';
     import type { ConfigProps } from './EngineConfig.svelte';
     import EngineConfig from './EngineConfig.svelte';
-    import { getSession, getUIState } from '$lib/app/utils/di';
-    import OutLink from '$lib/ui/common/OutLink.svelte';
+    import { getSession, getUIState } from '#lib/app/utils/di.js';
+    import OutLink from '#lib/ui/common/OutLink.svelte';
 
     let { engineId, close: close_ }: ConfigProps<typeof ENGINE_ID> = $props();
     const schema = zRandyPrefs;

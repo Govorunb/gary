@@ -1,9 +1,9 @@
-import { InternalConnection, ConnectionClient } from "$lib/api/connection";
-import { DiagnosticsExampleGame } from "$lib/app/diagnostics-example";
-import { SchemaTestGame } from "$lib/app/schema-test";
-import type { Registry } from "$lib/api/registry.svelte";
-import { ContextTestGame } from "$lib/app/context-test";
-import type { Session } from "$lib/app/session.svelte";
+import { InternalConnection, ConnectionClient } from "#lib/api/connection.js";
+import { DiagnosticsExampleGame } from "#lib/app/diagnostics-example/index.js";
+import { SchemaTestGame } from "#lib/app/schema-test/index.js";
+import type { Registry } from "#lib/api/registry.svelte.js";
+import { ContextTestGame } from "#lib/app/context-test/index.js";
+import type { Session } from "#lib/app/session.svelte.js";
 import { tick } from "svelte";
 
 export async function startSchemaTest(registry: Registry) {

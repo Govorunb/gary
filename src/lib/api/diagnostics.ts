@@ -1,4 +1,4 @@
-import type { UnwrapZod } from "$lib/app/utils";
+import type { UnwrapZod } from "#lib/app/utils/index.js";
 import type z from "zod";
 import type * as v1 from "./v1/spec";
 

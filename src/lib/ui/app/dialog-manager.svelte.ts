@@ -1,5 +1,5 @@
-import type { Game } from "$lib/api/game.svelte";
-import type { Action } from "$lib/api/v1/spec";
+import type { Game } from "#lib/api/game.svelte.js";
+import type { Action } from "#lib/api/v1/spec.js";
 
 export type DialogState =
     | { type: "manualSend", action: Action, game: Game }

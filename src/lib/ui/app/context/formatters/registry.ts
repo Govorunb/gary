@@ -1,4 +1,4 @@
-import type { EventInstance, EventKey } from "$lib/app/events";
+import type { EventInstance, EventKey } from "#lib/app/events/index.js";
 import type { ContextFormatOutput, ContextFormatTarget, ContextFormatterMap } from "./types";
 import { API_GAME_CONTEXT_FORMATTERS } from "./api-game";
 import { SCHEDULER_CONTEXT_FORMATTERS } from "./scheduler";

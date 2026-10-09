@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { getRegistry, getSession } from "$lib/app/utils/di";
-    import Popover from "$lib/ui/common/Popover.svelte";
+    import { getRegistry, getSession } from "#lib/app/utils/di.js";
+    import Popover from "#lib/ui/common/Popover.svelte";
     import type { Snippet } from "svelte";
     import type { SvelteHTMLElements } from "svelte/elements";
     import { startContextTest, startDiagnosticsExample, startSchemaTest } from "./internal-connections";

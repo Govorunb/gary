@@ -3,7 +3,7 @@ import { errAsync, okAsync } from "neverthrow";
 import { Scheduler, LogicError } from "./scheduler.svelte";
 import { EngineError, type EngineActResult } from "./engines/index.svelte";
 import type { Session } from "./session.svelte";
-import type { Action } from "$lib/api/v1/spec";
+import type { Action } from "#lib/api/v1/spec.js";
 
 function createScheduler(
     choice: EngineActResult = { say: "No games, still here.", notify: false },

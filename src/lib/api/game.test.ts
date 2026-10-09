@@ -1,7 +1,7 @@
 import { expect, vi, describe } from "vitest";
-import * as v1 from "$lib/api/v1/spec";
-import { test } from "$lib/testing";
-import { TIMEOUTS } from "$lib/api/diagnostics";
+import * as v1 from "#lib/api/v1/spec.js";
+import { test } from "#lib/testing/index.js";
+import { TIMEOUTS } from "#lib/api/diagnostics.js";
 
 const ACTION = v1.zAction.decode({ name: "test_action", description: "test" });
 

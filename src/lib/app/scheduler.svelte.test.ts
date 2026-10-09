@@ -2,8 +2,8 @@ import { describe, expect, test, vi } from "vitest";
 import { err, errAsync, okAsync, type Result, ResultAsync } from "neverthrow";
 import { Scheduler } from "./scheduler.svelte";
 import { EngineError, type Engine, type EngineAct, type EngineActResult } from "./engines/index.svelte";
-import type { Action, ActData, ForcePriority } from "$lib/api/v1/spec";
-import type { ActiveForce, Game } from "$lib/api/game.svelte";
+import type { Action, ActData, ForcePriority } from "#lib/api/v1/spec.js";
+import type { ActiveForce, Game } from "#lib/api/game.svelte.js";
 import type { Session } from "./session.svelte";
 
 type FakeGameAction = Action & { active: boolean };

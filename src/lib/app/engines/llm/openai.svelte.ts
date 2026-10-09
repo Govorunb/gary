@@ -1,13 +1,13 @@
 import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type LLMRequest } from ".";
-import type { UserPrefs } from "$lib/app/prefs.svelte";
+import type { UserPrefs } from "#lib/app/prefs.svelte.js";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageFunctionToolCall } from "openai/resources/chat/completions";
 import z from "zod";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError } from "../index.svelte";
-import { parseError, LogLevel } from "$lib/app/utils";
-import type { EventDef } from "$lib/app/events";
-import { EVENT_BUS } from "$lib/app/events/bus";
+import { parseError, LogLevel } from "#lib/app/utils/index.js";
+import type { EventDef } from "#lib/app/events/index.js";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
 import { v4 as uuid } from "uuid";
 import { getLMStudioModelMetadata, isLMStudioEngine } from "./lm-studio";
 import { getOllamaModelMetadata, isOllamaEngine } from "./ollama";

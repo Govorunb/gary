@@ -3,13 +3,13 @@
     import { onDestroy } from 'svelte';
     import type { LayoutProps } from './$types.js';
     import { Toaster } from "svelte-sonner";
-    import { getSession, initDI, getUIState } from '$lib/app/utils/di';
+    import { getSession, initDI, getUIState } from '#lib/app/utils/di.js';
     import dayjs from 'dayjs';
     import relativeTime from "dayjs/plugin/relativeTime";
     import localizedTime from "dayjs/plugin/localizedFormat";
-    import { registerAppHotkey } from '$lib/app/utils/hotkeys.svelte';
-    import { clearLocalStorage } from '$lib/app/utils';
-    import SafeModeDialog from '$lib/ui/app/SafeModeDialog.svelte';
+    import { registerAppHotkey } from '#lib/app/utils/hotkeys.svelte.js';
+    import { clearLocalStorage } from '#lib/app/utils/index.js';
+    import SafeModeDialog from '#lib/ui/app/SafeModeDialog.svelte';
 
     dayjs.extend(relativeTime);
     dayjs.extend(localizedTime);

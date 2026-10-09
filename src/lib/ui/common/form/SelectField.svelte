@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { shortId } from "$lib/app/utils";
+    import { shortId } from "#lib/app/utils/index.js";
     import type { Snippet } from "svelte";
 
     type Option = {

@@ -2,11 +2,11 @@
     import { Flag, FlagOff, SendHorizontal, MessageSquare } from "@lucide/svelte";
     import { PressedKeys, TextareaAutosize } from "runed";
     import { tick } from "svelte";
-    import { tooltip } from "$lib/app/utils";
-    import { getUserPrefs } from "$lib/app/utils/di";
-    import { EVENT_BUS } from "$lib/app/events/bus";
-    import TeachingTooltip from "$lib/ui/common/TeachingTooltip.svelte";
-    import Hotkey from "$lib/ui/common/Hotkey.svelte";
+    import { tooltip } from "#lib/app/utils/index.js";
+    import { getUserPrefs } from "#lib/app/utils/di.js";
+    import { EVENT_BUS } from "#lib/app/events/bus.js";
+    import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
+    import Hotkey from "#lib/ui/common/Hotkey.svelte";
 
     const userPrefs = getUserPrefs();
     const keys = new PressedKeys();

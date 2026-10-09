@@ -1,14 +1,14 @@
 <script lang="ts">
     import { EllipsisVertical, Filter } from "@lucide/svelte";
     import { toast } from "svelte-sonner";
-    import type { Game } from "$lib/api/game.svelte";
-    import { EVENTS_BY_KEY, redactSensitiveData, type EventDef, type EventInstance, type EventKey } from "$lib/app/events";
-    import { LogLevel } from "$lib/app/utils";
-    import { getSession, getUIState } from "$lib/app/utils/di";
-    import { eventLevel } from "$lib/app/events";
+    import type { Game } from "#lib/api/game.svelte.js";
+    import { EVENTS_BY_KEY, redactSensitiveData, type EventDef, type EventInstance, type EventKey } from "#lib/app/events/index.js";
+    import { LogLevel } from "#lib/app/utils/index.js";
+    import { getSession, getUIState } from "#lib/app/utils/di.js";
+    import { eventLevel } from "#lib/app/events/index.js";
     import { filterEvents } from "./event-filter";
-    import Popover from "$lib/ui/common/Popover.svelte";
-    import VirtualLog from "$lib/ui/common/VirtualLog.svelte";
+    import Popover from "#lib/ui/common/Popover.svelte";
+    import VirtualLog from "#lib/ui/common/VirtualLog.svelte";
     import EventLogRow from "./EventLogRow.svelte";
 
     type Props = {

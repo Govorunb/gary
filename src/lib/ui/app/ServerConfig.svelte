@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getServerManager, getUserPrefs } from "$lib/app/utils/di";
+    import { getServerManager, getUserPrefs } from "#lib/app/utils/di.js";
     import { BooleanField, NumberField } from "../common/form";
     import Switch from "../common/Switch.svelte";
     import TeachingTooltip from "../common/TeachingTooltip.svelte";

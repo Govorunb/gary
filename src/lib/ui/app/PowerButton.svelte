@@ -1,16 +1,16 @@
 <script lang="ts">
-    import { getUserPrefs, getServerManager, getRegistry } from "$lib/app/utils/di";
+    import { getUserPrefs, getServerManager, getRegistry } from "#lib/app/utils/di.js";
     import ServerConfig from "./ServerConfig.svelte";
     import { CirclePower, SlidersHorizontal } from "@lucide/svelte";
-    import Dialog from '$lib/ui/common/Dialog.svelte';
-    import Popover from "$lib/ui/common/Popover.svelte";
+    import Dialog from '#lib/ui/common/Dialog.svelte';
+    import Popover from "#lib/ui/common/Popover.svelte";
     import { boolAttr } from "runed";
     import { isTauri } from "@tauri-apps/api/core";
     import { Copy, Check } from "@lucide/svelte";
     import { toast } from "svelte-sonner";
-    import { tooltip } from "$lib/app/utils";
-    import { EVENT_BUS } from "$lib/app/events/bus";
-    import { LOCAL_SERVER_HOST } from "$lib/app/prefs.svelte";
+    import { tooltip } from "#lib/app/utils/index.js";
+    import { EVENT_BUS } from "#lib/app/events/bus.js";
+    import { LOCAL_SERVER_HOST } from "#lib/app/prefs.svelte.js";
 
     const userPrefs = getUserPrefs();
     const registry = getRegistry();

@@ -1,16 +1,16 @@
 import { createContext } from "svelte";
 import { Session } from "../session.svelte";
-import type { Registry } from "$lib/api/registry.svelte";
+import type { Registry } from "#lib/api/registry.svelte.js";
 import { UserPrefs, type UserPrefsData } from "../prefs.svelte";
 import type { Scheduler } from "../scheduler.svelte";
-import { ServerManager } from "../server.svelte";
+import { ServerManager } from "../server-manager.svelte";
 import { Updater } from "../updater.svelte";
 import { ThemeManager } from "../theme.svelte";
 import type { Result } from "neverthrow";
-import type { UIState } from "$lib/ui/app/ui-state.svelte";
+import type { UIState } from "#lib/ui/app/ui-state.svelte.js";
 // FIXME: find a better place (and better architecture)
 // it's just imported for side effects (otherwise tree-shaken out)
-import "$lib/app/utils/reporting";
+import "#lib/app/utils/reporting.js";
 
 const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
 const [ getSession, setSession ] = createContext<Session>();

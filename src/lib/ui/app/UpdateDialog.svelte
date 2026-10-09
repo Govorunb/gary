@@ -1,10 +1,10 @@
 <script lang="ts">
-    import Dialog from "$lib/ui/common/Dialog.svelte";
-    import OutLink from "$lib/ui/common/OutLink.svelte";
-    import { getUpdater, getUserPrefs } from "$lib/app/utils/di";
+    import Dialog from "#lib/ui/common/Dialog.svelte";
+    import OutLink from "#lib/ui/common/OutLink.svelte";
+    import { getUpdater, getUserPrefs } from "#lib/app/utils/di.js";
     import { isTauri } from "@tauri-apps/api/core";
-    import { safeInvoke, sleep } from "$lib/app/utils";
-    import { EVENT_BUS } from "$lib/app/events/bus";
+    import { safeInvoke, sleep } from "#lib/app/utils/index.js";
+    import { EVENT_BUS } from "#lib/app/events/bus.js";
     import { toast } from "svelte-sonner";
 
     type Props = {

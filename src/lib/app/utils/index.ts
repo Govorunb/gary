@@ -4,7 +4,7 @@ import { invoke, isTauri, type InvokeArgs, type InvokeOptions } from "@tauri-app
 import { on } from "svelte/events";
 import { listen, type EventCallback, type UnlistenFn } from "@tauri-apps/api/event";
 import type { Dayjs } from "dayjs";
-import { dev } from "$app/environment";
+import { dev } from "$app/env";
 // import { isTauri } from "@tauri-apps/api/core";
 import { toast } from "svelte-sonner";
 export * from "./zod";
@@ -99,7 +99,7 @@ export function jsonParse(s: string): Result<any, Error> {
 
 export function safeInvoke<TRet = void>(cmd: string, args?: InvokeArgs, options?: InvokeOptions): ResultAsync<TRet, string> {
     return isTauri()
-        ? ResultAsync.fromPromise(invoke(cmd, args, options), s => s as string)
+        ? ResultAsync.fromPromise(invoke(cmd, args, options), (s) => s as string)
         : errAsync("Tauri not available");
 }
 
@@ -252,9 +252,9 @@ export async function* createListener<T>(setup: (next: (value: T) => void, done:
     );
 
     while (true) {
-        const value: QueueValue
-            = queue.length ? queue.shift()!
-            : await new Promise<QueueValue>(r => resolve = r);
+        const value: QueueValue = queue.length
+            ? queue.shift()!
+            : await new Promise<QueueValue>((r) => resolve = r);
 
         if (value === DONE) break;
         yield value;
@@ -273,7 +273,7 @@ export function localeTimeWithMs(d: Dayjs): string {
 }
 
 export type Fn = () => void;
-export type DebouncedFn = Fn & { cancel: Fn, now: Fn };
+export type DebouncedFn = Fn & { cancel: Fn; now: Fn };
 export function debounced(func: () => void, delayMs: number | (() => number)): DebouncedFn {
     let timeout: ReturnType<typeof setTimeout> | null = null;
     function f() {

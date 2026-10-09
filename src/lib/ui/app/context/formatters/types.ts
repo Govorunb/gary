@@ -1,6 +1,6 @@
-import type { EventInstance, EventKey } from "$lib/app/events";
-import type { UserContextEvent } from "$lib/app/context.svelte";
-import type { ActMetrics } from "$lib/app/scheduler.svelte";
+import type { EventInstance, EventKey } from "#lib/app/events/index.js";
+import type { UserContextEvent } from "#lib/app/context.svelte.js";
+import type { ActMetrics } from "#lib/app/scheduler.svelte.js";
 
 export type ContextFormatTarget = "user" | "actor";
 

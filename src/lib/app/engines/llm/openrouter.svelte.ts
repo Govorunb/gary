@@ -1,10 +1,10 @@
 import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type LLMRequest } from ".";
-import type { UserPrefs } from "$lib/app/prefs.svelte";
+import type { UserPrefs } from "#lib/app/prefs.svelte.js";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError } from "../index.svelte";
 import { OpenAIClient, type OpenAIPrefs, zReasoningEffort } from "./openai.svelte";
-import { parseError } from "$lib/app/utils";
+import { parseError } from "#lib/app/utils/index.js";
 import { zModelMetadata, type ModelMetadata } from "./model-metadata";
 
 export const ENGINE_ID = "openRouter";

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { CircleX, X } from "@lucide/svelte";
-    import { getSession } from "$lib/app/utils/di";
+    import { getSession } from "#lib/app/utils/di.js";
 
     const session = getSession();
     const reason = $derived(session.scheduler.errored ? session.scheduler.errorReason : null);

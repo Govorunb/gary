@@ -1,9 +1,9 @@
 import Ajv from "ajv";
-import type { ConnectionClient } from "$lib/api/connection";
-import * as v1 from "$lib/api/v1/spec";
+import type { ConnectionClient } from "#lib/api/connection.js";
+import * as v1 from "#lib/api/v1/spec.js";
 import { formatZodError, jsonParse, safeParse, LogLevel } from "../app/utils";
-import { EVENT_BUS } from "$lib/app/events/bus";
-import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
+import type { EventDef, Keys, PresentDefs } from "#lib/app/events/index.js";
 
 export type ActionResult = Omit<v1.ActionResult['data'], 'id'>;
 

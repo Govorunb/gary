@@ -1,5 +1,5 @@
 <script lang="ts" module>
-    import type { UserPrefsData } from '$lib/app/prefs.svelte';
+    import type { UserPrefsData } from '#lib/app/prefs.svelte.js';
     import type { ZodType } from 'zod';
     import OpenRouterConfig from './OpenRouterConfig.svelte';
     import OpenAIConfig from './OpenAIConfig.svelte';
@@ -22,9 +22,9 @@
 </script>
 
 <script lang="ts" generics="E extends EngineId">
-    import { getUserPrefs } from '$lib/app/utils/di';
+    import { getUserPrefs } from '#lib/app/utils/di.js';
     import type { Snippet } from 'svelte';
-    import { formatZodError } from '$lib/app/utils';
+    import { formatZodError } from '#lib/app/utils/index.js';
     import { PressedKeys } from 'runed';
 
     type Props = ConfigProps<E> & {

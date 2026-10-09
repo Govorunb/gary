@@ -1,14 +1,14 @@
 <script lang="ts">
-    import { getRegistry, getUIState } from "$lib/app/utils/di";
+    import { getRegistry, getUIState } from "#lib/app/utils/di.js";
     import GameTab from "./GameTab.svelte";
     import GameAction from "./GameAction.svelte";
     import GameMenu from "./GameMenu.svelte";
-    import Popover from "$lib/ui/common/Popover.svelte";
+    import Popover from "#lib/ui/common/Popover.svelte";
     import { Plus, EllipsisVertical } from "@lucide/svelte";
     import ConnectClientPopover from "./ConnectClientPopover.svelte";
     import { startSchemaTest } from "./internal-connections";
-    import { tooltip } from "$lib/app/utils";
-    import type { Game } from "$lib/api/game.svelte";
+    import { tooltip } from "#lib/app/utils/index.js";
+    import type { Game } from "#lib/api/game.svelte.js";
 
     const registry = getRegistry();
     const uiState = getUIState();

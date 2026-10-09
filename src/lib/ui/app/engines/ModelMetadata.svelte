@@ -1,10 +1,10 @@
 <script lang="ts">
-    import type { EngineError } from '$lib/app/engines/index.svelte';
+    import type { EngineError } from '#lib/app/engines/index.svelte.js';
     import type {
         ModelMetadata,
         ModelMetadataOverrides,
-    } from '$lib/app/engines/llm/model-metadata';
-    import { NumberField } from '$lib/ui/common/form';
+    } from '#lib/app/engines/llm/model-metadata.js';
+    import { NumberField } from '#lib/ui/common/form/index.js';
     import type { Result } from 'neverthrow';
     import { untrack } from 'svelte';
 

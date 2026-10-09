@@ -1,9 +1,9 @@
 import type { Channel } from "@tauri-apps/api/core";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { NeuroMessage, GameMessage } from "./v1/spec";
-import { listenSub, safeInvoke, type Awaitable, createListener, LogLevel } from "$lib/app/utils";
-import { EVENT_BUS } from "$lib/app/events/bus";
-import type { EventDef, Keys, PresentDefs } from "$lib/app/events";
+import { listenSub, safeInvoke, type Awaitable, createListener, LogLevel } from "#lib/app/utils/index.js";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
+import type { EventDef, Keys, PresentDefs } from "#lib/app/events/index.js";
 
 type OnMessageHandler = (msg: string) => Awaitable;
 type OnCloseHandler = (clientDisconnected?: CloseFrame) => Awaitable;

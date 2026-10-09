@@ -1,4 +1,4 @@
-import type { ConnectionClient } from "$lib/api/connection";
+import type { ConnectionClient } from "#lib/api/connection.js";
 import { ClientGame } from "../../api/client-game";
 import type { ActionResult } from '../../api/client-game';
 import { TEST_ACTIONS_MAP } from "./actions";

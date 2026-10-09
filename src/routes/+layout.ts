@@ -1,4 +1,4 @@
-import { UserPrefs } from "$lib/app/prefs.svelte";
+import { UserPrefs } from "#lib/app/prefs.svelte.js";
 import type { LayoutLoad } from "./$types";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { err } from "neverthrow";

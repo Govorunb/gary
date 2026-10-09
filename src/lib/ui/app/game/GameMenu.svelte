@@ -1,9 +1,9 @@
 <script lang="ts">
-    import type { Game } from "$lib/api/game.svelte";
+    import type { Game } from "#lib/api/game.svelte.js";
     // import VersionChip from "./VersionChip.svelte";
     import { Unplug, Braces } from "@lucide/svelte";
-    import CopyButton from "$lib/ui/common/CopyButton.svelte";
-    import { getUIState } from "$lib/app/utils/di";
+    import CopyButton from "#lib/ui/common/CopyButton.svelte";
+    import { getUIState } from "#lib/app/utils/di.js";
 
     type Props = { game: Game };
     let { game }: Props = $props();

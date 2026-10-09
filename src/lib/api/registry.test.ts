@@ -4,8 +4,8 @@ import {
     sendDeprecatedV1ReregisterAllForCompat,
     shouldSendDeprecatedV1ReregisterAll,
 } from "./registry.svelte";
-import { EVENT_BUS } from "$lib/app/events/bus";
-import { zApiPrefs, type ApiPrefs } from "$lib/app/prefs.svelte";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
+import { zApiPrefs, type ApiPrefs } from "#lib/app/prefs.svelte.js";
 import { zSpeechFinished } from "./v1/spec";
 
 class TestConnection extends BaseConnection {

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Game } from "$lib/api/game.svelte";
+    import type { Game } from "#lib/api/game.svelte.js";
     import WorkspaceEventLog from "./WorkspaceEventLog.svelte";
 
     let { selectedGame }: { selectedGame: Game | null } = $props();

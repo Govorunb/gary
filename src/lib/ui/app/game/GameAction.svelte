@@ -1,12 +1,12 @@
 <script lang="ts">
     import { Dices, Send } from "@lucide/svelte";
-    import { getScheduler, getUIState, getUserPrefs } from "$lib/app/utils/di";
+    import { getScheduler, getUIState, getUserPrefs } from "#lib/app/utils/di.js";
     import CopyButton from "../../common/CopyButton.svelte";
     import CodeMirror from "../../common/CodeMirror.svelte";
-    import { generateFromJsonSchema, parseError, preventDefault, tooltip } from "$lib/app/utils";
-    import type { Game, GameAction } from "$lib/api/game.svelte";
+    import { generateFromJsonSchema, parseError, preventDefault, tooltip } from "#lib/app/utils/index.js";
+    import type { Game, GameAction } from "#lib/api/game.svelte.js";
     import { boolAttr } from "runed";
-    import { EVENT_BUS } from "$lib/app/events/bus";
+    import { EVENT_BUS } from "#lib/app/events/bus.js";
     import type { JsonSchema } from "json-schema-faker";
 
     type Props = {

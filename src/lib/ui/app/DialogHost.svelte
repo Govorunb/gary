@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getUIState, getUpdater } from "$lib/app/utils/di";
+    import { getUIState, getUpdater } from "#lib/app/utils/di.js";
     import DiagnosticsDialog from "./DiagnosticsDialog.svelte";
     import HotkeysDialog from "./HotkeysDialog.svelte";
     import ManualSendDialog from "./ManualSendDialog.svelte";
