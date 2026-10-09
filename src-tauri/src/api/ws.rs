@@ -24,7 +24,7 @@ impl std::fmt::Debug for ClientWSConnection {
         f.debug_struct("ClientWSConnection")
          .field("id", &self.id)
          .field("rx", &self.rx)
-         .field("channel", &format_args!("Channel(id:{})", &self.channel.id()))
+         .field("channel", &format_args!("Channel(id:{})", self.channel.id()))
          .finish()
     }
 }
