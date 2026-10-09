@@ -151,6 +151,7 @@ export const zAppPrefs = z.strictObject({
             "everyLaunch", "daily", "weekly", "monthly", "off"
         ]).fallback("daily"),
         lastCheckedAt: z.number().nullish(),
+        channel: z.enum(["stable", "prerelease"]).fallback("stable"),
     }).prefault({}),
 });
 

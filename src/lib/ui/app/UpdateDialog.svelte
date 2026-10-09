@@ -84,6 +84,11 @@
             </div>
         {/if}
         <OutLink href="https://github.com/Govorunb/gary/releases/v{update.version}">View release notes on GitHub</OutLink>
+        {#if update.prerelease}
+            <p class="note text-lvl-warn">
+                Pre-release: going back to an older version may reset your settings.
+            </p>
+        {/if}
         <p>Restart the app at your convenience to finish the update.</p>
     {/snippet}
     {#snippet footer()}
