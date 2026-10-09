@@ -35,7 +35,7 @@ jobs:
         shared-key: ${{ matrix.platform }}-${{ env.RUSTUP_TOOLCHAIN }}
 
     - name: Set up pnpm
-      uses: pnpm/action-setup@1e1c8eafbd745f64b1ef30a7d7ed7965034c486c
+      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
 
     - name: Setup node
       uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f
