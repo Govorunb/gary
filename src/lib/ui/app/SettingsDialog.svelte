@@ -316,6 +316,13 @@
                     <option value="off">Never</option>
                 </select>
             </div>
+            <div class="fcol-1">
+                <p class="font-light">Update channel:</p>
+                <select class="field-input" bind:value={userPrefs.app.updates.channel}>
+                    <option value="stable">Stable</option>
+                    <option value="prerelease">Pre-release</option>
+                </select>
+            </div>
             <div class="frow-2 items-center">
                 <button class="btn"
                     onclick={checkForUpdates}

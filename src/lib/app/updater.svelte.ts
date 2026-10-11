@@ -1,10 +1,13 @@
-import { check as tauriCheckUpdate, type Update } from "@tauri-apps/plugin-updater";
+import { check as tauriCheckUpdate, Update } from "@tauri-apps/plugin-updater";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { clean as semverClean, rcompare as semverRcompare } from "semver";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import dayjs, { type OpUnitType } from "dayjs";
 import type { UserPrefs } from "./prefs.svelte";
 import type { UIState } from "#lib/ui/app/ui-state.svelte.js";
 import { isTauri } from "@tauri-apps/api/core";
-import { pickRandom, sleep, type Await, LogLevel } from "./utils";
+import { pickRandom, sleep, safeInvoke, type Await, LogLevel } from "./utils";
+import { formatZodError, safeParse } from "./utils/zod";
 import type { EventDef, Keys, PresentDefs } from "./events";
 import { EVENT_BUS } from "./events/bus";
 import { toast } from "svelte-sonner";
@@ -17,11 +20,47 @@ const simUpdate: Update = {
     body: 'Did stuff.'
 } as any as Update;
 
+const RELEASES_URL = "https://api.github.com/repos/Govorunb/gary/releases?per_page=10";
+const zReleases = z.array(z.object({
+    tag_name: z.string(),
+    prerelease: z.boolean(),
+    assets: z.array(z.object({ name: z.string(), browser_download_url: z.string() })),
+}));
+
+/** The newest release with an updater manifest, pre-releases included. */
+export function newestRelease(releases: z.infer<typeof zReleases>) {
+    return releases
+        .flatMap(r => {
+            const version = semverClean(r.tag_name);
+            const manifest = r.assets.find(a => a.name === "latest.json");
+            return version && manifest ? [{ version, manifest: manifest.browser_download_url, prerelease: r.prerelease }] : [];
+        })
+        .sort((a, b) => semverRcompare(a.version, b.version))[0];
+}
+
+/** Updates from the stable channel never set `prerelease`, since it only sees full releases. */
+export type AvailableUpdate = Update & { prerelease?: boolean };
+
+function checkPrerelease(): ResultAsync<AvailableUpdate | null, string> {
+    return ResultAsync.fromPromise(
+        tauriFetch(RELEASES_URL).then(r => r.ok ? r.json() : Promise.reject(`GitHub responded with ${r.status}`)),
+        String,
+    )
+        .andThen(json => safeParse(zReleases, json).mapErr(e => formatZodError(e).join("\n")))
+        .andThen(releases => {
+            const release = newestRelease(releases);
+            return release ? ok(release) : err("No releases to update to");
+        })
+        .andThen(({ manifest, prerelease }) =>
+            safeInvoke<ConstructorParameters<typeof Update>[0] | null>("check_update", { endpoint: manifest })
+                .map(metadata => metadata && Object.assign(new Update(metadata), { prerelease })));
+}
+
 export class Updater {
-    public readonly update: Update | null;
+    public readonly update: AvailableUpdate | null;
     public hasPendingUpdate: boolean;
     #checkingForUpdates = $state(false);
-    #lastCheckResult: Result<Update | null, string> | null = $state(null);
+    #lastCheckResult: Result<AvailableUpdate | null, string> | null = $state(null);
 
     private get prefs() {
         return this.userPrefs.app.updates;
@@ -68,13 +107,15 @@ export class Updater {
         return dayjs().isAfter(dayjs(lastCheckedAt), unit);
     }
 
-    async checkForUpdates(isCheckManual = false): Promise<Result<Update | null, string>> {
+    async checkForUpdates(isCheckManual = false): Promise<Result<AvailableUpdate | null, string>> {
         this.#checkingForUpdates = true;
 
-        let updateRes: Result<Update | null, string>;
+        let updateRes: Result<AvailableUpdate | null, string>;
         EVENT_BUS.emit('app/update/check', { isManual: isCheckManual });
         if (isTauri()) {
-            updateRes = await ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string);
+            updateRes = await (this.prefs.channel === "prerelease"
+                ? checkPrerelease()
+                : ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string));
         } else {
             // vite dev
             await sleep(500);
