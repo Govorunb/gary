@@ -19,6 +19,8 @@ When writing prose, write with intention for the specific target audience:
 - Changelogs describe what the user can now do that they couldn't before.
 - User-facing copy describes things in the app's terms and never leaks internals.
 
+Only run `cargo` (check, build, test, clippy) when you changed Rust code or `Cargo.toml`. Frontend work, including edits to `tauri.conf.json` or capabilities, doesn't need it.
+
 Do not add "open questions" sections to plans or specs; raise a genuinely blocking question directly instead.
 
 Work with the big picture in mind. For more context on the repo:
