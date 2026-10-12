@@ -1,9 +1,9 @@
-import { check as tauriCheckUpdate, Update } from "@tauri-apps/plugin-updater";
+import { Update } from "@tauri-apps/plugin-updater";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { clean as semverClean, rcompare as semverRcompare } from "semver";
+import { clean as semverClean, gt as semverGt, rcompare as semverRcompare } from "semver";
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import dayjs, { type OpUnitType } from "dayjs";
-import type { UserPrefs } from "./prefs.svelte";
+import type { AppPrefs, UserPrefs } from "./prefs.svelte";
 import type { UIState } from "#lib/ui/app/ui-state.svelte.js";
 import { isTauri } from "@tauri-apps/api/core";
 import { pickRandom, sleep, safeInvoke, type Await, LogLevel } from "./utils";
@@ -13,47 +13,64 @@ import { EVENT_BUS } from "./events/bus";
 import { toast } from "svelte-sonner";
 import z from "zod";
 
-const simUpdate: Update = {
+const simUpdate = {
     available: true,
     currentVersion: '0.0.0',
     version: '1.0.0',
-    body: 'Did stuff.'
-} as any as Update;
+    prerelease: false,
+    releases: [{ version: '1.0.0', prerelease: false, notesHtml: '<h3>Changes</h3><ul><li>Did stuff.</li></ul>' }],
+} as any as AvailableUpdate;
 
-const RELEASES_URL = "https://api.github.com/repos/Govorunb/gary/releases?per_page=10";
+const RELEASES_URL = "https://api.github.com/repos/Govorunb/gary/releases?per_page=100";
 const zReleases = z.array(z.object({
     tag_name: z.string(),
     prerelease: z.boolean(),
+    body_html: z.string().nullish(),
     assets: z.array(z.object({ name: z.string(), browser_download_url: z.string() })),
 }));
 
-/** The newest release with an updater manifest, pre-releases included. */
-export function newestRelease(releases: z.infer<typeof zReleases>) {
-    return releases
+type UpdateChannel = AppPrefs["updates"]["channel"];
+
+export type Release = { version: string; prerelease: boolean; notesHtml: string; manifest?: string };
+
+/** The channel's releases newest first, starting from the newest one with an updater manifest (the update target). Empty if there is none. */
+export function updateCandidates(releases: z.infer<typeof zReleases>, channel: UpdateChannel): Release[] {
+    const sorted = releases
         .flatMap(r => {
             const version = semverClean(r.tag_name);
-            const manifest = r.assets.find(a => a.name === "latest.json");
-            return version && manifest ? [{ version, manifest: manifest.browser_download_url, prerelease: r.prerelease }] : [];
+            if (!version || (channel === "stable" && r.prerelease)) return [];
+            const manifest = r.assets.find(a => a.name === "latest.json")?.browser_download_url;
+            return [{ version, prerelease: r.prerelease, notesHtml: r.body_html ?? "", manifest }];
         })
-        .sort((a, b) => semverRcompare(a.version, b.version))[0];
+        .sort((a, b) => semverRcompare(a.version, b.version));
+    const target = sorted.findIndex(r => r.manifest);
+    return target < 0 ? [] : sorted.slice(target);
 }
 
-/** Updates from the stable channel never set `prerelease`, since it only sees full releases. */
-export type AvailableUpdate = Update & { prerelease?: boolean };
+export type AvailableUpdate = Update & {
+    prerelease: boolean;
+    /** Every release since the current version, newest first. */
+    releases: Release[];
+};
 
-function checkPrerelease(): ResultAsync<AvailableUpdate | null, string> {
+function checkForUpdate(channel: UpdateChannel): ResultAsync<AvailableUpdate | null, string> {
     return ResultAsync.fromPromise(
-        tauriFetch(RELEASES_URL).then(r => r.ok ? r.json() : Promise.reject(`GitHub responded with ${r.status}`)),
+        // GitHub renders and sanitizes the notes' Markdown into `body_html`
+        tauriFetch(RELEASES_URL, { headers: { Accept: "application/vnd.github.html+json" } })
+            .then(r => r.ok ? r.json() : Promise.reject(`GitHub responded with ${r.status}`)),
         String,
     )
         .andThen(json => safeParse(zReleases, json).mapErr(e => formatZodError(e).join("\n")))
         .andThen(releases => {
-            const release = newestRelease(releases);
-            return release ? ok(release) : err("No releases to update to");
+            const candidates = updateCandidates(releases, channel);
+            return candidates.length ? ok(candidates) : err("No releases to update to");
         })
-        .andThen(({ manifest, prerelease }) =>
-            safeInvoke<ConstructorParameters<typeof Update>[0] | null>("check_update", { endpoint: manifest })
-                .map(metadata => metadata && Object.assign(new Update(metadata), { prerelease })));
+        .andThen(candidates =>
+            safeInvoke<ConstructorParameters<typeof Update>[0] | null>("check_update", { endpoint: candidates[0].manifest })
+                .map(metadata => metadata && Object.assign(new Update(metadata), {
+                    prerelease: candidates[0].prerelease,
+                    releases: candidates.filter(r => semverGt(r.version, metadata.currentVersion)),
+                })));
 }
 
 export class Updater {
@@ -113,9 +130,7 @@ export class Updater {
         let updateRes: Result<AvailableUpdate | null, string>;
         EVENT_BUS.emit('app/update/check', { isManual: isCheckManual });
         if (isTauri()) {
-            updateRes = await (this.prefs.channel === "prerelease"
-                ? checkPrerelease()
-                : ResultAsync.fromPromise(tauriCheckUpdate(), (e) => e as string));
+            updateRes = await checkForUpdate(this.prefs.channel);
         } else {
             // vite dev
             await sleep(500);

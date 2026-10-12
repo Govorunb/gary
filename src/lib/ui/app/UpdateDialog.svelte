@@ -77,13 +77,15 @@
             Update from <span class="font-mono font-semibold">{update.currentVersion}</span> to
             <span class="font-mono font-semibold">{update.version}</span>?
         </p>
-        {#if update.body}
-            <div class="release-notes">
-                <p class="release-notes-title">Release Notes:</p>
-                <p class="release-notes-content">{update.body}</p>
-            </div>
-        {/if}
-        <OutLink href="https://github.com/Govorunb/gary/releases/v{update.version}">View release notes on GitHub</OutLink>
+        <!-- the opener plugin only sends `target="_blank"` links to the browser; the rest would navigate the app away -->
+        <div class="dialog-scroll fcol-4" onclickcapture={(e) => (e.target as Element).closest("a")?.setAttribute("target", "_blank")}>
+            {#each update.releases as release (release.version)}
+                <section class="release-notes">
+                    <OutLink href="https://github.com/Govorunb/gary/releases/v{release.version}">v{release.version}</OutLink>
+                    <div class="release-notes-content">{@html release.notesHtml}</div>
+                </section>
+            {/each}
+        </div>
         {#if update.prerelease}
             <p class="note text-lvl-warn">
                 Pre-release: may introduce issues or become incompatible with stable versions. Back up your settings before installing.
@@ -116,11 +118,14 @@
         @apply pl-3 border-l-2 border-edge;
     }
 
-    .release-notes-title {
-        @apply mb-1 text-sm font-medium text-ink-1;
-    }
-
+    /* GitHub-rendered Markdown */
     .release-notes-content {
-        @apply text-sm text-ink-2 whitespace-pre-wrap;
+        @apply fcol-2 mt-1 text-sm text-ink-2;
+        & :global(h2) { @apply text-base; }
+        & :global(h3) { @apply text-sm; }
+        & :global(ul) { @apply pl-5 list-disc; }
+        & :global(ol) { @apply pl-5 list-decimal; }
+        & :global(code), & :global(kbd) { @apply px-1 rounded bg-layer-2 font-mono text-xs; }
+        & :global(a) { @apply text-accent hover:underline; }
     }
 </style>
