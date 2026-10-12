@@ -9,13 +9,15 @@ edition = "2024"
 
 [lib]
 name = "gary_tauri" # not just "gary" because of https://github.com/rust-lang/cargo/issues/8519
-crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [profile.dev]
-incremental = true
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
 
 # https://v2.tauri.app/concept/size/
 [profile.release]
