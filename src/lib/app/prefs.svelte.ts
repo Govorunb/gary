@@ -7,6 +7,7 @@ import { APP_VERSION, formatZodError, jsonParse, safeParse, LogLevel } from "./u
 import { migrate, moveField, type Migration } from "./utils/migrations";
 import { err, ok, type Result } from "neverthrow";
 import type { EventDef } from "./events";
+import { sensitiveStrings } from "./events/sensitive";
 import { EVENT_BUS } from "./events/bus";
 
 export const USER_PREFS = "userPrefs";
@@ -44,6 +45,10 @@ export class UserPrefs {
     }
     get engines() {
         return this.#data.engines;
+    }
+    /** Configured secrets such as API keys, to scrub from anything that leaves the app. */
+    get secrets() {
+        return sensitiveStrings(zUserPrefs, this.#data);
     }
 
     static async loadData(): Promise<Result<UserPrefsData, string>> {

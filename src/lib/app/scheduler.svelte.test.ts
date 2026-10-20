@@ -59,12 +59,14 @@ async function withScheduler(
     games: FakeGame[],
     engine: Engine<unknown>,
     run: (scheduler: Scheduler) => Promise<void> | void,
+    prefs: { secrets: string[] } = { secrets: [] },
 ) {
     const disposeCallbacks: Array<() => void> = [];
     const session = {
         id: "test-session",
         name: "test-session",
         registry: { games },
+        userPrefs: { get secrets() { return prefs.secrets; } },
         activeEngine: engine,
         onDispose(callback: () => void) {
             disposeCallbacks.push(callback);
@@ -283,6 +285,24 @@ describe("Scheduler force priority", () => {
 });
 
 describe("Scheduler engine errors", () => {
+    test("keeps credentials out of errors, even if they change mid-request", async () => {
+        const game = createFakeGame("Test Game", "test", [{ name: "move" }]);
+        const prefs = { secrets: ["sk-old"] };
+        const engine = {
+            id: "failing-engine",
+            name: "Failing Engine",
+            tryAct: vi.fn(() => {
+                prefs.secrets = ["sk-new"];
+                return errAsync(new EngineError("Request failed", new Error("401 Invalid API key: sk-old"), false));
+            }),
+        } as unknown as Engine<unknown>;
+
+        await withScheduler([game], engine, async scheduler => {
+            await scheduler.tryAct();
+            expect(scheduler.errorReason).toBe("Request failed: 401 Invalid API key: [REDACTED]");
+        }, prefs);
+    });
+
     test("pauses after five consecutive recoverable errors", async () => {
         const game = createFakeGame("Test Game", "test", [{ name: "move" }]);
         const engine = {

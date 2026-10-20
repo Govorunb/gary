@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import z from "zod";
 import "../utils/zod";
-import { hasSensitiveSchemaField, redactSensitiveData } from "./sensitive";
+import { hasSensitiveSchemaField, redactSensitiveData, sensitiveStrings } from "./sensitive";
 
 describe("hasSensitiveSchemaField", () => {
     test("detects top-level sensitive fields", () => {
@@ -145,5 +145,19 @@ describe("redactSensitiveData", () => {
         expect(redactSensitiveData({} as { token: string }, data)).toBe(data);
         expect(redactSensitiveData(null, data)).toBe(data);
         expect(redactSensitiveData(undefined, data)).toBe(data);
+    });
+});
+
+describe("sensitiveStrings", () => {
+    test("collects secrets from records keyed by ID", () => {
+        const schema = z.object({
+            builtIn: z.object({ apiKey: z.string().sensitive() }),
+        }).catchall(z.object({ name: z.string(), apiKey: z.string().sensitive() }));
+
+        expect(sensitiveStrings(schema, {
+            builtIn: { apiKey: "sk-built-in" },
+            custom: { name: "Custom", apiKey: "sk-custom" },
+            keyless: { name: "Local", apiKey: "" },
+        })).toEqual(["sk-built-in", "sk-custom"]);
     });
 });

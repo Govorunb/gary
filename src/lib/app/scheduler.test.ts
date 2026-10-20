@@ -22,6 +22,7 @@ function createScheduler(
     };
     const session = {
         registry: { games },
+        userPrefs: { secrets: [] },
         activeEngine: engine,
         onDispose(callback: () => void) {
             disposers.push(callback);

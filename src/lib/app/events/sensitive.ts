@@ -13,6 +13,20 @@ export function redactSensitiveData(schema: unknown, data: unknown): unknown {
     return redactSensitiveDataCore(schema, data, new Set());
 }
 
+/** Replaces each secret in free text, such as a provider error quoting the credentials it was sent. */
+export function scrubSecrets(text: string, secrets: readonly string[]) {
+    return secrets.reduce((scrubbed, secret) => scrubbed.replaceAll(secret, "[REDACTED]"), text);
+}
+
+/** The non-empty strings in `data`'s sensitive fields, e.g. to pass to `scrubSecrets`. */
+export function sensitiveStrings(schema: unknown, data: unknown): string[] {
+    const found: string[] = [];
+    redactSensitiveDataCore(schema, data, new Set(), (value) => {
+        if (typeof value === "string" && value) found.push(value);
+    });
+    return found;
+}
+
 function hasSensitiveSchemaFieldCore(schema: unknown, seen: Set<unknown>): boolean {
     if (!isZodLike(schema) || seen.has(schema)) return false;
     seen.add(schema);
@@ -27,34 +41,36 @@ function hasSensitiveSchemaFieldCore(schema: unknown, seen: Set<unknown>): boole
     return childSchemas(schema).some((child) => hasSensitiveSchemaFieldCore(child, seen));
 }
 
-function redactSensitiveDataCore(schema: unknown, data: unknown, seen: Set<unknown>): unknown {
+function redactSensitiveDataCore(schema: unknown, data: unknown, seen: Set<unknown>, onRedact?: (value: unknown) => void): unknown {
     if (!isZodLike(schema) || seen.has(schema)) return data;
     seen.add(schema);
 
     try {
-        if (schema.meta?.()?.sensitive === true) return redactedPlaceholder(data);
+        if (schema.meta?.()?.sensitive === true) {
+            onRedact?.(data);
+            return redactedPlaceholder(data);
+        }
 
         const shape = getShape(schema);
         if (shape && isRecord(data)) {
             const redacted = { ...data };
-            for (const [key, fieldSchema] of Object.entries(shape)) {
-                if (key in redacted) {
-                    redacted[key] = redactSensitiveDataCore(fieldSchema, redacted[key], seen);
-                }
+            for (const key of Object.keys(redacted)) {
+                const fieldSchema = shape[key] ?? schema._def?.catchall;
+                redacted[key] = redactSensitiveDataCore(fieldSchema, redacted[key], seen, onRedact);
             }
             return redacted;
         }
 
         if (Array.isArray(data)) {
             const itemSchema = getArrayItemSchema(schema);
-            if (itemSchema) return data.map((item) => redactSensitiveDataCore(itemSchema, item, seen));
+            if (itemSchema) return data.map((item) => redactSensitiveDataCore(itemSchema, item, seen, onRedact));
         }
 
         const children = childSchemas(schema);
         if (children.length === 0) return data;
 
         return children.reduce(
-            (redactedData, child) => redactSensitiveDataCore(child, redactedData, seen),
+            (redactedData, child) => redactSensitiveDataCore(child, redactedData, seen, onRedact),
             data,
         );
     } finally {

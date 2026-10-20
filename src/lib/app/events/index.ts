@@ -14,7 +14,8 @@ import { EVENTS as SCHED_EVENTS, ACT_EVENTS, DISPLAY as SCHED_PRESENT } from "#l
 import { EVENTS as UPDATER_EVENTS, DISPLAY as UPDATER_DISPLAY } from "#lib/app/updater.svelte.js";
 import { EVENTS as LLM_EVENTS } from "#lib/app/engines/llm/openai.svelte.js";
 import { EVENTS as UI_EVENTS, DISPLAY as UI_DISPLAY } from "#lib/ui/events.js";
-export { hasSensitiveSchemaField, redactSensitiveData } from "./sensitive";
+import { redactSensitiveData, scrubSecrets } from "./sensitive";
+export { hasSensitiveSchemaField } from "./sensitive";
 
 export interface EventDef<Prefix extends string = ''> {
     /** Unique key signifying the event type.
@@ -105,6 +106,26 @@ export type EventInstances = {
 }[EventKey];
 
 export type EventInstance<K extends EventKey> = Extract<EventInstances, { key: K }>;
+
+/** A copy of the event that is safe to export (clipboard, MCP): sensitive fields are redacted. */
+export function redactEvent<E extends EventInstance<EventKey>>(event: E): E {
+    return { ...event, data: redactSensitiveData((EVENTS_BY_KEY[event.key] as EventDef).dataSchema, event.data) };
+}
+
+/** `JSON.stringify` replacer for exported event data: keeps error details and scrubs `secrets` from strings. */
+export function exportReplacer(secrets: readonly string[]) {
+    return (_key: string, value: unknown) => {
+        if (value instanceof Error) {
+            return {
+                name: value.name,
+                message: value.message,
+                stack: value.stack,
+            };
+        }
+        if (typeof value === "string") return scrubSecrets(value, secrets);
+        return value;
+    };
+}
 
 export const EVENTS_DISPLAY = {
     ...WS_SERVER_DISPLAY,

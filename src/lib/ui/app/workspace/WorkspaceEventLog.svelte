@@ -2,7 +2,7 @@
     import { EllipsisVertical, Filter } from "@lucide/svelte";
     import { toast } from "svelte-sonner";
     import type { Game } from "#lib/api/game.svelte.js";
-    import { EVENTS_BY_KEY, redactSensitiveData, type EventDef, type EventInstance, type EventKey } from "#lib/app/events/index.js";
+    import { exportReplacer, redactEvent, type EventInstance, type EventKey } from "#lib/app/events/index.js";
     import { LogLevel } from "#lib/app/utils/index.js";
     import { getSession, getUIState } from "#lib/app/utils/di.js";
     import { eventLevel } from "#lib/app/events/index.js";
@@ -86,13 +86,10 @@
     }
 
     async function copyVisibleEventsJson() {
-        const events = visibleEvents.map((event) => ({
-            ...event,
-            data: redactSensitiveData((EVENTS_BY_KEY[event.key] as EventDef).dataSchema, event.data),
-        }));
+        const events = visibleEvents.map(redactEvent);
 
         try {
-            await navigator.clipboard.writeText(JSON.stringify(events, eventJsonReplacer, 2));
+            await navigator.clipboard.writeText(JSON.stringify(events, exportReplacer(session.userPrefs.secrets), 2));
             toast.success("Copied JSON to clipboard");
         } catch (error) {
             toast.error("Failed to copy JSON", {
@@ -101,17 +98,6 @@
         } finally {
             closeMenu();
         }
-    }
-
-    function eventJsonReplacer(_key: string, value: unknown) {
-        if (value instanceof Error) {
-            return {
-                name: value.name,
-                message: value.message,
-                stack: value.stack,
-            };
-        }
-        return value;
     }
 </script>
 

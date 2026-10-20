@@ -6,6 +6,7 @@ import { EngineError, type Engine, type EngineAct, type EngineActError, type Eng
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { debounced, LogLevel } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";
+import { scrubSecrets } from "./events/sensitive";
 import { EVENT_BUS } from "./events/bus";
 import { toast } from "svelte-sonner";
 
@@ -237,6 +238,8 @@ export class Scheduler {
         const actionSet = this.engineActionSet(candidates);
 
         const engine = this.activeEngine;
+        // the request's credentials, in case they're replaced while it runs
+        const secrets = this.session.userPrefs.secrets;
 
         this.#busy = true;
         const controller = new AbortController();
@@ -255,7 +258,7 @@ export class Scheduler {
         }
         const result = await actRes
             .asyncAndThrough(act => this.perform(act, force, engine, actionSet.targetsByName, metrics))
-            .orTee(e => e instanceof EngineError && this.onError(e, engine));
+            .orTee(e => e instanceof EngineError && this.onError(e, engine, secrets));
         this.#busy = false;
         this.requestDrain();
         return result;
@@ -383,7 +386,7 @@ export class Scheduler {
         return out;
     }
 
-    private onError(err: EngineError, engine: Engine<unknown>) {
+    private onError(err: EngineError, engine: Engine<unknown>, requestSecrets: string[]) {
         if (this.#failedEngine !== engine) {
             this.#failedEngine = engine;
             this.#consecutiveEngineErrors = 0;
@@ -391,16 +394,20 @@ export class Scheduler {
         this.#consecutiveEngineErrors++;
         const paused = !err.recoverable
             || this.#consecutiveEngineErrors >= MAX_CONSECUTIVE_RECOVERABLE_ERRORS;
-        const errMsg = (err.cause as Error)?.message;
+        // scrub before logging: exports only know the credentials current at the time
+        const secrets = [...requestSecrets, ...this.session.userPrefs.secrets];
+        const message = scrubSecrets(err.message, secrets);
+        const causeMsg = (err.cause as Error)?.message;
+        const errMsg = causeMsg && scrubSecrets(causeMsg, secrets);
         EVENT_BUS.emit('app/scheduler/act/error', {
-            message: err.message,
+            message,
             cause: errMsg,
             recoverable: err.recoverable,
             consecutiveErrors: this.#consecutiveEngineErrors,
             paused,
         });
         this.#errored = paused;
-        if (paused) this.#errorReason = errMsg ? `${err.message}: ${errMsg}` : err.message;
+        if (paused) this.#errorReason = errMsg ? `${message}: ${errMsg}` : message;
     }
 
     private resetEngineErrors() {
