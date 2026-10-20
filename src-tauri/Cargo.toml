@@ -36,7 +36,6 @@ tauri = { version = "2", features = [
 tauri-plugin-log = { version = "2", features = ["colored"] }
 uuid = { version = "1.18", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["full"] }
-tokio-tungstenite = { version = "0.30" }
 thiserror = "2"
 anyhow = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }

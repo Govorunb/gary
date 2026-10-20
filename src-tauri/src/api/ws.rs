@@ -5,7 +5,6 @@ use serde_json::json;
 use tauri::{ipc::Channel, AppHandle};
 use tauri_plugin_log::log::{debug, trace, warn};
 use tokio::{io::Sink, sync::oneshot::{self, Receiver, Sender}};
-use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use uuid::{Timestamp, Uuid};
 use axum::extract::ws::{CloseFrame, Message, WebSocket};
 use anyhow::Result;

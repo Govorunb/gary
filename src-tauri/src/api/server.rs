@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tauri::{ipc::Channel, AppHandle, Emitter, Manager};
 use tokio::{net::TcpListener, sync::oneshot::{self, Sender}, task::{AbortHandle, JoinHandle}};
-use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use uuid::Uuid;
 
 use crate::{api::{ws::{ClientWSConnection, ServerWSEvent}, ApiVersion}, app::state::AppStateMutex};
@@ -79,7 +78,7 @@ impl WSServer {
         if let Some(existing) = self.connections.insert(id, tx) {
             warn!("UUID collision @ {id}, dropping existing");
             let _ = Self::close_tx(existing,
-                Some(CloseCode::Protocol.into()),
+                Some(axum::extract::ws::close_code::PROTOCOL),
                 Some("New incoming connection rolled the same UUID as yours... Sorry".into())
             ).await;
         }
