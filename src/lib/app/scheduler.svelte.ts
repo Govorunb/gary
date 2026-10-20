@@ -2,6 +2,7 @@ import type { Session } from "./session.svelte";
 import type { ActiveForce, Game } from "#lib/api/game.svelte.js";
 import type { Registry } from "#lib/api/registry.svelte.js";
 import { FORCE_PRIORITY, zActData, type Action, type ForcePriority } from "#lib/api/v1/spec.js";
+import { engineActionSet, type EngineActionTarget } from "./engines/actions";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { debounced, LogLevel } from "./utils";
@@ -13,16 +14,6 @@ import { toast } from "svelte-sonner";
 export type ActionCandidate = {
     game: Game;
     action: Action;
-};
-
-type EngineActionTarget = ActionCandidate & {
-    displayName: string;
-    engineAction: Action;
-};
-
-type EngineActionSet = {
-    actions: Action[];
-    targetsByName: Map<string, EngineActionTarget>;
 };
 
 const MAX_CONSECUTIVE_RECOVERABLE_ERRORS = 5;
@@ -231,7 +222,7 @@ export class Scheduler {
             }
             return err(LogicError.noActions());
         }
-        const actionSet = this.engineActionSet(candidates);
+        const actionSet = engineActionSet(this.registry.games, candidates);
 
         const engine = this.activeEngine;
         // the request's credentials, in case they're replaced while it runs
@@ -266,58 +257,7 @@ export class Scheduler {
         );
     }
 
-    private engineActionSet(candidates: ActionCandidate[]): EngineActionSet {
-        const actionNameCounts = new Map<string, number>();
-        for (const { action } of candidates) {
-            actionNameCounts.set(action.name, (actionNameCounts.get(action.name) ?? 0) + 1);
-        }
-
-        const displayNames = new Array<string>(candidates.length);
-        const usedNames = new Set<string>();
-
-        for (let i = 0; i < candidates.length; i++) {
-            const { action } = candidates[i];
-            if (actionNameCounts.get(action.name) === 1) {
-                displayNames[i] = action.name;
-                usedNames.add(action.name);
-            }
-        }
-
-        for (let i = 0; i < candidates.length; i++) {
-            const { game, action } = candidates[i];
-            if (displayNames[i]) {
-                continue;
-            }
-
-            const baseName = `${action.name} (${game.name} ${game.shortId})`;
-            let displayName = baseName;
-            let duplicateSuffix = 2;
-            while (usedNames.has(displayName)) {
-                displayName = `${baseName} #${duplicateSuffix}`;
-                duplicateSuffix++;
-            }
-            displayNames[i] = displayName;
-            usedNames.add(displayName);
-        }
-
-        const actions: Action[] = [];
-        const targetsByName = new Map<string, EngineActionTarget>();
-        for (let i = 0; i < candidates.length; i++) {
-            const candidate = candidates[i];
-            const displayName = displayNames[i];
-            const engineAction = { ...candidate.action, name: displayName };
-            actions.push(engineAction);
-            targetsByName.set(displayName, {
-                ...candidate,
-                displayName,
-                engineAction,
-            });
-        }
-
-        return { actions, targetsByName };
-    }
-
-    private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget>, metrics: ActMetrics): ResultAsync<EngineActResult, ActError> {
+    private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget<Game>>, metrics: ActMetrics): ResultAsync<EngineActResult, ActError> {
         if (typeof choice === 'object' && 'name' in choice) {
             return this.performAct(choice, force, engine, targetsByName, metrics);
         }
@@ -345,7 +285,7 @@ export class Scheduler {
         return errAsync(new LogicError(`Reached unreachable fallthrough in 'perform': Did you add a new engine return option?`));
     }
 
-    private performAct(act: EngineAct, forced: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget>, metrics: ActMetrics): ResultAsync<EngineAct, ActError> {
+    private performAct(act: EngineAct, forced: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget<Game>>, metrics: ActMetrics): ResultAsync<EngineAct, ActError> {
         const target = targetsByName.get(act.name);
         if (!target) {
             EVENT_BUS.emit('app/scheduler/act/fail/action_not_found', { force: forced, act });

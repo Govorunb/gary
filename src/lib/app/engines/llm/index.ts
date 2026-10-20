@@ -1,3 +1,4 @@
+import { engineActionSet } from "../actions";
 import type { Action, ForceAction } from "#lib/api/v1/spec.js";
 import type { ActorContextEvent } from "#lib/app/context.svelte.js";
 import { EVENT_BUS } from "#lib/app/events/bus.js";
@@ -173,20 +174,30 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 : err(new ConfigError("No actions are available, and this engine is configured to neither skip nor speak"));
         }
 
-        const callableActions = this.options.promptingStrategy === "tools"
-            ? this.callableActions(resolvedActions)
+        const catalog = new Map(engineActionSet(session.registry.games).actions.map(action => [action.name, action]));
+        // Explicit action sets may come from callers outside the registry.
+        for (const action of resolvedActions) catalog.set(action.name, action);
+        const promptActions = Array.from(catalog.values());
+        const promptTools = this.options.promptingStrategy === "tools"
+            ? this.callableActions(promptActions)
             : [];
+        const callableActions = promptTools.filter(({ action }) =>
+            resolvedActions.some(current => current.name === action.name)
+        );
         const budgetResult = await this.resolveContextBudget();
         if (budgetResult.isErr()) return err(budgetResult.error);
 
+        let feedback: string | undefined;
         for (let attempts = 0; ; attempts++) {
             const prepared = this.prepareRequest(
                 session,
-                callableActions,
-                resolvedActions,
+                promptTools,
+                promptActions,
+                this.closerMessage(resolvedActions, callableActions, isForce),
                 isForce,
                 forceContext,
                 budgetResult.value,
+                feedback,
             );
             if (prepared.isErr()) return err(prepared.error);
 
@@ -198,7 +209,11 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
 
             const generation = this.recordContextUsage(genRes.value, request, diagnostics, calibrationKey);
             if (this.options.promptingStrategy === "json") {
-                return this.parseStructuredOutput(generation, resolvedActions, isForce);
+                const result = this.parseStructuredOutput(generation, resolvedActions, isForce);
+                if (result.isOk() || !(result.error instanceof ToolCallError)
+                    || attempts >= MAX_INVALID_TOOL_CALL_RETRIES) return result;
+                feedback = result.error.feedback;
+                continue;
             }
 
             const [toolCall, additionalToolCall] = generation.toolCalls;
@@ -312,24 +327,24 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         if (!envelope.success) {
             return err(new EngineError(`Failed to parse structured output: ${envelope.error}`, envelope.error));
         }
-        if (zWait.safeParse(envelope.data.command).success) {
-            return isForce
-                ? err(new EngineError("Model waited during a forced action"))
-                : ok("skip");
-        }
+        const wait = zWait.safeParse(envelope.data.command).success;
         const say = zSay.safeParse(envelope.data.command);
-        if (say.success) {
-            return isForce
-                ? err(new EngineError("Model spoke during a forced action"))
-                : ok(say.data);
+        if (isForce && (wait || say.success)) {
+            return err(new ToolCallError(`Model ${wait ? "waited" : "spoke"} during a forced action`,
+                "This turn is forced. Execute one of the currently available actions."));
         }
+        if (wait) return ok("skip");
+        if (say.success) return ok(say.data);
         const actionCommand = zActionCommand.safeParse(envelope.data.command);
         if (!actionCommand.success) {
             return err(new EngineError(`Failed to parse structured command: ${actionCommand.error}`, actionCommand.error));
         }
         const action = actions.find(candidate => candidate.name === actionCommand.data.action);
         if (!action) {
-            return err(new EngineError(`Model selected unavailable action '${actionCommand.data.action}'`));
+            return err(new ToolCallError(
+                `Model selected unavailable action '${actionCommand.data.action}'`,
+                `Action '${actionCommand.data.action}' is not available on this turn. Choose from the currently available actions.`,
+            ));
         }
         if (action.schema && actionCommand.data.data === undefined) {
             return err(new EngineError(`Model omitted data for action '${action.name}'`));
@@ -375,10 +390,12 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     private prepareRequest(
         session: Session,
         callableActions: CallableAction[],
-        actions: Action[],
+        promptActions: Action[],
+        closer: OpenAIMessage,
         isForce: boolean,
         forceContext: ForceContext | undefined,
         budget: ContextBudget,
+        feedback?: string,
     ): Result<{
         request: LLMRequest;
         diagnostics: ContextDiagnostics;
@@ -396,7 +413,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const render = (start: number): LLMRequest => {
             const messages: OpenAIMessage[] = [{
                 role: this.shouldFirstMessageBeSystemRoleOrDeveloperRoleOrMaybeOpenAIWillMakeUpAnotherNewRoleTomorrowWhoKnowsILoveSoftware(),
-                content: this.systemPrompt(session, callableActions),
+                content: this.systemPrompt(session, callableActions, promptActions),
             }];
             for (let i = start; i < units.length; i++) {
                 messages.push(...units[i].messages);
@@ -404,18 +421,19 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (forceContext?.ephemeral_context) {
                 messages.push(this.forceMessage(forceContext));
             }
-            messages.push(this.closerMessage(actions, callableActions));
+            messages.push(closer);
+            if (feedback) messages.push({ role: "user", content: feedback });
 
             if (this.options.promptingStrategy === "json") {
                 return {
                     messages: this.mergeUserTurns(messages),
-                    responseSchema: this.structuredOutputSchemaForActions(actions, isForce),
+                    responseSchema: this.structuredOutputSchemaForActions(promptActions),
                     maxTokens: reserve,
                 };
             }
 
             const tools = callableActions.map(({ tool }) => tool);
-            if (!isForce && this.options.allowDoNothing) tools.push(WAIT_TOOL);
+            if (this.options.allowDoNothing) tools.push(WAIT_TOOL);
             return {
                 messages: this.mergeUserTurns(messages),
                 ...(tools.length ? { tools } : {}),
@@ -515,7 +533,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         };
     }
 
-    private structuredOutputSchemaForActions(actions: Action[], isForce: boolean): JSONSchema {
+    private structuredOutputSchemaForActions(actions: Action[]): JSONSchema {
         const actionCommands = actions.map(action => {
             const properties: Record<string, JSONSchemaDefinition> = {
                 action: { enum: [action.name] },
@@ -537,10 +555,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         const commands: JSONSchema[] = actionCommands.length
             ? [{ description: "Perform an action.", anyOf: actionCommands }]
             : [];
-        if (!isForce && this.options.allowDoNothing) {
+        if (this.options.allowDoNothing) {
             commands.push({ type: "string", enum: ["wait"], description: "End this turn without acting or speaking." });
         }
-        if (!isForce && this.options.allowYapping) {
+        if (this.options.allowYapping) {
             commands.push({
                 type: "object",
                 description: "Speak to the human user running the software.",
@@ -658,18 +676,24 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         };
     }
 
-    protected systemPrompt(session: Session, callableActions: CallableAction[] = []): string {
+    protected systemPrompt(session: Session, callableActions: CallableAction[], actions: Action[]): string {
         const prompts = [
             DEFAULT_SYSTEM_PROMPT,
             this.options.promptingStrategy === "json" ? STRUCTURED_OUTPUT_SYSTEM_PROMPT : TOOL_SYSTEM_PROMPT,
         ];
-        if (callableActions.length) {
+        const tools = this.options.promptingStrategy === "tools";
+        const definitions = tools
+            ? callableActions.map(({ tool }) => tool.function)
+            : actions.map(({ name, description }) => ({ name, description }));
+        if (definitions.length) {
             prompts.push([
-                "## Available actions",
+                "## Known actions",
                 "",
-                "Call one of these client action tools with JSON arguments matching its `parameters` schema:",
+                tools
+                    ? "These tools include inactive actions. Only call tools listed as currently available at the end of context. Use JSON arguments matching the `parameters` schema:"
+                    : "These definitions include inactive actions. Only choose actions listed as currently available at the end of context.",
                 "",
-                ...callableActions.map(({ tool }) => `- ${JSON.stringify(tool.function)}`),
+                ...definitions.map(definition => `- ${JSON.stringify(definition)}`),
             ].join("\n"));
         }
         if (session.userPrefs.app.systemPrompt?.trim()) {
@@ -774,7 +798,7 @@ The custom user instructions are as follows:
     }
 
     /** An ephemeral reminder at the end of context. */
-    protected closerMessage(actions: Action[], callableActions: CallableAction[]): OpenAIMessage {
+    protected closerMessage(actions: Action[], callableActions: CallableAction[], isForce: boolean): OpenAIMessage {
         const hasActions = !!actions.length;
         const contents = [hasActions ? "It is your turn to act." : "It is your turn to respond."];
         if (this.options.promptingStrategy === "tools") {
@@ -787,23 +811,21 @@ The custom user instructions are as follows:
                 contents.push("No client action tools are currently available.");
             }
         }
-        if (this.options.allowDoNothing) {
+        if (!isForce && this.options.allowDoNothing) {
             contents.push(this.options.promptingStrategy === "tools"
                 ? `You may use the \`${WAIT_TOOL_NAME}\` tool to end the turn without acting or speaking.`
                 : `You may use the \`wait\` command to end the turn without acting or speaking.`);
             contents.push("In general, prefer acting; only wait intentionally, e.g. when no actions are appropriate to execute at the moment.");
         }
-        if (this.options.allowYapping) {
+        if (!isForce && this.options.allowYapping) {
             contents.push(this.options.promptingStrategy === "tools"
                 ? "You may respond with ordinary text to speak to the human user instead of acting."
                 : "You may use the `say` command to speak to the human user instead of acting.");
         }
-        if (this.options.promptingStrategy === "json" && hasActions) {
-            contents.push("Available actions:");
-            for (const action of actions) {
-                contents.push(`- ${action.name}${action.description ? `: ${action.description}` : ""}`);
-            }
+        if (this.options.promptingStrategy === "json") {
+            contents.push(`Currently available actions (complete list): ${JSON.stringify(actions.map(action => action.name))}.`);
         }
+        if (isForce) contents.push("This turn is forced. Execute one of the currently available actions; do not wait or speak.");
         return { role: "user", content: contents.join("\n") };
     }
 

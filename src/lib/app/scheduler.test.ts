@@ -5,13 +5,18 @@ import { EngineError, type EngineActResult } from "./engines/index.svelte";
 import type { Session } from "./session.svelte";
 import type { Action } from "#lib/api/v1/spec.js";
 
+type FakeGame = {
+    nextForcePriority: null;
+    actions: Map<string, Action>;
+    name: string;
+    shortId: string;
+    getActiveActions(): Action[];
+    sendAction(...args: unknown[]): Promise<void>;
+};
+
 function createScheduler(
     choice: EngineActResult = { say: "No games, still here.", notify: false },
-    games: Array<{
-        nextForcePriority: null;
-        getActiveActions(): Action[];
-        sendAction(...args: unknown[]): Promise<void>;
-    }> = [],
+    games: FakeGame[] = [],
 ) {
     const disposers: Array<() => void> = [];
     const engine = {
@@ -50,11 +55,7 @@ function createScheduler(
 describe("Scheduler no-action acts", () => {
     test("gives pending acts time for actions to register", async () => {
         vi.useFakeTimers();
-        const games: Array<{
-            nextForcePriority: null;
-            getActiveActions(): Action[];
-            sendAction(...args: unknown[]): Promise<void>;
-        }> = [];
+        const games: FakeGame[] = [];
         const { scheduler, engine, dispose } = createScheduler({ name: "serve" }, games);
 
         scheduler.requestAct(true);
@@ -63,6 +64,9 @@ describe("Scheduler no-action acts", () => {
 
         games.push({
             nextForcePriority: null,
+            name: "Cafe",
+            shortId: "cafe",
+            actions: new Map([["serve", { name: "serve" }]]),
             getActiveActions: () => [{ name: "serve" }],
             sendAction: vi.fn().mockResolvedValue(undefined),
         });

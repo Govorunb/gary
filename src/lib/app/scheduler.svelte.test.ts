@@ -14,6 +14,7 @@ type FakeGame = {
     shortId: string;
     nextForcePriority: ForcePriority | null;
     activeActions: FakeGameAction[];
+    actions: Map<string, FakeGameAction>;
     sentActions: ActData[];
     speechFinishedCount: number;
     getActiveActions(): FakeGameAction[];
@@ -31,9 +32,10 @@ function createFakeGame(name: string, shortId: string, activeActions: Action[]):
         shortId,
         nextForcePriority: null,
         activeActions: storedActions,
+        actions: new Map(storedActions.map(action => [action.name, action])),
         sentActions,
         speechFinishedCount: 0,
-        getActiveActions: () => storedActions,
+        getActiveActions: () => storedActions.filter(action => action.active),
         getAction: (actionName: string) => storedActions.find(action => action.name === actionName),
         sendAction(actData: ActData) {
             sentActions.push(actData);
@@ -166,13 +168,32 @@ describe("Scheduler action names", () => {
         });
     });
 
+    test("keeps duplicate names stable when the other action unregisters", async () => {
+        const firstGame = createFakeGame("Alpha", "alpha1", [{ name: "move" }]);
+        const secondGame = createFakeGame("Beta", "beta22", [{ name: "move" }]);
+        const seenNames: string[][] = [];
+        const engine = createEngine(actions => {
+            seenNames.push(actions.map(action => action.name));
+            return { name: actions.at(-1)!.name };
+        });
+
+        await withScheduler([firstGame, secondGame], engine, async scheduler => {
+            expect((await scheduler.tryAct()).isOk()).toBe(true);
+            firstGame.activeActions[0].active = false;
+            expect((await scheduler.tryAct()).isOk()).toBe(true);
+        });
+
+        expect(seenNames).toEqual([["move (Alpha alpha1)", "move (Beta beta22)"], ["move (Beta beta22)"]]);
+        expect(secondGame.sentActions.map(action => action.name)).toEqual(["move", "move"]);
+    });
+
     test("keeps a forced game action scoped to its game even when another game has the same action name", async () => {
         const firstMove = { name: "move", description: "Alpha move" };
         const firstGame = createFakeGame("Alpha", "alpha1", [firstMove]);
         const secondGame = createFakeGame("Beta", "beta22", [{ name: "move", description: "Beta move" }]);
         const engine = createEngine(actions => {
-            expect(actions.map(action => action.name)).toStrictEqual(["move"]);
-            return { name: "move", data: "{\"square\":\"a1\"}" };
+            expect(actions.map(action => action.name)).toStrictEqual(["move (Alpha alpha1)"]);
+            return { name: actions[0].name, data: "{\"square\":\"a1\"}" };
         });
 
         await withScheduler([firstGame, secondGame], engine, async scheduler => {

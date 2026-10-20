@@ -125,9 +125,18 @@ export class OpenAIClient {
             return err(new ConfigError(`${this.name} is missing a model ID`));
         }
 
+        // Only OpenRouter's explicit Anthropic models accept these cache breakpoints.
+        // https://openrouter.ai/docs/guides/best-practices/prompt-caching
+        const cacheAnthropic = new URL(this.options.serverUrl).hostname === "openrouter.ai"
+            && /^~?anthropic\//.test(model);
+        const [system, ...history] = request.messages;
+        const messages = cacheAnthropic && (system.role === "system" || system.role === "developer")
+            && typeof system.content === "string"
+            ? [{ ...system, content: [{ type: "text" as const, text: system.content, cache_control: { type: "ephemeral" } }] }, ...history]
+            : request.messages;
         const baseParams: ChatCompletionCreateParamsNonStreaming = {
             model,
-            messages: request.messages,
+            messages,
             stream: false,
             max_tokens: request.maxTokens,
             ...(request.responseSchema ? {

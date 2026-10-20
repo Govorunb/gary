@@ -256,6 +256,45 @@ describe("OpenAIClient", () => {
         }), expect.any(Object));
     });
 
+    test.each([
+        ["https://openrouter.ai/api/v1", "anthropic/claude-sonnet-4", true],
+        ["https://openrouter.ai/api/v1", "~anthropic/claude-sonnet-latest", true],
+        ["https://openrouter.ai/api/v1", "openai/gpt-5", false],
+        ["https://api.openai.com/v1", "gpt-5", false],
+        ["http://localhost:1234/v1", "anthropic/claude-sonnet-4", false],
+        ["https://openrouter.ai/api/v1", "@preset/chess", false],
+    ])("marks only the stable system block for %s %s", async (serverUrl, modelId, cached) => {
+        const prefs: OpenAIPrefs = {
+            name: "Test",
+            allowDoNothing: false,
+            allowYapping: false,
+            promptingStrategy: "tools",
+            reasoningEffort: "none",
+            apiKey: "test-key",
+            serverUrl,
+            modelId,
+        };
+        const client = new OpenAIClient(prefsSource(prefs));
+        const messages = [
+            { role: "system", content: "Stable instructions" },
+            { role: "user", content: "Current context and active actions" },
+        ] satisfies OpenAIContext;
+        openAIMock.create.mockResolvedValue({
+            choices: [{ finish_reason: "stop", message: { content: "hello" } }],
+        });
+
+        const result = await client.generate({ messages });
+
+        expect(result.isOk()).toBe(true);
+        const params = openAIMock.create.mock.calls[0][0];
+        expect(params).not.toHaveProperty("cache_control");
+        expect(params.messages).toEqual(cached ? [
+            { role: "system", content: [{ type: "text", text: "Stable instructions", cache_control: { type: "ephemeral" } }] },
+            messages[1],
+        ] : messages);
+        expect(messages[0].content).toBe("Stable instructions");
+    });
+
     test("uses tauri http fetch with localhost origin for local llm endpoints", async () => {
         const prefs = $state<OpenAIPrefs>({
             name: "Ollama",

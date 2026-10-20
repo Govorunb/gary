@@ -21,6 +21,7 @@ const harnesses: SelfTestHarness[] = [];
 
 function createHarness() {
     const harness = new SelfTestHarness();
+    Object.assign(harness.session, { registry: { games: [harness.server] } });
     harnesses.push(harness);
     return harness;
 }
@@ -195,7 +196,7 @@ describe("LLMEngine tool calling", () => {
         await engine.tryAct(createSession(), actions);
 
         const systemPrompt = engine.requests[0].messages[0].content;
-        expect(systemPrompt).toContain("## Available actions");
+        expect(systemPrompt).toContain("## Known actions");
         for (const tool of engine.requests[0].tools!) {
             expect(systemPrompt).toContain(`- ${JSON.stringify(tool.function)}`);
         }
@@ -544,6 +545,42 @@ describe("LLMEngine structured output", () => {
         expect(result._unsafeUnwrapErr()).toMatchObject({ message: "Model returned no structured output" });
     });
 
+    test("retries a stale JSON selection once with ephemeral feedback", async () => {
+        const session = createSession();
+        const engine = new TestLLMEngine(llmOptions({ promptingStrategy: "json" }));
+        engine.generations = [
+            { text: '{"command":{"action":"old"}}', toolCalls: [] },
+            { text: '{"command":{"action":"move"}}', toolCalls: [] },
+        ];
+
+        const result = await engine.tryAct(session, [{ name: "move" }]);
+
+        expect(result._unsafeUnwrap()).toStrictEqual({ name: "move", data: null });
+        expect(engine.requests).toHaveLength(2);
+        expect(engine.requests[1].messages.at(-1)!.content).toContain("Action 'old' is not available on this turn");
+        expect(engine.requests[1].messages[0]).toEqual(engine.requests[0].messages[0]);
+
+        engine.generation = { text: '{"command":{"action":"move"}}', toolCalls: [] };
+        await engine.tryAct(session, [{ name: "move" }]);
+        expect(engine.requests[2].messages.at(-1)!.content).not.toContain("Action 'old'");
+    });
+
+    test.each(["wait", { say: "hello", notify: false }])("corrects forced JSON %j before choosing an action", async command => {
+        const engine = new TestLLMEngine(llmOptions({
+            promptingStrategy: "json", allowDoNothing: true, allowYapping: true,
+        }));
+        engine.generations = [
+            { text: JSON.stringify({ command }), toolCalls: [] },
+            { text: '{"command":{"action":"move"}}', toolCalls: [] },
+        ];
+
+        const result = await engine.forceAct(createSession(), [{ name: "move" }]);
+
+        expect(result._unsafeUnwrap()).toMatchObject({ name: "move" });
+        expect(engine.requests).toHaveLength(2);
+        expect(engine.requests[1].messages.at(-1)!.content).toContain("This turn is forced. Execute one of the currently available actions.");
+    });
+
     test("rejects unavailable actions even when the provider ignores the schema", async () => {
         const engine = new TestLLMEngine(llmOptions({ promptingStrategy: "json" }));
         engine.generation = {
@@ -557,6 +594,123 @@ describe("LLMEngine structured output", () => {
             message: "Model selected unavailable action 'invented_action'",
             recoverable: true,
         });
+        expect(engine.requests).toHaveLength(2);
+    });
+});
+
+describe.each(["tools", "json"] as const)("LLMEngine %s prompt caching", promptingStrategy => {
+    function setup() {
+        const harness = createHarness();
+        const session = createSession();
+        session.registry.games.push(harness.server);
+        const engine = new TestLLMEngine(llmOptions({ promptingStrategy, allowYapping: true, allowDoNothing: true }));
+        engine.generation = promptingStrategy === "tools"
+            ? { text: "okay", toolCalls: [] }
+            : { text: '{"command":"wait"}', toolCalls: [] };
+        return { harness, session, engine };
+    }
+
+    function prefix(request: LLMRequest) {
+        return JSON.stringify({
+            tools: request.tools,
+            responseSchema: request.responseSchema,
+            messages: request.messages.slice(0, 1),
+        });
+    }
+
+    test("keeps the prefix through unregister and reordered re-registration", async () => {
+        const { harness, session, engine } = setup();
+        const actions: Action[] = [
+            { name: "move!", description: "Move a piece" },
+            { name: "move?", description: "Move another piece", schema: { type: "integer" } },
+        ];
+        await harness.server.registerActions(actions);
+        session.context.actorView.push({ id: "context", timestamp: 1, key: "ui/context/input", data: { text: "Choose a move", silent: false } });
+        await engine.tryAct(session);
+        const initial = prefix(engine.requests.at(-1)!);
+        const historyLength = session.context.actorView.length;
+
+        await harness.server.unregisterActions(["move!"]);
+        await engine.tryAct(session);
+        expect(prefix(engine.requests.at(-1)!)).toBe(initial);
+        const liveEdge = engine.requests.at(-1)!.messages.at(-1)!.content;
+        expect(liveEdge).toContain(promptingStrategy === "tools" ? "`move__2`" : '"move?"');
+        expect(liveEdge).not.toContain(promptingStrategy === "tools" ? "`move_`" : '"move!"');
+
+        await harness.server.unregisterActions(["move?"]);
+        await harness.server.registerActions(actions.toReversed());
+        await engine.tryAct(session);
+        expect(prefix(engine.requests.at(-1)!)).toBe(initial);
+        expect(session.context.actorView).toHaveLength(historyLength);
+    });
+
+    test("extends history at the end without changing definitions or old context", async () => {
+        const { harness, session, engine } = setup();
+        await harness.server.registerActions([{ name: "move" }]);
+        session.context.actorView.push({ id: "old", timestamp: 1, key: "ui/context/input", data: { text: "Old position", silent: false } });
+        await engine.tryAct(session);
+        const first = engine.requests.at(-1)!;
+        session.context.actorView.push({ id: "new", timestamp: 2, key: "ui/context/input", data: { text: "New position", silent: false } });
+        await engine.tryAct(session);
+        const next = engine.requests.at(-1)!;
+
+        expect(next.tools).toEqual(first.tools);
+        expect(next.responseSchema).toEqual(first.responseSchema);
+        expect(next.messages[0]).toEqual(first.messages[0]);
+        const oldHistory = String(first.messages[1].content).split("\nIt is your turn")[0];
+        expect(String(next.messages[1].content).startsWith(oldHistory)).toBe(true);
+        expect(String(next.messages[1].content)).toContain("New position");
+    });
+
+    test("keeps definitions on forced subsets but rejects wait", async () => {
+        const { harness, session, engine } = setup();
+        await harness.server.registerActions([{ name: "move" }, { name: "jump" }]);
+        await engine.tryAct(session);
+        const first = engine.requests.at(-1)!;
+        engine.generation = promptingStrategy === "tools"
+            ? { text: "", toolCalls: [{ id: "wait", name: "__wait__", arguments: "{}" }] }
+            : { text: '{"command":"wait"}', toolCalls: [] };
+        const result = await engine.forceAct(session, [harness.server.getAction("jump")!]);
+        const next = engine.requests.at(-1)!;
+
+        expect(result.isErr()).toBe(true);
+        expect(engine.requests.slice(1)).toHaveLength(2);
+        expect(prefix(next)).toBe(prefix(first));
+        expect(next.messages.at(-1)!.content).toContain("This turn is forced");
+    });
+
+    test("rebuilds definitions for new names and changed descriptions or schemas", async () => {
+        const { harness, session, engine } = setup();
+        await harness.server.registerActions([{ name: "move", description: "Old move", schema: { type: "integer" } }]);
+        await engine.tryAct(session);
+        const initial = prefix(engine.requests.at(-1)!);
+        await harness.server.registerActions([{ name: "jump" }]);
+        await engine.tryAct(session);
+        const expanded = prefix(engine.requests.at(-1)!);
+        expect(expanded).not.toBe(initial);
+
+        await harness.server.unregisterActions(["move"]);
+        await harness.server.registerActions([{ name: "move", description: "New move", schema: { type: "string" } }]);
+        await engine.tryAct(session);
+        const changed = prefix(engine.requests.at(-1)!);
+        expect(changed).not.toBe(expanded);
+        expect(changed).toContain("New move");
+        expect(changed).not.toContain("Old move");
+        expect(changed).not.toContain('integer');
+    });
+
+    test("rejects an inactive action still present in the prompt catalog", async () => {
+        const { harness, session, engine } = setup();
+        await harness.server.registerActions([{ name: "old" }, { name: "current" }]);
+        await engine.tryAct(session);
+        await harness.server.unregisterActions(["old"]);
+        engine.generation = promptingStrategy === "tools"
+            ? { text: "", toolCalls: [{ id: "stale", name: "old", arguments: "{}" }] }
+            : { text: '{"command":{"action":"old"}}', toolCalls: [] };
+        const result = await engine.tryAct(session);
+
+        expect(result.isErr()).toBe(true);
+        expect(JSON.stringify(engine.requests.at(-1)!.tools ?? engine.requests.at(-1)!.responseSchema)).toContain("old");
     });
 });
 
