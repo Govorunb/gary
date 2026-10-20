@@ -118,14 +118,14 @@ export class Game {
         return null;
     }
 
-    public completeForce() {
-        if (this.activeForce?.phase === "generating") this.closeForce("not_sent");
+    public completeForce(force = this.activeForce) {
+        if (force?.phase === "generating" && this.activeForce === force) this.closeForce("not_sent");
     }
 
     // called on engine errors
-    public failForce() {
+    public failForce(force = this.activeForce) {
         // the game's still waiting on us
-        if (this.activeForce?.phase === "generating") this.retryForce();
+        if (force?.phase === "generating" && this.activeForce === force) this.retryForce();
     }
 
     private closeForce(reason: ForceDropReason | "completed") {

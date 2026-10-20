@@ -46,6 +46,7 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       "global.css": resolve(import.meta.dirname, "src/global.css"),
+      "vitest-environment-svelte-client": resolve(import.meta.dirname, "src/lib/app/utils/client-test-environment.ts"),
     }
   },
   define: {

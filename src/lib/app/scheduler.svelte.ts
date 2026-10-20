@@ -186,9 +186,9 @@ export class Scheduler {
         const candidates = force.actions.map(action => ({ game, action }));
         new ResultAsync(this.actInner(true, candidates, force.data, force.data.priority))
             .match(
-                () => game.completeForce(),
+                () => game.completeForce(force),
                 // user stop/preempt
-                e => e === "cancelled" ? game.completeForce() : game.failForce(),
+                e => e === "cancelled" ? game.completeForce(force) : game.failForce(force),
             )
             .finally(() => {
                 if (this.autoPoker.autoAct) this.autoPoker.forceTimer();
