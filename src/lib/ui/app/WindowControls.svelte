@@ -27,7 +27,7 @@
     });
 </script>
 
-<div class="window-controls" data-style={style}>
+<div id="window-controls" class="window-controls" data-style={style}>
     <button class="caption-btn minimize" onclick={() => win.minimize()} title="Minimize" aria-label="Minimize">
         <Minus />
     </button>
@@ -46,8 +46,9 @@
 <style lang="postcss">
     @reference "global.css";
 
+    /* Above dialog backdrops, so the window can still be minimized or closed with a dialog open. */
     .window-controls {
-        @apply frow-0 items-center self-stretch;
+        @apply relative layer-window-controls frow-0 items-center self-stretch;
     }
     .caption-btn {
         @apply inline-flex items-center justify-center text-ink-1 transition-colors;

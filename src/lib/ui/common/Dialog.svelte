@@ -37,13 +37,16 @@
         'top-start': 'layer-dialog fixed inset-0 flex items-start justify-center pt-[15vh]'
     };
 
+    // Window controls (when rendered) sit above dialogs; keep them clickable without dismissing the dialog.
+    const persistentElements = [() => document.getElementById("window-controls")];
+
     let useBackdropBlur = $state(false);
     onMount(() => {
         useBackdropBlur = hasHardwareAcceleration();
     });
 </script>
 
-<Dialog {open} onOpenChange={(d) => open = d.open} {...props}>
+<Dialog {open} onOpenChange={(d) => open = d.open} {persistentElements} {...props}>
     {#if trigger}
         <Dialog.Trigger element={trigger} />
     {/if}
