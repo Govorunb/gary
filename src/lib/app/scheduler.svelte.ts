@@ -175,8 +175,7 @@ export class Scheduler {
     forceAct(actions?: ActionCandidate[] | null): ResultAsync<EngineAct, ActError> {
         return new ResultAsync(this.actInner(true, actions))
             .andThen(choice => this.isAct(choice) ? ok(choice)
-                : err(new LogicError(`If you see this, DON'T tell me. This is under enough layers of "nobody will ever see this" checks that if you do, I'm NOT going to debug it. I'm just going to retrain to a plumber.`)))
-            .finally(() => this.autoPoker.autoAct && this.autoPoker.forceTimer());
+                : err(new LogicError(`If you see this, DON'T tell me. This is under enough layers of "nobody will ever see this" checks that if you do, I'm NOT going to debug it. I'm just going to retrain to a plumber.`)));
     }
 
     private isAct(choice: EngineActResult): choice is EngineAct {
@@ -190,10 +189,7 @@ export class Scheduler {
                 () => game.completeForce(force),
                 // user stop/preempt
                 e => e === "cancelled" ? game.completeForce(force) : game.failForce(force),
-            )
-            .finally(() => {
-                if (this.autoPoker.autoAct) this.autoPoker.forceTimer();
-            });
+            );
     }
 
     private takeGameForce(): { game: Game; force: ActiveForce } | null {
@@ -447,7 +443,9 @@ export class AutoPoker {
     public tryInterval = $state(5000);
     public forceInterval = $state(30000);
     public readonly tryTimer: ReturnType<typeof debounced>;
-    public readonly forceTimer: ReturnType<typeof debounced>;
+    /** Idle time since the engine last sent an action. Auto-act forces when it reaches the force interval. */
+    #idleSinceSend = 0;
+    #forceTimeout: ReturnType<typeof setTimeout> | undefined;
 
     private get scheduler() {
         return this.session.scheduler;
@@ -460,23 +458,32 @@ export class AutoPoker {
             this.tryTimer();
         }, () => this.tryInterval);
         
-        this.forceTimer = debounced(() => {
-            if (!this.scheduler.hasPendingForce) {
+        const sent = EVENT_BUS.subscribe(['api/actor/act']);
+        sent.onnext(() => this.#idleSinceSend = 0);
+
+        // Force time accrues only while idle, so a force never comes due behind a slow generation,
+        // and only a sent action resets it, so an engine that keeps waiting still gets forced.
+        $effect(() => {
+            if (!this.autoAct) {
+                this.#idleSinceSend = 0;
+                return;
+            }
+            if (!this.scheduler.canAct || this.scheduler.hasPendingForce) return;
+            const started = Date.now();
+            this.#forceTimeout = setTimeout(() => {
+                this.#forceTimeout = undefined;
+                this.#idleSinceSend = 0;
                 EVENT_BUS.emit('app/scheduler/idle/force');
                 this.scheduler.queueForce(null);
-            } else {
-                EVENT_BUS.emit('app/scheduler/idle/no_fq');
-            }
-        }, () => this.forceInterval);
-
-        $effect(() => {
-            if (this.autoAct) {
-                void this.forceTimer();
-            } else {
-                this.forceTimer.cancel();
-            }
-            return () => this.forceTimer.cancel();
+            }, this.forceInterval - this.#idleSinceSend);
+            return () => {
+                if (this.#forceTimeout === undefined) return;
+                clearTimeout(this.#forceTimeout);
+                this.#forceTimeout = undefined;
+                this.#idleSinceSend += Date.now() - started;
+            };
         });
+        // The try timer restarts whenever the engine finishes acting.
         $effect(() => {
             if (this.autoAct && this.scheduler.canAct && !this.scheduler.actPending && !this.scheduler.hasPendingForce) {
                 void this.tryTimer();
@@ -488,7 +495,8 @@ export class AutoPoker {
         // HMR
         session.onDispose(() => {
             this.tryTimer.cancel();
-            this.forceTimer.cancel();
+            clearTimeout(this.#forceTimeout);
+            sent.destroy();
         });
     }
 }
@@ -558,11 +566,6 @@ export const EVENTS = [
     {
         key: 'app/scheduler/idle/force',
         description: "Engine idle for a while, force acting",
-        level: LogLevel.Info,
-    },
-    {
-        key: 'app/scheduler/idle/no_fq',
-        description: "Engine idle but force already queued (stalled?)",
         level: LogLevel.Info,
     },
 ] as const satisfies EventDef<'app/scheduler'>[];
