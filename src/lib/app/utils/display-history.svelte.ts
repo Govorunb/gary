@@ -23,9 +23,14 @@ export class DisplayHistory<T> {
         if (this.#timer !== undefined) return;
         this.#pending = new Promise(resolve => { this.#resolve = resolve; });
         this.#timer = setTimeout(() => {
-            this.#items = [...this.#buffer.slice(this.#oldest), ...this.#buffer.slice(0, this.#oldest)];
+            this.#items = this.current();
             this.#finish();
         }, 16);
+    }
+
+    /** The retained items, oldest first, without waiting for the next published snapshot. */
+    current(): T[] {
+        return [...this.#buffer.slice(this.#oldest), ...this.#buffer.slice(0, this.#oldest)];
     }
 
     /** Wait for pending events to reach the reactive snapshot, before awaiting Svelte's tick. */

@@ -8,7 +8,7 @@ mod api;
 mod app;
 use app::state::{App, AppStateMutex};
 use app::commands::{is_server_running, server_state, start_server, stop_server, open_logs_folder, restart};
-use api::server::{ws_accept, ws_deny, ws_send, ws_close};
+use api::server::{ws_accept, ws_deny, ws_send, ws_close, mcp_reply};
 use app::log::{gary_log, prepare_launch_log};
 use app::safe_mode::{is_safe_mode, SafeMode};
 use app::window_menu::show_window_menu;
@@ -72,7 +72,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             is_server_running, server_state, start_server, stop_server,
-            ws_accept, ws_deny, ws_send, ws_close,
+            ws_accept, ws_deny, ws_send, ws_close, mcp_reply,
             gary_log, open_logs_folder, restart, is_safe_mode, show_window_menu, check_update
         ])
         .run(tauri::generate_context!())

@@ -7,7 +7,7 @@
     import { Send, ChevronLeft, ChevronRight, Dice6 } from "@lucide/svelte";
     import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "#lib/ui/common/Hotkey.svelte";
-    import { getScheduler, getUserPrefs } from "#lib/app/utils/di.js";
+    import { getScheduler, getSession, getUserPrefs } from "#lib/app/utils/di.js";
     import Ajv, { type ValidateFunction } from "ajv";
     import { emptyValueFromJsonSchema, generateFromJsonSchema, parseError, tooltip } from "#lib/app/utils/index.js";
     import { boolAttr, PressedKeys } from "runed";
@@ -23,6 +23,7 @@
     let { open = $bindable(), action, game }: Props = $props();
     const userPrefs = getUserPrefs();
     const scheduler = getScheduler();
+    const session = getSession();
     const busy = $derived(scheduler.busy);
     const ajv = new Ajv({ validateFormats: false, allErrors: true });
     const keys = new PressedKeys();
@@ -147,17 +148,12 @@
         open = false;
     }
 
-    async function sendAction() {
+    function sendAction() {
         if (busy) return;
         if (!isValid && !shiftPressed) return;
 
-        const actionToSend = currentAction;
-        EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!jsonContent });
-        game.manualSend(actionToSend.name, jsonContent)
-            .catch(e => {
-                EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) });
-            })
-            .finally(closeDialog);
+        session.sendAction(game.id, currentAction.name, jsonContent);
+        closeDialog();
     }
 </script>
 

@@ -4,9 +4,10 @@
     import Popover from "#lib/ui/common/Popover.svelte";
     import type { ContextRow } from "./formatters/types";
     import { copyContextText, contextRowData } from "./copy";
-    import { EVENT_BUS } from "#lib/app/events/bus.js";
+    import { getSession } from "#lib/app/utils/di.js";
 
     const { rows }: { rows: ContextRow[] } = $props();
+    const session = getSession();
 
     let open = $state(false);
 
@@ -14,7 +15,7 @@
         open = false;
     }
     function clearContext() {
-        EVENT_BUS.emit("ui/context/reset");
+        session.clearContext();
         closeMenu();
     }
     function copyContext(format: "text" | "json") {

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Dices, Send } from "@lucide/svelte";
-    import { getScheduler, getUIState, getUserPrefs } from "#lib/app/utils/di.js";
+    import { getScheduler, getSession, getUIState, getUserPrefs } from "#lib/app/utils/di.js";
     import CopyButton from "../../common/CopyButton.svelte";
     import CodeMirror from "../../common/CodeMirror.svelte";
     import { generateFromJsonSchema, parseError, preventDefault, tooltip } from "#lib/app/utils/index.js";
@@ -18,6 +18,7 @@
     const uiState = getUIState();
     const userPrefs = getUserPrefs();
     const scheduler = getScheduler();
+    const session = getSession();
 
     const active = $derived(action.active);
     const busy = $derived(scheduler.busy);
@@ -33,11 +34,7 @@
 
     const evtData = $derived({gameId: game.id, actionName: action.name});
     function doSend(data?: string) {
-        EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!data });
-        game.manualSend(action.name, data)
-            .catch(e => {
-                EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) });
-            });
+        session.sendAction(game.id, action.name, data);
     }
 
     async function sendRandom() {

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getSession, getUserPrefs, getUIState } from '#lib/app/utils/di.js';
+    import { getSession, getUIState } from '#lib/app/utils/di.js';
     import Dialog from '#lib/ui/common/Dialog.svelte';
     import ShiftIndicator from '#lib/ui/common/ShiftIndicator.svelte';
     import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
@@ -14,7 +14,6 @@
     import { toast } from 'svelte-sonner';
 
     const session = getSession();
-    const userPrefs = getUserPrefs();
     const uiState = getUIState();
 
     const dialogs = uiState.dialogs;
@@ -51,7 +50,7 @@
     }
 
     function selectEngine(id: string) {
-        userPrefs.app.selectedEngine = id;
+        session.selectEngine(id);
     }
 
     function toggleOpen() {

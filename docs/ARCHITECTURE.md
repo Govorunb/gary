@@ -67,7 +67,7 @@ There are Tauri plugins to extend the frontend with some common operations:
 
 There are more out there (e.g. file system access in `@tauri-apps/plugin-fs`), these are just examples.
 
-For Gary specifically, Rust hosts the WebSocket server, relaying messages to the frontend. Rust use in general is preferably kept to a minimum (for various reasons).
+For Gary specifically, Rust hosts the WebSocket server, relaying messages to the frontend. The same server relays HTTP requests on `/mcp` (from the local machine only) to the frontend, which answers them as an [MCP](MCP.md) server. Rust use in general is preferably kept to a minimum (for various reasons).
 
 #### Frontend Structure (`src/`)
 - Application code in `src/lib/`
@@ -75,6 +75,8 @@ For Gary specifically, Rust hosts the WebSocket server, relaying messages to the
     - App logic (engines, config) in `src/lib/app/`
     - Svelte 5 UI components and utilities in `src/lib/ui/`
 - SvelteKit routed pages in `src/routes/`
+
+`Session` (`src/lib/app/session.svelte.ts`) is the command service: anything the user can do to a session is a method on it, and both the UI and the MCP server (`src/lib/app/mcp.ts`) call those methods. Transports only parse inputs and shape outputs.
 
 #### Frontend Stack
 - Svelte 5 + SvelteKit + Vite

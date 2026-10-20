@@ -11,14 +11,18 @@ import { ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 import { UIState } from "#lib/ui/app/ui-state.svelte.js";
 import type { EventDef, Keys, PresentDefs } from "./events";
-import { LogLevel } from "./utils";
+import { LogLevel, parseError } from "./utils";
 import { EventLogStore } from "./events/log.svelte";
+import { err, ok, type Result } from "neverthrow";
 
 /**
  * Represents a user session within the app.
  *
  * Maybe in the future the app can save/load sessions, or run multiple at once, or something.
  * For now, it's just a "DI root"/"manager manager" kind of thing.
+ *
+ * It's also the command service: anything the user can do to the session goes through a method here,
+ * so the UI and external transports (MCP) share one path.
  */
 export class Session {
     readonly id: string;
@@ -95,6 +99,37 @@ export class Session {
         EVENT_BUS.emit('app/session/disposed', { session: {id: this.id, name: this.name} });
         this.context.dispose();
         this.eventLog.dispose();
+    }
+
+    /** Sends an action to a game as the user (Tony mode), bypassing the engine. */
+    sendAction(gameId: string, actionName: string, data?: string): Result<void, string> {
+        const game = this.registry.getGame(gameId);
+        if (!game) return err(`'${gameId}' doesn't match exactly one game ID`);
+        if (!game.getAction(actionName, false)) return err(`${game.name} has no action '${actionName}'`);
+        if (this.scheduler.busy) return err("The engine is busy acting");
+        const evtData = { gameId: game.id, actionName };
+        EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!data });
+        game.manualSend(actionName, data)
+            .catch(e => EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) }));
+        return ok();
+    }
+
+    /** Prompts the active engine to act now. Also resumes an engine paused on an error. */
+    act(force: boolean): Result<void, string> {
+        this.scheduler.clearError();
+        if (this.scheduler.busy) return err("The engine is busy acting");
+        void (force ? this.scheduler.forceAct() : this.scheduler.tryAct());
+        return ok();
+    }
+
+    selectEngine(id: string): Result<void, string> {
+        if (!Object.hasOwn(this.engines, id)) return err(`No engine with ID '${id}'`);
+        this.userPrefs.app.selectedEngine = id;
+        return ok();
+    }
+
+    clearContext() {
+        EVENT_BUS.emit('ui/context/reset');
     }
 
     public initEngine(id?: string): string {

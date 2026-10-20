@@ -1,6 +1,6 @@
-use std::{collections::BTreeMap, sync::Arc, convert::Into, net::{IpAddr, SocketAddr}};
+use std::{collections::BTreeMap, sync::Arc, convert::Into, net::{IpAddr, SocketAddr}, time::Duration};
 
-use axum::{extract::{ws::{CloseFrame, Message, WebSocket}, Path, Query, State, WebSocketUpgrade}, response::Response, routing::get, Router};
+use axum::{extract::{ws::{CloseFrame, Message, WebSocket}, ConnectInfo, Path, Query, State, WebSocketUpgrade}, http::{header::ORIGIN, HeaderMap, StatusCode}, response::{IntoResponse, Response}, routing::{get, post}, Router};
 use futures_util::{stream::SplitSink, FutureExt, SinkExt, StreamExt};
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,7 @@ struct V2ConnectQuery {
 pub struct WSServer {
     abort_handle: AbortHandle,
     pending_connections: BTreeMap<Uuid, Sender<WSConnectResponse>>,
+    pending_mcp: BTreeMap<Uuid, Sender<Response>>,
     connections: BTreeMap<Uuid, SplitSink<WebSocket, Message>>
 }
 
@@ -27,11 +28,13 @@ impl WSServer {
         Self {
             abort_handle,
             pending_connections: BTreeMap::new(),
+            pending_mcp: BTreeMap::new(),
             connections: BTreeMap::new()
         }
     }
 
     pub async fn stop(self) {
+        drop(self.pending_mcp);
         for (_, pend) in self.pending_connections {
             let _ = pend.send(WSConnectResponse::Deny(Some("Server shutting down".into())));
         }
@@ -93,6 +96,7 @@ impl WSServer {
 pub async fn create_server(app: AppHandle, host: IpAddr, port: u16) -> Result<WSServer, String> {
     let router = Router::new()
         .route("/", get(v1_legacy))
+        .route("/mcp", post(mcp))
         // v2 is not out yet (not even finalized)
         // .route("/v2/{game}", get(v2_game_in_path))
         // .route("/v2/{game}/", get(v2_game_in_path))
@@ -104,12 +108,93 @@ pub async fn create_server(app: AppHandle, host: IpAddr, port: u16) -> Result<WS
     let listener_res = TcpListener::bind(addr).await;
     debug!("Bind result to {addr:?} - {}", if let Err(ref e) = listener_res { e.to_string() } else { "OK".to_owned() });
     let listener = listener_res.map_err(|e| e.to_string())?;
-    let server_future = axum::serve(listener, router).into_future()
+    let server_future = axum::serve(listener, router.into_make_service_with_connect_info::<SocketAddr>()).into_future()
         .then(|_| async move { // result doesn't matter - it's never Ok (even if stopped gracefully, the task gets aborted anyway)
             let _ = app.clone().emit("server-stopped", ());
         });
     let abort_handle = tokio::spawn(server_future).abort_handle();
     Ok(WSServer::new(abort_handle))
+}
+
+#[derive(Clone, Serialize)]
+struct McpRequest {
+    id: Uuid,
+    headers: Vec<(String, String)>,
+    body: String,
+}
+
+/// Same-machine clients only, and no browser page from another origin.
+fn is_local_request(peer: SocketAddr, headers: &HeaderMap) -> bool {
+    peer.ip().is_loopback()
+        && headers.get_all(ORIGIN).iter().all(|origin| origin.to_str().is_ok_and(is_loopback_origin))
+}
+
+fn is_loopback_origin(origin: &str) -> bool {
+    let Ok(origin) = tauri::Url::parse(origin) else { return false; };
+    matches!(origin.scheme(), "http" | "https")
+        && origin.username().is_empty()
+        && origin.password().is_none()
+        && origin.path() == "/"
+        && origin.query().is_none()
+        && origin.fragment().is_none()
+        && origin.host_str().is_some_and(|host| {
+            host == "localhost" || host.trim_matches(['[', ']']).parse::<IpAddr>().is_ok_and(|ip| ip.is_loopback())
+        })
+}
+
+async fn mcp(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    State(app): State<AppHandle>,
+    headers: HeaderMap,
+    body: String,
+) -> Response {
+    if !is_local_request(peer, &headers) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let id = Uuid::new_v4();
+    let (tx, rx) = oneshot::channel();
+    let state_mutex = app.state::<AppStateMutex>();
+    {
+        let mut state = state_mutex.lock().await;
+        let Some(server) = state.server.as_mut() else {
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        };
+        server.pending_mcp.insert(id, tx);
+    }
+    let headers = headers.iter().filter_map(|(name, value)| {
+        std::str::from_utf8(value.as_bytes()).ok().map(|value| (name.to_string(), value.to_owned()))
+    }).collect();
+    let response = if app.emit("mcp-request", McpRequest { id, headers, body }).is_err() {
+        StatusCode::INTERNAL_SERVER_ERROR.into_response()
+    } else {
+        // outlasts the frontend's longest wait_for_events (50s)
+        match tokio::time::timeout(Duration::from_secs(55), rx).await {
+            Ok(Ok(response)) => return response,
+            Ok(Err(_)) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
+            Err(_) => StatusCode::GATEWAY_TIMEOUT.into_response(),
+        }
+    };
+    if let Some(server) = state_mutex.lock().await.server.as_mut() {
+        server.pending_mcp.remove(&id);
+    }
+    response
+}
+
+#[tauri::command]
+pub async fn mcp_reply(app: AppHandle, id: Uuid, status: u16, headers: Vec<(String, String)>, body: String) -> Result<(), String> {
+    let tx = {
+        let state_mutex = app.state::<AppStateMutex>();
+        let mut state = state_mutex.lock().await;
+        let server = state.server.as_mut().ok_or("mcp_reply: server not running")?;
+        server.pending_mcp.remove(&id).ok_or(format!("mcp_reply: no pending request found for id {id}"))?
+    };
+    let mut response = Response::builder().status(status);
+    for (name, value) in headers {
+        response = response.header(name, value);
+    }
+    let response = response.body(body.into()).map_err(|e| e.to_string())?;
+    let _ = tx.send(response);
+    Ok(())
 }
 
 async fn v1_legacy(
@@ -242,4 +327,57 @@ pub async fn ws_send(app: AppHandle, id: Uuid, text: String) -> Result<(), Strin
     let mut state = state_mutex.lock().await;
     let server = state.server.as_mut().ok_or("ws_send: server not running".to_owned())?;
     server.send(id, text).await
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::SocketAddr;
+    use axum::http::{header::ORIGIN, HeaderMap};
+    use super::{is_local_request, is_loopback_origin};
+
+    #[test]
+    fn accepts_only_local_requests() {
+        let local: SocketAddr = "127.0.0.1:50000".parse().unwrap();
+        let remote: SocketAddr = "192.168.1.2:50000".parse().unwrap();
+        let origins = |values: &[&str]| {
+            let mut headers = HeaderMap::new();
+            for value in values {
+                headers.append(ORIGIN, value.parse().unwrap());
+            }
+            headers
+        };
+        assert!(is_local_request(local, &origins(&[])));
+        assert!(is_local_request(local, &origins(&["http://localhost:5173"])));
+        assert!(!is_local_request(remote, &origins(&[])));
+        assert!(!is_local_request(local, &origins(&["http://example.com"])));
+        assert!(!is_local_request(local, &origins(&["http://localhost", "http://example.com"])));
+    }
+
+    #[test]
+    fn accepts_loopback_origins() {
+        for origin in [
+            "http://localhost", "https://localhost:8000",
+            "http://127.0.0.1:8000", "http://127.255.255.255",
+            "http://[::1]", "https://[::1]:8000",
+        ] {
+            assert!(is_loopback_origin(origin), "{origin}");
+        }
+    }
+
+    #[test]
+    fn rejects_remote_or_malformed_origins() {
+        for origin in [
+            "null", "", "localhost", "//localhost", "http://",
+            "http://localhost.evil.test", "http://evil.localhost",
+            "http://example.com", "http://192.168.1.1", "http://0.0.0.0",
+            "http://[::]", "http://[2001:db8::1]", "http://[::ffff:127.0.0.1]",
+            "http://localhost:invalid", "http://localhost:65536",
+            "http://localhost http://example.com", "http://localhost,http://example.com",
+            "http://user@localhost", "http://localhost@evil.test",
+            "http://localhost/path", "http://localhost?query", "http://localhost#fragment",
+            "ftp://localhost", "file://localhost", "data:text/plain,localhost",
+        ] {
+            assert!(!is_loopback_origin(origin), "{origin}");
+        }
+    }
 }

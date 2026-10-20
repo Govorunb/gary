@@ -19,16 +19,6 @@
         scheduler.clearError();
     }
 
-    function poke(force: boolean) {
-        userInteracted();
-        if (scheduler.busy) return;
-        if (force) {
-            scheduler.forceAct();
-        } else {
-            scheduler.tryAct();
-        }
-    }
-
     function toggleMute() {
         if (!scheduler.errored) {
             scheduler.toggleMuted();
@@ -92,7 +82,7 @@
             if (scheduler.busy && altMode) {
                 scheduler.cancelAct();
             } else {
-                poke(altMode);
+                session.act(altMode);
             }
         }}
         class="act-btn frow-2"

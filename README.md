@@ -15,6 +15,7 @@ A wide range of tools and environments to test your game integration, in one app
     - You can add any other custom remote OpenAI-compatible service, but not all are guaranteed to work.
         - If something breaks, file an issue - but from my (limited) testing a lot of APIs are vibe coded so support will be on a best-effort basis.
 - Diagnostics - easy automatic checks for common pitfalls and off-spec behavior.
+- An [MCP endpoint](docs/MCP.md) - coding agents like Claude Code or Codex can watch and drive a session, so the agent writing your integration can test it as it goes.
 
 The overall goal is to close and/or document the gap to the production system, letting you develop and test with confidence.
 The app offers (in my opinion) a comfortable UI with hotkeys for ~~speedrunners~~ power users (press F1 for the list).
