@@ -1,11 +1,39 @@
 // @vitest-environment svelte-client
 import { expect, test, vi } from "vitest";
+import { ok } from "neverthrow";
 import { AutoPoker } from "./scheduler.svelte";
+import { UserPrefs, zUserPrefs } from "./prefs.svelte";
 import { EVENT_BUS } from "./events/bus";
 import type { Session } from "./session.svelte";
 
+test("reschedules active auto-act timers when preferences are edited or imported", async () => {
+    const { scheduler, prefs, poker, dispose } = setup();
+    try {
+        expect(prefs.setAutoActIntervals({ tryInterval: 1000, forceInterval: 2000 }).isOk()).toBe(true);
+        await Promise.resolve();
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(scheduler.requestAct).toHaveBeenCalledTimes(2);
+        expect(scheduler.queueForce).toHaveBeenCalledOnce();
+
+        const imported = prefs.data;
+        imported.app.autoAct = { tryInterval: 500, forceInterval: 1000 };
+        expect(prefs.importData(imported).isOk()).toBe(true);
+        await Promise.resolve();
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(scheduler.requestAct).toHaveBeenCalledTimes(4);
+        expect(scheduler.queueForce).toHaveBeenCalledTimes(2);
+
+        poker.autoAct = false;
+        await Promise.resolve();
+        expect(vi.getTimerCount()).toBe(0);
+    } finally {
+        dispose();
+    }
+});
+
 function setup() {
     vi.useFakeTimers();
+    vi.stubGlobal("localStorage", { setItem: vi.fn() });
     const scheduler = $state({
         canAct: true,
         actPending: false,
@@ -14,11 +42,12 @@ function setup() {
         queueForce: vi.fn(),
     });
     const disposers: Array<() => void> = [];
+    let userPrefs: UserPrefs;
     let poker: AutoPoker;
     const cleanup = $effect.root(() => {
-        poker = new AutoPoker({ scheduler, onDispose: (cb: () => void) => { disposers.push(cb); } } as unknown as Session);
-        poker.tryInterval = 60_000;
-        poker.forceInterval = 30_000;
+        userPrefs = new UserPrefs(ok(zUserPrefs.decode({})));
+        userPrefs.setAutoActIntervals({ tryInterval: 30_000, forceInterval: 30_000 });
+        poker = new AutoPoker({ userPrefs, scheduler, onDispose: (cb: () => void) => { disposers.push(cb); } } as unknown as Session);
         poker.autoAct = true;
     });
     // a generation that takes `ms`, optionally sending an action
@@ -30,11 +59,12 @@ function setup() {
         await Promise.resolve();
     }
     return {
-        scheduler, act,
+        scheduler, act, prefs: userPrefs!, poker: poker!,
         dispose() {
             poker!.autoAct = false;
             disposers.forEach(dispose => dispose());
             cleanup();
+            vi.unstubAllGlobals();
             vi.useRealTimers();
         },
     };

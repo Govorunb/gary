@@ -440,8 +440,6 @@ export type Cancelled = "cancelled";
 
 export class AutoPoker {
     public autoAct = $state(false);
-    public tryInterval = $state(5000);
-    public forceInterval = $state(30000);
     public readonly tryTimer: ReturnType<typeof debounced>;
     /** Idle time since the engine last sent an action. Auto-act forces when it reaches the force interval. */
     #idleSinceSend = 0;
@@ -456,7 +454,7 @@ export class AutoPoker {
             EVENT_BUS.emit('app/scheduler/idle/try');
             this.scheduler.requestAct();
             this.tryTimer();
-        }, () => this.tryInterval);
+        }, () => this.session.userPrefs.app.autoAct.tryInterval);
         
         const sent = EVENT_BUS.subscribe(['api/actor/act']);
         sent.onnext(() => this.#idleSinceSend = 0);
@@ -475,7 +473,7 @@ export class AutoPoker {
                 this.#idleSinceSend = 0;
                 EVENT_BUS.emit('app/scheduler/idle/force');
                 this.scheduler.queueForce(null);
-            }, this.forceInterval - this.#idleSinceSend);
+            }, this.session.userPrefs.app.autoAct.forceInterval - this.#idleSinceSend);
             return () => {
                 if (this.#forceTimeout === undefined) return;
                 clearTimeout(this.#forceTimeout);

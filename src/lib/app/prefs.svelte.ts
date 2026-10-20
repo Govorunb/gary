@@ -113,6 +113,11 @@ export class UserPrefs {
         return this.api.games[game] ??= zGamePrefs.decode({});
     }
 
+    public setAutoActIntervals(data: unknown) {
+        return safeParse(zAutoActPrefs, data)
+            .andTee(intervals => this.app.autoAct = intervals);
+    }
+
     public importData(data: unknown) {
         if (typeof data !== "object") return err(`Validation failed: Must be a JSON object`);
 
@@ -127,6 +132,16 @@ export class UserPrefs {
     }
 }
 
+// Keep delays within the timer's signed 32-bit range.
+const zAutoActInterval = z.number().int().positive().max(2_147_483_647);
+export const zAutoActPrefs = z.strictObject({
+    tryInterval: zAutoActInterval.prefault(5000),
+    forceInterval: zAutoActInterval.prefault(30000),
+}).refine(data => data.forceInterval >= data.tryInterval, {
+    message: "Force interval must be at least the try interval",
+    path: ["forceInterval"],
+});
+
 export const zAppPrefs = z.strictObject({
     theme: z.enum(["system", "light", "dark"]).fallback("system"),
     selectedEngine: z.string().fallback(RANDY_ID),
@@ -134,6 +149,7 @@ export const zAppPrefs = z.strictObject({
     manualSendSchemaCollapsed: z.boolean().fallback(true),
     hideSensitiveInfo: z.boolean().fallback(true),
     batterySaver: z.boolean().fallback(false),
+    autoAct: zAutoActPrefs.prefault({}),
     actionListDensity: z.enum(["default", "compact"]).fallback("default"),
     rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
     character: z.strictObject({

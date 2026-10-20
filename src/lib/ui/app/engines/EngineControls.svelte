@@ -1,7 +1,9 @@
 <script lang="ts">
     import EnginePicker from "./EnginePicker.svelte";
+    import AutoActIntervals from "./AutoActIntervals.svelte";
+    import Popover from "#lib/ui/common/Popover.svelte";
     import { getSession, getUIState } from "#lib/app/utils/di.js";
-    import { HandFist, Pointer, Pause, BugPlay, Play, Hourglass, Infinity as InfinityIcon, Square } from "@lucide/svelte";
+    import { HandFist, Pointer, Pause, BugPlay, Play, Hourglass, Infinity as InfinityIcon, Square, ChevronDown } from "@lucide/svelte";
     import { tooltip } from "#lib/app/utils/index.js";
     import { pressedKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import { boolAttr } from "runed";
@@ -67,6 +69,10 @@
     const showBusyIcon = $derived(scheduler.busy && !altMode);
     const showForceIcon = $derived(!scheduler.busy && altMode);
     const showActIcon = $derived(!scheduler.busy && !altMode);
+    const autoActTooltip = $derived.by(() => {
+        const { tryInterval, forceInterval } = session.userPrefs.app.autoAct;
+        return `Act automatically (every ${tryInterval / 1000}s, force after ${forceInterval / 1000}s)`;
+    });
 </script>
 
 <div class="engine-controls">
@@ -118,15 +124,26 @@
             {/if}
         {/if}
     </button>
-    <button
-        onclick={() => scheduler.autoPoker.autoAct = !scheduler.autoPoker.autoAct}
-        class="act-btn autoact-btn"
-        {@attach tooltip("Act automatically")}
-        data-checked={boolAttr(scheduler.autoPoker.autoAct)}
-    >
-        <InfinityIcon />
-        <span class="not-md:hidden">Auto-act</span>
-    </button>
+    <!-- One control: the toggle, and its timing behind the chevron. -->
+    <div class="autoact-split" data-checked={boolAttr(scheduler.autoPoker.autoAct)}>
+        <button
+            onclick={() => scheduler.autoPoker.autoAct = !scheduler.autoPoker.autoAct}
+            class="act-btn autoact-btn"
+            aria-pressed={scheduler.autoPoker.autoAct}
+            {@attach tooltip(autoActTooltip)}
+        >
+            <InfinityIcon />
+            <span class="not-md:hidden">Auto-act</span>
+        </button>
+        <Popover>
+            {#snippet trigger(props)}
+                <button {...props} class="act-btn autoact-timing" aria-label="Auto-act timing" {@attach tooltip("Auto-act timing")}>
+                    <ChevronDown />
+                </button>
+            {/snippet}
+            <AutoActIntervals />
+        </Popover>
+    </div>
 </div>
 
 <style lang="postcss">
@@ -168,7 +185,20 @@
     .mute-btn[data-errored] {
         @apply text-lvl-err ring-[1.5px] ring-inset ring-lvl-err;
     }
-    .autoact-btn[data-checked] {
-        @apply text-accent ring-[1.5px] ring-inset ring-accent;
+    .autoact-split {
+        @apply relative frow-0 items-center;
+        & > .autoact-btn { @apply rounded-r-none; }
+        & > .autoact-timing {
+            @apply rounded-l-none px-1.5 text-ink-2;
+            border-left: 1px solid color-mix(in oklab, var(--color-ink-0) 12%, transparent);
+        }
+        /* The ring goes over both segments, so it's drawn on top of their backgrounds. */
+        &[data-checked] {
+            & > .act-btn { @apply text-accent; }
+            &::after {
+                content: "";
+                @apply absolute inset-0 rounded-md pointer-events-none ring-[1.5px] ring-inset ring-accent;
+            }
+        }
     }
 </style>
