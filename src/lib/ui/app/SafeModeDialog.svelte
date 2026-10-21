@@ -57,14 +57,14 @@
 
 <Dialog open={!!userPrefs.loadError} position="center"
     closeOnInteractOutside={false} closeOnEscape={false}
-    class="attention"
+    class="attention safe-mode-dialog"
 >
     {#snippet title()}
         <h2 class="title">Safe Mode Active</h2>
         <ShiftIndicator />
     {/snippet}
     {#snippet body()}
-        <div class="fcol-scroll-2">
+        <div class="dialog-scroll fcol-2">
             <p class="error-message">
                 The app is running with default settings in read-only mode.
             </p>
@@ -89,17 +89,18 @@
                     {/if}
                     {!editorOpen ? "Show" : "Hide"} editor
                 </summary>
-                {#if editorOpen}
-                    <div class="editor-container">
-                        <CodeMirror
-                            code={editorContent}
-                            open={true}
-                            readonly={false}
-                            onChange={(code) => editorContent = code}
-                        />
-                    </div>
-                {/if}
             </details>
+            <!-- Outside the details element so it can take the dialog's free height. -->
+            {#if editorOpen}
+                <div class="editor-container">
+                    <CodeMirror
+                        code={editorContent}
+                        open={true}
+                        readonly={false}
+                        onChange={(code) => editorContent = code}
+                    />
+                </div>
+            {/if}
 
             <div class="frow-2">
                 <button class="btn"
@@ -144,6 +145,11 @@
 <style lang="postcss">
     @reference "global.css";
 
+    /* The editor is the main tool here, so take more of the window than other dialogs. */
+    :global(.safe-mode-dialog) {
+        @apply w-3xl max-w-[90vw] max-h-[90vh];
+    }
+
     .title, .error-message {
         @apply text-lvl-warn;
     }
@@ -156,17 +162,20 @@
         @apply font-medium text-ink-1;
     }
 
+    /* Grows into the free height and gives it up first when the window is short. */
     .editor-container {
-        @apply flex min-h-50 max-h-100;
+        @apply flex flex-auto min-h-32 max-h-100;
     }
 
     .editor-details {
         @apply mt-1;
+        /* Full width: the scroll area would clip the default bleed on the left. */
+        & > summary { @apply mx-0; }
         & summary > :global(svg) { @apply size-4; }
     }
 
     .validation-error {
         @apply text-xs font-mono whitespace-pre-wrap text-lvl-err;
-        @apply max-h-48 overflow-y-auto;
+        @apply shrink-0 max-h-48 overflow-y-auto;
     }
 </style>
