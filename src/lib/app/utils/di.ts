@@ -1,5 +1,6 @@
 import { createContext } from "svelte";
 import { Session } from "../session.svelte";
+import { Sessions } from "../sessions.svelte";
 import type { Registry } from "#lib/api/registry.svelte.js";
 import { UserPrefs, type UserPrefsData } from "../prefs.svelte";
 import type { Scheduler } from "../scheduler.svelte";
@@ -14,6 +15,7 @@ import "#lib/app/utils/reporting.js";
 
 const [ getUserPrefs, setUserPrefs ] = createContext<UserPrefs>();
 const [ getSession, setSession ] = createContext<Session>();
+const [ getSessions, setSessions ] = createContext<Sessions>();
 const [ getRegistry, setRegistry ] = createContext<Registry>();
 const [ getScheduler, setScheduler ] = createContext<Scheduler>();
 const [ getServerManager, setServerManager ] = createContext<ServerManager>();
@@ -24,6 +26,7 @@ const [ getThemeManager, setThemeManager ] = createContext<ThemeManager>();
 export {
     getUserPrefs,
     getSession,
+    getSessions,
     getRegistry,
     getScheduler,
     getServerManager,
@@ -44,10 +47,19 @@ export function initDI(prefsLoadRes: Result<UserPrefsData, string>) {
 
     setUserPrefs(userPrefs);
     setSession(session);
+    setSessions(new Sessions(session));
     setRegistry(registry);
     setScheduler(scheduler);
     setServerManager(serverManager);
     setUIState(uiState);
     setUpdater(updater);
     setThemeManager(themeManager);
+}
+
+/** Points the components below at `session` instead of the live one. Call during component init. */
+export function provideSession(session: Session) {
+    setSession(session);
+    setRegistry(session.registry);
+    setScheduler(session.scheduler);
+    setUIState(session.uiState);
 }

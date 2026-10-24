@@ -6,8 +6,11 @@
     import StoppedNotice from "#lib/ui/app/StoppedNotice.svelte";
     import WindowControls from "#lib/ui/app/WindowControls.svelte";
     import ResizeHandles from "#lib/ui/app/ResizeHandles.svelte";
+    import SessionMenu from "#lib/ui/app/SessionMenu.svelte";
+    import SessionScope from "#lib/ui/app/SessionScope.svelte";
+    import RecordBar from "#lib/ui/app/RecordBar.svelte";
     import { Settings } from "@lucide/svelte";
-    import { getUIState, getUpdater } from "#lib/app/utils/di.js";
+    import { getSessions, getUIState, getUpdater } from "#lib/app/utils/di.js";
     import { invoke, isTauri } from "@tauri-apps/api/core";
 
     // The top bar doubles as the window's title bar in Tauri: drag to move, double-click to maximize,
@@ -22,6 +25,7 @@
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
     const updater = getUpdater();
+    const sessions = getSessions();
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions : right-click only opens the platform window menu -->
@@ -38,6 +42,7 @@
                 Update to {updater.update?.version ?? "latest version"}
             </button>
         {/if}
+        <SessionMenu />
         <button
             class="icon-btn bar-btn"
             onclick={() => dialogs.openSettingsDialog()}
@@ -51,11 +56,18 @@
     </div>
     <StoppedNotice />
 </header>
-<main>
-    <GaryDashboard />
-</main>
-
-<DialogHost />
+<!-- the dashboard and its dialogs show the viewed session; the bar above always drives the live one -->
+{#key sessions.viewed}
+    <SessionScope session={sessions.viewed}>
+        {#if !sessions.viewed.live}
+            <RecordBar />
+        {/if}
+        <main>
+            <GaryDashboard />
+        </main>
+        <DialogHost />
+    </SessionScope>
+{/key}
 {#if framed}
     <ResizeHandles />
 {/if}

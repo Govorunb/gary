@@ -19,23 +19,25 @@
         <p class="id-text">ID: <span class="id-value">{game.conn.id}</span></p>
         <CopyButton data={game.conn.id} desc="ID" />
     </div>
-    <div class="fcol-0.5">
-        <button
-            class="menu-item"
-            onclick={() => uiState.dialogs.openRawMessageDialog(game)}
-        >
-            <span class="text-src-actor">
-                <Braces size={14} />
-            </span>
-                Send Raw Message
-        </button>
-        <button
-            class="menu-item menu-item-danger"
-            onclick={() => void session.run(COMMANDS.disconnectGame, { game: game.id })}
-        >
-            <Unplug size={14} /> Disconnect
-        </button>
-    </div>
+    {#if !game.conn.closed}
+        <div class="fcol-0.5">
+            <button
+                class="menu-item"
+                onclick={() => uiState.dialogs.openRawMessageDialog(game)}
+            >
+                <span class="text-src-actor">
+                    <Braces size={14} />
+                </span>
+                    Send Raw Message
+            </button>
+            <button
+                class="menu-item menu-item-danger"
+                onclick={() => void session.run(COMMANDS.disconnectGame, { game: game.id })}
+            >
+                <Unplug size={14} /> Disconnect
+            </button>
+        </div>
+    {/if}
 </div>
 
 

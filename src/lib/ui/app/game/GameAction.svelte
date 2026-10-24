@@ -56,7 +56,7 @@
     function quickSend(evt: MouseEvent) {
         if (evt.defaultPrevented || !(evt.ctrlKey || evt.metaKey)) return;
         evt.preventDefault();
-        if (!canSend) return;
+        if (!canSend || game.conn.closed) return;
         if (hasSchema) {
             send();
         } else {
@@ -74,7 +74,9 @@
     <summary onclick={quickSend}>
         <span class="name">{action.name}</span>
         <div class="row-actions">
-            {#if hasSchema}
+            {#if game.conn.closed}
+                <!-- a saved session's games aren't connected -->
+            {:else if hasSchema}
                 <button
                     class="icon-btn"
                     disabled={!canSend}
