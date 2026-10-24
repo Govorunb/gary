@@ -16,15 +16,10 @@
     const ui = getUIState();
     const altMode = $derived(pressedKeys.has('Shift') && !ui.anyDialogOpen);
 
-    function userInteracted() {
-        scheduler.clearError();
-    }
-
     function toggleMute() {
-        if (!scheduler.errored) {
-            scheduler.toggleMuted();
-        }
-        userInteracted();
+        // resuming from an error pause leaves the user's own pause as it was
+        const paused = scheduler.errored ? scheduler.muted : !scheduler.muted;
+        void session.run(COMMANDS.setPaused, { paused });
     }
 
     function getState(): State {
@@ -112,7 +107,7 @@
     <!-- One control: the toggle, and its timing behind the chevron. -->
     <div class="autoact-split" data-checked={boolAttr(scheduler.autoPoker.autoAct)}>
         <button
-            onclick={() => scheduler.autoPoker.autoAct = !scheduler.autoPoker.autoAct}
+            onclick={() => void session.run(COMMANDS.setAutoAct, { enabled: !scheduler.autoPoker.autoAct })}
             class="act-btn autoact-btn"
             aria-pressed={scheduler.autoPoker.autoAct}
             {@attach tooltip(autoActTooltip)}

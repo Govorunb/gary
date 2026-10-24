@@ -1,5 +1,5 @@
 import z from "zod";
-import { err, ok, type Result } from "neverthrow";
+import { err, ok, ResultAsync, type Result } from "neverthrow";
 import type { Session } from "./session.svelte";
 import type { HotkeyGroup } from "#lib/ui/commands.js";
 import { EVENT_BUS } from "./events/bus";
@@ -82,6 +82,27 @@ export const COMMANDS = {
         unavailable: ({ scheduler }) => scheduler.busy ? undefined : "The engine isn't acting",
         run: ({ scheduler }) => scheduler.cancelAct() ? ok() : err("The engine's act is already being carried out"),
     }),
+    setPaused: command({
+        id: "set_paused",
+        title: "Pause",
+        description: "Pause or unpause the engine. A paused engine doesn't act, even when asked to. Either way, this clears a pause caused by an engine error.",
+        input: z.strictObject({ paused: z.boolean() }),
+        run: ({ scheduler }, { paused }) => {
+            if (scheduler.muted !== paused) scheduler.toggleMuted();
+            scheduler.clearError();
+            return ok();
+        },
+    }),
+    setAutoAct: command({
+        id: "set_auto_act",
+        title: "Auto-act",
+        description: "Turn auto-act on or off. While it's on, the engine is prompted to act after a few idle seconds, and forced to after a longer idle stretch. The user sets both intervals.",
+        input: z.strictObject({ enabled: z.boolean() }),
+        run: ({ scheduler }, { enabled }) => {
+            scheduler.autoPoker.autoAct = enabled;
+            return ok();
+        },
+    }),
     selectEngine: command({
         id: "select_engine",
         title: "Select engine",
@@ -90,6 +111,35 @@ export const COMMANDS = {
         run: (session, { id }) => {
             if (!Object.hasOwn(session.engines, id)) return err(`No engine with ID '${id}'`);
             session.userPrefs.app.selectedEngine = id;
+            return ok();
+        },
+    }),
+    sendRawMessage: command({
+        id: "send_raw_message",
+        title: "Send",
+        description: "Send any text to a game over its connection, unchecked. Use it to test how a game handles messages that break the protocol, e.g. '{\"command\": \"actions/reregister_all\"}'.",
+        input: z.strictObject({ game: zGameId, message: z.string().describe("The exact text to send") }),
+        run: async (session, { game: gameId, message }) => {
+            const game = session.registry.getGame(gameId);
+            if (!game) return err(`'${gameId}' doesn't match exactly one game ID`);
+            const sent = await ResultAsync.fromPromise(game.conn.sendRaw(message), parseError);
+            if (sent.isErr()) {
+                EVENT_BUS.emit('ui/game/send_raw/error', { gameId: game.id, gameName: game.name, error: sent.error });
+                return err(sent.error.message);
+            }
+            EVENT_BUS.emit('ui/game/send_raw/sent', { gameId: game.id });
+            return ok();
+        },
+    }),
+    disconnectGame: command({
+        id: "disconnect_game",
+        title: "Disconnect",
+        description: "Close a game's connection. The game is removed with an 'api/registry/game_removed' event.",
+        input: z.strictObject({ game: zGameId }),
+        run: (session, { game: gameId }) => {
+            const game = session.registry.getGame(gameId);
+            if (!game) return err(`'${gameId}' doesn't match exactly one game ID`);
+            void game.conn.disconnect();
             return ok();
         },
     }),

@@ -3,11 +3,13 @@
     // import VersionChip from "./VersionChip.svelte";
     import { Unplug, Braces } from "@lucide/svelte";
     import CopyButton from "#lib/ui/common/CopyButton.svelte";
-    import { getUIState } from "#lib/app/utils/di.js";
+    import { getSession, getUIState } from "#lib/app/utils/di.js";
+    import { COMMANDS } from "#lib/app/commands.js";
 
     type Props = { game: Game };
     let { game }: Props = $props();
     const uiState = getUIState();
+    const session = getSession();
 </script>
 
 <div class="fcol-2">
@@ -29,7 +31,7 @@
         </button>
         <button
             class="menu-item menu-item-danger"
-            onclick={() => game.conn.disconnect()}
+            onclick={() => void session.run(COMMANDS.disconnectGame, { game: game.id })}
         >
             <Unplug size={14} /> Disconnect
         </button>

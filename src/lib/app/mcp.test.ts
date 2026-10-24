@@ -149,3 +149,25 @@ test("sends raw action data exactly as given", async () => {
 
     expect(await call("send_action", { game: game.id, action: "jump", data: {}, rawData: "{}" })).toMatchObject({ isError: true });
 });
+
+test("pauses the engine so it doesn't act, even when asked", async () => {
+    await connectGame();
+    await call("set_paused", { paused: true });
+    expect(await call("list_engines")).toMatchObject({ muted: true });
+    const { cursor } = await call("act", { force: true });
+    const { matched } = await call("wait_for_events", { after: cursor, keys: ["app/scheduler/act/"], timeoutMs: 1000 });
+    expect(matched).toMatchObject({ key: "app/scheduler/act/fail/ignored" });
+});
+
+test("sends a raw message to a game and disconnects it", async () => {
+    await connectGame();
+    const { games: [game] } = await call("list_games");
+    const sent = await call("send_raw_message", { game: game.id, message: JSON.stringify({ command: "actions/reregister_all" }) });
+    const reregistered = await call("wait_for_events", { after: sent.cursor, keys: ["api/game/register"], timeoutMs: 1000 });
+    expect(reregistered.matched).not.toBeNull();
+
+    const { cursor } = await call("disconnect_game", { game: game.id });
+    const removed = await call("wait_for_events", { after: cursor, keys: ["api/registry/game_removed"], timeoutMs: 1000 });
+    expect(removed.matched).toMatchObject({ data: { id: game.id } });
+    expect(await call("list_games")).toMatchObject({ games: [] });
+});
