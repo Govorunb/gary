@@ -11,6 +11,8 @@
     import TeachingTooltip from '#lib/ui/common/TeachingTooltip.svelte';
     import Hotkey from '#lib/ui/common/Hotkey.svelte';
     import { toast } from 'svelte-sonner';
+    import { onCommandKeys } from '#lib/app/utils/hotkeys.svelte.js';
+    import { UI_COMMANDS, keysLabel } from '#lib/ui/commands.js';
 
     const session = getSession();
     const uiState = getUIState();
@@ -27,16 +29,13 @@
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has('Shift'));
 
-    // quick select
-    for (let i = 1; i <= 9; i++) {
-        keys.onKeys(i.toString(), () => {
-            if (!showingEngineList) return;
-            if (i > engines.length) return;
-            selectEngine(engines[i - 1][0]);
-            dialogs.closeEnginePicker();
-        });
-    }
-    keys.onKeys(['Alt', 'a'], () => {
+    UI_COMMANDS.quickSelectEngine.keys.forEach((chord, i) => keys.onKeys(chord, () => {
+        if (!showingEngineList) return;
+        if (i >= engines.length) return;
+        selectEngine(engines[i][0]);
+        dialogs.closeEnginePicker();
+    }));
+    onCommandKeys(keys, UI_COMMANDS.addEngine, () => {
         if (!showingEngineList) return;
         createOpenAICompatible();
     });
@@ -102,10 +101,10 @@
                         <div class="header-actions">
                             <ShiftIndicator />
                             <TeachingTooltip>
-                                <p><Hotkey>Ctrl+E</Hotkey> to open/close engine picker.</p>
+                                <p><Hotkey>{keysLabel(UI_COMMANDS.toggleEnginePicker)}</Hotkey> to open/close engine picker.</p>
                                 <p><Hotkey>1..9</Hotkey> to quick-select engine.</p>
                                 <p><Hotkey>Alt-click</Hotkey> an engine to quickly open config.</p>
-                                <p><Hotkey>Alt+A</Hotkey> to create a custom OpenAI-compatible engine.</p>
+                                <p><Hotkey>{keysLabel(UI_COMMANDS.addEngine)}</Hotkey> to create a custom OpenAI-compatible engine.</p>
                                 <p>Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (OpenAI-compatible only)</p>
                             </TeachingTooltip>
                         </div>

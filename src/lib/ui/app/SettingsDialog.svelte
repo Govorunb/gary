@@ -4,6 +4,7 @@
     import ThemePicker from "#lib/ui/common/ThemePicker.svelte";
     import { ExternalLink, X } from "@lucide/svelte";
     import Hotkey from "../common/Hotkey.svelte";
+    import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
     import dayjs from "dayjs";
     import { app } from "@tauri-apps/api";
     import { APP_VERSION, clearLocalStorage, debounced, isApril1st, jsonParse, safeInvoke } from "#lib/app/utils/index.js";
@@ -124,7 +125,7 @@
 <Dialog bind:open position="center">
     {#snippet title()}
         <h3>Settings</h3>
-        <Hotkey>Ctrl+,</Hotkey>
+        <Hotkey>{keysLabel(UI_COMMANDS.toggleSettings)}</Hotkey>
     {/snippet}
     {#snippet body()}
         <div class="dialog-scroll dialog-body-scroll">

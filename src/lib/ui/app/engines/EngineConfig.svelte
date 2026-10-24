@@ -26,6 +26,8 @@
     import type { Snippet } from 'svelte';
     import { formatZodError } from '#lib/app/utils/index.js';
     import { PressedKeys } from 'runed';
+    import { onCommandKeys } from '#lib/app/utils/hotkeys.svelte.js';
+    import { UI_COMMANDS, keysLabel } from '#lib/ui/commands.js';
 
     type Props = ConfigProps<E> & {
         schema: ZodType<EngineConfig<E>>;
@@ -58,7 +60,7 @@
 
     $effect(validateConfig);
     const keys = new PressedKeys();
-    keys.onKeys(['Control', 'Enter'], handleSave);
+    onCommandKeys(keys, UI_COMMANDS.saveEngineConfig, handleSave);
 
     function handleSave() {
         if (!isValid) return;
@@ -89,7 +91,7 @@
                 class="btn btn-primary"
                 onclick={handleSave}
                 disabled={!isValid}
-                title="Ctrl+Enter"
+                title={keysLabel(UI_COMMANDS.saveEngineConfig)}
             >
                 Save changes
             </button>

@@ -6,7 +6,7 @@
     import { getSession, getUserPrefs } from "#lib/app/utils/di.js";
     import { COMMANDS } from "#lib/app/commands.js";
     import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
-    import { chordPressed } from "#lib/app/utils/hotkeys.svelte.js";
+    import { chordPressed, onCommandKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "#lib/ui/common/Hotkey.svelte";
 
@@ -16,7 +16,7 @@
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
 
-    keys.onKeys(["Alt", "C"], () => open());
+    onCommandKeys(keys, UI_COMMANDS.openContextInput, open);
 
     let expanded = $state(false);
     let value = $state("");
@@ -112,7 +112,7 @@
         <button class="open-link" onclick={open}>
             <MessageSquare />
             <span>Add to context</span>
-            <Hotkey>Alt+C</Hotkey>
+            <Hotkey>{keysLabel(UI_COMMANDS.openContextInput)}</Hotkey>
         </button>
     </div>
 {/if}

@@ -48,3 +48,8 @@ export function registerAppHotkey(chords: Chord[], callback: () => void) {
 export function chordPressed(e: KeyboardEvent, { keys = [] }: { keys?: Chord[] }) {
     return keys.some(chord => chord.every(key => e.getModifierState(key) || e.key.toLowerCase() === key.toLowerCase()));
 }
+
+/** Binds the command's chords through a component's own `PressedKeys`, as its `onKeys` does. */
+export function onCommandKeys(pressed: PressedKeys, { keys }: { keys: Chord[] }, callback: () => void) {
+    for (const chord of keys) pressed.onKeys(chord, callback);
+}

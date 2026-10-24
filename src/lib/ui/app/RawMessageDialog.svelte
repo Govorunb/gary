@@ -10,6 +10,8 @@
     import { formatZodError, jsonParse, parseError, safeParse, tooltip } from "#lib/app/utils/index.js";
     import { PressedKeys } from "runed";
     import { EVENT_BUS } from "#lib/app/events/bus.js";
+    import { onCommandKeys } from "#lib/app/utils/hotkeys.svelte.js";
+    import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
 
     type Props = {
         open: boolean;
@@ -19,7 +21,7 @@
     let { open = $bindable(), game }: Props = $props();
     const userPrefs = getUserPrefs();
     const keys = new PressedKeys();
-    keys.onKeys(["Control", "Enter"], sendMessage);
+    onCommandKeys(keys, UI_COMMANDS.sendRaw, sendMessage);
 
     let jsonContent = $state('');
     let validationErrors = $state<string[] | null>(null);
@@ -128,7 +130,7 @@
             <TeachingTooltip>
                 <p>Send any arbitrary text WebSocket message.</p>
                 <p><b>This dialog is for debugging and won't stop you from sending invalid data.</b></p>
-                <p><Hotkey>Ctrl+Enter</Hotkey> to send message.</p>
+                <p><Hotkey>{keysLabel(UI_COMMANDS.sendRaw)}</Hotkey> to send message.</p>
             </TeachingTooltip>
         </div>
     {/snippet}
@@ -189,7 +191,7 @@
             <button
                 class="btn btn-primary"
                 onclick={sendMessage}
-                {@attach tooltip("Send (Ctrl+Enter)")}
+                {@attach tooltip(`Send (${keysLabel(UI_COMMANDS.sendRaw)})`)}
             >
                 <Send class="size-4" />
                 Send

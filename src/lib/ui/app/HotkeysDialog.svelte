@@ -2,7 +2,7 @@
     import Dialog from "#lib/ui/common/Dialog.svelte";
     import Hotkey from "#lib/ui/common/Hotkey.svelte";
     import { COMMANDS } from "#lib/app/commands.js";
-    import { HOTKEY_GROUPS, UI_COMMANDS, displayChords, keyLabel } from "#lib/ui/commands.js";
+    import { HOTKEY_GROUPS, UI_COMMANDS, displayChords, keyLabel, keysLabel } from "#lib/ui/commands.js";
 
     type Props = {
         open: boolean;
@@ -21,7 +21,7 @@
 <Dialog bind:open>
     {#snippet title()}
         <h3>Hotkeys</h3>
-        <Hotkey>F1</Hotkey>
+        <Hotkey>{keysLabel(UI_COMMANDS.toggleHotkeys)}</Hotkey>
     {/snippet}
     {#snippet body()}
         <!-- One grid for every section so the descriptions line up across them. -->

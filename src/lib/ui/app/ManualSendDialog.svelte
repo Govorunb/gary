@@ -13,6 +13,8 @@
     import { boolAttr, PressedKeys } from "runed";
     import { EVENT_BUS } from "#lib/app/events/bus.js";
     import type { JsonSchema } from "json-schema-faker";
+    import { onCommandKeys } from "#lib/app/utils/hotkeys.svelte.js";
+    import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
 
     type Props = {
         open: boolean;
@@ -28,8 +30,8 @@
     const ajv = new Ajv({ validateFormats: false, allErrors: true });
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
-    keys.onKeys(["Control", "Enter"], sendAction);
-    keys.onKeys(["Alt", "R"], reroll);
+    onCommandKeys(keys, UI_COMMANDS.sendManual, sendAction);
+    onCommandKeys(keys, UI_COMMANDS.randomizeManual, reroll);
 
     const currentAction = $derived(game.getAction(action.name, false) ?? action);
     const evtData = $derived({gameId: game.id, actionName: currentAction.name});
@@ -40,7 +42,7 @@
     const isValid = $derived(!validationErrors);
     const sendTip = $derived.by(() => {
         if (busy) return "Engine busy (Shift to stop)";
-        if (isValid) return "Send (Ctrl+Enter)";
+        if (isValid) return `Send (${keysLabel(UI_COMMANDS.sendManual)})`;
         return shiftPressed ? "Send invalid data?" : "Hold shift to bypass validation";
     });
     const schemaCollapsed = $derived(userPrefs.app.manualSendSchemaCollapsed);
@@ -164,9 +166,9 @@
             <ShiftIndicator />
             <TeachingTooltip>
                 {#if schemaJson}
-                    <p><Hotkey>Alt+R</Hotkey> to use random data. (May not always be valid)</p>
+                    <p><Hotkey>{keysLabel(UI_COMMANDS.randomizeManual)}</Hotkey> to use random data. (May not always be valid)</p>
                 {/if}
-                <p><Hotkey>Ctrl+Enter</Hotkey> to send action.</p>
+                <p><Hotkey>{keysLabel(UI_COMMANDS.sendManual)}</Hotkey> to send action.</p>
                 {#if schemaJson}
                     <p>Hold <Hotkey>Shift</Hotkey> to bypass validation.</p>
                 {/if}
@@ -231,7 +233,7 @@
             {#if schemaJson}
                 <button class="btn"
                     onclick={reroll}
-                    {@attach tooltip("Replace editor contents with random data (Alt+R)")}
+                    {@attach tooltip(`Replace editor contents with random data (${keysLabel(UI_COMMANDS.randomizeManual)})`)}
                 >
                     <Dice6 class="size-4" />
                     Randomize
