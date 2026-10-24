@@ -129,3 +129,13 @@ test("keeps secrets out of what agents read", async () => {
     EVENT_BUS.emit("ui/context/input", { text: `old key ${apiKey}`, silent: true });
     expect((await waiting).matched).toMatchObject({ data: { text: "old key [REDACTED]" } });
 });
+
+test("adds to the actor's context as the user", async () => {
+    const { cursor } = await call("add_context", { text: "The floor is lava", silent: true });
+    const { events } = await call("read_events", { after: cursor, keys: ["ui/context/input"] });
+    expect(events).toMatchObject([{ data: { text: "The floor is lava", silent: true } }]);
+    const { context } = await call("get_context");
+    expect(context.at(-1)).toMatchObject({ source: { type: "user" }, text: "The floor is lava" });
+
+    expect(await call("add_context", { text: "" })).toMatchObject({ isError: true });
+});

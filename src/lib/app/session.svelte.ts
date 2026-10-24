@@ -14,6 +14,7 @@ import type { EventDef, Keys, PresentDefs } from "./events";
 import { LogLevel, parseError } from "./utils";
 import { EventLogStore } from "./events/log.svelte";
 import { err, ok, type Result } from "neverthrow";
+import type { Command } from "./commands";
 
 /**
  * Represents a user session within the app.
@@ -99,6 +100,12 @@ export class Session {
         EVENT_BUS.emit('app/session/disposed', { session: {id: this.id, name: this.name} });
         this.context.dispose();
         this.eventLog.dispose();
+    }
+
+    /** Runs a command on this session, unless it can't run right now. */
+    run<I>(command: Command<I>, input: I) {
+        const reason = command.unavailable?.(this);
+        return reason ? err(reason) : command.run(this, input);
     }
 
     /** Sends an action to a game as the user (Tony mode), bypassing the engine. */

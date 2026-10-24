@@ -1,6 +1,8 @@
 <script lang="ts">
     import Dialog from "#lib/ui/common/Dialog.svelte";
     import Hotkey from "#lib/ui/common/Hotkey.svelte";
+    import { COMMANDS } from "#lib/app/commands.js";
+    import { HOTKEY_GROUPS, UI_COMMANDS, displayChords, keyLabel } from "#lib/ui/commands.js";
 
     type Props = {
         open: boolean;
@@ -8,65 +10,12 @@
 
     let { open = $bindable() }: Props = $props();
 
-    // Every hotkey the app has, grouped by where it applies. Keep in step with the registerAppHotkey and onKeys calls.
-    const groups: { title: string; keys: [keys: string[], does: string][] }[] = [
-        {
-            title: "Anywhere",
-            keys: [
-                [["F1", "or", "Ctrl", "/"], "This list"],
-                [["Ctrl", ","], "Settings"],
-                [["Ctrl", "E"], "Engine picker"],
-                [["Alt", "C"], "Add to context"],
-                [["Shift"], "Hold to reveal second-layer options where the arrow indicator is shown"],
-            ],
-        },
-        {
-            title: "Top bar",
-            keys: [
-                [["Shift", 'click "Act"'], "Force act"],
-                [["Shift", 'click "Busy"'], "Stop the current act"],
-                [["Shift", "click power"], "Stop the server without confirming"],
-            ],
-        },
-        {
-            title: "Actions list",
-            keys: [
-                [["Ctrl", "click row"], "Send the action (opens manual send if it has a schema)"],
-            ],
-        },
-        {
-            title: "Add to context",
-            keys: [
-                [["Ctrl", "Enter"], "Send"],
-                [["Esc"], "Close"],
-                [["Shift"], "Hold to invert silent for one message"],
-            ],
-        },
-        {
-            title: "Engine picker",
-            keys: [
-                [["1", "to", "9"], "Quick-select engine by position"],
-                [["Alt", "click engine"], "Open its config"],
-                [["Alt", "A"], "Add an OpenAI-compatible engine"],
-                [["Shift"], "Hold to reveal delete buttons"],
-                [["Ctrl", "Enter"], "Save engine config"],
-            ],
-        },
-        {
-            title: "Manual send",
-            keys: [
-                [["Ctrl", "Enter"], "Send"],
-                [["Alt", "R"], "Fill with random data"],
-                [["Shift"], "Hold to send despite validation errors"],
-            ],
-        },
-        {
-            title: "Diagnostics",
-            keys: [
-                [["Shift", 'click "Dismiss all"'], "Delete all diagnostics instead of dismissing"],
-            ],
-        },
-    ];
+    // Every command with keys, in its section. Commands that agents can run come first.
+    const commands = [...Object.values(COMMANDS), ...Object.values(UI_COMMANDS)];
+    const groups = HOTKEY_GROUPS.map(title => ({
+        title,
+        commands: commands.flatMap(({ group, keys, title: does }) => group === title && keys ? [{ does, ...displayChords(keys) }] : []),
+    }));
 </script>
 
 <Dialog bind:open>
@@ -79,19 +28,18 @@
         <dl class="dialog-scroll hotkey-grid">
             {#each groups as group (group.title)}
                 <dt class="group-title">{group.title}</dt>
-                {#each group.keys as [keys, does]}
+                {#each group.commands as { does, chords, separator }}
                     <dt>
-                        {#each keys as key, i}
-                            {#if key === "to" || key === "or"}
-                                <span class="plus">{key}</span>
-                            {:else}
-                                {#if i > 0 && keys[i - 1] !== "to" && keys[i - 1] !== "or"}<span class="plus">+</span>{/if}
+                        {#each chords as chord, i}
+                            {#if i > 0}<span class="plus">{separator}</span>{/if}
+                            {#each chord as key, j}
+                                {#if j > 0}<span class="plus">+</span>{/if}
                                 {#if key.startsWith("click ")}
                                     <span class="text-xs text-ink-2">{key}</span>
                                 {:else}
-                                    <Hotkey>{key}</Hotkey>
+                                    <Hotkey>{keyLabel(key)}</Hotkey>
                                 {/if}
-                            {/if}
+                            {/each}
                         {/each}
                     </dt>
                     <dd>{does}</dd>

@@ -1,22 +1,25 @@
 import { PressedKeys } from "runed";
 import { onDestroy } from "svelte";
 import { on } from "svelte/events";
+import type { Chord } from "../commands";
 
 export const pressedKeys = new PressedKeys();
 
 const MODIFIER_KEYS = new Set(["meta", "control", "alt", "shift"]);
 
-export function registerAppHotkey(targetKeys: string[], callback: () => void) {
-    targetKeys = targetKeys.map(k => k.toLowerCase());
+/** Calls back when any of the chords is completed, for the calling component's lifetime. */
+export function registerAppHotkey(chords: Chord[], callback: () => void) {
+    chords = chords.map(chord => chord.map(k => k.toLowerCase()));
     const down = new Set<string>();
 
     const keydown = on(window, "keydown", (e) => {
         const key = e.key.toLowerCase();
         const firstPress = !down.has(key);
         down.add(key);
-        if (targetKeys.every(target => down.has(target))) {
+        for (const chord of chords) {
+            if (!chord.every(target => down.has(target))) continue;
             e.preventDefault();
-            if (firstPress && targetKeys.includes(key)) callback();
+            if (firstPress && chord.includes(key)) return callback();
         }
     });
     const keyup = on(window, "keyup", (e) => {
@@ -39,4 +42,9 @@ export function registerAppHotkey(targetKeys: string[], callback: () => void) {
         blur();
         visibilityChange();
     });
+}
+
+/** For an element's own keydown handler: whether the event completes one of the command's chords. Modifiers count by the event's flags. */
+export function chordPressed(e: KeyboardEvent, { keys = [] }: { keys?: Chord[] }) {
+    return keys.some(chord => chord.every(key => e.getModifierState(key) || e.key.toLowerCase() === key.toLowerCase()));
 }

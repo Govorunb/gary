@@ -8,7 +8,6 @@
     import ResizeHandles from "#lib/ui/app/ResizeHandles.svelte";
     import { Settings } from "@lucide/svelte";
     import { getUIState, getUpdater } from "#lib/app/utils/di.js";
-    import { registerAppHotkey } from "#lib/app/utils/hotkeys.svelte.js";
     import { invoke, isTauri } from "@tauri-apps/api/core";
 
     // The top bar doubles as the window's title bar in Tauri: drag to move, double-click to maximize,
@@ -23,10 +22,6 @@
     const uiState = getUIState();
     const dialogs = uiState.dialogs;
     const updater = getUpdater();
-
-    registerAppHotkey(["Control", ","], () => dialogs.toggleSettingsDialog());
-    registerAppHotkey(["F1"], () => dialogs.toggleHotkeysDialog());
-    registerAppHotkey(["Control", "/"], () => dialogs.toggleHotkeysDialog());
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions : right-click only opens the platform window menu -->

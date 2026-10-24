@@ -2,6 +2,7 @@ import { McpServer, WebStandardStreamableHTTPServerTransport, type CallToolResul
 import { err, ok, type Result } from "neverthrow";
 import z from "zod";
 import type { Session } from "./session.svelte";
+import { COMMANDS, type AgentCommand } from "./commands";
 import { exportReplacer, eventLevel, redactEvent, type EventInstance, type EventKey } from "./events";
 import { APP_VERSION, LogLevel, type Awaitable } from "./utils";
 import { scrubSecrets } from "./events/sensitive";
@@ -194,6 +195,10 @@ function createServer(session: Session) {
         z.strictObject({}),
         () => ok(session.clearContext()),
     );
+
+    for (const command of Object.values(COMMANDS) as AgentCommand[]) {
+        tool(command.id, command.description, command.input, args => session.run(command, args));
+    }
 
     return server;
 }

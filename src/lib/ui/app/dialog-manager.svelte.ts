@@ -75,19 +75,11 @@ export class DialogManager {
         this.openDialog({ type: "settings" });
     }
 
-    toggleSettingsDialog() {
-        if (this.isOpen("settings")) {
-            this.closeDialog("settings");
+    toggle(dialog: DialogState) {
+        if (this.isOpen(dialog.type)) {
+            this.closeDialog(dialog.type);
         } else {
-            this.openSettingsDialog();
-        }
-    }
-
-    toggleHotkeysDialog() {
-        if (this.isOpen("hotkeys")) {
-            this.closeDialog("hotkeys");
-        } else {
-            this.openDialog({ type: "hotkeys" });
+            this.openDialog(dialog);
         }
     }
 

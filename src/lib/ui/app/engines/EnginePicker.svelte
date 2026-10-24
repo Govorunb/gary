@@ -10,7 +10,6 @@
     import { fade, fly } from 'svelte/transition';
     import TeachingTooltip from '#lib/ui/common/TeachingTooltip.svelte';
     import Hotkey from '#lib/ui/common/Hotkey.svelte';
-    import { registerAppHotkey } from '#lib/app/utils/hotkeys.svelte.js';
     import { toast } from 'svelte-sonner';
 
     const session = getSession();
@@ -28,7 +27,6 @@
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has('Shift'));
 
-    registerAppHotkey(['Control', 'E'], () => toggleOpen());
     // quick select
     for (let i = 1; i <= 9; i++) {
         keys.onKeys(i.toString(), () => {
@@ -51,14 +49,6 @@
 
     function selectEngine(id: string) {
         session.selectEngine(id);
-    }
-
-    function toggleOpen() {
-        if (dialogs.isOpen("enginePicker")) {
-            dialogs.closeEnginePicker();
-        } else {
-            dialogs.openEnginePicker();
-        }
     }
 
     function openConfig(engineId: string) {
