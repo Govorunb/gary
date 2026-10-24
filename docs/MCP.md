@@ -1,6 +1,6 @@
 # Driving Gary from an agent (MCP)
 
-Gary serves an [MCP](https://modelcontextprotocol.io) endpoint, so a coding agent such as Claude Code or Codex can watch a session and drive it. The agent can see which games are connected and what they registered, read what the engine sees, send actions as the user, make the engine act, and wait for the results.
+Gary serves an [MCP](https://modelcontextprotocol.io) endpoint, so a coding agent such as Claude Code or Codex can watch a session and drive it. The agent can see which games are connected and what they registered, read what the engine sees, and wait for results. It can also act on the session as the user: send actions and raw messages, add to the engine's context, make the engine act or stop, pause it, and switch engines.
 
 ## Connecting
 
@@ -22,10 +22,16 @@ There is no authentication, but the endpoint only accepts connections from this 
 | `get_context` | The actor's context: the history the engine decides from. |
 | `read_events` | The newest events from Gary's event log, filtered by key prefix and level. |
 | `wait_for_events` | Waits for the next event matching a key prefix and returns it with the events before it. |
-| `send_action` | Sends an action to a game as the user, bypassing the engine. |
+| `send_action` | Sends an action to a game as the user, bypassing the engine. `rawData` sends the data's exact text instead, even if it isn't valid JSON. |
+| `send_raw_message` | Sends any text to a game, unchecked, like the raw message dialog. |
+| `disconnect_game` | Closes a game's connection. |
 | `list_engines` | The engines, which one is active, and whether it's busy, paused or acting automatically. |
 | `select_engine` | Makes an engine the active one. |
 | `act` | Asks the active engine to act now, optionally forcing it to pick an action. |
+| `stop_act` | Stops the engine's current act. |
+| `set_paused` | Pauses or unpauses the engine. A paused engine doesn't act, even when asked. |
+| `set_auto_act` | Turns auto-act on or off. |
+| `add_context` | Adds a message to the engine's context as the user, prompting it to act unless it's silent. |
 | `clear_context` | Clears the actor's context. |
 
 ## Cursors and waiting
