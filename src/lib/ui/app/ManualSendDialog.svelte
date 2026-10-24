@@ -15,6 +15,7 @@
     import type { JsonSchema } from "json-schema-faker";
     import { onCommandKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
+    import { COMMANDS, canRun } from "#lib/app/commands.js";
 
     type Props = {
         open: boolean;
@@ -27,6 +28,7 @@
     const scheduler = getScheduler();
     const session = getSession();
     const busy = $derived(scheduler.busy);
+    const canSend = $derived(canRun(session, COMMANDS.sendAction));
     const ajv = new Ajv({ validateFormats: false, allErrors: true });
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
@@ -151,10 +153,10 @@
     }
 
     function sendAction() {
-        if (busy) return;
+        if (!canSend) return;
         if (!isValid && !shiftPressed) return;
 
-        session.sendAction(game.id, currentAction.name, jsonContent);
+        void session.run(COMMANDS.sendAction, { game: game.id, action: currentAction.name, rawData: jsonContent });
         closeDialog();
     }
 </script>
@@ -245,8 +247,8 @@
             <button
                 class="btn btn-primary send-btn"
                 onclick={sendAction}
-                disabled={busy || (!isValid && !shiftPressed)}
-                data-bypass={boolAttr(!busy && !isValid && shiftPressed)}
+                disabled={!canSend || (!isValid && !shiftPressed)}
+                data-bypass={boolAttr(canSend && !isValid && shiftPressed)}
                 {@attach tooltip(sendTip)}
             >
                 <Send class="size-4" />

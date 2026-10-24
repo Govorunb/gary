@@ -13,6 +13,7 @@
     import { toast } from 'svelte-sonner';
     import { onCommandKeys } from '#lib/app/utils/hotkeys.svelte.js';
     import { UI_COMMANDS, keysLabel } from '#lib/ui/commands.js';
+    import { COMMANDS } from '#lib/app/commands.js';
 
     const session = getSession();
     const uiState = getUIState();
@@ -47,7 +48,7 @@
     }
 
     function selectEngine(id: string) {
-        session.selectEngine(id);
+        void session.run(COMMANDS.selectEngine, { id });
     }
 
     function openConfig(engineId: string) {

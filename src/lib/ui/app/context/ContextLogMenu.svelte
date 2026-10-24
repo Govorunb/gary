@@ -5,6 +5,7 @@
     import type { ContextRow } from "./formatters/types";
     import { copyContextText, contextRowData } from "./copy";
     import { getSession } from "#lib/app/utils/di.js";
+    import { COMMANDS } from "#lib/app/commands.js";
 
     const { rows }: { rows: ContextRow[] } = $props();
     const session = getSession();
@@ -15,7 +16,7 @@
         open = false;
     }
     function clearContext() {
-        session.clearContext();
+        void session.run(COMMANDS.clearContext, {});
         closeMenu();
     }
     function copyContext(format: "text" | "json") {

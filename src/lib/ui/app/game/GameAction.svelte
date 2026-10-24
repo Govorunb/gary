@@ -8,6 +8,7 @@
     import { boolAttr } from "runed";
     import { EVENT_BUS } from "#lib/app/events/bus.js";
     import type { JsonSchema } from "json-schema-faker";
+    import { COMMANDS, canRun } from "#lib/app/commands.js";
 
     type Props = {
         action: GameAction;
@@ -22,6 +23,7 @@
 
     const active = $derived(action.active);
     const busy = $derived(scheduler.busy);
+    const canSend = $derived(canRun(session, COMMANDS.sendAction));
     const busyTip = (tip: string) => tooltip(busy ? "Engine busy (Shift to stop)" : tip);
 
     let open = $state(false);
@@ -34,7 +36,7 @@
 
     const evtData = $derived({gameId: game.id, actionName: action.name});
     function doSend(data?: string) {
-        session.sendAction(game.id, action.name, data);
+        void session.run(COMMANDS.sendAction, { game: game.id, action: action.name, rawData: data });
     }
 
     async function sendRandom() {
@@ -55,7 +57,7 @@
     function quickSend(evt: MouseEvent) {
         if (evt.defaultPrevented || !(evt.ctrlKey || evt.metaKey)) return;
         evt.preventDefault();
-        if (busy) return;
+        if (!canSend) return;
         if (hasSchema) {
             send();
         } else {
@@ -76,7 +78,7 @@
             {#if hasSchema}
                 <button
                     class="icon-btn"
-                    disabled={busy}
+                    disabled={!canSend}
                     onclick={preventDefault(send)}
                     {@attach busyTip("Send (manual) - Ctrl/Cmd-click row")}
                 >
@@ -84,7 +86,7 @@
                 </button>
                 <button
                     class="icon-btn"
-                    disabled={busy}
+                    disabled={!canSend}
                     onclick={preventDefault(sendRandom)}
                     {@attach busyTip("Send (random data)")}
                 >
@@ -93,7 +95,7 @@
             {:else}
                 <button
                     class="icon-btn"
-                    disabled={busy}
+                    disabled={!canSend}
                     onclick={preventDefault(() => doSend())}
                     {@attach busyTip("Send - Ctrl/Cmd-click row")}
                 >

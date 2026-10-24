@@ -1,9 +1,9 @@
 import z from "zod";
-import { ok, type Result } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 import type { Session } from "./session.svelte";
 import type { HotkeyGroup } from "#lib/ui/commands.js";
 import { EVENT_BUS } from "./events/bus";
-import type { Awaitable } from "./utils";
+import { parseError, type Awaitable } from "./utils";
 
 /** Keys held together, named as in `KeyboardEvent.key`, e.g. `["Control", "Enter"]`. */
 export type Chord = string[];
@@ -31,8 +31,78 @@ export type AgentCommand<S extends z.ZodType = z.ZodType> = Command<z.output<S>>
 
 export const command = <S extends z.ZodType>(definition: AgentCommand<S>) => definition;
 
+/** Whether the command can run right now, e.g. for a button's disabled state. */
+export const canRun = (session: Session, command: Command<never>) => !command.unavailable?.(session);
+
+export const zGameId = z.string().describe("Game ID from list_games (a unique prefix is enough)");
+
+const whenIdle = (session: Session) => session.scheduler.busy ? "The engine is busy acting" : undefined;
+
 /** Everything the user can do to a session. Each entry is also an MCP tool. */
 export const COMMANDS = {
+    sendAction: command({
+        id: "send_action",
+        title: "Send",
+        description: "Send an action to a game as the user, bypassing the engine. The game's result arrives later as an 'api/game/action_result' event.",
+        input: z.strictObject({
+            game: zGameId,
+            action: z.string(),
+            data: z.unknown().optional().describe("Action data matching the action's schema; omit for actions without one"),
+            rawData: z.string().optional().describe("Instead of data: the exact text to send as the action's data, even if it isn't valid JSON"),
+        }).refine(({ data, rawData }) => data === undefined || rawData === undefined, "Pass data or rawData, not both"),
+        unavailable: whenIdle,
+        run: (session, { game: gameId, action: actionName, data, rawData = data === undefined ? undefined : JSON.stringify(data) }) => {
+            const game = session.registry.getGame(gameId);
+            if (!game) return err(`'${gameId}' doesn't match exactly one game ID`);
+            if (!game.getAction(actionName, false)) return err(`${game.name} has no action '${actionName}'`);
+            const evtData = { gameId: game.id, actionName };
+            EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!rawData });
+            game.manualSend(actionName, rawData)
+                .catch(e => EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) }));
+            return ok();
+        },
+    }),
+    act: command({
+        id: "act",
+        title: "Act",
+        description: "Ask the active engine to act now. Returns at once; the outcome arrives as 'api/actor/' events, or an 'app/scheduler/act/' event if it couldn't act. Resumes an engine paused on an error.",
+        input: z.strictObject({ force: z.boolean().default(false).describe("The engine must pick an action instead of waiting or speaking") }),
+        unavailable: whenIdle,
+        run: ({ scheduler }, { force }) => {
+            scheduler.clearError();
+            void (force ? scheduler.forceAct() : scheduler.tryAct());
+            return ok();
+        },
+    }),
+    stopAct: command({
+        id: "stop_act",
+        title: "Stop the current act",
+        description: "Stop the engine's current act, as if it chose not to act. Confirmed by an 'app/scheduler/act/cancelled' event.",
+        input: z.strictObject({}),
+        unavailable: ({ scheduler }) => scheduler.busy ? undefined : "The engine isn't acting",
+        run: ({ scheduler }) => scheduler.cancelAct() ? ok() : err("The engine's act is already being carried out"),
+    }),
+    selectEngine: command({
+        id: "select_engine",
+        title: "Select engine",
+        description: "Make an engine the active one.",
+        input: z.strictObject({ id: z.string().describe("Engine ID from list_engines") }),
+        run: (session, { id }) => {
+            if (!Object.hasOwn(session.engines, id)) return err(`No engine with ID '${id}'`);
+            session.userPrefs.app.selectedEngine = id;
+            return ok();
+        },
+    }),
+    clearContext: command({
+        id: "clear_context",
+        title: "Reset Context",
+        description: "Clear the actor's context, as if the session just started.",
+        input: z.strictObject({}),
+        run: () => {
+            EVENT_BUS.emit('ui/context/reset');
+            return ok();
+        },
+    }),
     addContext: command({
         id: "add_context",
         title: "Send",

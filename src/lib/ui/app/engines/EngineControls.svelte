@@ -7,6 +7,7 @@
     import { tooltip } from "#lib/app/utils/index.js";
     import { pressedKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import { boolAttr } from "runed";
+    import { COMMANDS, canRun } from "#lib/app/commands.js";
 
     type State = "errored" | "muted" | "unmuted";
 
@@ -55,7 +56,7 @@
     const MuteIcon = $derived(machine[state].icon);
     const muteTooltip = $derived(machine[state].tooltip);
     const muteText = $derived(machine[state].text);
-    const showStopIcon = $derived(scheduler.busy && altMode);
+    const clickStops = $derived(scheduler.busy && altMode);
     const showBusyIcon = $derived(scheduler.busy && !altMode);
     const showForceIcon = $derived(!scheduler.busy && altMode);
     const showActIcon = $derived(!scheduler.busy && !altMode);
@@ -78,15 +79,9 @@
         <span class="not-md:hidden">{muteText}</span>
     </button>
     <button
-        onclick={() => {
-            if (scheduler.busy && altMode) {
-                scheduler.cancelAct();
-            } else {
-                session.act(altMode);
-            }
-        }}
+        onclick={() => void (clickStops ? session.run(COMMANDS.stopAct, {}) : session.run(COMMANDS.act, { force: altMode }))}
         class="act-btn frow-2"
-        disabled={scheduler.busy && !altMode}
+        disabled={!canRun(session, clickStops ? COMMANDS.stopAct : COMMANDS.act)}
         {@attach tooltip(
             scheduler.busy
                 ? (altMode ? "Stop" : "Engine busy (Shift to stop)")
@@ -95,7 +90,7 @@
     >
         <span class="act-icon-slot" aria-hidden="true">
             <!-- Keep every icon mounted so the busy animation retains its phase between state changes. -->
-            <Square class="act-icon" data-visible={boolAttr(showStopIcon)} />
+            <Square class="act-icon" data-visible={boolAttr(clickStops)} />
             <Hourglass class="act-icon animate-[spin_2s_ease-in-out_infinite,pulse_4s_linear_infinite]" data-visible={boolAttr(showBusyIcon)} />
             <HandFist class="act-icon" data-visible={boolAttr(showForceIcon)} />
             <Pointer class="act-icon" data-visible={boolAttr(showActIcon)} />

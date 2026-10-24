@@ -2,7 +2,7 @@ import { McpServer, WebStandardStreamableHTTPServerTransport, type CallToolResul
 import { err, ok, type Result } from "neverthrow";
 import z from "zod";
 import type { Session } from "./session.svelte";
-import { COMMANDS, type AgentCommand } from "./commands";
+import { COMMANDS, zGameId, type AgentCommand } from "./commands";
 import { exportReplacer, eventLevel, redactEvent, type EventInstance, type EventKey } from "./events";
 import { APP_VERSION, LogLevel, type Awaitable } from "./utils";
 import { scrubSecrets } from "./events/sensitive";
@@ -34,7 +34,6 @@ const zKeys = z.array(z.string()).min(1)
     .describe("Event key prefixes, e.g. 'api/game/' or 'api/game/action_result'");
 const zCursor = z.int().nonnegative()
     .describe("A cursor from an earlier tool result; only events after it are considered");
-const zGameId = z.string().describe("Game ID from list_games (a unique prefix is enough)");
 
 export async function handleMcpRequest(session: Session, { headers, body }: McpHttpRequest): Promise<McpHttpResponse> {
     const server = createServer(session);
@@ -160,15 +159,6 @@ function createServer(session: Session) {
         },
     );
 
-    tool("send_action", "Send an action to a game as the user, bypassing the engine. The game's result arrives later as an 'api/game/action_result' event.",
-        z.strictObject({
-            game: zGameId,
-            action: z.string(),
-            data: z.unknown().optional().describe("Action data matching the action's schema; omit for actions without one"),
-        }),
-        ({ game, action, data }) => session.sendAction(game, action, data === undefined ? undefined : JSON.stringify(data)),
-    );
-
     tool("list_engines", "List the engines that can act, which one is active, and whether it can act right now.",
         z.strictObject({}),
         () => ok({
@@ -181,21 +171,7 @@ function createServer(session: Session) {
         }),
     );
 
-    tool("select_engine", "Make an engine the active one.",
-        z.strictObject({ id: z.string().describe("Engine ID from list_engines") }),
-        ({ id }) => session.selectEngine(id),
-    );
-
-    tool("act", "Ask the active engine to act now. Returns at once; the outcome arrives as 'api/actor/' events, or an 'app/scheduler/act/' event if it couldn't act. Resumes an engine paused on an error.",
-        z.strictObject({ force: z.boolean().default(false).describe("The engine must pick an action instead of waiting or speaking") }),
-        ({ force }) => session.act(force),
-    );
-
-    tool("clear_context", "Clear the actor's context, as if the session just started.",
-        z.strictObject({}),
-        () => ok(session.clearContext()),
-    );
-
+    // everything the user can do to a session
     for (const command of Object.values(COMMANDS) as AgentCommand[]) {
         tool(command.id, command.description, command.input, args => session.run(command, args));
     }

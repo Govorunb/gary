@@ -139,3 +139,13 @@ test("adds to the actor's context as the user", async () => {
 
     expect(await call("add_context", { text: "" })).toMatchObject({ isError: true });
 });
+
+test("sends raw action data exactly as given", async () => {
+    await connectGame();
+    const { games: [game] } = await call("list_games");
+    const { cursor } = await call("send_action", { game: game.id, action: "jump", rawData: "{not json" });
+    const { matched } = await call("wait_for_events", { after: cursor, keys: ["api/game/action_result"] });
+    expect(matched).toMatchObject({ data: { act: { name: "jump", data: "{not json" } } });
+
+    expect(await call("send_action", { game: game.id, action: "jump", data: {}, rawData: "{}" })).toMatchObject({ isError: true });
+});
