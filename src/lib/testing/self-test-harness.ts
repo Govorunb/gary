@@ -4,6 +4,7 @@ import { InternalConnection, ConnectionClient } from "#lib/api/connection.js";
 import { type UserPrefs, zGamePrefs, zUserPrefs } from "#lib/app/prefs.svelte.js";
 import { ContextManager } from "#lib/app/context.svelte.js";
 import { EventLogStore } from "#lib/app/events/log.svelte.js";
+import { EVENT_BUS } from "#lib/app/events/bus.js";
 import type { ActionCandidate, Scheduler } from "#lib/app/scheduler.svelte.js";
 
 
@@ -26,6 +27,8 @@ class MockSession {
             return this.api.games[game] ??= zGamePrefs.decode({});
         }
     };
+    readonly bus = EVENT_BUS;
+    readonly live = true;
     readonly eventLog = new EventLogStore();
     readonly id = "test-session";
     readonly name = "test-session";

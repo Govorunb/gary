@@ -2,7 +2,7 @@ import { DisplayHistory } from "../utils/display-history.svelte";
 import type { EventInstance, EventKey } from ".";
 import { EVENT_BUS, type EventBus } from "./bus";
 
-export type EventLogDelta = { type: "append"; event: EventInstance<EventKey> };
+export type EventLogDelta<K extends EventKey = EventKey> = { type: "append"; event: EventInstance<K> };
 
 type Unsub = () => void;
 
@@ -19,11 +19,15 @@ export type EventWait = {
 export class EventLogStore {
     #displayed = new DisplayHistory<EventInstance<EventKey>>(MAX_DISPLAYED_EVENTS);
     #appended = 0;
+    /** Events the session's projections are built from, with their position. Kept for the session's lifetime. */
+    #durable: { at: number; event: EventInstance<EventKey> }[] = [];
+    readonly #durableKeys: ReadonlySet<EventKey>;
     #subs: Array<(delta: EventLogDelta) => void> = [];
     #subsByKey = new Map<EventKey, Array<(delta: EventLogDelta) => void>>();
     #busSub;
 
-    constructor(private readonly bus: EventBus = EVENT_BUS) {
+    constructor(private readonly bus: EventBus = EVENT_BUS, durableKeys: readonly EventKey[] = []) {
+        this.#durableKeys = new Set(durableKeys);
         this.#busSub = this.bus.subscribe();
         this.#busSub.onnext((event) => this.append(event));
     }
@@ -38,6 +42,7 @@ export class EventLogStore {
     }
 
     append(event: EventInstance<EventKey>) {
+        if (this.#durableKeys.has(event.key)) this.#durable.push({ at: this.#appended, event });
         this.#appended++;
         this.#displayed.append(event);
         this.#emit({ type: "append", event });
@@ -47,6 +52,18 @@ export class EventLogStore {
     since(cursor: number) {
         const count = this.#appended - cursor;
         return count > 0 ? this.#displayed.current().slice(-count) : [];
+    }
+
+    /** Every retained event, oldest first: durable events from before the displayed window, then the window. */
+    history(): EventInstance<EventKey>[] {
+        const window = this.#displayed.current();
+        const start = this.#appended - window.length;
+        return [...this.#durable.filter(({ at }) => at < start).map(({ event }) => event), ...window];
+    }
+
+    /** The events the session's projections are built from, oldest first. */
+    durable() {
+        return this.#durable.map(({ event }) => event);
     }
 
     /** Collects events after `cursor` until one matches or the timeout passes. */
@@ -83,10 +100,10 @@ export class EventLogStore {
     }
 
     subscribe(cb: (delta: EventLogDelta) => void): Unsub;
-    subscribe<Ks extends readonly EventKey[]>(keys: Ks, cb: (delta: EventLogDelta) => void): Unsub;
+    subscribe<Ks extends readonly EventKey[]>(keys: Ks, cb: (delta: EventLogDelta<Ks[number]>) => void): Unsub;
     subscribe<Ks extends readonly EventKey[]>(
         keysOrCb: Ks | ((delta: EventLogDelta) => void),
-        cbMaybe?: (delta: EventLogDelta) => void,
+        cbMaybe?: (delta: EventLogDelta<Ks[number]>) => void,
     ): Unsub {
         if (typeof keysOrCb === "function") {
             const cb = keysOrCb;
@@ -100,7 +117,7 @@ export class EventLogStore {
         }
 
         const keys = keysOrCb;
-        const cb = cbMaybe!;
+        const cb = cbMaybe as (delta: EventLogDelta) => void;
         for (const key of keys) {
             let cbs = this.#subsByKey.get(key);
             if (!cbs) {
@@ -123,6 +140,7 @@ export class EventLogStore {
 
     dispose() {
         this.#displayed.dispose();
+        this.#durable.length = 0;
         this.#busSub.destroy();
         this.#subs.length = 0;
         this.#subsByKey.clear();

@@ -41,10 +41,10 @@ function llmOptions(options: Partial<CommonLLMOptions> = {}): CommonLLMOptions {
     };
 }
 
-function createSession(): Session {
+function createSession(bus = new EventBus()): Session {
     return {
         registry: { games: [] },
-        context: new ContextManager(new EventLogStore(new EventBus())),
+        context: new ContextManager(new EventLogStore(bus)),
         userPrefs: { app: {} },
     } as unknown as Session;
 }
@@ -62,8 +62,8 @@ class TestLLMEngine extends LLMEngine<CommonLLMOptions> {
     requests: LLMRequest[] = [];
     model = "test";
 
-    constructor(options: CommonLLMOptions) {
-        super({ engines: { test: options } } as unknown as UserPrefs, "test");
+    constructor(options: CommonLLMOptions, bus?: EventBus) {
+        super({ engines: { test: options } } as unknown as UserPrefs, "test", bus);
     }
 
     protected modelId(): string {
@@ -789,7 +789,8 @@ describe("LLMEngine context trimming", () => {
     });
 
     test("releases compacted history across subsequent requests and engine changes", async () => {
-        const session = createSession();
+        const bus = new EventBus();
+        const session = createSession(bus);
         (session.context.actorView as any[]).push(...Array.from({ length: 20 }, (_, index) => ({
             id: `event-${index}`,
             timestamp: 1_000 + index,
@@ -805,7 +806,7 @@ describe("LLMEngine context trimming", () => {
         const engine = new TestLLMEngine(llmOptions({
             allowYapping: true,
             modelMetadata: { test: { contextWindow: 6_800 } },
-        }));
+        }), bus);
         engine.generation = { text: "okay", toolCalls: [] };
 
         const result = await engine.tryAct(session);
@@ -815,7 +816,9 @@ describe("LLMEngine context trimming", () => {
         expect(firstWire).not.toContain("old-prefix");
         expect(firstWire).toContain("live-4");
         expect(firstWire).toContain("live-19");
-        expect(session.context.actorView).toStrictEqual(original.slice(4));
+        // the trim reaches the context through the log, followed by what the engine said
+        expect(session.context.actorView.slice(0, -1)).toStrictEqual(original.slice(4));
+        expect(session.context.actorView.at(-1)).toMatchObject({ key: "api/actor/generated", data: { text: "okay" } });
 
         (session.context.actorView as any[]).push({
             id: "event-20",
@@ -832,7 +835,7 @@ describe("LLMEngine context trimming", () => {
         otherEngine.generation = { text: "okay", toolCalls: [] };
         expect((await otherEngine.tryAct(session)).isOk()).toBe(true);
         expect(JSON.stringify(otherEngine.requests[0].messages)).not.toContain("old-prefix");
-        expect(session.context.actorView).toHaveLength(17);
+        expect(session.context.actorView).toHaveLength(19);
 
         (session.context.actorView as any[]).splice(0, session.context.actorView.length, {
             id: "reset-event",

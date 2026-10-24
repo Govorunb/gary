@@ -1,6 +1,6 @@
 import { DisplayHistory } from "./utils/display-history.svelte";
 import type { EventInstance } from "./events";
-import type { EventLogDelta, EventLogStore } from "./events/log.svelte";
+import type { EventLogStore } from "./events/log.svelte";
 
 export const USER_CONTEXT_KEYS = [
     "api/game/connected",
@@ -28,6 +28,14 @@ export const ACTOR_CONTEXT_KEYS = [
     "ui/context/input",
 ] as const;
 
+/** Every event the context views are built from. */
+export const CONTEXT_KEYS = [...new Set([
+    ...USER_CONTEXT_KEYS,
+    ...ACTOR_CONTEXT_KEYS,
+    "ui/context/reset",
+    "app/engines/llm/context_trimmed",
+] as const)];
+
 export type UserContextEventKey = typeof USER_CONTEXT_KEYS[number];
 export type ActorContextEventKey = typeof ACTOR_CONTEXT_KEYS[number];
 
@@ -46,9 +54,12 @@ export class ContextManager {
     #onActorEvent: Array<(event: ActorContextEvent, shouldPromptAct: boolean) => void> = [];
 
     constructor(eventLog: EventLogStore) {
-        this.#ondispose.push(eventLog.subscribe(USER_CONTEXT_KEYS, (delta) => this.#onUserDelta(delta)));
-        this.#ondispose.push(eventLog.subscribe(ACTOR_CONTEXT_KEYS, (delta) => this.#onActorDelta(delta)));
+        this.#ondispose.push(eventLog.subscribe(USER_CONTEXT_KEYS, ({ event }) => this.#userView.append(event)));
+        this.#ondispose.push(eventLog.subscribe(ACTOR_CONTEXT_KEYS, ({ event }) => this.#appendActor(event)));
         this.#ondispose.push(eventLog.subscribe(["ui/context/reset"], () => this.#resetViews()));
+        this.#ondispose.push(eventLog.subscribe(["app/engines/llm/context_trimmed"], ({ event }) => {
+            this.#trimActorBefore(event.data.before);
+        }));
     }
 
     get userView() {
@@ -60,7 +71,7 @@ export class ContextManager {
     }
 
     /** Release a compacted prefix and any tool results whose calls were in that prefix. */
-    trimActorBefore(eventId: string) {
+    #trimActorBefore(eventId: string) {
         const index = this.actorView.findIndex(event => event.id === eventId);
         if (index > 0) this.#trimActor(index);
     }
@@ -101,12 +112,7 @@ export class ContextManager {
         this.#onActorEvent.length = 0;
     }
 
-    #onUserDelta(delta: EventLogDelta) {
-        this.#userView.append(delta.event as UserContextEvent);
-    }
-
-    #onActorDelta(delta: EventLogDelta) {
-        const event = delta.event as ActorContextEvent;
+    #appendActor(event: ActorContextEvent) {
         if (event.key === "api/game/act/actor" && event.data.toolCallId && !this.#toolCalls.has(event.data.toolCallId)) return;
         if (event.key === "api/actor/generated" && event.data.toolCall) this.#toolCalls.add(event.data.toolCall.id);
         this.actorView.push(event);

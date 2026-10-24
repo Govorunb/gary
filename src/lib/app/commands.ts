@@ -2,7 +2,6 @@ import z from "zod";
 import { err, ok, ResultAsync, type Result } from "neverthrow";
 import type { Session } from "./session.svelte";
 import type { HotkeyGroup } from "#lib/ui/commands.js";
-import { EVENT_BUS } from "./events/bus";
 import { parseError, type Awaitable } from "./utils";
 
 /** Keys held together, named as in `KeyboardEvent.key`, e.g. `["Control", "Enter"]`. */
@@ -54,11 +53,12 @@ export const COMMANDS = {
         run: (session, { game: gameId, action: actionName, data, rawData = data === undefined ? undefined : JSON.stringify(data) }) => {
             const game = session.registry.getGame(gameId);
             if (!game) return err(`'${gameId}' doesn't match exactly one game ID`);
+            if (game.conn.closed) return err(`${game.name} is disconnected`);
             if (!game.getAction(actionName, false)) return err(`${game.name} has no action '${actionName}'`);
             const evtData = { gameId: game.id, actionName };
-            EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!rawData });
+            session.bus.emit('ui/game/user_act/send', { ...evtData, hasData: !!rawData });
             game.manualSend(actionName, rawData)
-                .catch(e => EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) }));
+                .catch(e => session.bus.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) }));
             return ok();
         },
     }),
@@ -124,10 +124,10 @@ export const COMMANDS = {
             if (!game) return err(`'${gameId}' doesn't match exactly one game ID`);
             const sent = await ResultAsync.fromPromise(game.conn.sendRaw(message), parseError);
             if (sent.isErr()) {
-                EVENT_BUS.emit('ui/game/send_raw/error', { gameId: game.id, gameName: game.name, error: sent.error });
+                session.bus.emit('ui/game/send_raw/error', { gameId: game.id, gameName: game.name, error: sent.error });
                 return err(sent.error.message);
             }
-            EVENT_BUS.emit('ui/game/send_raw/sent', { gameId: game.id });
+            session.bus.emit('ui/game/send_raw/sent', { gameId: game.id });
             return ok();
         },
     }),
@@ -148,8 +148,8 @@ export const COMMANDS = {
         title: "Reset Context",
         description: "Clear the actor's context, as if the session just started.",
         input: z.strictObject({}),
-        run: () => {
-            EVENT_BUS.emit('ui/context/reset');
+        run: ({ bus }) => {
+            bus.emit('ui/context/reset');
             return ok();
         },
     }),
@@ -163,8 +163,8 @@ export const COMMANDS = {
             text: z.string().min(1),
             silent: z.boolean().default(false).describe("Add it without prompting the engine to act"),
         }),
-        run: (_session, { text, silent }) => {
-            EVENT_BUS.emit('ui/context/input', { text, silent });
+        run: ({ bus }, { text, silent }) => {
+            bus.emit('ui/context/input', { text, silent });
             return ok();
         },
     }),

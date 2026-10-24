@@ -1,32 +1,46 @@
 import { createEngine } from "./engines/create";
 import { v4 as uuidv4 } from "uuid";
-import { ContextManager } from "./context.svelte";
+import { CONTEXT_KEYS, ContextManager } from "./context.svelte";
 import { Scheduler } from "./scheduler.svelte";
 import type { Engine } from "./engines/index.svelte";
-import { Registry } from "#lib/api/registry.svelte.js";
+import { REGISTRY_KEYS, Registry } from "#lib/api/registry.svelte.js";
+import { GAME_KEYS } from "#lib/api/game.svelte.js";
 import type { UserPrefs } from "./prefs.svelte";
 import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
-import { EVENT_BUS } from "./events/bus";
+import { EVENT_BUS, EventBus } from "./events/bus";
 import { ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
 import { ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 import { UIState } from "#lib/ui/app/ui-state.svelte.js";
-import type { EventDef, Keys, PresentDefs } from "./events";
-import { LogLevel } from "./utils";
+import type { DialogManager } from "#lib/ui/app/dialog-manager.svelte.js";
+import type { EventDef, EventInstance, EventKey, Keys, PresentDefs } from "./events";
+import { LogLevel, withEffectRoot } from "./utils";
 import { EventLogStore } from "./events/log.svelte";
-import { err } from "neverthrow";
+import type { SessionFile } from "./session-file";
+import { err, ok, type Result } from "neverthrow";
+import z from "zod";
 import type { Command } from "./commands";
 
+/** Events the session and its projections are built from, so a fork needs only these. They stay in the log for the session's lifetime. */
+export const SESSION_KEYS = ["app/session/created", ...CONTEXT_KEYS, ...REGISTRY_KEYS, ...GAME_KEYS] as const;
+
+/** A session's events. The first is always its creation, which names the session. */
+export type SessionEvents = [EventInstance<"app/session/created">, ...EventInstance<EventKey>[]];
+
+/** Events to rebuild a session from, and optionally the bus it should use afterwards. */
+export type SessionHistory = { events: SessionEvents; bus?: EventBus };
+
 /**
- * Represents a user session within the app.
- *
- * Maybe in the future the app can save/load sessions, or run multiple at once, or something.
- * For now, it's just a "DI root"/"manager manager" kind of thing.
+ * A user session: its event log, and everything derived from it.
+ * Context, games and their diagnostics are projections of the log, so replaying a log rebuilds them.
  *
  * Anything the user can do to it is a command (see `./commands`), run through `run`,
  * so the UI and external transports (MCP) share one path.
  */
 export class Session {
     readonly id: string;
+    /** Games connect to the live session and its engine acts. A loaded or forked session is a record. */
+    readonly live: boolean;
+    readonly bus: EventBus;
     readonly eventLog: EventLogStore;
     readonly context: ContextManager;
     readonly registry: Registry;
@@ -38,31 +52,58 @@ export class Session {
 
     name: string;
     private ondispose: (() => void)[];
+    readonly #disposeEffects: () => void;
 
-    constructor(name: string, public readonly userPrefs: UserPrefs) {
-        this.id = uuidv4();
+    constructor(name: string, public readonly userPrefs: UserPrefs, history?: SessionHistory, dialogs?: DialogManager) {
+        // a session is identified by its creation, so forks and saved copies keep the ID of the history they came from
+        this.id = history ? history.events[0].data.session.id : uuidv4();
         this.name = $state(name);
         this.ondispose = [];
-        this.eventLog = new EventLogStore();
+        this.live = !history;
+        this.bus = history ? history.bus ?? new EventBus() : EVENT_BUS;
+        // raw provider responses stay too: no other event holds them
+        this.eventLog = new EventLogStore(this.bus, [...SESSION_KEYS, "app/engines/llm/response"]);
+        if (this.live) this.bus.emit('app/session/created', { session: {id: this.id, name: this.name} });
         this.context = new ContextManager(this.eventLog);
         this.registry = new Registry(this);
-        this.scheduler = new Scheduler(this);
-        this.uiState = new UIState(this);
-        EVENT_BUS.emit('app/session/created', { session: {id: this.id, name: this.name} });
+        // owned here rather than by a component, so records can be built anywhere
+        [[this.scheduler, this.uiState], this.#disposeEffects] = withEffectRoot(() => [new Scheduler(this), new UIState(this, dialogs)] as const);
+        // a record never prompts its engine: it has no games to act in
+        for (const event of history?.events ?? []) this.eventLog.append(event);
         for (const id of Object.keys(this.userPrefs.engines)) {
             this.initEngine(id);
         }
         this.activeEngine = $derived.by(() => this.getEngine(this.userPrefs.app.selectedEngine));
-        this.onDispose(this.context.onActorViewAppend((_event, shouldPromptAct) => {
-            if (shouldPromptAct) {
-                this.scheduler.requestAct(true);
-            }
-        }));
+        if (this.live) {
+            this.onDispose(this.context.onActorViewAppend((_event, shouldPromptAct) => {
+                if (shouldPromptAct) {
+                    this.scheduler.requestAct(true);
+                }
+            }));
+        }
+    }
+
+    /** A record of this session up to and including `eventId`, or up to now. */
+    fork(eventId?: string, name = this.name): Result<Session, string> {
+        const [created, ...rest] = this.history();
+        const end = eventId === undefined ? rest.length : rest.findIndex(event => event.id === eventId) + 1;
+        if (!end && eventId !== undefined && eventId !== created.id) return err("That event is no longer in the session's history");
+        return ok(new Session(name, this.userPrefs, { events: [created, ...rest.slice(0, end)] }, this.uiState.dialogs));
+    }
+
+    /** Every retained event, oldest first, starting with the session's creation. */
+    history(): SessionEvents {
+        // the creation is the first event appended and is kept for good
+        return this.eventLog.history() as unknown as SessionEvents;
+    }
+
+    toFile(): SessionFile {
+        return { version: 1, events: this.history() };
     }
 
     private getEngine(id: string): Engine<unknown> {
         if (!this.engines[id]) {
-            EVENT_BUS.emit('app/session/engine/not_found', { id });
+            this.bus.emit('app/session/engine/not_found', { id });
             id = RANDY_ID;
         }
         return this.engines[id];
@@ -70,7 +111,7 @@ export class Session {
 
     public deleteEngine(id: string) {
         if (id === RANDY_ID || id === OPENROUTER_ID) {
-            EVENT_BUS.emit('app/session/engine/no_delete_system', { id });
+            this.bus.emit('app/session/engine/no_delete_system', { id });
             return;
         }
         if (this.activeEngine.id === id) {
@@ -97,7 +138,8 @@ export class Session {
         }
         this.ondispose.length = 0;
         this.engines = {};
-        EVENT_BUS.emit('app/session/disposed', { session: {id: this.id, name: this.name} });
+        if (this.live) this.bus.emit('app/session/disposed', { session: {id: this.id, name: this.name} });
+        this.#disposeEffects();
         this.context.dispose();
         this.eventLog.dispose();
     }
@@ -112,10 +154,10 @@ export class Session {
         if (!id) {
             id = uuidv4();
             this.userPrefs.engines[id] = zOpenAIPrefs.decode({ name: "New engine" });
-            EVENT_BUS.emit('app/session/engine/created', { id });
+            this.bus.emit('app/session/engine/created', { id });
         }
-        this.engines[id] = createEngine(this.userPrefs, id);
-        EVENT_BUS.emit('app/session/engine/initialized', { id });
+        this.engines[id] = createEngine(this.userPrefs, id, this.bus);
+        if (this.live) this.bus.emit('app/session/engine/initialized', { id });
         return id;
     }
 }
@@ -123,7 +165,7 @@ export class Session {
 export const EVENTS = [
     {
         key: 'app/session/created',
-        dataSchema: {} as { session: { id: string, name: string } },
+        dataSchema: z.strictObject({ session: z.strictObject({ id: z.string(), name: z.string() }) }),
         description: "Created session",
         level: LogLevel.Debug,
     },

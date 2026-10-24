@@ -226,6 +226,13 @@ export class InternalConnection extends BaseConnection {
     }
 }
 
+/** A connection that has already closed, for games restored from a saved session. */
+export function closedConnection(id: string, version: string) {
+    const conn = new InternalConnection(id, version);
+    conn.dispose();
+    return conn;
+}
+
 /** The 'client' side of a connection (as opposed to the regular, server side).
  * Inverts sender and receiver.
 */
