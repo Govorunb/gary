@@ -129,7 +129,7 @@ export async function getOpenRouterModelMetadata(
 export const zOpenRouterPrefs = z.strictObject({
     ...zLLMOptions.shape,
     reasoningEffort: zReasoningEffort.default("auto"),
-    apiKey: z.string().default("").sensitive(),
+    apiKey: z.string().default("").sensitive().password().field({ title: "API Key" }),
     /** OpenRouter model identifier.
      * Can be:
      * - Empty or "openrouter/auto" for auto routing
@@ -138,7 +138,7 @@ export const zOpenRouterPrefs = z.strictObject({
      * - Variants (":nitro", ":free") are supported as normal
      * See [OpenRouter docs](https://openrouter.ai/docs/features/model-routing) for more info.
      * */
-    model: z.string().optional(),
+    model: z.string().optional().field({ title: "Model", placeholder: "openrouter/auto" }),
 });
 
 export type OpenRouterPrefs = z.infer<typeof zOpenRouterPrefs>;

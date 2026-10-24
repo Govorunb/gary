@@ -33,12 +33,22 @@ import {
 } from "../index.svelte";
 
 export const zLLMOptions = z.strictObject({
-    /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
-    allowDoNothing: z.boolean().fallback(false),
+    /** Approximates the model getting distracted calling other unrelated tools. */
+    allowDoNothing: z.boolean().fallback(false).field({
+        title: "Allow to do nothing",
+        description: "Let the model choose to skip acting (if not forced)",
+    }),
     /** Let the model trauma dump about its horrid life circumstances instead of doing something useful to society. Approximates realistic human behavior. */
-    allowYapping: z.boolean().fallback(false),
+    allowYapping: z.boolean().fallback(false).field({
+        title: "Allow yapping",
+        description: "Let the model choose to speak instead of acting (unless forced)",
+    }),
     /** How actions and optional commands are constrained in model responses. */
-    promptingStrategy: z.enum(["json", "tools"]).fallback("json"),
+    promptingStrategy: z.enum(["json", "tools"]).fallback("json").field({
+        title: "Response method",
+        options: { json: "Structured output", tools: "Tool calling (beta)" },
+        description: "Choose how the model returns actions. Structured output works with more providers.",
+    }),
     /** User-edited model metadata, keyed by the configured model identifier. */
     modelMetadata: zModelMetadataOverrides.optional(),
 });

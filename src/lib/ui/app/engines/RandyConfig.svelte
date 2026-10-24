@@ -1,13 +1,16 @@
 <script lang="ts">
     import { zRandyPrefs, type ENGINE_ID } from '#lib/app/engines/randy.svelte.js';
-    import { NumberField, StringField } from '#lib/ui/common/form/index.js';
+    import Field from '#lib/ui/common/form/Field.svelte';
     import type { ConfigProps } from './EngineConfig.svelte';
     import EngineConfig from './EngineConfig.svelte';
     import { getSession, getUIState } from '#lib/app/utils/di.js';
     import OutLink from '#lib/ui/common/OutLink.svelte';
+    import z from 'zod';
 
     let { engineId, close: close_ }: ConfigProps<typeof ENGINE_ID> = $props();
     const schema = zRandyPrefs;
+    const fields = schema.shape;
+    const zLicenseKey = z.string().password().field({ title: "License key", placeholder: "Enter your Gary Gold Membership™ key" });
     const uiState = getUIState();
     const session = getSession();
 
@@ -21,26 +24,9 @@
 
 <EngineConfig {engineId} {schema} {close}>
     {#snippet configForm(dirtyConfig)}
-        <NumberField
-            bind:value={dirtyConfig.chanceDoNothing}
-            label="Chance to skip acting"
-            min={0} max={1} step={0.01}
-            slider
-            description="Probability (0-1) of skipping an action if not forced. Keep this above 0 or Randy might get stuck in a retry loop for some actions."
-        />
-        <NumberField
-            bind:value={dirtyConfig.latencyMs}
-            min={1} max={864000000}
-            label="L*tency"
-            description="Optional delay for Randy's responses (in milliseconds). If you set this too low and Randy gets stuck in a retry loop, the app will hang. You have been sufficiently informed and thus warned."
-        />
-        <NumberField
-            bind:value={dirtyConfig.seed}
-            step={1}
-            label="Random seed"
-            placeholder="Random"
-            description="Random generator seed. Set for deterministic behavior, leave blank for random."
-        />
+        <Field schema={fields.chanceDoNothing} bind:value={dirtyConfig.chanceDoNothing} />
+        <Field schema={fields.latencyMs} bind:value={dirtyConfig.latencyMs} />
+        <Field schema={fields.seed} bind:value={dirtyConfig.seed} />
         {#if uiState.aprilFools}
             <div class="callout warn">
                 <span class="text-base font-semibold">
@@ -50,12 +36,7 @@
                     Your <span class="text-base"><i>Gary Gold Membership™</i></span> has <b>expired</b> and your Randy API key has been <b>revoked</b>. Please re-enter your license key below.
                 </span>
             </div>
-            <StringField
-                label="License key"
-                placeholder="Enter your Gary Gold Membership™ key"
-                value="sk-rnd-TWFkZSB5b3UgbG9vayA7KQ=="
-                password
-            >
+            <Field schema={zLicenseKey} value="sk-rnd-TWFkZSB5b3UgbG9vayA7KQ==">
             {#snippet description()}
                 <p class="note">
                     Please check your key for correctness. If it looks wrong, or you believe there has been a mistake, please
@@ -65,7 +46,7 @@
                     .
                 </p>
             {/snippet}
-            </StringField>
+            </Field>
         {/if}
     {/snippet}
 </EngineConfig>

@@ -1,10 +1,11 @@
 <script lang="ts">
     import type { EngineError } from '#lib/app/engines/index.svelte.js';
-    import type {
-        ModelMetadata,
-        ModelMetadataOverrides,
+    import {
+        zModelMetadata,
+        type ModelMetadata,
+        type ModelMetadataOverrides,
     } from '#lib/app/engines/llm/model-metadata.js';
-    import { NumberField } from '#lib/ui/common/form/index.js';
+    import Field from '#lib/ui/common/form/Field.svelte';
     import type { Result } from 'neverthrow';
     import { untrack } from 'svelte';
 
@@ -132,13 +133,9 @@
         {#if !model}
             <p class="note">Enter a model ID to configure its metadata.</p>
         {:else}
-            <NumberField
-                value={contextWindow}
-                oninput={(event) => setContextWindow(event.currentTarget.valueAsNumber || undefined)}
-                label="Context window"
-                min="1"
-                step="1"
-                placeholder="Tokens"
+            <Field
+                schema={zModelMetadata.shape.contextWindow}
+                bind:value={() => contextWindow, (value) => setContextWindow(value || undefined)}
                 disabled={isLoading}
             />
             <p class="note">

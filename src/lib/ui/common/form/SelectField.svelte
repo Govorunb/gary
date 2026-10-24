@@ -1,77 +1,14 @@
 <script lang="ts">
-    import { shortId } from "#lib/app/utils/index.js";
-    import type { Snippet } from "svelte";
+    import type { ControlProps } from "./field";
+    import FieldFrame from "./FieldFrame.svelte";
 
-    type Option = {
-        value: string;
-        label: string;
-        disabled?: boolean;
-    };
-
-    interface Props {
-        value?: string;
-        label?: string | Snippet;
-        options: Option[];
-        placeholder?: string;
-        required?: boolean;
-        disabled?: boolean;
-        description?: string | Snippet;
-    }
-
-    let {
-        value = $bindable(),
-        label = "",
-        options,
-        placeholder = "",
-        required = false,
-        disabled = false,
-        description = "",
-    }: Props = $props();
-
-    let inputId = $state(`select-${shortId()}`);
+    let { field, id, value = $bindable(), help, disabled, tip }: ControlProps<string> = $props();
 </script>
 
-<div class="field">
-    {#if label}
-        <label for={inputId} class="field-label">
-            {#if typeof label === "string"}
-                {label}
-            {:else}
-                {@render label()}
-            {/if}
-            {#if required}
-                <span class="required">*</span>
-            {/if}
-        </label>
-    {/if}
-    <select
-        id={inputId}
-        {required}
-        {disabled}
-        bind:value
-        class="field-input"
-    >
-        {#if placeholder}
-            <option value="" disabled selected={value === ""}>{placeholder}</option>
-        {/if}
-        {#each options as opt (opt.value)}
-            <option value={opt.value} disabled={opt.disabled}>{opt.label}</option>
+<FieldFrame {field} {id} {help} {tip}>
+    <select {id} required={field.required} {disabled} bind:value class="field-input">
+        {#each field.options as opt (opt.value)}
+            <option value={opt.value}>{opt.label}</option>
         {/each}
     </select>
-    {#if description}
-        {#if typeof description === "string"}
-            <div class="field-description">{description}</div>
-        {:else}
-            {@render description()}
-        {/if}
-    {/if}
-</div>
-
-<style lang="postcss">
-    @reference "global.css";
-
-
-
-
-
-</style>
+</FieldFrame>

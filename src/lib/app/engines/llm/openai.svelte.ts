@@ -61,16 +61,26 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
     }
 }
 
-export const zReasoningEffort = z.enum(["auto", "none", "low", "medium", "high"]);
+export const zReasoningEffort = z.enum(["auto", "none", "low", "medium", "high"]).field({
+    title: "Reasoning effort",
+    options: { auto: "Auto (recommended)", none: "None", low: "Low", medium: "Medium", high: "High" },
+    description: "Auto defaults to None for minimum l*tency (but falls back to Low if the provider requires reasoning).",
+});
 
 export const zOpenAIPrefs = z.looseObject({
-    name: z.string().nonempty(),
+    name: z.string().nonempty().field({ title: "Name", description: "Display name for this engine" }),
     ...zLLMOptions.shape,
     reasoningEffort: zReasoningEffort.fallback("auto"),
-    /** Leave empty if your server doesn't need authentication. (e.g. local) */
-    apiKey: z.string().default("").sensitive(),
-    serverUrl: z.url().default("https://api.openai.com/v1").sensitive(),
-    modelId: z.string().optional(),
+    apiKey: z.string().default("").sensitive().password().field({
+        title: "API Key",
+        description: "API key (leave empty if not required)",
+    }),
+    serverUrl: z.url().default("https://api.openai.com/v1").sensitive().field({
+        title: "Server URL",
+        placeholder: "https://api.openai.com/v1",
+        description: "Base URL for the API",
+    }),
+    modelId: z.string().optional().field({ title: "Model ID", description: "Model identifier (e.g., llama3.1-7b)" }),
 });
 
 export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;

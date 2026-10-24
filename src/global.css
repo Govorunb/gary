@@ -158,6 +158,8 @@
         background-size: 1rem;
     }
     .field-description { @apply text-xs text-ink-2; }
+    /* Label with a teaching tip (and sometimes the control) beside it. */
+    .field-heading { @apply inline-flex items-center gap-1.5; }
     /* Keycap. layer-4 is the surface furthest from panels and popovers in both themes, and the ring is ink-based so it shows on any layer. */
     .hotkey {
         @apply inline-flex items-center px-1.5 py-0.5 rounded;

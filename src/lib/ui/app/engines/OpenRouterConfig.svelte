@@ -6,7 +6,7 @@
         getOpenRouterModelMetadata,
         OpenRouter,
     } from '#lib/app/engines/llm/openrouter.svelte.js';
-    import { StringField, BooleanField, SelectField } from '#lib/ui/common/form/index.js';
+    import Field from '#lib/ui/common/form/Field.svelte';
     import type { ConfigProps } from './EngineConfig.svelte';
     import { toast } from 'svelte-sonner';
     import OutLink from '#lib/ui/common/OutLink.svelte';
@@ -17,6 +17,7 @@
     let isTestingApiKey: boolean = $state(false);
     let { engineId, close }: ConfigProps<typeof ENGINE_ID> = $props();
     const schema = zOpenRouterPrefs;
+    const fields = schema.shape;
 
     async function testApiKey(dirtyConfig: OpenRouterPrefs) {
         if (!dirtyConfig.apiKey) {
@@ -42,11 +43,7 @@
 
 <EngineConfig {engineId} {schema} {close}>
     {#snippet configForm(dirtyConfig)}
-        <StringField
-            bind:value={dirtyConfig.apiKey}
-            label="API Key"
-            password
-        >
+        <Field schema={fields.apiKey} bind:value={dirtyConfig.apiKey}>
             {#snippet description()}
                 <p class="note">
                     Visit
@@ -54,7 +51,7 @@
                     to create an API key.
                 </p>
             {/snippet}
-        </StringField>
+        </Field>
         {#if dirtyConfig.apiKey}
             <button
                 class="btn self-start"
@@ -70,11 +67,7 @@
             </button>
         {/if}
         <div class="fcol-2">
-            <StringField
-                bind:value={dirtyConfig.model}
-                label="Model"
-                placeholder="openrouter/auto"
-            >
+            <Field schema={fields.model} bind:value={dirtyConfig.model}>
                 {#snippet description()}
                     <p class="note">
                         Visit
@@ -88,7 +81,7 @@
                         To configure preferred providers or fallback models, create a preset in your OpenRouter account.
                     </p>
                 {/snippet}
-            </StringField>
+            </Field>
             <ModelMetadata
                 modelId={dirtyConfig.model?.trim() || 'openrouter/auto'}
                 bind:overrides={dirtyConfig.modelMetadata}
@@ -102,44 +95,12 @@
                     : undefined}
             />
         </div>
-        <BooleanField
-            bind:value={dirtyConfig.allowDoNothing}
-            label="Allow to do nothing"
-            description="Let the model choose to skip acting (if not forced)"
-        />
-        <BooleanField
-            bind:value={dirtyConfig.allowYapping}
-            label="Allow yapping"
-            description="Let the model choose to speak instead of acting (unless forced)"
-        />
+        <Field schema={fields.allowDoNothing} bind:value={dirtyConfig.allowDoNothing} />
+        <Field schema={fields.allowYapping} bind:value={dirtyConfig.allowYapping} />
         <details class="details-box advanced-details">
             <summary>Advanced</summary>
-            <SelectField
-                bind:value={dirtyConfig.promptingStrategy}
-                label="Response method"
-                options={[
-                    { value: "json", label: "Structured output" },
-                    { value: "tools", label: "Tool calling (beta)" },
-                ]}
-                description="Choose how the model returns actions. Structured output works with more providers."
-            />
-            <SelectField
-                bind:value={dirtyConfig.reasoningEffort}
-                label="Reasoning effort"
-                options={[
-                    { value: "auto", label: "Auto (recommended)" },
-                    { value: "none", label: "None" },
-                    { value: "low", label: "Low" },
-                    { value: "medium", label: "Medium" },
-                    { value: "high", label: "High" },
-                ]}
-            >
-                {#snippet description()}
-                    <p class="note">
-                        Auto defaults to None for minimum l*tency (but falls back to Low if the provider requires reasoning).
-                    </p>
-                {/snippet}
-            </SelectField>
+            <Field schema={fields.promptingStrategy} bind:value={dirtyConfig.promptingStrategy} />
+            <Field schema={fields.reasoningEffort} bind:value={dirtyConfig.reasoningEffort} />
         </details>
     {/snippet}
 </EngineConfig>

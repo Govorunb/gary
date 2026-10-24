@@ -1,7 +1,7 @@
 import z from "zod";
 
 export const zModelMetadata = z.strictObject({
-    contextWindow: z.number().int().positive(),
+    contextWindow: z.number().int().positive().field({ title: "Context window", placeholder: "Tokens" }),
 });
 
 export const zModelMetadataOverrides = z.record(z.string(), zModelMetadata);
