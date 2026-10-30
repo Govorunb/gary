@@ -33,11 +33,12 @@
         </label>
     {/if}
     {#snippet input()}
+        <!-- An emptied number input reads as null, which no schema accepts; empty means unset. -->
         <input
             {...props}
             id={inputId}
             type={slider ? "range" : "number"}
-            bind:value
+            bind:value={() => value, (v) => value = v ?? undefined}
             class="field-input"
             class:field-slider={slider}
             {@attach scrollNumInput}
