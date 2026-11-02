@@ -43,6 +43,10 @@ export const zLLMOptions = z.strictObject({
         title: "Allow yapping",
         description: "Let the model choose to speak instead of acting (unless forced)",
     }),
+    allowUnregisteredActions: z.boolean().fallback(false).field({
+        title: "Allow unregistered actions",
+        description: "Send actions the game hasn't registered instead of asking the model to pick again. Useful for testing how the game rejects them.",
+    }),
     /** How actions and optional commands are constrained in model responses. */
     promptingStrategy: z.enum(["json", "tools"]).fallback("json").field({
         title: "Response method",
@@ -152,6 +156,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     abstract name: string;
     private readonly tokensPerByte = new Map<string, number>();
 
+    override get allowsUnregisteredActions() {
+        return this.options.allowUnregisteredActions;
+    }
+
     tryAct(session: EngineContext, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
         return new ResultAsync(this.actCore(session, actions, false, signal));
     }
@@ -232,7 +240,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                         "Model returned multiple tool calls",
                         "Only one tool call is allowed per response. Choose one tool and call it once.",
                     ))
-                    : this.parseToolCall(toolCall, generation, callableActions, isForce);
+                    : this.parseToolCall(toolCall, generation, this.allowsUnregisteredActions ? promptTools : callableActions, isForce);
                 if (toolResult.isOk()) return toolResult;
                 this.eventBus.emit("api/actor/tool_error", {
                     engineId: this.id,
@@ -278,7 +286,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return ok("skip");
         }
         const callable = callableActions.find(({ tool }) => tool.function.name === toolCall.name);
-        if (!callable) {
+        if (!callable && !this.allowsUnregisteredActions) {
             return err(new ToolCallError(
                 `Model called unknown tool '${toolCall.name}'`,
                 `Tool '${toolCall.name}' is not available on this turn. Use one of the currently available tools.`,
@@ -291,7 +299,9 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 e,
             ));
         if (args.isErr()) return err(args.error);
-        const wrappedData = callable.action.schema
+        const wrappedData = !callable
+            ? z.strictObject({ data: z.unknown().optional() }).safeParse(args.value)
+            : callable.action.schema
             ? z.strictObject({ data: z.unknown() }).safeParse(args.value)
             : null;
         if (wrappedData && !wrappedData.success) {
@@ -308,8 +318,8 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             metadata: generation.metadata,
         });
         return ok({
-            name: callable.action.name,
-            data: wrappedData ? JSON.stringify(wrappedData.data.data) : null,
+            name: callable?.action.name ?? toolCall.name,
+            data: wrappedData ? JSON.stringify(wrappedData.data.data) ?? null : null,
             toolCallId: toolCall.id,
         });
     }
@@ -349,18 +359,18 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return err(new EngineError(`Failed to parse structured command: ${actionCommand.error}`, actionCommand.error));
         }
         const action = actions.find(candidate => candidate.name === actionCommand.data.action);
-        if (!action) {
+        if (!action && !this.allowsUnregisteredActions) {
             return err(new ToolCallError(
                 `Model selected unavailable action '${actionCommand.data.action}'`,
                 `Action '${actionCommand.data.action}' is not available on this turn. Choose from the currently available actions.`,
             ));
         }
-        if (action.schema && actionCommand.data.data === undefined) {
+        if (action?.schema && actionCommand.data.data === undefined) {
             return err(new EngineError(`Model omitted data for action '${action.name}'`));
         }
         return ok({
-            name: action.name,
-            data: action.schema ? JSON.stringify(actionCommand.data.data) : null,
+            name: actionCommand.data.action,
+            data: !action || action.schema ? JSON.stringify(actionCommand.data.data) ?? null : null,
         });
     }
 

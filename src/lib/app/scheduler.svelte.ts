@@ -5,11 +5,12 @@ import { FORCE_PRIORITY, zActData, type Action, type ForcePriority } from "#lib/
 import { engineActionSet, type EngineActionTarget } from "./engines/actions";
 import { EngineError, type Engine, type EngineAct, type EngineActError, type EngineActResult } from "./engines/index.svelte";
 import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
-import { debounced, LogLevel } from "./utils";
+import { debounced, jsonParse, LogLevel } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";
 import { scrubSecrets } from "./events/sensitive";
 import { EVENT_BUS } from "./events/bus";
 import { toast } from "svelte-sonner";
+import { validateActionData } from "./engines/action-data";
 
 export type ActionCandidate = {
     game: Game;
@@ -286,7 +287,21 @@ export class Scheduler {
     }
 
     private performAct(act: EngineAct, forced: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget<Game>>, metrics: ActMetrics): ResultAsync<EngineAct, ActError> {
-        const target = targetsByName.get(act.name);
+        let target: ActionCandidate | undefined = targetsByName.get(act.name);
+        const outsideRequestedActions = !target;
+        if (!target && engine.allowsUnregisteredActions) {
+            const games = forced
+                ? [...new Set(Array.from(targetsByName.values(), target => target.game))]
+                : this.registry.games;
+            const historical = engineActionSet(this.registry.games).targetsByName.get(act.name);
+            if (historical) {
+                if (games.includes(historical.game)) target = historical;
+            } else {
+                const owners = games.filter(game => game.actions.has(act.name));
+                const game = owners.length === 1 ? owners[0] : owners.length === 0 && games.length === 1 ? games[0] : undefined;
+                if (game) target = { game, action: { name: act.name } };
+            }
+        }
         if (!target) {
             EVENT_BUS.emit('app/scheduler/act/fail/action_not_found', { force: forced, act });
             return errAsync(LogicError.notFound(act.name));
@@ -295,12 +310,21 @@ export class Scheduler {
         const realAct: EngineAct = { ...act, name: target.action.name };
         EVENT_BUS.emit('app/scheduler/act/perform', { force: forced, action: realAct.name });
         const actData = zActData.decode({ name: realAct.name, data: realAct.data });
+        const issues: string[] = [];
+        const registered = game.actions.get(realAct.name);
+        if (!registered?.active) issues.push("unregistered");
+        else if (outsideRequestedActions) issues.push("not requested");
+        const schema = registered?.schema;
+        if (schema && !jsonParse(realAct.data ?? "null").andThen(data => validateActionData(schema, data)).unwrapOr(true)) {
+            issues.push("invalid data");
+        }
         EVENT_BUS.emit('api/actor/act', {
             engineId: engine.id,
             force: forced,
             game: game.name,
             act: actData,
             metrics,
+            issues,
         });
         return ResultAsync.fromPromise(game.sendAction(actData, act.toolCallId), (e) => LogicError.sendErr(e as Error))
             .orTee(() => EVENT_BUS.emit('app/scheduler/act/fail/failed_to_send', { force: forced }))
@@ -509,6 +533,10 @@ export const EVENTS = [
 ] as const satisfies EventDef<'app/scheduler'>[];
 
 export const DISPLAY = {
+    "api/actor/act": ({ game, act, issues }) => ({
+        title: `Engine sent '${act.name}'${issues.length ? ` (${issues.join(", ")})` : ""}`,
+        description: game,
+    }),
     "app/scheduler/act/cancelled": () => ({
         title: "Cancelled acting",
         level: LogLevel.Success
@@ -520,7 +548,7 @@ export const DISPLAY = {
         title: `Engine error: ${message}`,
         description: cause,
     }),
-} as PresentDefs<Keys<typeof EVENTS>>;
+} as PresentDefs<Keys<typeof EVENTS> | Keys<typeof ACT_EVENTS>>;
 
 /** How long the engine took to decide, and what it cost when the engine reports usage. */
 export type ActMetrics = { latencyMs: number; tokens?: number };
@@ -547,9 +575,11 @@ export const ACT_EVENTS = [
             game: string;
             act: ReturnType<typeof zActData.decode>;
             metrics: ActMetrics;
+            issues: string[];
         },
         description: "Actor selected an action",
         level: LogLevel.Info,
+        silent: true,
     },
     {
         key: 'api/actor/generated',

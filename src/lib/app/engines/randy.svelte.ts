@@ -6,6 +6,8 @@ import type { EventBus } from "../events/bus";
 import z from "zod";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import type { JsonSchema } from "json-schema-faker";
+import { validateActionData } from "./action-data";
+import { engineActionSet } from "./actions";
 
 export const ENGINE_ID = "randy";
 /** Automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
@@ -36,7 +38,7 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
             return errAsync(new EngineError("Randy API key invalid", new Error("Please re-enter the API key in Randy's engine config.")));
         }
         return ResultAsync.fromPromise(
-            this.shouldSkip(),
+            this.roll(this.options.chanceDoNothing),
             e => new EngineError("Randy could not decide whether to act", parseError(e))
         ).andThen(skip => skip ? okAsync("skip" as const) : this.forceAct(session, actions, signal));
     }
@@ -50,25 +52,47 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
             return errAsync(new EngineError("Randy API key invalid", new Error("Please re-enter the API key in Randy's engine config.")));
         }
         return ResultAsync.fromPromise(
+            this.generate(resolvedActions, this.staleActions(session, resolvedActions)),
+            e => new EngineError("Randy could not generate an action", parseError(e)),
+        ).andThen(act => ResultAsync.fromPromise(
             sleep(this.options.latencyMs, signal),
-            _ => "cancelled" as EngineActError
-        ).andThen(() => ResultAsync.fromPromise(
-            this.generate(resolvedActions),
-            e => new EngineError("Randy could not generate an action", parseError(e))
-        ));
+            _ => "cancelled" as EngineActError,
+        ).map(() => act));
     }
 
-    private async shouldSkip(): Promise<boolean> {
+    override get allowsUnregisteredActions() {
+        return this.options.chanceUnregisteredAction > 0;
+    }
+
+    private staleActions(session: EngineContext, actions: Action[]): Action[] {
+        if (!this.options.chanceUnregisteredAction) return [];
+        const catalog = engineActionSet(session.registry.games);
+        const sourceGames = new Set(actions.map(action => catalog.targetsByName.get(action.name)?.game));
+        return Array.from(catalog.targetsByName.values())
+            .filter(({ game, action }) => sourceGames.has(game) && game.actions.get(action.name)?.active === false)
+            .map(({ engineAction }) => engineAction);
+    }
+
+    private async roll(chance: number): Promise<boolean> {
         const value = await this.generator.generate({ type: "number", minimum: 0, maximum: 1 });
-        return (value as number) < this.options.chanceDoNothing;
+        return chance === 1 || (value as number) < chance;
     }
 
-    private async generate(actions: Action[]): Promise<EngineAct> {
+    private async generate(actions: Action[], stale: Action[]): Promise<EngineAct> {
+        if (stale.length && await this.roll(this.options.chanceUnregisteredAction)) actions = stale;
         const index = await this.generator.generate({ type: "integer", minimum: 0, maximum: actions.length - 1 }) as number;
         const action = actions[index];
-        const data = action.schema
+        let data = action.schema
             ? await this.generator.generate(action.schema as JsonSchema)
             : null;
+        if (action.schema && this.options.chanceInvalidData > 0 && await this.roll(this.options.chanceInvalidData)) {
+            // Valid JSON with the wrong shape, rather than a broken protocol frame.
+            for (const candidate of [{}, null, [], "", 0, true]) {
+                if (validateActionData(action.schema, candidate).unwrapOr(true)) continue;
+                data = candidate;
+                break;
+            }
+        }
         return zEngineAct.decode({ name: action.name, data: JSON.stringify(data) });
     }
 
@@ -80,14 +104,23 @@ export const zRandyPrefs = z.strictObject({
         title: "Chance to skip acting",
         description: "Probability (0-1) of skipping an action if not forced. Keep this above 0 or Randy might get stuck in a retry loop for some actions.",
     }),
+    /** Held even if the game changes in the meantime. */
     latencyMs: z.number().min(1).max(864000000).default(100).field({
         title: "L*tency",
-        description: "Optional delay for Randy's responses (in milliseconds). If you set this too low and Randy gets stuck in a retry loop, the app will hang. You have been sufficiently informed and thus warned.",
+        description: "How long Randy waits after picking an action (in milliseconds). If you set this too low and Randy gets stuck in a retry loop, the app will hang. You have been sufficiently informed and thus warned.",
     }),
     seed: z.number().int().optional().field({
         title: "Random seed",
         placeholder: "Random",
         description: "Random generator seed. Set for deterministic behavior, leave blank for random.",
+    }),
+    chanceUnregisteredAction: z.number().min(0).max(1).slider(0.01).fallback(0).field({
+        title: "Chance to send an unregistered action",
+        description: "Picks an action the game has unregistered, if there is one.",
+    }),
+    chanceInvalidData: z.number().min(0).max(1).slider(0.01).fallback(0).field({
+        title: "Chance to send invalid data",
+        description: "Sends data that doesn't fit the action's schema.",
     }),
 });
 
