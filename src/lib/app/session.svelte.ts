@@ -1,13 +1,14 @@
+import { createEngine } from "./engines/create";
 import { v4 as uuidv4 } from "uuid";
 import { ContextManager } from "./context.svelte";
 import { Scheduler } from "./scheduler.svelte";
 import type { Engine } from "./engines/index.svelte";
 import { Registry } from "#lib/api/registry.svelte.js";
 import type { UserPrefs } from "./prefs.svelte";
-import { OpenAIEngine, zOpenAIPrefs } from "./engines/llm/openai.svelte";
+import { zOpenAIPrefs } from "./engines/llm/openai.svelte";
 import { EVENT_BUS } from "./events/bus";
-import { Randy, ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
-import { OpenRouter, ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
+import { ENGINE_ID as RANDY_ID } from "./engines/randy.svelte";
+import { ENGINE_ID as OPENROUTER_ID } from "./engines/llm/openrouter.svelte";
 import { UIState } from "#lib/ui/app/ui-state.svelte.js";
 import type { EventDef, Keys, PresentDefs } from "./events";
 import { LogLevel } from "./utils";
@@ -102,17 +103,7 @@ export class Session {
             this.userPrefs.engines[id] = zOpenAIPrefs.decode({ name: "New engine" });
             EVENT_BUS.emit('app/session/engine/created', { id });
         }
-        switch (id) {
-            case RANDY_ID:
-                this.engines[id] = new Randy(this.userPrefs);
-                break;
-            case OPENROUTER_ID:
-                this.engines[id] = new OpenRouter(this.userPrefs);
-                break;
-            default:
-                this.engines[id] = new OpenAIEngine(this.userPrefs, id);
-                break;
-        }
+        this.engines[id] = createEngine(this.userPrefs, id);
         EVENT_BUS.emit('app/session/engine/initialized', { id });
         return id;
     }

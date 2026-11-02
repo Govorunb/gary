@@ -1,9 +1,9 @@
 import type { Action } from "#lib/api/v1/spec.js";
 import { createJsonSchemaGenerator, parseError, sleep } from "../utils";
 import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "./index.svelte";
-import type { Session } from "../session.svelte";
+import type { EngineContext, EnginePrefs } from "./index.svelte";
+import type { EventBus } from "../events/bus";
 import z from "zod";
-import type { UserPrefs } from "../prefs.svelte";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import type { JsonSchema } from "json-schema-faker";
 
@@ -15,11 +15,11 @@ export class Randy extends Engine<RandyPrefs> {
     readonly name: string = "Randy";
     private generator = $derived.by(() => createJsonSchemaGenerator(this.options.seed));
 
-    constructor(userPrefs: UserPrefs) {
-        super(userPrefs, ENGINE_ID);
+    constructor(userPrefs: EnginePrefs, eventBus?: EventBus) {
+        super(userPrefs, ENGINE_ID, eventBus);
     }
 
-    tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
+    tryAct(session: EngineContext, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
             return okAsync({
@@ -41,7 +41,7 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
         ).andThen(skip => skip ? okAsync("skip" as const) : this.forceAct(session, actions, signal));
     }
 
-    forceAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError> {
+    forceAct(session: EngineContext, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
             return errAsync(new EngineError("forceAct called with no available actions"));

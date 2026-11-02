@@ -1,5 +1,6 @@
 import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type LLMRequest } from ".";
-import type { UserPrefs } from "#lib/app/prefs.svelte.js";
+import type { EnginePrefs } from "../index.svelte";
+import type { EventBus } from "#lib/app/events/bus.js";
 import z from "zod";
 import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
 import { EngineError, type EngineActError } from "../index.svelte";
@@ -13,8 +14,8 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
     readonly name: string = "OpenRouter";
     private client: OpenAIClient;
 
-    constructor(userPrefs: UserPrefs) {
-        super(userPrefs, ENGINE_ID);
+    constructor(userPrefs: EnginePrefs, eventBus?: EventBus) {
+        super(userPrefs, ENGINE_ID, eventBus);
         const self = this;
         this.client = new OpenAIClient({
             get prefs(): OpenAIPrefs {
@@ -28,7 +29,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
             setReasoningEffort(effort) {
                 self.options.reasoningEffort = effort;
             },
-        });
+        }, this.eventBus);
     }
 
     protected modelId(): string {

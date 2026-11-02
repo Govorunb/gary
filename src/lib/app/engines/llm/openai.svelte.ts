@@ -1,5 +1,6 @@
 import { ConfigError, LLMEngine, zLLMOptions, type LLMGeneration, type LLMRequest } from ".";
-import type { UserPrefs } from "#lib/app/prefs.svelte.js";
+import type { EnginePrefs } from "../index.svelte";
+import type { EventBus } from "#lib/app/events/bus.js";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageFunctionToolCall } from "openai/resources/chat/completions";
 import z from "zod";
@@ -23,14 +24,14 @@ export class OpenAIEngine extends LLMEngine<OpenAIPrefs> {
         return this.options.name;
     }
 
-    constructor(userPrefs: UserPrefs, engineId: string) {
-        super(userPrefs, engineId);
+    constructor(userPrefs: EnginePrefs, engineId: string, eventBus?: EventBus) {
+        super(userPrefs, engineId, eventBus);
 
         const self = this;
         this.client = new OpenAIClient({
             get prefs() { return self.options; },
             setReasoningEffort(effort) { self.options.reasoningEffort = effort; },
-        });
+        }, this.eventBus);
     }
 
     protected modelId(): string | undefined {
@@ -102,7 +103,7 @@ export class OpenAIClient {
         return this.prefsSource.prefs;
     }
 
-    constructor(private readonly prefsSource: OpenAIPrefsSource) {
+    constructor(private readonly prefsSource: OpenAIPrefsSource, private readonly eventBus: EventBus = EVENT_BUS) {
         this.client = new OpenAI({
             apiKey: this.options.apiKey || OPENAI_COMPAT_NO_API_KEY,
             dangerouslyAllowBrowser: true,
@@ -181,7 +182,7 @@ export class OpenAIClient {
                 ...baseParams,
                 ...(effort ? { reasoning_effort: effort } : {}),
             };
-            EVENT_BUS.emit('app/engines/llm/request', { reqId, params });
+            this.eventBus.emit('app/engines/llm/request', { reqId, params });
             const res = await ResultAsync.fromPromise(
                 this.client.chat.completions.create(params, { signal }),
                 (error) => {
@@ -210,36 +211,36 @@ export class OpenAIClient {
         }
         if (preference === "auto" && res.isErr() && isReasoningEffortError(res.error)) {
             this.prefsSource.setReasoningEffort("low");
-            EVENT_BUS.emit('app/engines/llm/reasoning_effort_fallback', { reqId });
+            this.eventBus.emit('app/engines/llm/reasoning_effort_fallback', { reqId });
             res = await sendRequest("low");
         }
         if (signal?.aborted) {
             return err("cancelled");
         }
-        EVENT_BUS.emit('app/engines/llm/response', { reqId, response: res });
+        this.eventBus.emit('app/engines/llm/response', { reqId, response: res });
         if (res.isErr()) {
-            EVENT_BUS.emit('app/engines/llm/network_error', { reqId });
+            this.eventBus.emit('app/engines/llm/network_error', { reqId });
             return err(new EngineError(`${this.name} request failed: ${res.error.message}`, res.error.error as Error, false));
         }
         const response = res.value;
         type RespOrError = typeof response | { choices?: never, error: any };
         const resp = (response as RespOrError).choices?.[0];
         if (!resp) {
-            EVENT_BUS.emit('app/engines/llm/error_result', { reqId });
+            this.eventBus.emit('app/engines/llm/error_result', { reqId });
             return err(new EngineError(
                 `${this.name} did not return successful result`,
                 responseError(response) ?? parseError(response),
             ));
         }
         if ((resp.finish_reason as string) === "error") {
-            EVENT_BUS.emit('app/engines/llm/error_result', { reqId });
+            this.eventBus.emit('app/engines/llm/error_result', { reqId });
             return err(new EngineError(
                 `${this.name} generation failed`,
                 responseError(resp) ?? parseError(resp),
             ));
         }
         if (resp.finish_reason !== "stop" && resp.finish_reason !== "length" && resp.finish_reason !== "tool_calls") {
-            EVENT_BUS.emit('app/engines/llm/assert', { reqId, assertion: 'finish_reason' });
+            this.eventBus.emit('app/engines/llm/assert', { reqId, assertion: 'finish_reason' });
             return err(new EngineError(`${this.name} returned unexpected finish_reason '${resp.finish_reason}'`, undefined, false))
         }
         const toolCalls = (resp.message.tool_calls ?? [])
