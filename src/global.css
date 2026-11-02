@@ -171,8 +171,9 @@
     .menu-item {
         @apply frow-1.5 items-center w-full px-3 py-2 rounded-sm;
         @apply text-left text-sm text-ink-1 transition-colors duration-150;
-        &:hover { @apply bg-layer-4; }
+        &:hover:not(:disabled) { @apply bg-layer-4; }
         &:focus-visible { @apply outline-none ring-1 ring-edge; }
+        &:disabled { @apply opacity-40 cursor-not-allowed; }
         &.menu-item-danger {
             @apply text-lvl-err;
             &:hover { background-color: color-mix(in oklab, var(--color-lvl-err) 12%, transparent); }

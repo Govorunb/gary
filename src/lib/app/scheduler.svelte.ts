@@ -1,3 +1,4 @@
+import { captureProfile, zDecision, type Decision } from "./evals/decision";
 import type { Session } from "./session.svelte";
 import type { ActiveForce, Game } from "#lib/api/game.svelte.js";
 import type { Registry } from "#lib/api/registry.svelte.js";
@@ -21,6 +22,17 @@ const MAX_CONSECUTIVE_RECOVERABLE_ERRORS = 5;
 const PENDING_ACT_GRACE_MS = 100;
 
 export class Scheduler {
+    /** What the active engine would be asked now, or with the given candidates. */
+    decision(candidates = this.activeActionCandidates(), force = false, forceContext?: ActiveForce["data"]): Decision {
+        return {
+            engine: captureProfile(this.activeEngine),
+            force,
+            forceContext,
+            selection: candidates.map(({ game, action }) => ({ gameId: game.id, name: action.name })),
+            systemPrompt: this.session.userPrefs.app.systemPrompt ?? "",
+        };
+    }
+
     /** Explicitly muted by the user through the app UI. */
     #muted = $state(false);
     /** Busy (or simulating a busy state), e.g. waiting for LLM generation or pretending to wait for TTS. */
@@ -237,6 +249,7 @@ export class Scheduler {
         this.#abort = controller;
         this.#activePriority = priority;
         this.#generatedTokens = undefined;
+        this.session.bus.emit('app/scheduler/decision', this.decision(candidates, force, forceContext));
         const started = Date.now();
         const actRes = force
             ? await this.activeEngine!.forceAct(this.session, actionSet.actions, controller.signal, forceContext)
@@ -467,6 +480,13 @@ export class AutoPoker {
 }
 
 export const EVENTS = [
+    {
+        // an eval forks the session here and asks other engines the same thing
+        key: 'app/scheduler/decision',
+        dataSchema: zDecision,
+        description: "Engine asked to act",
+        level: LogLevel.Debug,
+    },
     {
         key: 'app/scheduler/act/cancelled',
         level: LogLevel.Info,

@@ -7,6 +7,7 @@ export type DialogState =
     | { type: "diagnostics", game: Game }
     | { type: "update" }
     | { type: "enginePicker", engineId: string | null }
+    | { type: "decisionEvals", eventId?: string }
     | { type: "settings" }
     | { type: "hotkeys" };
 
@@ -69,6 +70,11 @@ export class DialogManager {
 
     closeEnginePicker() {
         this.closeDialog("enginePicker");
+    }
+
+    /** Opens evals on the newest decision at or before `eventId`, or the newest of all. */
+    openDecisionEvals(eventId?: string) {
+        this.openDialog({ type: "decisionEvals", eventId });
     }
 
     openSettingsDialog() {

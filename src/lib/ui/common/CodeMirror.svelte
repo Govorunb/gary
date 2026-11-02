@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onDestroy } from "svelte";
     import { basicSetup, EditorView } from "codemirror";
     import { EditorState } from "@codemirror/state";
     import { json } from "@codemirror/lang-json";
@@ -25,6 +26,7 @@
 
     let editorEl = $state<HTMLDivElement>();
     let view: EditorView | null = null;
+    onDestroy(() => view?.destroy());
 
     $effect(() => {
         if (!open) {

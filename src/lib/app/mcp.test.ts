@@ -130,6 +130,18 @@ test("keeps secrets out of what agents read", async () => {
     expect((await waiting).matched).toMatchObject({ data: { text: "old key [REDACTED]" } });
 });
 
+test("replays a captured decision without touching the session", async () => {
+    await connectGame();
+    const { decision } = await call("capture_decision", { current: true });
+    const before = session.eventLog.cursor;
+
+    const run = await call("run_decision", { decision, trials: 2 });
+
+    expect(run.stoppedEarly).toBe(false);
+    expect(run.trials).toMatchObject([{ engineId: "randy" }, { engineId: "randy" }]);
+    expect(session.eventLog.cursor).toBe(before);
+});
+
 test("adds to the actor's context as the user", async () => {
     const { cursor } = await call("add_context", { text: "The floor is lava", silent: true });
     const { events } = await call("read_events", { after: cursor, keys: ["ui/context/input"] });

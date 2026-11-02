@@ -4,7 +4,9 @@ import z from "zod";
 import type { Session } from "./session.svelte";
 import { COMMANDS, zGameId, type AgentCommand } from "./commands";
 import { exportReplacer, eventLevel, redactEvent, type EventInstance, type EventKey } from "./events";
-import { APP_VERSION, LogLevel, type Awaitable } from "./utils";
+import { APP_VERSION, LogLevel, safeParse, type Awaitable } from "./utils";
+import { captureProfile } from "./evals/decision";
+import { currentDecision, distribution, lastDecision, runDecision, zDecisionDoc, type Trial } from "./evals/runner";
 import { scrubSecrets } from "./events/sensitive";
 import { DIAGNOSTICS_BY_KEY, DiagnosticSeverity } from "#lib/api/diagnostics.js";
 import { formatContextEvent } from "#lib/ui/app/context/formatters/registry.js";
@@ -169,6 +171,38 @@ function createServer(session: Session) {
             autoAct: scheduler.autoPoker.autoAct,
             pausedOnError: scheduler.errorReason,
         }),
+    );
+
+    tool("capture_decision", "Capture the engine's last decision as JSON for run_decision: the session's events up to it, ending with the decision itself (the actions offered, the engine, the system prompt), and the engines to run. Edit it to test what changes the outcome.",
+        z.strictObject({ current: z.boolean().default(false).describe("Capture the decision the engine would face now instead") }),
+        ({ current }) => {
+            const decision = current ? currentDecision(session) : lastDecision(session);
+            return decision ? ok({ decision }) : err("The engine hasn't decided anything yet; capture the current state instead");
+        },
+    );
+
+    tool("run_decision", `Run a captured decision several times, each on a fresh copy of its context, without touching the live session. Returns every result and how often each choice came up. Stops after ${MAX_CALL_MS / 1000} seconds with the trials finished so far. LLM engines use their configured credentials, so trials cost money.`,
+        z.strictObject({
+            decision: z.record(z.string(), z.unknown()).describe("A decision from capture_decision, edited or not"),
+            trials: z.int().min(1).max(100).default(3).describe("Runs per engine"),
+            engines: z.array(z.string()).min(1).optional().describe("Engine IDs to compare, instead of the decision's own engine"),
+        }),
+        async ({ decision, trials, engines }) => {
+            const parsed = safeParse(zDecisionDoc, decision);
+            if (parsed.isErr()) return err(`Invalid decision: ${parsed.error.message}`);
+            const doc = parsed.value;
+            if (engines) {
+                const missing = engines.find(id => !Object.hasOwn(session.engines, id));
+                if (missing) return err(`No engine with ID '${missing}'`);
+                doc.engines = engines.map(id => captureProfile(session.engines[id]));
+            }
+            const results: Trial[] = [];
+            const signal = AbortSignal.timeout(MAX_CALL_MS);
+            // model metadata lookups ignore the signal, so stop waiting at the deadline rather than when they finish
+            const deadline = new Promise<Result<void, string>>(resolve => signal.addEventListener("abort", () => resolve(ok()), { once: true }));
+            const run = await Promise.race([runDecision(doc, session.userPrefs, trials, signal, trial => results.push(trial)), deadline]);
+            return run.map(() => ({ stoppedEarly: signal.aborted, trials: results, distribution: distribution(results) }));
+        },
     );
 
     // everything the user can do to a session

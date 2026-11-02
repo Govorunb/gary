@@ -33,6 +33,8 @@ There is no authentication, but the endpoint only accepts connections from this 
 | `set_auto_act` | Turns auto-act on or off. |
 | `add_context` | Adds a message to the engine's context as the user, prompting it to act unless it's silent. |
 | `clear_context` | Clears the actor's context. |
+| `capture_decision` | The engine's last decision (or the one it would face now) as JSON: the session's events up to it, ending with the decision itself (the actions offered, the engine and the system prompt), plus the engines to run. |
+| `run_decision` | Replays a captured decision several times, optionally on other engines, and returns how often each choice came up. It doesn't touch the live session, but LLM trials cost money. |
 
 ## Cursors and waiting
 
@@ -55,4 +57,6 @@ Keys are matched by prefix, so `api/game/` covers everything games send. Useful 
 | `api/actor/` | The engine acted, spoke or skipped. |
 | `app/diagnostics/triggered` | Gary found a problem in a game's protocol use. |
 
-`wait_for_events` waits for up to 50 seconds per call (30 by default). Gary keeps the newest 1,000 events, and clearing the event log in the app clears them for agents too.
+To find out why the engine made a choice, capture the decision, edit its events (a game's context, an action's description) or the decision itself, and run both versions a few times. One run proves little, since engines aren't deterministic.
+
+`wait_for_events` waits for up to 50 seconds per call (30 by default), and `run_decision` stops after 50 seconds with the trials it finished. Gary keeps the newest 1,000 events, and clearing the event log in the app clears them for agents too.

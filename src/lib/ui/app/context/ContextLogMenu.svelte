@@ -4,12 +4,13 @@
     import Popover from "#lib/ui/common/Popover.svelte";
     import type { ContextRow } from "./formatters/types";
     import { copyContextText, contextRowData } from "./copy";
-    import { getSession } from "#lib/app/utils/di.js";
+    import { getSession, getUIState } from "#lib/app/utils/di.js";
     import { COMMANDS } from "#lib/app/commands.js";
 
     const { rows }: { rows: ContextRow[] } = $props();
     const session = getSession();
 
+    const dialogs = getUIState().dialogs;
     let open = $state(false);
 
     function closeMenu() {
@@ -39,6 +40,9 @@
     </button>
     <button class="menu-item" onclick={() => copyContext("json")} disabled={!rows.length}>
         Copy as JSON
+    </button>
+    <button class="menu-item" onclick={() => { dialogs.openDecisionEvals(); closeMenu(); }}>
+        Decision evals
     </button>
     {#if session.live}
         <button class="menu-item menu-item-danger" onclick={clearContext}>

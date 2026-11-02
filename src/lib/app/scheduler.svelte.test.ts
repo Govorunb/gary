@@ -58,6 +58,7 @@ function createEngine(select: (actions: Action[]) => EngineActResult, allowsUnre
         id: "test-engine",
         allowsUnregisteredActions,
         name: "Test Engine",
+        options: {},
         forceAct: vi.fn((_session: Session, actions?: Action[]) => okAsync(select(actions ?? []))),
         tryAct: vi.fn((_session: Session, actions?: Action[]) => okAsync(select(actions ?? []))),
     } as unknown as Engine<unknown>;
@@ -74,7 +75,8 @@ async function withScheduler(
         id: "test-session",
         name: "test-session",
         registry: { games },
-        userPrefs: { get secrets() { return prefs.secrets; } },
+        context: { actorView: [] },
+        userPrefs: { app: {}, get secrets() { return prefs.secrets; } },
         activeEngine: engine,
         uiState: { aprilFools: false },
         bus: EVENT_BUS,
