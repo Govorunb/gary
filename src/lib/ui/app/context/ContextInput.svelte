@@ -3,16 +3,20 @@
     import { PressedKeys, TextareaAutosize } from "runed";
     import { tick } from "svelte";
     import { tooltip } from "#lib/app/utils/index.js";
-    import { getUserPrefs } from "#lib/app/utils/di.js";
-    import { EVENT_BUS } from "#lib/app/events/bus.js";
+    import { getSession, getUserPrefs } from "#lib/app/utils/di.js";
+    import { COMMANDS } from "#lib/app/commands.js";
+    import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
+    import { chordPressed, onCommandKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "#lib/ui/common/Hotkey.svelte";
 
+    const session = getSession();
     const userPrefs = getUserPrefs();
+    const { addContext } = COMMANDS;
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
 
-    keys.onKeys(["Alt", "C"], () => open());
+    onCommandKeys(keys, UI_COMMANDS.openContextInput, open);
 
     let expanded = $state(false);
     let value = $state("");
@@ -37,7 +41,7 @@
 
     function submit() {
         if (!value) return;
-        EVENT_BUS.emit('ui/context/input', { text: value, silent });
+        void session.run(addContext, { text: value, silent });
         value = "";
         close();
     }
@@ -47,11 +51,11 @@
     }
 
     function onKeydown(evt: KeyboardEvent) {
-        if (evt.ctrlKey && evt.key === "Enter") {
+        if (chordPressed(evt, addContext)) {
             evt.preventDefault();
             submit();
         }
-        if (evt.key === "Escape") {
+        if (chordPressed(evt, UI_COMMANDS.closeContextInput)) {
             evt.preventDefault();
             close();
         }
@@ -89,15 +93,15 @@
                 {/if}
             </button>
             <TeachingTooltip>
-                <p><Hotkey>Ctrl+Enter</Hotkey> send</p>
-                <p><Hotkey>Esc</Hotkey> close</p>
+                <p><Hotkey>{keysLabel(addContext)}</Hotkey> send</p>
+                <p><Hotkey>{keysLabel(UI_COMMANDS.closeContextInput)}</Hotkey> close</p>
                 <p>Hold <Hotkey>Shift</Hotkey> to invert silent for one message</p>
             </TeachingTooltip>
             <button
                 class="send-button"
                 onclick={submit}
                 disabled={!value}
-                {@attach tooltip("Send (Ctrl+Enter)")}
+                {@attach tooltip(`${addContext.title} (${keysLabel(addContext)})`)}
             >
                 <SendHorizontal />
             </button>
@@ -108,7 +112,7 @@
         <button class="open-link" onclick={open}>
             <MessageSquare />
             <span>Add to context</span>
-            <Hotkey>Alt+C</Hotkey>
+            <Hotkey>{keysLabel(UI_COMMANDS.openContextInput)}</Hotkey>
         </button>
     </div>
 {/if}

@@ -8,8 +8,17 @@ type Unsub = () => void;
 
 export const MAX_DISPLAYED_EVENTS = 1_000;
 
+export type EventWait = {
+    /** Events after the starting cursor, up to and including the match. */
+    events: EventInstance<EventKey>[];
+    matched?: EventInstance<EventKey>;
+    /** Position right after the last collected event. */
+    cursor: number;
+};
+
 export class EventLogStore {
     #displayed = new DisplayHistory<EventInstance<EventKey>>(MAX_DISPLAYED_EVENTS);
+    #appended = 0;
     #subs: Array<(delta: EventLogDelta) => void> = [];
     #subsByKey = new Map<EventKey, Array<(delta: EventLogDelta) => void>>();
     #busSub;
@@ -23,9 +32,46 @@ export class EventLogStore {
         return this.#displayed.items;
     }
 
+    /** Position after the newest event. Pass it to `since` or `waitFor` to see what comes next. */
+    get cursor() {
+        return this.#appended;
+    }
+
     append(event: EventInstance<EventKey>) {
+        this.#appended++;
         this.#displayed.append(event);
         this.#emit({ type: "append", event });
+    }
+
+    /** Retained events appended after `cursor`, oldest first. */
+    since(cursor: number) {
+        const count = this.#appended - cursor;
+        return count > 0 ? this.#displayed.current().slice(-count) : [];
+    }
+
+    /** Collects events after `cursor` until one matches or the timeout passes. */
+    waitFor(match: (event: EventInstance<EventKey>) => boolean, cursor: number, timeoutMs: number): Promise<EventWait> {
+        const events = this.since(cursor);
+        const i = events.findIndex(match);
+        if (i >= 0) {
+            return Promise.resolve({
+                events: events.slice(0, i + 1),
+                matched: events[i],
+                cursor: this.#appended - (events.length - i - 1),
+            });
+        }
+        return new Promise(resolve => {
+            const finish = (matched?: EventInstance<EventKey>) => {
+                clearTimeout(timer);
+                unsub();
+                resolve({ events, matched, cursor: this.#appended });
+            };
+            const unsub = this.subscribe(({ event }) => {
+                events.push(event);
+                if (match(event)) finish(event);
+            });
+            const timer = setTimeout(finish, timeoutMs);
+        });
     }
 
     whenDisplayed() {
@@ -83,7 +129,8 @@ export class EventLogStore {
     }
 
     #emit(delta: EventLogDelta) {
-        this.#subs.forEach((cb) => cb(delta));
+        // copy: waiters unsubscribe mid-dispatch
+        [...this.#subs].forEach((cb) => cb(delta));
         const cbs = this.#subsByKey.get(delta.event.key);
         cbs?.forEach((cb) => cb(delta));
     }

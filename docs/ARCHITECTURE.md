@@ -67,7 +67,7 @@ There are Tauri plugins to extend the frontend with some common operations:
 
 There are more out there (e.g. file system access in `@tauri-apps/plugin-fs`), these are just examples.
 
-For Gary specifically, Rust hosts the WebSocket server, relaying messages to the frontend. Rust use in general is preferably kept to a minimum (for various reasons).
+For Gary specifically, Rust hosts the WebSocket server, relaying messages to the frontend. The same server relays HTTP requests on `/mcp` (from the local machine only) to the frontend, which answers them as an [MCP](MCP.md) server. Rust use in general is preferably kept to a minimum (for various reasons).
 
 #### Frontend Structure (`src/`)
 - Application code in `src/lib/`
@@ -75,6 +75,10 @@ For Gary specifically, Rust hosts the WebSocket server, relaying messages to the
     - App logic (engines, config) in `src/lib/app/`
     - Svelte 5 UI components and utilities in `src/lib/ui/`
 - SvelteKit routed pages in `src/routes/`
+
+User actions on a session are commands in `COMMANDS` (`src/lib/app/commands.ts`), defined once with its title, input schema, availability, handler and default hotkeys. The UI runs commands through `Session.run`, buttons take their disabled state from the command's availability, and the MCP server (`src/lib/app/mcp.ts`) exposes every command as a tool of the same name. A new command is an agent tool without further work. Transports only parse inputs and shape outputs.
+
+Actions that only make sense on screen, such as opening dialogs or a dialog's own hotkeys, are in `UI_COMMANDS` (`src/lib/ui/commands.ts`). The hotkeys dialog lists the keys of both catalogues, so a new command with keys shows up there on its own.
 
 #### Frontend Stack
 - Svelte 5 + SvelteKit + Vite

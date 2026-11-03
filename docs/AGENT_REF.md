@@ -50,6 +50,7 @@ We have neverthrow utility wrappers over common commands (exported from `#lib/ap
 Zod use should follow these conventions:
 - Prefer `strictObject` over `object` unless extra fields are explicitly meant to be allowed
 - When constructing objects in code from literals, prefer `zMyType.decode(input)` as it enables type checking whereas the `zMyType.parse(input)` parameter is typed as `unknown`. Use `parse` for outside input.
+- A pref shown in a form carries its user-facing copy in `.field()`: `title`, `description`, and where needed `placeholder` and `options` (enum labels). `.slider(step)` and `.password()` pick the control (see `src/lib/app/utils/zod.ts`). The layout places it with `<Field schema={fields.myPref} bind:value={prefs.myPref} />` (`src/lib/ui/common/form/Field.svelte`), which takes the label, control and bounds from the schema. Order, grouping and anything bespoke stay in the layout's markup.
 
 #### Svelte + Skeleton UI
 

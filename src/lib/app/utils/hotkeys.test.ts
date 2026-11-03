@@ -26,7 +26,7 @@ test("registerAppHotkey owns and removes every listener", () => {
     vi.stubGlobal("window", fakeWindow);
     vi.stubGlobal("document", fakeDocument);
     const callback = vi.fn();
-    registerAppHotkey(["Control", "K"], callback);
+    registerAppHotkey([["Control", "K"]], callback);
 
     fakeWindow.dispatchEvent(keyEvent("keydown", "Control"));
     const activation = keyEvent("keydown", "K");

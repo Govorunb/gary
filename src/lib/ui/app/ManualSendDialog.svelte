@@ -7,12 +7,15 @@
     import { Send, ChevronLeft, ChevronRight, Dice6 } from "@lucide/svelte";
     import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "#lib/ui/common/Hotkey.svelte";
-    import { getScheduler, getUserPrefs } from "#lib/app/utils/di.js";
+    import { getScheduler, getSession, getUserPrefs } from "#lib/app/utils/di.js";
     import Ajv, { type ValidateFunction } from "ajv";
     import { emptyValueFromJsonSchema, generateFromJsonSchema, parseError, tooltip } from "#lib/app/utils/index.js";
     import { boolAttr, PressedKeys } from "runed";
     import { EVENT_BUS } from "#lib/app/events/bus.js";
     import type { JsonSchema } from "json-schema-faker";
+    import { onCommandKeys } from "#lib/app/utils/hotkeys.svelte.js";
+    import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
+    import { COMMANDS, canRun } from "#lib/app/commands.js";
 
     type Props = {
         open: boolean;
@@ -23,12 +26,14 @@
     let { open = $bindable(), action, game }: Props = $props();
     const userPrefs = getUserPrefs();
     const scheduler = getScheduler();
+    const session = getSession();
     const busy = $derived(scheduler.busy);
+    const canSend = $derived(canRun(session, COMMANDS.sendAction));
     const ajv = new Ajv({ validateFormats: false, allErrors: true });
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has("Shift"));
-    keys.onKeys(["Control", "Enter"], sendAction);
-    keys.onKeys(["Alt", "R"], reroll);
+    onCommandKeys(keys, UI_COMMANDS.sendManual, sendAction);
+    onCommandKeys(keys, UI_COMMANDS.randomizeManual, reroll);
 
     const currentAction = $derived(game.getAction(action.name, false) ?? action);
     const evtData = $derived({gameId: game.id, actionName: currentAction.name});
@@ -39,7 +44,7 @@
     const isValid = $derived(!validationErrors);
     const sendTip = $derived.by(() => {
         if (busy) return "Engine busy (Shift to stop)";
-        if (isValid) return "Send (Ctrl+Enter)";
+        if (isValid) return `Send (${keysLabel(UI_COMMANDS.sendManual)})`;
         return shiftPressed ? "Send invalid data?" : "Hold shift to bypass validation";
     });
     const schemaCollapsed = $derived(userPrefs.app.manualSendSchemaCollapsed);
@@ -147,17 +152,12 @@
         open = false;
     }
 
-    async function sendAction() {
-        if (busy) return;
+    function sendAction() {
+        if (!canSend) return;
         if (!isValid && !shiftPressed) return;
 
-        const actionToSend = currentAction;
-        EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!jsonContent });
-        game.manualSend(actionToSend.name, jsonContent)
-            .catch(e => {
-                EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) });
-            })
-            .finally(closeDialog);
+        void session.run(COMMANDS.sendAction, { game: game.id, action: currentAction.name, rawData: jsonContent });
+        closeDialog();
     }
 </script>
 
@@ -168,9 +168,9 @@
             <ShiftIndicator />
             <TeachingTooltip>
                 {#if schemaJson}
-                    <p><Hotkey>Alt+R</Hotkey> to use random data. (May not always be valid)</p>
+                    <p><Hotkey>{keysLabel(UI_COMMANDS.randomizeManual)}</Hotkey> to use random data. (May not always be valid)</p>
                 {/if}
-                <p><Hotkey>Ctrl+Enter</Hotkey> to send action.</p>
+                <p><Hotkey>{keysLabel(UI_COMMANDS.sendManual)}</Hotkey> to send action.</p>
                 {#if schemaJson}
                     <p>Hold <Hotkey>Shift</Hotkey> to bypass validation.</p>
                 {/if}
@@ -235,7 +235,7 @@
             {#if schemaJson}
                 <button class="btn"
                     onclick={reroll}
-                    {@attach tooltip("Replace editor contents with random data (Alt+R)")}
+                    {@attach tooltip(`Replace editor contents with random data (${keysLabel(UI_COMMANDS.randomizeManual)})`)}
                 >
                     <Dice6 class="size-4" />
                     Randomize
@@ -247,8 +247,8 @@
             <button
                 class="btn btn-primary send-btn"
                 onclick={sendAction}
-                disabled={busy || (!isValid && !shiftPressed)}
-                data-bypass={boolAttr(!busy && !isValid && shiftPressed)}
+                disabled={!canSend || (!isValid && !shiftPressed)}
+                data-bypass={boolAttr(canSend && !isValid && shiftPressed)}
                 {@attach tooltip(sendTip)}
             >
                 <Send class="size-4" />

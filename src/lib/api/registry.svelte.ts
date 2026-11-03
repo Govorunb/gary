@@ -59,12 +59,12 @@ export class Registry {
         return game;
     }
 
-    getGame(idLikeOrPrefix: string) {
-        return this.games.find(g =>
-            g.conn.id === idLikeOrPrefix
-            || g.conn.shortId === idLikeOrPrefix
-            || g.conn.id.startsWith(idLikeOrPrefix)
-        );
+    /** Finds a game by its ID, or by a prefix that only one game's ID starts with. */
+    getGame(idOrPrefix: string) {
+        const exact = this.games.find(g => g.id === idOrPrefix);
+        if (exact || !idOrPrefix) return exact;
+        const matches = this.games.filter(g => g.id.startsWith(idOrPrefix));
+        return matches.length === 1 ? matches[0] : undefined;
     }
 
     removeGame(fullId: string) {

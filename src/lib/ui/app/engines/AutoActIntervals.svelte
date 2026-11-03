@@ -49,10 +49,6 @@
         @apply grid grid-cols-[max-content_1fr] gap-x-3 gap-y-2 items-center p-1;
     }
 
-    .field-heading {
-        @apply inline-flex items-center gap-1.5;
-    }
-
     .interval {
         @apply frow-2 items-center text-sm text-ink-1;
         & > input { @apply w-24; }

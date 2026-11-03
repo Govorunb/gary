@@ -7,6 +7,7 @@
     import { tooltip } from "#lib/app/utils/index.js";
     import { pressedKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import { boolAttr } from "runed";
+    import { COMMANDS, canRun } from "#lib/app/commands.js";
 
     type State = "errored" | "muted" | "unmuted";
 
@@ -15,25 +16,10 @@
     const ui = getUIState();
     const altMode = $derived(pressedKeys.has('Shift') && !ui.anyDialogOpen);
 
-    function userInteracted() {
-        scheduler.clearError();
-    }
-
-    function poke(force: boolean) {
-        userInteracted();
-        if (scheduler.busy) return;
-        if (force) {
-            scheduler.forceAct();
-        } else {
-            scheduler.tryAct();
-        }
-    }
-
     function toggleMute() {
-        if (!scheduler.errored) {
-            scheduler.toggleMuted();
-        }
-        userInteracted();
+        // resuming from an error pause leaves the user's own pause as it was
+        const paused = scheduler.errored ? scheduler.muted : !scheduler.muted;
+        void session.run(COMMANDS.setPaused, { paused });
     }
 
     function getState(): State {
@@ -65,7 +51,7 @@
     const MuteIcon = $derived(machine[state].icon);
     const muteTooltip = $derived(machine[state].tooltip);
     const muteText = $derived(machine[state].text);
-    const showStopIcon = $derived(scheduler.busy && altMode);
+    const clickStops = $derived(scheduler.busy && altMode);
     const showBusyIcon = $derived(scheduler.busy && !altMode);
     const showForceIcon = $derived(!scheduler.busy && altMode);
     const showActIcon = $derived(!scheduler.busy && !altMode);
@@ -88,15 +74,9 @@
         <span class="not-md:hidden">{muteText}</span>
     </button>
     <button
-        onclick={() => {
-            if (scheduler.busy && altMode) {
-                scheduler.cancelAct();
-            } else {
-                poke(altMode);
-            }
-        }}
+        onclick={() => void (clickStops ? session.run(COMMANDS.stopAct, {}) : session.run(COMMANDS.act, { force: altMode }))}
         class="act-btn frow-2"
-        disabled={scheduler.busy && !altMode}
+        disabled={!canRun(session, clickStops ? COMMANDS.stopAct : COMMANDS.act)}
         {@attach tooltip(
             scheduler.busy
                 ? (altMode ? "Stop" : "Engine busy (Shift to stop)")
@@ -105,7 +85,7 @@
     >
         <span class="act-icon-slot" aria-hidden="true">
             <!-- Keep every icon mounted so the busy animation retains its phase between state changes. -->
-            <Square class="act-icon" data-visible={boolAttr(showStopIcon)} />
+            <Square class="act-icon" data-visible={boolAttr(clickStops)} />
             <Hourglass class="act-icon animate-[spin_2s_ease-in-out_infinite,pulse_4s_linear_infinite]" data-visible={boolAttr(showBusyIcon)} />
             <HandFist class="act-icon" data-visible={boolAttr(showForceIcon)} />
             <Pointer class="act-icon" data-visible={boolAttr(showActIcon)} />
@@ -127,7 +107,7 @@
     <!-- One control: the toggle, and its timing behind the chevron. -->
     <div class="autoact-split" data-checked={boolAttr(scheduler.autoPoker.autoAct)}>
         <button
-            onclick={() => scheduler.autoPoker.autoAct = !scheduler.autoPoker.autoAct}
+            onclick={() => void session.run(COMMANDS.setAutoAct, { enabled: !scheduler.autoPoker.autoAct })}
             class="act-btn autoact-btn"
             aria-pressed={scheduler.autoPoker.autoAct}
             {@attach tooltip(autoActTooltip)}

@@ -1,8 +1,7 @@
 import { engineActionSet } from "../actions";
 import type { Action, ForceAction } from "#lib/api/v1/spec.js";
 import type { ActorContextEvent } from "#lib/app/context.svelte.js";
-import { EVENT_BUS } from "#lib/app/events/bus.js";
-import type { Session } from "#lib/app/session.svelte.js";
+import type { EngineContext } from "../index.svelte";
 import { jsonParse, snapshotState } from "#lib/app/utils/index.js";
 import type {
     ChatCompletionMessageParam,
@@ -34,12 +33,22 @@ import {
 } from "../index.svelte";
 
 export const zLLMOptions = z.strictObject({
-    /** Let the model choose to do nothing (skip acting) if not forced. Approximates the model getting distracted calling other unrelated tools. */
-    allowDoNothing: z.boolean().fallback(false),
+    /** Approximates the model getting distracted calling other unrelated tools. */
+    allowDoNothing: z.boolean().fallback(false).field({
+        title: "Allow to do nothing",
+        description: "Let the model choose to skip acting (if not forced)",
+    }),
     /** Let the model trauma dump about its horrid life circumstances instead of doing something useful to society. Approximates realistic human behavior. */
-    allowYapping: z.boolean().fallback(false),
+    allowYapping: z.boolean().fallback(false).field({
+        title: "Allow yapping",
+        description: "Let the model choose to speak instead of acting (unless forced)",
+    }),
     /** How actions and optional commands are constrained in model responses. */
-    promptingStrategy: z.enum(["json", "tools"]).fallback("json"),
+    promptingStrategy: z.enum(["json", "tools"]).fallback("json").field({
+        title: "Response method",
+        options: { json: "Structured output", tools: "Tool calling (beta)" },
+        description: "Choose how the model returns actions. Structured output works with more providers.",
+    }),
     /** User-edited model metadata, keyed by the configured model identifier. */
     modelMetadata: zModelMetadataOverrides.optional(),
 });
@@ -143,12 +152,12 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     abstract name: string;
     private readonly tokensPerByte = new Map<string, number>();
 
-    tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
+    tryAct(session: EngineContext, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
         return new ResultAsync(this.actCore(session, actions, false, signal));
     }
 
     forceAct(
-        session: Session,
+        session: EngineContext,
         actions?: Action[],
         signal?: AbortSignal,
         forceContext?: ForceContext,
@@ -158,7 +167,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     private async actCore(
-        session: Session,
+        session: EngineContext,
         actions: Action[] | undefined,
         isForce: boolean,
         signal?: AbortSignal,
@@ -225,7 +234,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                     ))
                     : this.parseToolCall(toolCall, generation, callableActions, isForce);
                 if (toolResult.isOk()) return toolResult;
-                EVENT_BUS.emit("api/actor/tool_error", {
+                this.eventBus.emit("api/actor/tool_error", {
                     engineId: this.id,
                     text: generation.text,
                     toolCalls: generation.toolCalls,
@@ -244,7 +253,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             if (isForce || !this.options.allowYapping) {
                 return err(new EngineError("Model returned text when speaking was not allowed"));
             }
-            EVENT_BUS.emit("api/actor/generated", {
+            this.eventBus.emit("api/actor/generated", {
                 engineId: this.id,
                 text,
                 metadata: generation.metadata,
@@ -292,7 +301,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 wrappedData.error,
             ));
         }
-        EVENT_BUS.emit("api/actor/generated", {
+        this.eventBus.emit("api/actor/generated", {
             engineId: this.id,
             text: generation.text,
             toolCall,
@@ -314,7 +323,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         if (!text) {
             return err(new EngineError("Model returned no structured output", undefined, true));
         }
-        EVENT_BUS.emit("api/actor/generated", {
+        this.eventBus.emit("api/actor/generated", {
             engineId: this.id,
             text,
             metadata: generation.metadata,
@@ -388,7 +397,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     }
 
     private prepareRequest(
-        session: Session,
+        session: EngineContext,
         callableActions: CallableAction[],
         promptActions: Action[],
         closer: OpenAIMessage,
@@ -479,7 +488,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             removedHistoryUnits: retainedStart,
         };
         if (retainedStart > 0) {
-            EVENT_BUS.emit("app/engines/llm/context_trimmed", {
+            this.eventBus.emit("app/engines/llm/context_trimmed", {
                 engineId: this.id,
                 ...diagnostics,
             });
@@ -676,7 +685,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
         };
     }
 
-    protected systemPrompt(session: Session, callableActions: CallableAction[], actions: Action[]): string {
+    protected systemPrompt(session: EngineContext, callableActions: CallableAction[], actions: Action[]): string {
         const prompts = [
             DEFAULT_SYSTEM_PROMPT,
             this.options.promptingStrategy === "json" ? STRUCTURED_OUTPUT_SYSTEM_PROMPT : TOOL_SYSTEM_PROMPT,

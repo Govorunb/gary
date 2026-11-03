@@ -5,11 +5,13 @@
     import { Send, TriangleAlert } from "@lucide/svelte";
     import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
     import Hotkey from "#lib/ui/common/Hotkey.svelte";
-    import { getUserPrefs } from "#lib/app/utils/di.js";
+    import { getSession, getUserPrefs } from "#lib/app/utils/di.js";
+    import { COMMANDS } from "#lib/app/commands.js";
     import { zNeuroMessage } from "#lib/api/v1/spec.js";
-    import { formatZodError, jsonParse, parseError, safeParse, tooltip } from "#lib/app/utils/index.js";
+    import { formatZodError, jsonParse, safeParse, tooltip } from "#lib/app/utils/index.js";
     import { PressedKeys } from "runed";
-    import { EVENT_BUS } from "#lib/app/events/bus.js";
+    import { onCommandKeys } from "#lib/app/utils/hotkeys.svelte.js";
+    import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
 
     type Props = {
         open: boolean;
@@ -17,9 +19,10 @@
     };
 
     let { open = $bindable(), game }: Props = $props();
+    const session = getSession();
     const userPrefs = getUserPrefs();
     const keys = new PressedKeys();
-    keys.onKeys(["Control", "Enter"], sendMessage);
+    onCommandKeys(keys, UI_COMMANDS.sendRaw, sendMessage);
 
     let jsonContent = $state('');
     let validationErrors = $state<string[] | null>(null);
@@ -110,14 +113,8 @@
     }
 
     async function sendMessage() {
-        try {
-            await game.conn.sendRaw(jsonContent);
-            EVENT_BUS.emit('ui/game/send_raw/sent', { gameId: game.conn.id });
-        } catch (e) {
-            EVENT_BUS.emit('ui/game/send_raw/error', { gameId: game.conn.id, gameName: game.name, error: parseError(e) });
-        } finally {
-            closeDialog();
-        }
+        await session.run(COMMANDS.sendRawMessage, { game: game.id, message: jsonContent });
+        closeDialog();
     }
 </script>
 
@@ -128,7 +125,7 @@
             <TeachingTooltip>
                 <p>Send any arbitrary text WebSocket message.</p>
                 <p><b>This dialog is for debugging and won't stop you from sending invalid data.</b></p>
-                <p><Hotkey>Ctrl+Enter</Hotkey> to send message.</p>
+                <p><Hotkey>{keysLabel(UI_COMMANDS.sendRaw)}</Hotkey> to send message.</p>
             </TeachingTooltip>
         </div>
     {/snippet}
@@ -189,7 +186,7 @@
             <button
                 class="btn btn-primary"
                 onclick={sendMessage}
-                {@attach tooltip("Send (Ctrl+Enter)")}
+                {@attach tooltip(`Send (${keysLabel(UI_COMMANDS.sendRaw)})`)}
             >
                 <Send class="size-4" />
                 Send

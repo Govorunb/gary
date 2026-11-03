@@ -3,12 +3,12 @@
     import { onDestroy } from 'svelte';
     import type { LayoutProps } from './$types.js';
     import { Toaster } from "svelte-sonner";
-    import { getSession, initDI, getUIState } from '#lib/app/utils/di.js';
+    import { getSession, initDI } from '#lib/app/utils/di.js';
     import dayjs from 'dayjs';
     import relativeTime from "dayjs/plugin/relativeTime";
     import localizedTime from "dayjs/plugin/localizedFormat";
     import { registerAppHotkey } from '#lib/app/utils/hotkeys.svelte.js';
-    import { clearLocalStorage } from '#lib/app/utils/index.js';
+    import { UI_COMMANDS } from '#lib/ui/commands.js';
     import SafeModeDialog from '#lib/ui/app/SafeModeDialog.svelte';
 
     dayjs.extend(relativeTime);
@@ -19,7 +19,6 @@
     // svelte-ignore state_referenced_locally
     initDI(data.userPrefsData);
     const session = getSession();
-    const uiState = getUIState();
     onDestroy(() => session.dispose());
     // debugging
     const __global = window as any;
@@ -33,12 +32,10 @@
         document.documentElement.toggleAttribute('data-battery-saver', session.userPrefs.app.batterySaver);
     });
 
-    // delete localstorage (dev hotkey)
-    registerAppHotkey(['Backspace', 'Delete', 'Shift', 'L'], clearLocalStorage);
-    // trigger safe mode (dev hotkey)
-    registerAppHotkey(['Control', 'Shift', '+', 'S'], () => session.userPrefs.loadError = ".");
-    // toggle april fools mode (dev hotkey)
-    registerAppHotkey(['Alt', 'Enter', 'A', '1'], () => uiState.devToggleAprilFools());
+    // UI commands that need only the session; the others act on a component's state, and it binds their keys while mounted
+    for (const { keys, run } of Object.values(UI_COMMANDS)) {
+        if (run) registerAppHotkey(keys, () => run(session));
+    }
 </script>
 
 <div class="fcol-0 h-screen" role="application">

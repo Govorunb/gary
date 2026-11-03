@@ -1,9 +1,9 @@
 import type { Action } from "#lib/api/v1/spec.js";
 import { createJsonSchemaGenerator, parseError, sleep } from "../utils";
 import { Engine, EngineError, zEngineAct, type EngineAct, type EngineActError, type EngineActResult } from "./index.svelte";
-import type { Session } from "../session.svelte";
+import type { EngineContext, EnginePrefs } from "./index.svelte";
+import type { EventBus } from "../events/bus";
 import z from "zod";
-import type { UserPrefs } from "../prefs.svelte";
 import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import type { JsonSchema } from "json-schema-faker";
 
@@ -15,11 +15,11 @@ export class Randy extends Engine<RandyPrefs> {
     readonly name: string = "Randy";
     private generator = $derived.by(() => createJsonSchemaGenerator(this.options.seed));
 
-    constructor(userPrefs: UserPrefs) {
-        super(userPrefs, ENGINE_ID);
+    constructor(userPrefs: EnginePrefs, eventBus?: EventBus) {
+        super(userPrefs, ENGINE_ID, eventBus);
     }
 
-    tryAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
+    tryAct(session: EngineContext, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
             return okAsync({
@@ -41,7 +41,7 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
         ).andThen(skip => skip ? okAsync("skip" as const) : this.forceAct(session, actions, signal));
     }
 
-    forceAct(session: Session, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError> {
+    forceAct(session: EngineContext, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineAct, EngineActError> {
         const resolvedActions = this.resolveActions(session, actions);
         if (!resolvedActions.length) {
             return errAsync(new EngineError("forceAct called with no available actions"));
@@ -75,17 +75,20 @@ Thank you for assisting me. I truly do appreciate it. I eagerly await a return t
 }
 
 export const zRandyPrefs = z.strictObject({
-    /** The chance to do nothing instead of acting.
-     * Applicable when prompted to act but not forced (e.g. on non-silent context).
-     * Can be used to approximate LLMs getting distracted, experiencing internal errors, etc.
-     *
-     * Number between 0 and 1.
-     * */
-    chanceDoNothing: z.number().min(0).max(1).fallback(0.2),
-    /** Randy will sleep for this long before responding (in milliseconds). Don't set too low or the app might freeze. */
-    latencyMs: z.number().min(1).max(864000000).default(100),
-    /** Seed for Randy's random decisions. A random seed is chosen when unset. */
-    seed: z.number().int().optional(),
+    /** Approximates LLMs getting distracted, experiencing internal errors, etc. */
+    chanceDoNothing: z.number().min(0).max(1).slider(0.01).fallback(0.2).field({
+        title: "Chance to skip acting",
+        description: "Probability (0-1) of skipping an action if not forced. Keep this above 0 or Randy might get stuck in a retry loop for some actions.",
+    }),
+    latencyMs: z.number().min(1).max(864000000).default(100).field({
+        title: "L*tency",
+        description: "Optional delay for Randy's responses (in milliseconds). If you set this too low and Randy gets stuck in a retry loop, the app will hang. You have been sufficiently informed and thus warned.",
+    }),
+    seed: z.number().int().optional().field({
+        title: "Random seed",
+        placeholder: "Random",
+        description: "Random generator seed. Set for deterministic behavior, leave blank for random.",
+    }),
 });
 
 export type RandyPrefs = z.infer<typeof zRandyPrefs>;

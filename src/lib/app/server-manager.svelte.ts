@@ -9,6 +9,8 @@ import type { EventDef, Keys, PresentDefs } from "./events";
 import { EVENT_BUS } from "./events/bus";
 import { TauriServerConnection } from "#lib/api/connection.js";
 import { toast } from "svelte-sonner";
+import { ResultAsync } from "neverthrow";
+import type { McpHttpRequest } from "./mcp";
 
 type ServerConnections = string[] | null;
 
@@ -29,6 +31,7 @@ export class ServerManager {
         if (isTauri()) {
             listenSub<WSConnectionRequest>("ws-try-connect", (evt) => this.registry.tryConnect(evt.payload), this.subscriptions);
             listenSub<ServerConnections>("server-state", (evt) => this.doSync(evt.payload), this.subscriptions);
+            listenSub<McpHttpRequest & { id: string }>("mcp-request", (evt) => this.relayMcp(evt.payload), this.subscriptions);
             void this.sync();
         } else {
             EVENT_BUS.emit('app/server/no_tauri');
@@ -112,6 +115,15 @@ export class ServerManager {
         }
     }
 
+    private async relayMcp({ id, ...req }: McpHttpRequest & { id: string }) {
+        // loaded lazily: mcp.ts imports the events index, which imports this module
+        const res = await ResultAsync.fromPromise(import("./mcp").then(({ handleMcpRequest }) => handleMcpRequest(this.session, req)), String)
+            .orTee(error => EVENT_BUS.emit('app/server/mcp/error', { error }))
+            .unwrapOr({ status: 500, headers: [], body: "" });
+        await safeInvoke("mcp_reply", { id, ...res })
+            .orTee(error => EVENT_BUS.emit('app/server/mcp/error', { error }));
+    }
+
     dispose() {
         // keep running for HMR (reloaded session picks up backend state)
         // if (this.running) void this.stop();
@@ -141,6 +153,12 @@ export const EVENTS = [
         dataSchema: {} as {serverOnly: string[], regOnly: string[]},
         description: "Reconciled server connections with registered games",
         level: LogLevel.Info,
+    },
+    {
+        key: 'app/server/mcp/error',
+        dataSchema: {} as { error: string },
+        description: "Failed to answer an MCP request",
+        level: LogLevel.Error,
     },
 ] as const satisfies EventDef<'app/server'>[];
 

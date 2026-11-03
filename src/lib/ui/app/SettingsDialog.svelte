@@ -4,6 +4,7 @@
     import ThemePicker from "#lib/ui/common/ThemePicker.svelte";
     import { ExternalLink, X } from "@lucide/svelte";
     import Hotkey from "../common/Hotkey.svelte";
+    import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
     import dayjs from "dayjs";
     import { app } from "@tauri-apps/api";
     import { APP_VERSION, clearLocalStorage, debounced, isApril1st, jsonParse, safeInvoke } from "#lib/app/utils/index.js";
@@ -12,6 +13,8 @@
     import OutLink from "../common/OutLink.svelte";
     import Switch from "#lib/ui/common/Switch.svelte";
     import TeachingTooltip from "../common/TeachingTooltip.svelte";
+    import Field from "../common/form/Field.svelte";
+    import { zAppPrefs, zUpdatePrefs } from "#lib/app/prefs.svelte.js";
 
     type Props = {
         open: boolean;
@@ -21,6 +24,8 @@
 
     const userPrefs = getUserPrefs();
     const updater = getUpdater();
+    const fields = zAppPrefs.shape;
+    const updateFields = zUpdatePrefs.shape;
     const characterPresets = {
         neuro: "Neuro-sama",
         evil: "Evil Neuro",
@@ -120,7 +125,7 @@
 <Dialog bind:open position="center">
     {#snippet title()}
         <h3>Settings</h3>
-        <Hotkey>Ctrl+,</Hotkey>
+        <Hotkey>{keysLabel(UI_COMMANDS.toggleSettings)}</Hotkey>
     {/snippet}
     {#snippet body()}
         <div class="dialog-scroll dialog-body-scroll">
@@ -143,41 +148,9 @@
                 <p class="field-label">Theme</p>
                 <ThemePicker bind:currentTheme={userPrefs.app.theme} />
             </div>
-            <div class="field">
-                <div class="field-heading">
-                    <span id="hide-sensitive-info-label" class="field-label">Hide sensitive info</span>
-                    <TeachingTooltip>
-                        <p>Blur potentially sensitive event data in the event log</p>
-                    </TeachingTooltip>
-                    <Switch
-                        bind:checked={userPrefs.app.hideSensitiveInfo}
-                        aria-labelledby="hide-sensitive-info-label"
-                    />
-                </div>
-            </div>
-            <div class="field">
-                <div class="field-heading">
-                    <span id="battery-saver-label" class="field-label">Battery saver</span>
-                    <TeachingTooltip>
-                        <p>Reduces animations and visual effects to help save battery power.</p>
-                    </TeachingTooltip>
-                    <Switch
-                        bind:checked={userPrefs.app.batterySaver}
-                        aria-labelledby="battery-saver-label"
-                    />
-                </div>
-            </div>
-            <div class="field stacked">
-                <label class="field-label" for="action-list-density">Action list density</label>
-                <select
-                    id="action-list-density"
-                    class="field-input"
-                    bind:value={userPrefs.app.actionListDensity}
-                >
-                    <option value="default">Default</option>
-                    <option value="compact">Compact</option>
-                </select>
-            </div>
+            <Field schema={fields.hideSensitiveInfo} bind:value={userPrefs.app.hideSensitiveInfo} tip />
+            <Field schema={fields.batterySaver} bind:value={userPrefs.app.batterySaver} tip />
+            <Field schema={fields.actionListDensity} bind:value={userPrefs.app.actionListDensity} tip />
             <div class="field stacked">
                 <div class="field-heading">
                     <label class="field-label" for="character-preset">Startup character</label>
@@ -306,23 +279,8 @@
                 </p>
             </div>
 
-            <div class="fcol-1">
-                <p class="font-light">Automatically check for updates on app launch:</p>
-                <select class="field-input" bind:value={userPrefs.app.updates.autoCheckInterval}>
-                    <option value="everyLaunch">Every launch</option>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="off">Never</option>
-                </select>
-            </div>
-            <div class="fcol-1">
-                <p class="font-light">Update channel:</p>
-                <select class="field-input" bind:value={userPrefs.app.updates.channel}>
-                    <option value="stable">Stable</option>
-                    <option value="prerelease">Pre-release</option>
-                </select>
-            </div>
+            <Field schema={updateFields.autoCheckInterval} bind:value={userPrefs.app.updates.autoCheckInterval} tip />
+            <Field schema={updateFields.channel} bind:value={userPrefs.app.updates.channel} tip />
             <div class="frow-2 items-center">
                 <button class="btn"
                     onclick={checkForUpdates}
@@ -411,20 +369,19 @@
         }
     }
 
-    .field {
-        @apply frow-3 items-center;
+    /* Also styles the Fields rendered here. */
+    .settings-section :global {
+        .field {
+            @apply frow-3 items-center;
 
-        &.stacked {
-            @apply fcol-2 items-stretch;
+            &.stacked {
+                @apply fcol-2 items-stretch;
+            }
         }
-    }
 
-    .field-label {
-        @apply select-none;
-    }
-
-    .field-heading {
-        @apply inline-flex items-center gap-1.5;
+        .field-label {
+            @apply select-none;
+        }
     }
 
     .custom-character-fields {

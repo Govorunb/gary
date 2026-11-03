@@ -142,15 +142,40 @@ export const zAutoActPrefs = z.strictObject({
     path: ["forceInterval"],
 });
 
+export const zUpdatePrefs = z.strictObject({
+    skipUpdateVersion: z.string().nullish(),
+    autoCheckInterval: z.enum([
+        // all automatic update checks are done once on launch
+        "everyLaunch", "daily", "weekly", "monthly", "off"
+    ]).fallback("daily").field({
+        title: "Automatically check for updates on app launch",
+        options: { everyLaunch: "Every launch", daily: "Daily", weekly: "Weekly", monthly: "Monthly", off: "Never" },
+    }),
+    lastCheckedAt: z.number().nullish(),
+    channel: z.enum(["stable", "prerelease"]).fallback("stable").field({
+        title: "Update channel",
+        options: { stable: "Stable", prerelease: "Pre-release" },
+    }),
+});
+
 export const zAppPrefs = z.strictObject({
     theme: z.enum(["system", "light", "dark"]).fallback("system"),
     selectedEngine: z.string().fallback(RANDY_ID),
     ctxInputSilent: z.boolean().fallback(false),
     manualSendSchemaCollapsed: z.boolean().fallback(true),
-    hideSensitiveInfo: z.boolean().fallback(true),
-    batterySaver: z.boolean().fallback(false),
+    hideSensitiveInfo: z.boolean().fallback(true).field({
+        title: "Hide sensitive info",
+        description: "Blur potentially sensitive event data in the event log",
+    }),
+    batterySaver: z.boolean().fallback(false).field({
+        title: "Battery saver",
+        description: "Reduces animations and visual effects to help save battery power.",
+    }),
     autoAct: zAutoActPrefs.prefault({}),
-    actionListDensity: z.enum(["default", "compact"]).fallback("default"),
+    actionListDensity: z.enum(["default", "compact"]).fallback("default").field({
+        title: "Action list density",
+        options: { default: "Default", compact: "Compact" },
+    }),
     rawSendSelectedPreset: z.enum(["empty", "action", "actions/reregister_all", "shutdown/graceful", "shutdown/immediate"]).fallback("empty"),
     character: z.strictObject({
         characterId: z.string().fallback("gary"),
@@ -165,15 +190,7 @@ export const zAppPrefs = z.strictObject({
     systemPrompt: z.string().nullish(),
     joyless: z.boolean().fallback(false),
     garyGoldMembershipEndsAfter: z.number().nullish(),
-    updates: z.strictObject({
-        skipUpdateVersion: z.string().nullish(),
-        autoCheckInterval: z.enum([
-            // all automatic update checks are done once on launch
-            "everyLaunch", "daily", "weekly", "monthly", "off"
-        ]).fallback("daily"),
-        lastCheckedAt: z.number().nullish(),
-        channel: z.enum(["stable", "prerelease"]).fallback("stable"),
-    }).prefault({}),
+    updates: zUpdatePrefs.prefault({}),
 });
 
 export const zGamePrefs = z.strictObject({
@@ -186,12 +203,20 @@ export const zApiCompatibilityPrefs = z.strictObject({
     sendV1ReregisterAll: z.boolean().fallback(true),
 }).prefault({});
 
+export const zServerPrefs = z.strictObject({
+    port: z.coerce.number().int().min(1024).max(65535).fallback(8000).field({
+        title: "Port",
+        placeholder: "Port (default 8000)",
+    }),
+    bindAllInterfaces: z.boolean().fallback(false).field({
+        title: "Allow connections from other devices",
+        description: "Lets integrations outside this computer connect to Gary. Use this computer's network address and port. Only enable this on networks you trust.",
+    }),
+    // TODO: server behavior toggles (e.g. conflict resolution)
+});
+
 export const zApiPrefs = z.strictObject({
-    server: z.strictObject({
-        port: z.coerce.number().int().min(1024).max(65535).fallback(8000),
-        bindAllInterfaces: z.boolean().fallback(false),
-        // TODO: server behavior toggles (e.g. conflict resolution)
-    }).prefault({}),
+    server: zServerPrefs.prefault({}),
     compatibility: zApiCompatibilityPrefs,
     games: z.record(z.string(), zGamePrefs.optional()).prefault({}),
 });

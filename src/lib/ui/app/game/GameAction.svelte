@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Dices, Send } from "@lucide/svelte";
-    import { getScheduler, getUIState, getUserPrefs } from "#lib/app/utils/di.js";
+    import { getScheduler, getSession, getUIState, getUserPrefs } from "#lib/app/utils/di.js";
     import CopyButton from "../../common/CopyButton.svelte";
     import CodeMirror from "../../common/CodeMirror.svelte";
     import { generateFromJsonSchema, parseError, preventDefault, tooltip } from "#lib/app/utils/index.js";
@@ -8,6 +8,7 @@
     import { boolAttr } from "runed";
     import { EVENT_BUS } from "#lib/app/events/bus.js";
     import type { JsonSchema } from "json-schema-faker";
+    import { COMMANDS, canRun } from "#lib/app/commands.js";
 
     type Props = {
         action: GameAction;
@@ -18,9 +19,11 @@
     const uiState = getUIState();
     const userPrefs = getUserPrefs();
     const scheduler = getScheduler();
+    const session = getSession();
 
     const active = $derived(action.active);
     const busy = $derived(scheduler.busy);
+    const canSend = $derived(canRun(session, COMMANDS.sendAction));
     const busyTip = (tip: string) => tooltip(busy ? "Engine busy (Shift to stop)" : tip);
 
     let open = $state(false);
@@ -33,11 +36,7 @@
 
     const evtData = $derived({gameId: game.id, actionName: action.name});
     function doSend(data?: string) {
-        EVENT_BUS.emit('ui/game/user_act/send', { ...evtData, hasData: !!data });
-        game.manualSend(action.name, data)
-            .catch(e => {
-                EVENT_BUS.emit('ui/game/user_act/send_error', { ...evtData, error: parseError(e) });
-            });
+        void session.run(COMMANDS.sendAction, { game: game.id, action: action.name, rawData: data });
     }
 
     async function sendRandom() {
@@ -58,7 +57,7 @@
     function quickSend(evt: MouseEvent) {
         if (evt.defaultPrevented || !(evt.ctrlKey || evt.metaKey)) return;
         evt.preventDefault();
-        if (busy) return;
+        if (!canSend) return;
         if (hasSchema) {
             send();
         } else {
@@ -79,7 +78,7 @@
             {#if hasSchema}
                 <button
                     class="icon-btn"
-                    disabled={busy}
+                    disabled={!canSend}
                     onclick={preventDefault(send)}
                     {@attach busyTip("Send (manual) - Ctrl/Cmd-click row")}
                 >
@@ -87,7 +86,7 @@
                 </button>
                 <button
                     class="icon-btn"
-                    disabled={busy}
+                    disabled={!canSend}
                     onclick={preventDefault(sendRandom)}
                     {@attach busyTip("Send (random data)")}
                 >
@@ -96,7 +95,7 @@
             {:else}
                 <button
                     class="icon-btn"
-                    disabled={busy}
+                    disabled={!canSend}
                     onclick={preventDefault(() => doSend())}
                     {@attach busyTip("Send - Ctrl/Cmd-click row")}
                 >

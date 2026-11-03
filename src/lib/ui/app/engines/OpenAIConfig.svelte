@@ -2,26 +2,22 @@
     import { getLMStudioModelMetadata, isLMStudioEngine } from '#lib/app/engines/llm/lm-studio.js';
     import { getOllamaModelMetadata, isOllamaEngine } from '#lib/app/engines/llm/ollama.js';
     import { zOpenAIPrefs } from '#lib/app/engines/llm/openai.svelte.js';
-    import { StringField, BooleanField, UrlField, SelectField } from '#lib/ui/common/form/index.js';
+    import Field from '#lib/ui/common/form/Field.svelte';
     import Hotkey from '#lib/ui/common/Hotkey.svelte';
     import OutLink from '#lib/ui/common/OutLink.svelte';
-    import EngineConfig from './EngineConfig.svelte';
+    import EngineConfig, { type ConfigProps } from './EngineConfig.svelte';
     import ModelMetadata from './ModelMetadata.svelte';
 
-    let { engineId, close } = $props();
+    let { engineId, close }: ConfigProps<string> = $props();
     const schema = zOpenAIPrefs;
+    const fields = schema.shape;
 </script>
 
 <EngineConfig {engineId} {schema} {close}>
     {#snippet configForm(dirtyConfig)}
         {const isOllama = $derived(isOllamaEngine(engineId, dirtyConfig))}
         {const isLMStudio = $derived(isLMStudioEngine(engineId, dirtyConfig))}
-        <StringField
-            bind:value={dirtyConfig.name}
-            label="Name"
-            required
-            description="Display name for this engine"
-        />
+        <Field schema={fields.name} bind:value={dirtyConfig.name} />
         {#if isLMStudio}
             <div class="callout warn">
                 <p class="note">
@@ -30,18 +26,8 @@
                 </p>
             </div>
         {/if}
-        <StringField
-            bind:value={dirtyConfig.apiKey}
-            label="API Key"
-            password
-            description="API key (leave empty if not required)"
-        />
-        <UrlField
-            bind:value={dirtyConfig.serverUrl}
-            label="Server URL"
-            placeholder="https://api.openai.com/v1"
-            description="Base URL for the API"
-        />
+        <Field schema={fields.apiKey} bind:value={dirtyConfig.apiKey} />
+        <Field schema={fields.serverUrl} bind:value={dirtyConfig.serverUrl} />
         {#if isOllama && dirtyConfig.serverUrl.match(/https?:\/\/[^/]+\/api/i)}
             <div class="callout">
                 <p class="note whitespace-pre-line">
@@ -51,11 +37,7 @@
             </div>
         {/if}
         <div class="fcol-2">
-            <StringField
-                bind:value={dirtyConfig.modelId}
-                label="Model ID"
-                description="Model identifier (e.g., llama3.1-7b)"
-            />
+            <Field schema={fields.modelId} bind:value={dirtyConfig.modelId} />
             <ModelMetadata
                 modelId={dirtyConfig.modelId}
                 bind:overrides={dirtyConfig.modelMetadata}
@@ -76,44 +58,12 @@
                     : undefined}
             />
         </div>
-        <BooleanField
-            bind:value={dirtyConfig.allowDoNothing}
-            label="Allow to do nothing"
-            description="Let the model choose to skip acting (if not forced)"
-        />
-        <BooleanField
-            bind:value={dirtyConfig.allowYapping}
-            label="Allow yapping"
-            description="Let the model choose to speak instead of acting (unless forced)"
-        />
+        <Field schema={fields.allowDoNothing} bind:value={dirtyConfig.allowDoNothing} />
+        <Field schema={fields.allowYapping} bind:value={dirtyConfig.allowYapping} />
         <details class="details-box advanced-details">
             <summary>Advanced</summary>
-            <SelectField
-                bind:value={dirtyConfig.promptingStrategy}
-                label="Response method"
-                options={[
-                    { value: "json", label: "Structured output" },
-                    { value: "tools", label: "Tool calling (beta)" },
-                ]}
-                description="Choose how the model returns actions. Structured output works with more OpenAI-compatible servers."
-            />
-            <SelectField
-                bind:value={dirtyConfig.reasoningEffort}
-                label="Reasoning effort"
-                options={[
-                    { value: "auto", label: "Auto (recommended)" },
-                    { value: "none", label: "None" },
-                    { value: "low", label: "Low" },
-                    { value: "medium", label: "Medium" },
-                    { value: "high", label: "High" },
-                ]}
-            >
-                {#snippet description()}
-                    <p class="note">
-                        Auto defaults to None for minimum l*tency (but falls back to Low if the provider requires reasoning).
-                    </p>
-                {/snippet}
-            </SelectField>
+            <Field schema={fields.promptingStrategy} bind:value={dirtyConfig.promptingStrategy} />
+            <Field schema={fields.reasoningEffort} bind:value={dirtyConfig.reasoningEffort} />
         </details>
     {/snippet}
  </EngineConfig>

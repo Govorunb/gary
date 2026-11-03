@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { getSession, getUserPrefs, getUIState } from '#lib/app/utils/di.js';
+    import { getSession, getUIState } from '#lib/app/utils/di.js';
     import Dialog from '#lib/ui/common/Dialog.svelte';
     import ShiftIndicator from '#lib/ui/common/ShiftIndicator.svelte';
     import { CirclePlus, Settings2, ArrowLeft, Trash2, ChevronDown, Check } from '@lucide/svelte';
@@ -10,11 +10,12 @@
     import { fade, fly } from 'svelte/transition';
     import TeachingTooltip from '#lib/ui/common/TeachingTooltip.svelte';
     import Hotkey from '#lib/ui/common/Hotkey.svelte';
-    import { registerAppHotkey } from '#lib/app/utils/hotkeys.svelte.js';
     import { toast } from 'svelte-sonner';
+    import { onCommandKeys } from '#lib/app/utils/hotkeys.svelte.js';
+    import { UI_COMMANDS, keysLabel } from '#lib/ui/commands.js';
+    import { COMMANDS } from '#lib/app/commands.js';
 
     const session = getSession();
-    const userPrefs = getUserPrefs();
     const uiState = getUIState();
 
     const dialogs = uiState.dialogs;
@@ -29,17 +30,13 @@
     const keys = new PressedKeys();
     const shiftPressed = $derived(keys.has('Shift'));
 
-    registerAppHotkey(['Control', 'E'], () => toggleOpen());
-    // quick select
-    for (let i = 1; i <= 9; i++) {
-        keys.onKeys(i.toString(), () => {
-            if (!showingEngineList) return;
-            if (i > engines.length) return;
-            selectEngine(engines[i - 1][0]);
-            dialogs.closeEnginePicker();
-        });
-    }
-    keys.onKeys(['Alt', 'a'], () => {
+    UI_COMMANDS.quickSelectEngine.keys.forEach((chord, i) => keys.onKeys(chord, () => {
+        if (!showingEngineList) return;
+        if (i >= engines.length) return;
+        selectEngine(engines[i][0]);
+        dialogs.closeEnginePicker();
+    }));
+    onCommandKeys(keys, UI_COMMANDS.addEngine, () => {
         if (!showingEngineList) return;
         createOpenAICompatible();
     });
@@ -51,15 +48,7 @@
     }
 
     function selectEngine(id: string) {
-        userPrefs.app.selectedEngine = id;
-    }
-
-    function toggleOpen() {
-        if (dialogs.isOpen("enginePicker")) {
-            dialogs.closeEnginePicker();
-        } else {
-            dialogs.openEnginePicker();
-        }
+        void session.run(COMMANDS.selectEngine, { id });
     }
 
     function openConfig(engineId: string) {
@@ -113,10 +102,10 @@
                         <div class="header-actions">
                             <ShiftIndicator />
                             <TeachingTooltip>
-                                <p><Hotkey>Ctrl+E</Hotkey> to open/close engine picker.</p>
+                                <p><Hotkey>{keysLabel(UI_COMMANDS.toggleEnginePicker)}</Hotkey> to open/close engine picker.</p>
                                 <p><Hotkey>1..9</Hotkey> to quick-select engine.</p>
                                 <p><Hotkey>Alt-click</Hotkey> an engine to quickly open config.</p>
-                                <p><Hotkey>Alt+A</Hotkey> to create a custom OpenAI-compatible engine.</p>
+                                <p><Hotkey>{keysLabel(UI_COMMANDS.addEngine)}</Hotkey> to create a custom OpenAI-compatible engine.</p>
                                 <p>Hold <Hotkey>Shift</Hotkey> to reveal delete buttons. (OpenAI-compatible only)</p>
                             </TeachingTooltip>
                         </div>

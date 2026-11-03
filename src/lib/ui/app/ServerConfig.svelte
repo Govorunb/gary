@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getServerManager, getUserPrefs } from "#lib/app/utils/di.js";
-    import { BooleanField, NumberField } from "../common/form";
+    import { zServerPrefs } from "#lib/app/prefs.svelte.js";
+    import Field from "../common/form/Field.svelte";
     import Switch from "../common/Switch.svelte";
     import TeachingTooltip from "../common/TeachingTooltip.svelte";
 
@@ -9,20 +10,9 @@
 </script>
 
 <div class="server-config">
-    <NumberField bind:value={userPrefs.api.server.port}
-        disabled={manager.running}
-        min={1024}
-        max={65535}
-        label="Port"
-        placeholder="Port (default 8000)"
-    />
+    <Field schema={zServerPrefs.shape.port} bind:value={userPrefs.api.server.port} disabled={manager.running} />
 
-    <BooleanField
-        bind:value={userPrefs.api.server.bindAllInterfaces}
-        disabled={manager.running}
-        label="Allow connections from other devices"
-        description="Lets integrations outside this computer connect to Gary. Use this computer's network address and port. Only enable this on networks you trust."
-    />
+    <Field schema={zServerPrefs.shape.bindAllInterfaces} bind:value={userPrefs.api.server.bindAllInterfaces} disabled={manager.running} />
 
     <div class="compatibility-section">
         <p class="section-label">API compatibility</p>

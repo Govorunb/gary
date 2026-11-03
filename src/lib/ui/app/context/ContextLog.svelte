@@ -6,6 +6,7 @@
     import ContextLogMenu from "#lib/ui/app/context/ContextLogMenu.svelte";
     import ContextInput from "./ContextInput.svelte";
     import Hotkey from "#lib/ui/common/Hotkey.svelte";
+    import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
     import Popover from "#lib/ui/common/Popover.svelte";
     import { Search, Filter, X } from "@lucide/svelte";
     import { tick, untrack } from "svelte";
@@ -151,7 +152,7 @@
             <p>The latest {MAX_USER_CONTEXT_EVENTS.toLocaleString()} messages are kept here, including for search and copy. Earlier messages are recorded in the app logs.</p>
             <p>Copy uses the current search and filters. Right-click a message for copy options.</p>
             <p>Click client names to jump to their game tab.</p>
-            <p><Hotkey>Alt+C</Hotkey> to add to context.</p>
+            <p><Hotkey>{keysLabel(UI_COMMANDS.openContextInput)}</Hotkey> to add to context.</p>
         </TeachingTooltip>
         <ContextLogMenu {rows} />
     </div>

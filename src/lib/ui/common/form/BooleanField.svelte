@@ -1,26 +1,24 @@
 <script lang="ts">
     import Switch from "../Switch.svelte";
+    import type { ControlProps } from "./field";
+    import FieldHelp from "./FieldHelp.svelte";
 
-    interface Props {
-        value: boolean;
-        label?: string;
-        disabled?: boolean;
-        description?: string;
-    }
-
-    let {
-        value = $bindable(),
-        label = "",
-        disabled = false,
-        description = ""
-    }: Props = $props();
+    let { field, id, value = $bindable(), help, disabled, tip }: ControlProps<boolean> = $props();
 </script>
 
-<div class="field">
-    <Switch bind:checked={value} {disabled}>
-        <span class="field-label">{label}</span>
-    </Switch>
-    {#if description}
-        <div class="field-description">{description}</div>
-    {/if}
-</div>
+{#if tip}
+    <div class="field">
+        <div class="field-heading">
+            <span {id} class="field-label">{field.label}</span>
+            {#if help}<FieldHelp {help} tip />{/if}
+            <Switch bind:checked={value} {disabled} aria-labelledby={id} />
+        </div>
+    </div>
+{:else}
+    <div class="field">
+        <Switch bind:checked={value} {disabled}>
+            <span class="field-label">{field.label}</span>
+        </Switch>
+        {#if help}<FieldHelp {help} />{/if}
+    </div>
+{/if}
