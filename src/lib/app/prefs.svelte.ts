@@ -212,6 +212,9 @@ export const zServerPrefs = z.strictObject({
         title: "Allow connections from other devices",
         description: "Lets integrations outside this computer connect to Gary. Use this computer's network address and port. Only enable this on networks you trust.",
     }),
+    startOnLaunch: z.boolean().fallback(false).field({
+        title: "Start server on launch",
+    }),
     // TODO: server behavior toggles (e.g. conflict resolution)
 });
 

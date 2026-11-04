@@ -42,6 +42,11 @@ pub async fn start_server(app: AppHandle, host: IpAddr, port: u16) -> Result<(),
 }
 
 #[tauri::command]
+pub fn launched_with_start_server() -> bool {
+    std::env::args_os().any(|arg| arg == "--start-server")
+}
+
+#[tauri::command]
 pub async fn stop_server(app: AppHandle) -> Result<(), String> {
     info!("WebView requested to stop server");
     let state_mutex = app.state::<AppStateMutex>();

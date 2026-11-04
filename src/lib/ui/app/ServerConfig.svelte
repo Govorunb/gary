@@ -14,6 +14,8 @@
 
     <Field schema={zServerPrefs.shape.bindAllInterfaces} bind:value={userPrefs.api.server.bindAllInterfaces} disabled={manager.running} />
 
+    <Field schema={zServerPrefs.shape.startOnLaunch} bind:value={userPrefs.api.server.startOnLaunch} />
+
     <div class="compatibility-section">
         <p class="section-label">API compatibility</p>
         <Switch

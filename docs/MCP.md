@@ -4,7 +4,7 @@ Gary serves an [MCP](https://modelcontextprotocol.io) endpoint, so a coding agen
 
 ## Connecting
 
-The endpoint is part of Gary's game server, so the server has to be running (the power button in the top left). On the default port:
+The endpoint is part of Gary's game server, so the server has to be running. Start it with the power button in the top left, turn on "Start server on launch" in its settings, or launch Gary with `--start-server`. On the default port:
 
 ```sh
 claude mcp add --transport http gary http://127.0.0.1:8000/mcp

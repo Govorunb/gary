@@ -61,19 +61,19 @@ jobs:
         releaseDraft: true
 
   # Launch the built bundles on clean systems before the draft release goes out.
-  # "app/session/created" is logged by the frontend over IPC, so seeing it means the window, webview and IPC all work.
+  # An MCP reply listing the engines means the window, webview, IPC, game server and its relay to the frontend all work.
   smoke-linux:
     needs: publish
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { image: 'ubuntu:24.04', bundle: appimage, install: 'apt-get update && apt-get install -y xvfb libgl1-mesa-dri libegl1 libgles2 libgtk-3-0t64 fonts-dejavu-core' }
-          - { image: 'ubuntu:26.04', bundle: appimage, install: 'apt-get update && apt-get install -y xvfb libgl1-mesa-dri libegl1 libgles2 libgtk-3-0t64 fonts-dejavu-core' }
+          - { image: 'ubuntu:24.04', bundle: appimage, install: 'apt-get update && apt-get install -y xvfb libgl1-mesa-dri libegl1 libgles2 libgtk-3-0t64 fonts-dejavu-core curl' }
+          - { image: 'ubuntu:26.04', bundle: appimage, install: 'apt-get update && apt-get install -y xvfb libgl1-mesa-dri libegl1 libgles2 libgtk-3-0t64 fonts-dejavu-core curl' }
           - { image: 'fedora:latest', bundle: appimage, install: 'dnf install -y xorg-x11-server-Xvfb mesa-dri-drivers mesa-libEGL libglvnd-gles gtk3 dejavu-sans-fonts' }
           - { image: 'archlinux:latest', bundle: appimage, install: 'pacman -Syu --noconfirm --needed xorg-server-xvfb mesa gtk3 ttf-dejavu' }
-          - { image: 'ubuntu:24.04', bundle: deb, install: 'apt-get update && apt-get install -y xvfb ./dist/*.deb' }
-          - { image: 'debian:13', bundle: deb, install: 'apt-get update && apt-get install -y xvfb ./dist/*.deb' }
+          - { image: 'ubuntu:24.04', bundle: deb, install: 'apt-get update && apt-get install -y xvfb curl ./dist/*.deb' }
+          - { image: 'debian:13', bundle: deb, install: 'apt-get update && apt-get install -y xvfb curl ./dist/*.deb' }
     runs-on: ubuntu-latest
     container: ${{ matrix.image }}
     defaults:
@@ -95,10 +95,11 @@ jobs:
       run: |
         Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
         if [ ${{ matrix.bundle }} = deb ]; then app=gary; else chmod +x dist/*.AppImage; app=$(echo dist/*.AppImage); fi
-        $app > gary.log 2>&1 &
+        $app --start-server > gary.log 2>&1 &
         pid=$!
         for _ in $(seq 60); do
-          grep -q '"app/session/created"' gary.log && exit 0
+          curl -sf http://127.0.0.1:8000/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -H 'mcp-protocol-version: 2025-11-25' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_engines","arguments":{}}}' | grep -q randy && exit 0
           kill -0 $pid 2>/dev/null || break
           sleep 1
         done
@@ -118,10 +119,15 @@ jobs:
       shell: pwsh
       run: |
         Start-Process (Get-Item dist\*-setup.exe) -ArgumentList /S -Wait
-        $app = Start-Process (Get-Item "$env:LOCALAPPDATA\Gary\*.exe" -Exclude uninstall.exe) -PassThru
+        $app = Start-Process (Get-Item "$env:LOCALAPPDATA\Gary\*.exe" -Exclude uninstall.exe) -ArgumentList --start-server -PassThru
         $logs = "$env:LOCALAPPDATA\dev.govorunb.gary\logs\*"
+        $mcp = @{
+          Uri = 'http://127.0.0.1:8000/mcp'; Method = 'Post'; ContentType = 'application/json'
+          Headers = @{ Accept = 'application/json, text/event-stream'; 'MCP-Protocol-Version' = '2025-11-25' }
+          Body = '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_engines","arguments":{}}}'
+        }
         foreach ($i in 1..60) {
-          if (Select-String -Path $logs -SimpleMatch '"app/session/created"' -Quiet -ErrorAction SilentlyContinue) { exit 0 }
+          try { if ((Invoke-WebRequest @mcp -UseBasicParsing).Content -match 'randy') { exit 0 } } catch {}
           if ($app.HasExited) { break }
           Start-Sleep 1
         }

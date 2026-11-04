@@ -32,12 +32,19 @@ export class ServerManager {
             listenSub<WSConnectionRequest>("ws-try-connect", (evt) => this.registry.tryConnect(evt.payload), this.subscriptions);
             listenSub<ServerConnections>("server-state", (evt) => this.doSync(evt.payload), this.subscriptions);
             listenSub<McpHttpRequest & { id: string }>("mcp-request", (evt) => this.relayMcp(evt.payload), this.subscriptions);
-            void this.sync();
+            void this.sync().then(() => this.startOnLaunch());
         } else {
             EVENT_BUS.emit('app/server/no_tauri');
             // we're called before toasts init (so they can't show until settled)
             settled().then(() => toast.warning("No Tauri backend on browser (vite dev)", {description: "Some app features disabled."}));
         }
+    }
+
+    /** The setting, or `--start-server` for this launch. */
+    private async startOnLaunch() {
+        const requested = this.userPrefs.api.server.startOnLaunch
+            || await safeInvoke<boolean>("launched_with_start_server").unwrapOr(false);
+        if (requested && !this.running) await this.start();
     }
 
     async start() {
