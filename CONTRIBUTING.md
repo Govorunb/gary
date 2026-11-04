@@ -27,26 +27,6 @@ Install the [Tauri prerequisites](https://tauri.app/start/prerequisites/). You'l
 
 Skip the mobile targets.
 
-<details><summary>Troubleshooting</summary>
-
-If you get an error like this:
-```
-error[E0554]: `#![feature]` may not be used on the stable release channel
- --> src/lib.rs:1:1
-  |
-1 | #![feature(if_let_guard)]
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For more information about this error, try `rustc --explain E0554`.
-error: could not compile `gary` (lib) due to 1 previous error
-```
-
-You need to install the `nightly` Rust toolchain:
-```
-rustup install nightly
-```
-</details>
-
 You can run the project in the following ways:
 1. Dev server + browser: `pnpm d` (alias for `pnpm vite dev`)
     - Recommended for development that doesn't need Tauri APIs (e.g. pure UI or app logic)
