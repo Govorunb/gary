@@ -86,7 +86,7 @@ A suitably intelligent model likely will not fit on most gaming GPUs, so you sho
 
 My recommended solution is [OpenRouter](https://openrouter.ai). Get an [API token](https://openrouter.ai/settings/keys) and use `openrouter/free` to get started without choosing a model. It selects from the available free models based on the features Gary needs.
 
-If you want to choose one, `openai/gpt-oss-20b` (faster/cheaper, 20B total/3.6B active) and `openai/gpt-oss-120b` (smarter, 120B total/5.1B active) are reasonable cost-effective options. Make sure any other model supports [structured outputs](https://openrouter.ai/models?fmt=cards&input_modalities=text&output_modalities=text&supported_parameters=structured_outputs) or [tool calling](https://openrouter.ai/models?fmt=cards&input_modalities=text&output_modalities=text&supported_parameters=tools), whichever output mode you select in Gary.
+If you want to choose one, `deepseek/deepseek-v4.1-flash-1017` and `qwen/qwen3.8-27b` are reasonable cost-effective options. Make sure any other model supports [structured outputs](https://openrouter.ai/models?fmt=cards&input_modalities=text&output_modalities=text&supported_parameters=structured_outputs) or [tool calling](https://openrouter.ai/models?fmt=cards&input_modalities=text&output_modalities=text&supported_parameters=tools), whichever output mode you select in Gary.
 
 Other OpenAI-compatible providers can work, but are not officially supported (meaning, fixing issues with these is best-effort and lower priority for me). Check for explicit structured-output or tool-calling support.
 
