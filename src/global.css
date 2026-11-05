@@ -56,6 +56,7 @@
     --z-mobile-sidebar: 22;
     --z-dialog-backdrop: 100;
     --z-dialog: 110;
+    --z-title-bar: 115;
     --z-window-controls: 120;
     --z-popover: 1000;
     --z-tooltip: 1010;
@@ -344,6 +345,10 @@ html[data-battery-saver] .dialog-backdrop {
 
 @utility layer-dialog {
     z-index: var(--z-dialog);
+}
+
+@utility layer-title-bar {
+    z-index: var(--z-title-bar);
 }
 
 @utility layer-window-controls {

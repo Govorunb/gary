@@ -5,6 +5,7 @@
     import type { DialogRootProps } from "@skeletonlabs/skeleton-svelte";
     import { hasHardwareAcceleration } from "#lib/app/utils/hardware-acceleration.js";
     import { onMount } from "svelte";
+    import { invoke, isTauri } from "@tauri-apps/api/core";
 
     type SnippetOfHTML<T extends keyof SvelteHTMLElements> = Snippet<[SvelteHTMLElements[T]]>;
     type Props = {
@@ -37,8 +38,9 @@
         'top-start': 'layer-dialog fixed inset-0 flex items-start justify-center pt-[15vh]'
     };
 
-    // Window controls (when rendered) sit above dialogs; keep them clickable without dismissing the dialog.
-    const persistentElements = [() => document.getElementById("window-controls")];
+    // Window controls and the title bar strip sit above dialogs; a modal turns off pointer events outside itself unless an element is listed here.
+    const persistentElements = [() => document.getElementById("window-controls"), () => titleBar ?? null];
+    let titleBar = $state<HTMLDivElement>();
 
     let useBackdropBlur = $state(false);
     onMount(() => {
@@ -51,6 +53,13 @@
         <Dialog.Trigger element={trigger} />
     {/if}
     <Portal>
+        {#if open && props.closeOnInteractOutside === false && isTauri()}
+            <!-- Nothing outside this dialog closes it, so the strip where the header is stays a title bar: drag, double-click and the window menu. -->
+            <!-- svelte-ignore a11y_no_static_element_interactions : right-click only opens the platform window menu -->
+            <div bind:this={titleBar} class="layer-title-bar fixed inset-x-0 top-0 h-12" data-tauri-drag-region
+                oncontextmenu={(e) => { e.preventDefault(); void invoke("show_window_menu"); }}
+            ></div>
+        {/if}
         <Dialog.Backdrop class={[
             "dialog-backdrop layer-dialog-backdrop fixed inset-0 transition-opacity",
             useBackdropBlur ? "bg-black/20 backdrop-blur-sm" : "bg-black/40",
