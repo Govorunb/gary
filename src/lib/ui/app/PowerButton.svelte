@@ -6,7 +6,7 @@
     import Popover from "#lib/ui/common/Popover.svelte";
     import { boolAttr } from "runed";
     import { isTauri } from "@tauri-apps/api/core";
-    import { Copy, Check } from "@lucide/svelte";
+    import { Copy, Check, Globe } from "@lucide/svelte";
     import { toast } from "svelte-sonner";
     import { tooltip } from "#lib/app/utils/index.js";
     import { EVENT_BUS } from "#lib/app/events/bus.js";
@@ -56,7 +56,7 @@
         const state = running
             ? (userPrefs.api.server.bindAllInterfaces ? "Listening on all interfaces" : "Server running")
             : "Server offline";
-        return `${state}. Click to copy address`;
+        return `${state}. Click to copy ${address}`;
     });
     let copied = $state(false);
     function copyAddress() {
@@ -94,17 +94,19 @@
             </div>
         </Popover>
     </div>
+    <!-- Narrow windows show a globe in place of the address, so it doesn't run under the engine controls. -->
     <button
-        class="address not-lg:hidden"
+        class="address"
         data-running={boolAttr(running)}
         onclick={copyAddress}
         {@attach tooltip(addressTip)}
     >
-        <span class="truncate">{address}</span>
+        <span class="truncate not-lg:hidden">{address}</span>
         {#if copied}
             <Check size={12} />
         {:else}
-            <Copy size={12} />
+            <Globe size={16} class="lg:hidden" />
+            <Copy size={12} class="not-lg:hidden" />
         {/if}
     </button>
 </div>
