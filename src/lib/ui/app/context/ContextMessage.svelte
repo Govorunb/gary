@@ -135,6 +135,9 @@
         grid-template-columns: 1.25rem minmax(0, 1fr) 1.25rem;
         background-color: color-mix(in oklab, var(--src) 4%, transparent);
         border-top: 1px solid var(--color-layer-0);
+        /* The log can hold a thousand rows; skip laying out the ones off screen, or every width change reflows them all. */
+        content-visibility: auto;
+        contain-intrinsic-size: auto 3rem;
         &::before {
             content: "";
             @apply absolute left-0 top-0 bottom-0 w-[3px];
