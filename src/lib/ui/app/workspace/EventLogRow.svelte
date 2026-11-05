@@ -97,7 +97,7 @@
 
     <div class="event-main">
         <div class="event-summary">
-            <h3 class="event-title">{title}</h3>
+            <h3 class="event-title" {title}>{title}</h3>
             <time class="event-time" title={absoluteTimestamp} datetime={new Date(event.timestamp).toISOString()}>{timestamp}</time>
             {#if disclosure}
                 <span class="details-affordance" aria-hidden="true">

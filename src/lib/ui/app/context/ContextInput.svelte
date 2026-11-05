@@ -132,7 +132,7 @@
     }
     .input-container {
         @apply frow-1 items-end shrink-0 m-2.5 mt-1.5 p-1 rounded-lg;
-        @apply bg-layer-2 ring-[1.5px] ring-accent;
+        @apply bg-layer-2 ring-2 ring-accent;
     }
     .input-field {
         @apply flex-1 resize-none px-2 py-1.5 text-sm bg-transparent text-ink-0;

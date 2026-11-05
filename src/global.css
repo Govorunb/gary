@@ -193,7 +193,7 @@
     }
     /* Floating help text (teaching tooltips, shift indicator). */
     .tooltip-panel {
-        @apply fcol-1 p-3 rounded-md max-w-xs;
+        @apply fcol-1 p-3 rounded-md max-w-md;
         @apply bg-layer-3 ring-1 ring-edge shadow-xl;
         @apply text-xs text-ink-1;
     }

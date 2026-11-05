@@ -163,7 +163,7 @@
         @apply text-lvl-warn;
     }
     .mute-btn[data-errored] {
-        @apply text-lvl-err ring-[1.5px] ring-inset ring-lvl-err;
+        @apply text-lvl-err ring-2 ring-inset ring-lvl-err;
     }
     .autoact-split {
         @apply relative frow-0 items-center;
@@ -177,7 +177,7 @@
             & > .act-btn { @apply text-accent; }
             &::after {
                 content: "";
-                @apply absolute inset-0 rounded-md pointer-events-none ring-[1.5px] ring-inset ring-accent;
+                @apply absolute inset-0 rounded-md pointer-events-none ring-2 ring-inset ring-accent;
             }
         }
     }

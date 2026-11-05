@@ -4,6 +4,8 @@
     import ContextLog from "#lib/ui/app/context/ContextLog.svelte";
     import ConnectClientPopover from "#lib/ui/app/game/ConnectClientPopover.svelte";
     import GameTabs from "#lib/ui/app/game/GameTabs.svelte";
+    import GameMenu from "#lib/ui/app/game/GameMenu.svelte";
+    import Popover from "#lib/ui/common/Popover.svelte";
     import Workspace from "#lib/ui/app/workspace/Workspace.svelte";
     import { getRegistry, getSession, getUIState } from "#lib/app/utils/di.js";
     import { Plus, TriangleAlert, CircleX, Check, Info } from "@lucide/svelte";
@@ -41,6 +43,11 @@
     const anyMobileSidebarOpen = $derived(leftMobileOpen || rightMobileOpen);
     const games = $derived(registry.games);
     const selectedGame = $derived(games[uiState.selectedGameTab] ?? null);
+    // Right-clicking a rail game opens the same menu as its tab.
+    let railMenuFor = $state<string | null>(null);
+    $effect(() => {
+        if (uiState.anyDialogOpen) railMenuFor = null;
+    });
 
     // Same events the event log shows under its current filter, same order, for the collapsed rail.
     const railEvents = $derived(
@@ -126,18 +133,33 @@
         {#snippet rail()}
             <div class="rail-body">
                 {#each games as game, i (game.conn.id)}
-                    <button
-                        class="rail-game"
-                        type="button"
-                        data-selected={i === uiState.selectedGameTab ? "" : undefined}
-                        style:--dot={game.conn.closed ? null : STATUS_COLORS[game.status]}
-                        onclick={() => uiState.selectGameTab(game.conn.id)}
-                        title={game.name}
-                        aria-label={`Select ${game.name}`}
+                    <Popover
+                        open={railMenuFor === game.conn.id}
+                        onOpenChange={(d) => { if (!d.open && railMenuFor === game.conn.id) railMenuFor = null; }}
+                        positioning={{ placement: "right-start" }}
                     >
-                        {game.name.slice(0, 1).toUpperCase()}
-                        <span class="rail-dot"></span>
-                    </button>
+                        {#snippet trigger({ onclick: _toggle, ...anchor })}
+                            <button
+                                {...anchor}
+                                class="rail-game"
+                                type="button"
+                                data-selected={i === uiState.selectedGameTab ? "" : undefined}
+                                style:--dot={game.conn.closed ? null : STATUS_COLORS[game.status]}
+                                onclick={() => uiState.selectGameTab(game.conn.id)}
+                                oncontextmenu={(e) => {
+                                    e.preventDefault();
+                                    uiState.selectGameTab(game.conn.id);
+                                    railMenuFor = game.conn.id;
+                                }}
+                                title={game.name}
+                                aria-label={`Select ${game.name}`}
+                            >
+                                {game.name.slice(0, 1).toUpperCase()}
+                                <span class="rail-dot"></span>
+                            </button>
+                        {/snippet}
+                        <GameMenu {game} />
+                    </Popover>
                 {/each}
                 <ConnectClientPopover>
                     {#snippet trigger(props)}
