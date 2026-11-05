@@ -40,9 +40,11 @@
     <button class="menu-item" onclick={() => copyContext("json")} disabled={!rows.length}>
         Copy as JSON
     </button>
-    <button class="menu-item menu-item-danger" onclick={clearContext}>
-        Reset Context
-    </button>
+    {#if session.live}
+        <button class="menu-item menu-item-danger" onclick={clearContext}>
+            Reset Context
+        </button>
+    {/if}
 </Popover>
 
 <style lang="postcss">

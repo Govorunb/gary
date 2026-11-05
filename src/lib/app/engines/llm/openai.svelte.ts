@@ -227,7 +227,8 @@ export class OpenAIClient {
         if (signal?.aborted) {
             return err("cancelled");
         }
-        this.eventBus.emit('app/engines/llm/response', { reqId, response: res });
+        // plain data, since the log keeps it and saved sessions hold it
+        this.eventBus.emit('app/engines/llm/response', { reqId, response: res.isOk() ? { value: res.value } : { error: res.error } });
         if (res.isErr()) {
             this.eventBus.emit('app/engines/llm/network_error', { reqId });
             return err(new EngineError(`${this.name} request failed: ${res.error.message}`, res.error.error as Error, false));
@@ -267,7 +268,6 @@ export class OpenAIClient {
             metadata: {
                 reasoning: (resp.message as any)?.reasoning,
                 usage: response.usage,
-                response,
             },
         });
     }
@@ -276,17 +276,19 @@ export class OpenAIClient {
 export const EVENTS = [
     {
         key: 'app/engines/llm/context_trimmed',
-        dataSchema: {} as {
-            engineId: string;
-            contextWindow: number;
-            source: "override" | "provider";
-            model: string;
-            completionReserve: number;
-            promptBudget: number;
-            estimatedPromptTokensBefore: number;
-            estimatedPromptTokens: number;
-            removedHistoryUnits: number;
-        },
+        dataSchema: z.strictObject({
+            engineId: z.string(),
+            /** The oldest actor context event kept. */
+            before: z.string(),
+            contextWindow: z.number(),
+            source: z.enum(["override", "provider"]),
+            model: z.string(),
+            completionReserve: z.number(),
+            promptBudget: z.number(),
+            estimatedPromptTokensBefore: z.number(),
+            estimatedPromptTokens: z.number(),
+            removedHistoryUnits: z.number(),
+        }),
         description: "Old LLM context compacted to preserve the live edge",
         level: LogLevel.Debug,
     },
@@ -327,7 +329,7 @@ export const EVENTS = [
         key: 'app/engines/llm/response',
         dataSchema: z.object({
             reqId: z.string(),
-            response: z.any().sensitive(),
+            response: z.union([z.strictObject({ value: z.any() }), z.strictObject({ error: z.any() })]).sensitive(),
         }),
         description: "LLM response received",
         level: LogLevel.Verbose,

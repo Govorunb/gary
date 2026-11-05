@@ -22,7 +22,7 @@ export type EngineActResult = EngineAct | Skip | Yap;
 
 /** The engine's view of a decision. It has no game transport or scheduler. */
 export interface EngineContext {
-    context: Pick<ContextManager, "actorView" | "trimActorBefore">;
+    context: Pick<ContextManager, "actorView">;
     registry: { games: {
         id: string;
         name: string;

@@ -6,7 +6,6 @@
     import { generateFromJsonSchema, parseError, preventDefault, tooltip } from "#lib/app/utils/index.js";
     import type { Game, GameAction } from "#lib/api/game.svelte.js";
     import { boolAttr } from "runed";
-    import { EVENT_BUS } from "#lib/app/events/bus.js";
     import type { JsonSchema } from "json-schema-faker";
     import { COMMANDS, canRun } from "#lib/app/commands.js";
 
@@ -46,7 +45,7 @@
                 const genObj = await generateFromJsonSchema(action.schema as JsonSchema);
                 generatedData = JSON.stringify(genObj);
             } catch (e) {
-                EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
+                session.bus.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
                 // TODO: popover
                 return;
             }
@@ -57,7 +56,7 @@
     function quickSend(evt: MouseEvent) {
         if (evt.defaultPrevented || !(evt.ctrlKey || evt.metaKey)) return;
         evt.preventDefault();
-        if (!canSend) return;
+        if (!canSend || game.conn.closed) return;
         if (hasSchema) {
             send();
         } else {
@@ -75,7 +74,9 @@
     <summary onclick={quickSend}>
         <span class="name">{action.name}</span>
         <div class="row-actions">
-            {#if hasSchema}
+            {#if game.conn.closed}
+                <!-- a saved session's games aren't connected -->
+            {:else if hasSchema}
                 <button
                     class="icon-btn"
                     disabled={!canSend}

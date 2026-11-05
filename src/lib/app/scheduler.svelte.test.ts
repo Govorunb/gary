@@ -77,6 +77,8 @@ async function withScheduler(
         userPrefs: { get secrets() { return prefs.secrets; } },
         activeEngine: engine,
         uiState: { aprilFools: false },
+        bus: EVENT_BUS,
+        live: true,
         onDispose(callback: () => void) {
             disposeCallbacks.push(callback);
             return () => {

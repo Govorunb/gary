@@ -161,7 +161,9 @@
             <ContextMessage {row} />
         {/each}
     </div>
-    <ContextInput />
+    {#if session.live}
+        <ContextInput />
+    {/if}
 </div>
 
 <style lang="postcss">

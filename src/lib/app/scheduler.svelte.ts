@@ -8,8 +8,8 @@ import { err, errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import { debounced, jsonParse, LogLevel } from "./utils";
 import type { EventDef, Keys, PresentDefs } from "./events";
 import { scrubSecrets } from "./events/sensitive";
-import { EVENT_BUS } from "./events/bus";
 import { toast } from "svelte-sonner";
+import z from "zod";
 import { validateActionData } from "./engines/action-data";
 
 export type ActionCandidate = {
@@ -29,7 +29,7 @@ export class Scheduler {
     #errored = $state(false);
     #errorReason = $state<string | null>(null);
     #generatedTokens: number | undefined;
-    public readonly canAct: boolean = $derived(!this.#muted && !this.#busy && !this.#errored);
+    public readonly canAct: boolean;
 
     private readonly registry: Registry;
     #abort: AbortController | null = $state(null);
@@ -53,12 +53,14 @@ export class Scheduler {
     #disposed = false;
 
     constructor(private readonly session: Session) {
+        // a saved session has no games to send to, so its engine never acts
+        this.canAct = $derived(session.live && !this.#muted && !this.#busy && !this.#errored);
         this.registry = this.session.registry;
         this.pendingActTimer = debounced(() => {
             this.#actPending = true;
             this.requestDrain();
         }, PENDING_ACT_GRACE_MS);
-        const generated = EVENT_BUS.subscribe(['api/actor/generated']);
+        const generated = this.session.bus.subscribe(['api/actor/generated']);
         generated.onnext(e => this.#generatedTokens = totalTokens(e.data.metadata?.usage));
         session.onDispose(() => {
             this.#disposed = true;
@@ -117,6 +119,7 @@ export class Scheduler {
     }
     public get activeMutes() {
         return [
+            !this.session.live && "not the live session",
             this.muted && "muted",
             this.busy && "busy",
             this.errored && "paused due to error",
@@ -156,7 +159,7 @@ export class Scheduler {
             return false;
         }
         this.#abort.abort();
-        EVENT_BUS.emit('app/scheduler/act/cancelled');
+        this.session.bus.emit('app/scheduler/act/cancelled');
         return true;
     }
 
@@ -210,14 +213,14 @@ export class Scheduler {
         this.#actPending = false;
         const ignores = this.checkIgnored();
         if (ignores.length) {
-            EVENT_BUS.emit('app/scheduler/act/fail/ignored', { force, ignores });
+            this.session.bus.emit('app/scheduler/act/fail/ignored', { force, ignores });
             return err(LogicError.ignored(ignores));
         }
 
         const actionsProvided = candidates !== undefined && candidates !== null;
         candidates ??= this.activeActionCandidates();
         if (candidates.length === 0) {
-            EVENT_BUS.emit('app/scheduler/act/fail/no_actions', { force, actionsProvided });
+            this.session.bus.emit('app/scheduler/act/fail/no_actions', { force, actionsProvided });
             if (actionsProvided) {
                 toast.error("No actions provided");
             }
@@ -266,12 +269,12 @@ export class Scheduler {
             return errAsync(new LogicError(`Engine chose to ${choice === "skip" ? choice : "yap"} in forced act. Please don't tell the developer. I will cry`));
         }
         if (choice === "skip") {
-            EVENT_BUS.emit('api/actor/skip', { engineId: engine.id, metrics });
+            this.session.bus.emit('api/actor/skip', { engineId: engine.id, metrics });
             return okAsync(choice);
         }
         if ('say' in choice) {
-            EVENT_BUS.emit('app/scheduler/act/say', { ...choice });
-            EVENT_BUS.emit('api/actor/say', {
+            this.session.bus.emit('app/scheduler/act/say', { ...choice });
+            this.session.bus.emit('api/actor/say', {
                 engineId: engine.id,
                 msg: choice.say,
                 notify: choice.notify,
@@ -303,12 +306,12 @@ export class Scheduler {
             }
         }
         if (!target) {
-            EVENT_BUS.emit('app/scheduler/act/fail/action_not_found', { force: forced, act });
+            this.session.bus.emit('app/scheduler/act/fail/action_not_found', { force: forced, act });
             return errAsync(LogicError.notFound(act.name));
         }
         const game = target.game;
         const realAct: EngineAct = { ...act, name: target.action.name };
-        EVENT_BUS.emit('app/scheduler/act/perform', { force: forced, action: realAct.name });
+        this.session.bus.emit('app/scheduler/act/perform', { force: forced, action: realAct.name });
         const actData = zActData.decode({ name: realAct.name, data: realAct.data });
         const issues: string[] = [];
         const registered = game.actions.get(realAct.name);
@@ -318,7 +321,7 @@ export class Scheduler {
         if (schema && !jsonParse(realAct.data ?? "null").andThen(data => validateActionData(schema, data)).unwrapOr(true)) {
             issues.push("invalid data");
         }
-        EVENT_BUS.emit('api/actor/act', {
+        this.session.bus.emit('api/actor/act', {
             engineId: engine.id,
             force: forced,
             game: game.name,
@@ -327,7 +330,7 @@ export class Scheduler {
             issues,
         });
         return ResultAsync.fromPromise(game.sendAction(actData, act.toolCallId), (e) => LogicError.sendErr(e as Error))
-            .orTee(() => EVENT_BUS.emit('app/scheduler/act/fail/failed_to_send', { force: forced }))
+            .orTee(() => this.session.bus.emit('app/scheduler/act/fail/failed_to_send', { force: forced }))
             .map(() => realAct);
     }
 
@@ -359,7 +362,7 @@ export class Scheduler {
         const message = scrubSecrets(err.message, secrets);
         const causeMsg = (err.cause as Error)?.message;
         const errMsg = causeMsg && scrubSecrets(causeMsg, secrets);
-        EVENT_BUS.emit('app/scheduler/act/error', {
+        this.session.bus.emit('app/scheduler/act/error', {
             message,
             cause: errMsg,
             recoverable: err.recoverable,
@@ -415,12 +418,12 @@ export class AutoPoker {
 
     constructor(private session: Session) {
         this.tryTimer = debounced(() => {
-            EVENT_BUS.emit('app/scheduler/idle/try');
+            this.session.bus.emit('app/scheduler/idle/try');
             this.scheduler.requestAct();
             this.tryTimer();
         }, () => this.session.userPrefs.app.autoAct.tryInterval);
         
-        const sent = EVENT_BUS.subscribe(['api/actor/act']);
+        const sent = this.session.bus.subscribe(['api/actor/act']);
         sent.onnext(() => this.#idleSinceSend = 0);
 
         // Force time accrues only while idle, so a force never comes due behind a slow generation,
@@ -435,7 +438,7 @@ export class AutoPoker {
             this.#forceTimeout = setTimeout(() => {
                 this.#forceTimeout = undefined;
                 this.#idleSinceSend = 0;
-                EVENT_BUS.emit('app/scheduler/idle/force');
+                this.session.bus.emit('app/scheduler/idle/force');
                 this.scheduler.queueForce(null);
             }, this.session.userPrefs.app.autoAct.forceInterval - this.#idleSinceSend);
             return () => {
@@ -550,68 +553,62 @@ export const DISPLAY = {
     }),
 } as PresentDefs<Keys<typeof EVENTS> | Keys<typeof ACT_EVENTS>>;
 
+const zMetrics = z.strictObject({ latencyMs: z.number(), tokens: z.number().optional() });
 /** How long the engine took to decide, and what it cost when the engine reports usage. */
-export type ActMetrics = { latencyMs: number; tokens?: number };
+export type ActMetrics = z.infer<typeof zMetrics>;
+const zToolCall = z.strictObject({ id: z.string(), name: z.string(), arguments: z.string() });
 
 // FIXME: move to lib/app/engines
 export const ACT_EVENTS = [
     {
         key: 'api/actor/skip',
-        dataSchema: {} as { engineId: string; metrics: ActMetrics },
+        dataSchema: z.strictObject({ engineId: z.string(), metrics: zMetrics }),
         description: "Actor skipped acting",
         level: LogLevel.Info,
     },
     {
         key: 'api/actor/say',
-        dataSchema: {} as { engineId: string; msg: string; notify: boolean; metrics: ActMetrics },
+        dataSchema: z.strictObject({ engineId: z.string(), msg: z.string(), notify: z.boolean(), metrics: zMetrics }),
         description: "Actor spoke",
         level: LogLevel.Info,
     },
     {
         key: 'api/actor/act',
-        dataSchema: {} as {
-            engineId: string;
-            force: boolean;
-            game: string;
-            act: ReturnType<typeof zActData.decode>;
-            metrics: ActMetrics;
-            issues: string[];
-        },
+        dataSchema: z.strictObject({
+            engineId: z.string(),
+            force: z.boolean(),
+            game: z.string(),
+            act: zActData.extend({ id: z.string() }),
+            metrics: zMetrics,
+            issues: z.array(z.string()),
+        }),
         description: "Actor selected an action",
         level: LogLevel.Info,
         silent: true,
     },
     {
         key: 'api/actor/generated',
-        dataSchema: {} as {
-            engineId: string;
-            text: string;
-            toolCall?: {
-                id: string;
-                name: string;
-                arguments: string;
-            };
-            metadata?: {
-                reasoning?: unknown;
-                usage?: unknown;
-                response?: unknown;
-            };
-        },
+        dataSchema: z.strictObject({
+            engineId: z.string(),
+            text: z.string(),
+            toolCall: zToolCall.optional(),
+            metadata: z.strictObject({
+                reasoning: z.unknown(),
+                usage: z.unknown(),
+                context: z.unknown(),
+            }).partial().optional(),
+        }),
         description: "Actor generated text",
         level: LogLevel.Info,
     },
     {
         key: 'api/actor/tool_error',
-        dataSchema: {} as {
-            engineId: string;
-            text: string;
-            toolCalls: Array<{
-                id: string;
-                name: string;
-                arguments: string;
-            }>;
-            message: string;
-        },
+        dataSchema: z.strictObject({
+            engineId: z.string(),
+            text: z.string(),
+            toolCalls: z.array(zToolCall),
+            message: z.string(),
+        }),
         description: "Actor made an invalid tool call",
         level: LogLevel.Info,
     }

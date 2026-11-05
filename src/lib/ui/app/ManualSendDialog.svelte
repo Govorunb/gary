@@ -11,7 +11,6 @@
     import Ajv, { type ValidateFunction } from "ajv";
     import { emptyValueFromJsonSchema, generateFromJsonSchema, parseError, tooltip } from "#lib/app/utils/index.js";
     import { boolAttr, PressedKeys } from "runed";
-    import { EVENT_BUS } from "#lib/app/events/bus.js";
     import type { JsonSchema } from "json-schema-faker";
     import { onCommandKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
@@ -91,7 +90,7 @@
                 jsonContent = generatedJson;
             }
         } catch (e) {
-            EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
+            session.bus.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
         }
     }
 
@@ -103,7 +102,7 @@
                 jsonContent = nextJson;
             }
         } catch (e) {
-            EVENT_BUS.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
+            session.bus.emit('ui/game/user_act/generate_error', { ...evtData, error: parseError(e) });
         }
     }
 

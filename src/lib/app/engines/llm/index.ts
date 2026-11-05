@@ -115,7 +115,6 @@ export type LLMGeneration = {
     metadata?: {
         reasoning?: unknown;
         usage?: unknown;
-        response?: unknown;
         context?: ContextDiagnostics;
     };
 };
@@ -484,11 +483,6 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 `${this.name}'s instructions, actions, or newest context exceed the ${budget.contextWindow}-token context window`,
             ));
         }
-        if (retainedStart > 0) {
-            const firstRetainedIndex = Math.min(...units[retainedStart].indexes);
-            session.context.trimActorBefore(events[firstRetainedIndex].id);
-        }
-
         const diagnostics: ContextDiagnostics = {
             ...budget,
             completionReserve: reserve,
@@ -498,8 +492,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             removedHistoryUnits: retainedStart,
         };
         if (retainedStart > 0) {
+            // the session's context drops everything before `before` when it sees this
             this.eventBus.emit("app/engines/llm/context_trimmed", {
                 engineId: this.id,
+                before: events[Math.min(...units[retainedStart].indexes)].id,
                 ...diagnostics,
             });
         }

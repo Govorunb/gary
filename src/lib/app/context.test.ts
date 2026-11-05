@@ -64,7 +64,10 @@ describe("ContextManager projection", () => {
         });
         bus.emit("api/game/act/actor", { ...result, toolCallId: "retained-call" });
 
-        context.trimActorBefore(retainedId);
+        bus.emit("app/engines/llm/context_trimmed", {
+            engineId: "test", before: retainedId, contextWindow: 1, source: "override", model: "test",
+            completionReserve: 0, promptBudget: 1, estimatedPromptTokensBefore: 2, estimatedPromptTokens: 1, removedHistoryUnits: 1,
+        });
         bus.emit("api/game/act/actor", result);
 
         expect(context.actorView.map(event => event.key)).toEqual([

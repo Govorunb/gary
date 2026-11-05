@@ -15,14 +15,14 @@ export class UIState {
     readonly seenEvents = new SvelteSet<string>();
     /** Event the log should scroll to once it is open. Consumed by the event log. */
     eventLogScrollTarget: string | null = $state(null);
-    readonly dialogs = new DialogManager();
     aprilFools: boolean;
 
     get anyDialogOpen() {
         return this.dialogs.anyDialogOpen;
     }
 
-    constructor(private readonly session: Session) {
+    /** Shared by every session, since one dialog shows at a time whichever session is in view. */
+    constructor(private readonly session: Session, readonly dialogs = new DialogManager()) {
         $effect(() => {
             this.selectedGameTab = clamp(this.selectedGameTab, 0, session.registry.games.length - 1);
         });

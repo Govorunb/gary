@@ -3,6 +3,7 @@ import { errAsync, okAsync } from "neverthrow";
 import { Scheduler, LogicError } from "./scheduler.svelte";
 import { EngineError, type EngineActResult } from "./engines/index.svelte";
 import type { Session } from "./session.svelte";
+import { EVENT_BUS } from "./events/bus";
 import type { Action } from "#lib/api/v1/spec.js";
 
 type FakeGame = {
@@ -29,6 +30,8 @@ function createScheduler(
         registry: { games },
         userPrefs: { secrets: [] },
         activeEngine: engine,
+        bus: EVENT_BUS,
+        live: true,
         onDispose(callback: () => void) {
             disposers.push(callback);
             return () => {

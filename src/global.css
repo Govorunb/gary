@@ -178,6 +178,11 @@
             &:hover { background-color: color-mix(in oklab, var(--color-lvl-err) 12%, transparent); }
         }
     }
+    /* Separates groups of menu items. */
+    .menu-divider {
+        @apply mx-2 h-px;
+        @apply bg-layer-4;
+    }
     /* A details element whose summary is a row, like an expanded action: background shows the open state, no frame. */
     .details-box {
         @apply fcol-2;

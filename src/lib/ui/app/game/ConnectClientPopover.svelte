@@ -47,8 +47,4 @@
         @apply pl-2;
     }
 
-    .menu-divider {
-        @apply mx-2 h-px;
-        @apply bg-layer-4;
-    }
 </style>

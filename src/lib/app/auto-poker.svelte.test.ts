@@ -47,7 +47,7 @@ function setup() {
     const cleanup = $effect.root(() => {
         userPrefs = new UserPrefs(ok(zUserPrefs.decode({})));
         userPrefs.setAutoActIntervals({ tryInterval: 30_000, forceInterval: 30_000 });
-        poker = new AutoPoker({ userPrefs, scheduler, onDispose: (cb: () => void) => { disposers.push(cb); } } as unknown as Session);
+        poker = new AutoPoker({ userPrefs, scheduler, bus: EVENT_BUS, live: true, onDispose: (cb: () => void) => { disposers.push(cb); } } as unknown as Session);
         poker.autoAct = true;
     });
     // a generation that takes `ms`, optionally sending an action
