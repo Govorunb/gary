@@ -8,6 +8,7 @@ import type { Action } from "#lib/api/v1/spec.js";
 
 type FakeGame = {
     nextForcePriority: null;
+    id: string;
     actions: Map<string, Action & { active: boolean }>;
     name: string;
     shortId: string;
@@ -23,12 +24,14 @@ function createScheduler(
     const engine = {
         id: "test-engine",
         name: "Test Engine",
+        options: {},
         tryAct: vi.fn((_session: Session, _actions?: Action[], _signal?: AbortSignal) => okAsync(choice)),
         forceAct: vi.fn((_session: Session, _actions?: Action[], _signal?: AbortSignal) => errAsync(new EngineError("forceAct should not be called"))),
     };
     const session = {
         registry: { games },
-        userPrefs: { secrets: [] },
+        context: { actorView: [] },
+        userPrefs: { app: {}, secrets: [] },
         activeEngine: engine,
         bus: EVENT_BUS,
         live: true,
@@ -67,6 +70,7 @@ describe("Scheduler no-action acts", () => {
 
         games.push({
             nextForcePriority: null,
+            id: "cafe-id",
             name: "Cafe",
             shortId: "cafe",
             actions: new Map([["serve", { name: "serve", active: true }]]),

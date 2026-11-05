@@ -41,6 +41,7 @@ async function state(session: Session) {
     return {
         user: session.context.userView.map(event => event.id),
         actor: session.context.actorView.map(event => event.id),
+        lastDecision: session.lastDecision?.id,
         games: session.registry.games.map(game => ({
             id: game.id, name: game.name, version: game.version, status: game.status,
             actions: [...game.actions.values()].map(action => ({ ...action })),
@@ -85,6 +86,7 @@ test("loading a saved session rebuilds its context, games and diagnostics withou
         const expected = await state(live);
         expect(expected.games).toHaveLength(2);
         expect(expected.games[0].diagnostics.length).toBeGreaterThan(2);
+        expect(expected.lastDecision).toBeDefined();
         expect(await state(loaded)).toEqual(expected);
         // the history starts with the session's creation, and copies keep its ID
         expect(live.history()[0]).toMatchObject({ key: "app/session/created", data: { session: { id: live.id } } });

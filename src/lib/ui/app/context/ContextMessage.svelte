@@ -120,6 +120,10 @@
         <button class="menu-item" onclick={() => copy(rendered?.text ?? "")}>Copy text</button>
         <button class="menu-item" onclick={() => copy(event.id)}>Copy event ID</button>
         <button class="menu-item" onclick={() => copy(JSON.stringify(contextRowData(row), null, 2))}>Copy as JSON</button>
+        {#if source.type === "actor"}
+            <div class="menu-divider"></div>
+            <button class="menu-item" onclick={() => { menuOpen = false; uiState.dialogs.openDecisionEvals(event.id); }}>Evaluate this decision</button>
+        {/if}
     </Popover>
     {#if metricsText}
         <span class="message-metrics" {@attach tooltip("Engine latency · tokens used")}>{metricsText}</span>

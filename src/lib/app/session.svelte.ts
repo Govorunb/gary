@@ -21,7 +21,9 @@ import z from "zod";
 import type { Command } from "./commands";
 
 /** Events the session and its projections are built from, so a fork needs only these. They stay in the log for the session's lifetime. */
-export const SESSION_KEYS = ["app/session/created", ...CONTEXT_KEYS, ...REGISTRY_KEYS, ...GAME_KEYS] as const;
+export const SESSION_KEYS = ["app/session/created", ...CONTEXT_KEYS, ...REGISTRY_KEYS, ...GAME_KEYS, "app/scheduler/decision"] as const;
+
+const SESSION_KEY_SET = new Set<EventKey>(SESSION_KEYS);
 
 /** A session's events. The first is always its creation, which names the session. */
 export type SessionEvents = [EventInstance<"app/session/created">, ...EventInstance<EventKey>[]];
@@ -46,6 +48,8 @@ export class Session {
     readonly registry: Registry;
     readonly scheduler: Scheduler;
     readonly uiState: UIState;
+    /** The newest time the scheduler asked an engine to act. Evals fork the session here. */
+    lastDecision: EventInstance<"app/scheduler/decision"> | null = $state.raw(null);
 
     engines: Record<string, Engine<unknown>> = $state({});
     activeEngine: Engine<unknown>;
@@ -55,7 +59,7 @@ export class Session {
     readonly #disposeEffects: () => void;
 
     constructor(name: string, public readonly userPrefs: UserPrefs, history?: SessionHistory, dialogs?: DialogManager) {
-        // a session is identified by its creation, so forks and saved copies keep the ID of the history they came from
+        // a session is identified by its creation, so forks, saved copies and eval trials keep the ID of the history they came from
         this.id = history ? history.events[0].data.session.id : uuidv4();
         this.name = $state(name);
         this.ondispose = [];
@@ -65,6 +69,9 @@ export class Session {
         this.eventLog = new EventLogStore(this.bus, [...SESSION_KEYS, "app/engines/llm/response"]);
         if (this.live) this.bus.emit('app/session/created', { session: {id: this.id, name: this.name} });
         this.context = new ContextManager(this.eventLog);
+        this.onDispose(this.eventLog.subscribe(["app/scheduler/decision"], ({ event }) => {
+            this.lastDecision = event;
+        }));
         this.registry = new Registry(this);
         // owned here rather than by a component, so records can be built anywhere
         [[this.scheduler, this.uiState], this.#disposeEffects] = withEffectRoot(() => [new Scheduler(this), new UIState(this, dialogs)] as const);
@@ -95,6 +102,12 @@ export class Session {
     history(): SessionEvents {
         // the creation is the first event appended and is kept for good
         return this.eventLog.history() as unknown as SessionEvents;
+    }
+
+    /** What a fork is rebuilt from: the session's creation and the events its projections read, without the raw provider responses the log also keeps. */
+    forkEvents(): SessionEvents {
+        const [created, ...rest] = this.history();
+        return [created, ...rest.filter(event => SESSION_KEY_SET.has(event.key))];
     }
 
     toFile(): SessionFile {
