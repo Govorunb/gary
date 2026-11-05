@@ -46,6 +46,9 @@ export class UserPrefs {
     get engines() {
         return this.#data.engines;
     }
+    get dev() {
+        return this.#data.dev;
+    }
     /** Configured secrets such as API keys, to scrub from anything that leaves the app. */
     get secrets() {
         return sensitiveStrings(zUserPrefs, this.#data);
@@ -193,6 +196,19 @@ export const zAppPrefs = z.strictObject({
     updates: zUpdatePrefs.prefault({}),
 });
 
+/** Overrides for developing and screenshotting the app. Settings shows them only in dev builds. */
+export const zDevPrefs = z.strictObject({
+    aprilFools: z.enum(["auto", "on", "off"]).fallback("auto").field({
+        title: "April Fools",
+        options: { auto: "Default", on: "Always", off: "Never" },
+    }),
+    platform: z.enum(["auto", "windows", "linux"]).fallback("auto").field({
+        title: "Platform",
+        description: "Draws the window controls of this platform instead of the one Gary runs on.",
+        options: { auto: "Default", windows: "Windows", linux: "Linux" },
+    }),
+});
+
 export const zGamePrefs = z.strictObject({
     diagnostics: z.strictObject({
         suppressions: z.array(z.string()).prefault([]),
@@ -230,6 +246,7 @@ export const zUserPrefs = z.strictObject({
     version: z.string().prefault(APP_VERSION),
     app: zAppPrefs.prefault({}),
     api: zApiPrefs.prefault({}),
+    dev: zDevPrefs.prefault({}),
     engines: z.object({
         randy: zRandyPrefs.prefault({}),
         openRouter: zOpenRouterPrefs.prefault({})

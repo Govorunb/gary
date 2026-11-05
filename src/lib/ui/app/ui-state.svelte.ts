@@ -29,14 +29,17 @@ export class UIState {
         $effect(() => {
             this.dialogs.setPrefsLoadErrorOpen(!!session.userPrefs.loadError);
         });
-        this.aprilFools = $derived.by(() => isApril1st()
-            && !this.session.userPrefs.app.joyless
-            && this.session.userPrefs.app.garyGoldMembershipEndsAfter !== new Date().getFullYear()
-        );
+        this.aprilFools = $derived.by(() => {
+            const { userPrefs } = this.session;
+            if (userPrefs.dev.aprilFools !== "auto") return userPrefs.dev.aprilFools === "on";
+            return isApril1st()
+                && !userPrefs.app.joyless
+                && userPrefs.app.garyGoldMembershipEndsAfter !== new Date().getFullYear();
+        });
     }
 
     devToggleAprilFools() {
-        this.aprilFools = !this.aprilFools;
+        this.session.userPrefs.dev.aprilFools = this.aprilFools ? "off" : "on";
     }
 
     isSidebarCollapsed(side: DashboardSidebarSide) {

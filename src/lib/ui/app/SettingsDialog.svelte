@@ -14,7 +14,7 @@
     import Switch from "#lib/ui/common/Switch.svelte";
     import TeachingTooltip from "../common/TeachingTooltip.svelte";
     import Field from "../common/form/Field.svelte";
-    import { zAppPrefs, zUpdatePrefs } from "#lib/app/prefs.svelte.js";
+    import { zAppPrefs, zDevPrefs, zUpdatePrefs } from "#lib/app/prefs.svelte.js";
 
     type Props = {
         open: boolean;
@@ -26,6 +26,7 @@
     const updater = getUpdater();
     const fields = zAppPrefs.shape;
     const updateFields = zUpdatePrefs.shape;
+    const devFields = zDevPrefs.shape;
     const characterPresets = {
         neuro: "Neuro-sama",
         evil: "Evil Neuro",
@@ -134,6 +135,7 @@
                 UpdatesSection,
                 PreferencesSection,
                 TroubleshootingSection,
+                ...(import.meta.env.DEV ? [DeveloperSection] : []),
             ] as section}
                 <div class="settings-section">
                     {@render section()}
@@ -257,6 +259,12 @@
                     </p>
                 </div>
             </div>
+        {/snippet}
+
+        {#snippet DeveloperSection()}
+            <h2>Developer</h2>
+            <Field schema={devFields.aprilFools} bind:value={userPrefs.dev.aprilFools} tip />
+            <Field schema={devFields.platform} bind:value={userPrefs.dev.platform} tip />
         {/snippet}
 
         {#snippet UpdatesSection()}

@@ -3,11 +3,16 @@
     import { isTauri } from "@tauri-apps/api/core";
     import { Minus, Square, Copy, X } from "@lucide/svelte";
     import { onMount } from "svelte";
+    import { getUserPrefs } from "#lib/app/utils/di.js";
 
     // Caption buttons for the frameless window. The browser (dev) build shows inert ones, so it lays out like the app.
     // Windows gets the flat full-height caption look; everything else gets round buttons like GTK apps.
     const win = isTauri() ? getCurrentWindow() : null;
-    const style = navigator.userAgent.includes("Windows") ? "windows" : "gtk";
+    const userPrefs = getUserPrefs();
+    const platform = $derived(userPrefs.dev.platform === "auto"
+        ? (navigator.userAgent.includes("Windows") ? "windows" : "linux")
+        : userPrefs.dev.platform);
+    const style = $derived(platform === "windows" ? "windows" : "gtk");
     let maximized = $state(false);
 
     onMount(() => {
