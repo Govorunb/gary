@@ -89,7 +89,7 @@
 >
     {#snippet trigger(props)}
         <button {...props} class="trigger">
-            <span class="truncate max-w-96">{session.activeEngine.name}</span>
+            <span class="truncate min-w-0 max-w-96">{session.activeEngine.name}</span>
             <ChevronDown class="size-4 opacity-50" />
         </button>
     {/snippet}
@@ -182,7 +182,7 @@
     @reference "global.css";
 
     .trigger {
-        @apply frow-1.5 items-center h-8 px-2.5 rounded-md;
+        @apply frow-1.5 items-center min-w-0 h-8 px-2.5 rounded-md;
         @apply text-sm font-medium text-ink-1 transition-colors;
         &:hover {
             @apply text-ink-0;

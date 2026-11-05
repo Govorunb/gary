@@ -129,10 +129,10 @@
 <style lang="postcss">
     @reference "global.css";
     .engine-controls {
-        @apply frow-2 items-center;
+        @apply frow-2 items-center justify-center min-w-0;
     }
     .act-btn {
-        @apply frow-1.5 items-center h-8 px-2.5 rounded-md;
+        @apply frow-1.5 items-center shrink-0 h-8 px-2.5 rounded-md whitespace-nowrap;
         @apply text-sm font-medium text-ink-0 transition-all;
         background-color: var(--color-bar-control);
         & > :global(svg) { @apply size-4; }

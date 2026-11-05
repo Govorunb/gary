@@ -29,7 +29,7 @@
     <div class="justify-self-start min-w-0">
         <PowerButton />
     </div>
-    <div class="justify-self-center">
+    <div class="min-w-0">
         <EngineControls />
     </div>
     <div class="justify-self-end frow-2 items-center">
@@ -45,9 +45,7 @@
         >
             <Settings class="size-[18px]!" />
         </button>
-        {#if framed}
-            <WindowControls />
-        {/if}
+        <WindowControls />
     </div>
     <StoppedNotice />
 </header>
@@ -64,7 +62,8 @@
     @reference "global.css";
 
     header {
-        @apply relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 h-12 px-2.5 shrink-0;
+        /* The controls stay centered while there's room; when there isn't, they give way (the engine name truncates) rather than run over the sides. */
+        @apply relative grid grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-2 h-12 px-2.5 shrink-0;
         @apply bg-bar text-ink-0 select-none;
     }
     .bar-btn {

@@ -1,15 +1,17 @@
 <script lang="ts">
     import { getCurrentWindow } from "@tauri-apps/api/window";
+    import { isTauri } from "@tauri-apps/api/core";
     import { Minus, Square, Copy, X } from "@lucide/svelte";
     import { onMount } from "svelte";
 
-    // Caption buttons for the frameless window. Only rendered inside Tauri.
+    // Caption buttons for the frameless window. The browser (dev) build shows inert ones, so it lays out like the app.
     // Windows gets the flat full-height caption look; everything else gets round buttons like GTK apps.
-    const win = getCurrentWindow();
+    const win = isTauri() ? getCurrentWindow() : null;
     const style = navigator.userAgent.includes("Windows") ? "windows" : "gtk";
     let maximized = $state(false);
 
     onMount(() => {
+        if (!win) return;
         const linux = navigator.userAgent.includes("Linux");
         const sync = async () => {
             maximized = await win.isMaximized();
@@ -28,17 +30,17 @@
 </script>
 
 <div id="window-controls" class="window-controls" data-style={style}>
-    <button class="caption-btn minimize" onclick={() => win.minimize()} title="Minimize" aria-label="Minimize">
+    <button class="caption-btn minimize" onclick={() => win?.minimize()} title="Minimize" aria-label="Minimize">
         <Minus />
     </button>
-    <button class="caption-btn" onclick={() => win.toggleMaximize()} title={maximized ? "Restore" : "Maximize"} aria-label={maximized ? "Restore" : "Maximize"}>
+    <button class="caption-btn" onclick={() => win?.toggleMaximize()} title={maximized ? "Restore" : "Maximize"} aria-label={maximized ? "Restore" : "Maximize"}>
         {#if maximized}
             <Copy class="size-3!" />
         {:else}
             <Square class="size-3!" />
         {/if}
     </button>
-    <button class="caption-btn close" onclick={() => win.close()} title="Close" aria-label="Close">
+    <button class="caption-btn close" onclick={() => win?.close()} title="Close" aria-label="Close">
         <X />
     </button>
 </div>
