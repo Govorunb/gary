@@ -99,6 +99,7 @@
         <Field schema={fields.allowYapping} bind:value={dirtyConfig.allowYapping} />
         <details class="details-box advanced-details">
             <summary>Advanced</summary>
+            <Field schema={fields.allowUnregisteredActions} bind:value={dirtyConfig.allowUnregisteredActions} />
             <Field schema={fields.promptingStrategy} bind:value={dirtyConfig.promptingStrategy} />
             <Field schema={fields.reasoningEffort} bind:value={dirtyConfig.reasoningEffort} />
         </details>

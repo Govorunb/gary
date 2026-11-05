@@ -1,3 +1,4 @@
+// @vitest-environment svelte-client
 import { describe, expect, test, vi } from "vitest";
 import { err, errAsync, okAsync, type Result, ResultAsync } from "neverthrow";
 import { Scheduler } from "./scheduler.svelte";
@@ -5,6 +6,10 @@ import { EngineError, type Engine, type EngineAct, type EngineActResult } from "
 import type { Action, ActData, ForcePriority } from "#lib/api/v1/spec.js";
 import type { ActiveForce, Game } from "#lib/api/game.svelte.js";
 import type { Session } from "./session.svelte";
+import { Randy, zRandyPrefs, type RandyPrefs } from "./engines/randy.svelte";
+import { EVENT_BUS } from "./events/bus";
+import type { EventData } from "./events";
+import { SelfTestHarness } from "#lib/testing/self-test-harness.js";
 
 type FakeGameAction = Action & { active: boolean };
 
@@ -48,9 +53,10 @@ function createFakeGame(name: string, shortId: string, activeActions: Action[]):
     };
 }
 
-function createEngine(select: (actions: Action[]) => EngineActResult): Engine<unknown> {
+function createEngine(select: (actions: Action[]) => EngineActResult, allowsUnregisteredActions = false): Engine<unknown> {
     return {
         id: "test-engine",
+        allowsUnregisteredActions,
         name: "Test Engine",
         forceAct: vi.fn((_session: Session, actions?: Action[]) => okAsync(select(actions ?? []))),
         tryAct: vi.fn((_session: Session, actions?: Action[]) => okAsync(select(actions ?? []))),
@@ -58,9 +64,9 @@ function createEngine(select: (actions: Action[]) => EngineActResult): Engine<un
 }
 
 async function withScheduler(
-    games: FakeGame[],
+    games: Array<FakeGame | Game>,
     engine: Engine<unknown>,
-    run: (scheduler: Scheduler) => Promise<void> | void,
+    run: (scheduler: Scheduler, acts: EventData<"api/actor/act">[]) => Promise<void> | void,
     prefs: { secrets: string[] } = { secrets: [] },
 ) {
     const disposeCallbacks: Array<() => void> = [];
@@ -70,6 +76,7 @@ async function withScheduler(
         registry: { games },
         userPrefs: { get secrets() { return prefs.secrets; } },
         activeEngine: engine,
+        uiState: { aprilFools: false },
         onDispose(callback: () => void) {
             disposeCallbacks.push(callback);
             return () => {
@@ -81,12 +88,21 @@ async function withScheduler(
         },
     } as unknown as Session;
 
-    const scheduler = new Scheduler(session);
+    let scheduler!: Scheduler;
+    const disposeRoot = $effect.root(() => {
+        scheduler = new Scheduler(session);
+    });
+    Object.assign(session, { scheduler });
+    const acts: EventData<"api/actor/act">[] = [];
+    const subscription = EVENT_BUS.subscribe(["api/actor/act"]);
+    subscription.onnext(event => acts.push(event.data));
 
     try {
-        await run(scheduler);
+        await run(scheduler, acts);
     } finally {
+        subscription.destroy();
         disposeCallbacks.toReversed().forEach(callback => callback());
+        disposeRoot();
     }
 }
 
@@ -387,6 +403,168 @@ describe("Scheduler engine errors", () => {
         await withScheduler([game], engine, async scheduler => {
             expect((await scheduler.tryAct()).isErr()).toBe(true);
             expect(scheduler.errored).toBe(true);
+        });
+    });
+});
+
+function createRandyEngine(options: Partial<RandyPrefs> = {}) {
+    return new Randy({ engines: { randy: zRandyPrefs.decode({
+        chanceDoNothing: 0, latencyMs: 1, seed: 12345, ...options,
+    }) } });
+}
+
+describe("Scheduler chaos sends", () => {
+    test.each([false, true])("Randy keeps valid actions with chaos disabled, forced=%s", async forced => {
+        const game = createFakeGame("Game", "game", [
+            { name: "current", schema: { type: "object", properties: { count: { type: "integer" } }, required: ["count"] } },
+            { name: "old" },
+        ]);
+        game.actions.get("old")!.active = false;
+        await withScheduler([game], createRandyEngine(), async (scheduler, acts) => {
+            const result = await (forced ? scheduler.forceAct() : scheduler.tryAct());
+            expect(result.isOk()).toBe(true);
+            expect(game.sentActions[0].name).toBe("current");
+            expect(acts[0].issues).toEqual([]);
+        });
+    });
+
+    test.each([false, true])("Randy sends retained inactive actions when enabled, forced=%s", async forced => {
+        const game = createFakeGame("Game", "game", [{ name: "current" }, { name: "old" }]);
+        game.actions.get("old")!.active = false;
+        await withScheduler([game], createRandyEngine({ chanceUnregisteredAction: 1 }), async (scheduler, acts) => {
+            const result = await (forced ? scheduler.forceAct() : scheduler.tryAct());
+            expect(result.isOk()).toBe(true);
+            expect(game.sentActions[0].name).toBe("old");
+            expect(acts[0].issues).toEqual(["unregistered"]);
+        });
+    });
+
+    test("keeps forced stale choices in the source game despite duplicate historical names", async () => {
+        const first = createFakeGame("First", "first", [{ name: "current" }, { name: "old" }]);
+        const second = createFakeGame("Second", "second", [{ name: "other" }, { name: "old" }]);
+        first.actions.get("old")!.active = false;
+        second.actions.get("old")!.active = false;
+        await withScheduler([first, second], createRandyEngine({ chanceUnregisteredAction: 1 }), async scheduler => {
+            const result = await scheduler.forceAct([{ game: first as unknown as Game, action: first.actions.get("current")! }]);
+            expect(result.isOk()).toBe(true);
+            expect(first.sentActions[0].name).toBe("old");
+            expect(second.sentActions).toEqual([]);
+        });
+    });
+
+    test.each([false, true])("Randy sends JSON that fails the schema when enabled, forced=%s", async forced => {
+        const game = createFakeGame("Game", "game", [{
+            name: "move", schema: { type: "object", properties: { x: { type: "integer" } }, required: ["x"] },
+        }]);
+        await withScheduler([game], createRandyEngine({ chanceInvalidData: 1 }), async (scheduler, acts) => {
+            expect((await (forced ? scheduler.forceAct() : scheduler.tryAct())).isOk()).toBe(true);
+            expect(JSON.parse(game.sentActions[0].data!)).toEqual({});
+            expect(acts[0].issues).toEqual(["invalid data"]);
+        });
+    });
+
+    test("reports an action unregistered while Randy holds its choice", async () => {
+        vi.useFakeTimers();
+        const game = createFakeGame("Game", "game", [{ name: "move" }]);
+        try {
+            await withScheduler([game], createRandyEngine({ latencyMs: 1000 }), async (scheduler, acts) => {
+                const acting = scheduler.forceAct();
+                await vi.advanceTimersByTimeAsync(500);
+                expect(game.sentActions).toEqual([]);
+                game.actions.get("move")!.active = false;
+                await vi.advanceTimersByTimeAsync(500);
+                expect((await acting).isOk()).toBe(true);
+                expect(game.sentActions[0].name).toBe("move");
+                expect(acts[0].issues).toEqual(["unregistered"]);
+                expect(acts[0].metrics.latencyMs).toBe(1000);
+            });
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    test("cancels held choices without sending or reporting an act", async () => {
+        vi.useFakeTimers();
+        const game = createFakeGame("Game", "game", [{ name: "move" }]);
+        try {
+            await withScheduler([game], createRandyEngine({ latencyMs: 1000 }), async (scheduler, acts) => {
+                const acting = scheduler.forceAct();
+                await vi.advanceTimersByTimeAsync(500);
+                expect(scheduler.cancelAct()).toBe(true);
+                expect((await acting)._unsafeUnwrapErr()).toBe("cancelled");
+                await vi.advanceTimersByTimeAsync(1000);
+                expect(game.sentActions).toEqual([]);
+                expect(acts).toEqual([]);
+            });
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    test("routes a made-up name only when enabled and one game can receive it", async () => {
+        const game = createFakeGame("Game", "game", [{ name: "move" }]);
+        await withScheduler([game], createEngine(() => ({ name: "invented" }), false), async scheduler => {
+            expect((await scheduler.tryAct()).isErr()).toBe(true);
+            expect(game.sentActions).toEqual([]);
+        });
+        await withScheduler([game], createEngine(() => ({ name: "invented" }), true), async scheduler => {
+            expect((await scheduler.tryAct()).isOk()).toBe(true);
+            expect(game.sentActions[0].name).toBe("invented");
+        });
+    });
+
+    test("rejects ambiguous historical names and unknown names across games", async () => {
+        const first = createFakeGame("First", "first", [{ name: "move" }, { name: "old" }]);
+        const second = createFakeGame("Second", "second", [{ name: "jump" }, { name: "old" }]);
+        first.actions.get("old")!.active = false;
+        second.actions.get("old")!.active = false;
+        for (const name of ["old", "invented"]) {
+            await withScheduler([first, second], createEngine(() => ({ name }), true), async scheduler => {
+                expect((await scheduler.tryAct()).isErr()).toBe(true);
+                expect(first.sentActions).toEqual([]);
+                expect(second.sentActions).toEqual([]);
+            });
+        }
+    });
+
+    test("keeps stale choices across game-force retries", async () => {
+        const harness = new SelfTestHarness();
+        try {
+            const receive = async () => {
+                for await (const text of harness.client.conn.listen()) await harness.client.recvRaw(text);
+            };
+            void receive();
+            await harness.connect();
+            await harness.client.hello();
+            await harness.client.registerActions([{ name: "current", description: "Current menu" }, { name: "old", description: "Old menu" }]);
+            await harness.client.unregisterActions(["old"]);
+            const run = vi.spyOn(harness.client, "runAction").mockResolvedValue({ success: false, message: "That action is unavailable" });
+            await withScheduler([harness.server], createRandyEngine({ chanceUnregisteredAction: 1 }), async (scheduler, acts) => {
+                Object.assign(harness.session, { scheduler });
+                await harness.client.sendForce(["current"], "Choose from this menu");
+                await vi.waitFor(() => {
+                    expect(run).toHaveBeenCalledTimes(4);
+                    expect(harness.server.hasForce).toBe(false);
+                    expect(scheduler.busy).toBe(false);
+                });
+                expect(run.mock.calls.every(([name]) => name === "old")).toBe(true);
+                expect(acts).toHaveLength(4);
+                expect(acts.every(act => act.issues.includes("unregistered"))).toBe(true);
+                expect(harness.diagnosticKeys).toEqual([]);
+            });
+        } finally {
+            await harness.dispose();
+        }
+    });
+
+    test("rejects a known action belonging to a different game's force", async () => {
+        const first = createFakeGame("First", "first", [{ name: "move" }]);
+        const second = createFakeGame("Second", "second", [{ name: "old" }]);
+        second.actions.get("old")!.active = false;
+        await withScheduler([first, second], createEngine(() => ({ name: "old" }), true), async scheduler => {
+            expect((await scheduler.forceAct([{ game: first as unknown as Game, action: first.actions.get("move")! }])).isErr()).toBe(true);
+            expect(first.sentActions).toEqual([]);
+            expect(second.sentActions).toEqual([]);
         });
     });
 });

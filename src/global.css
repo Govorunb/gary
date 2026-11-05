@@ -190,6 +190,8 @@
             &:focus-visible { @apply outline-none ring-2 ring-inset ring-accent; }
         }
         &[open] > summary { @apply bg-layer-2 text-ink-0; }
+        /* Browsers wrap the content in ::details-content; unwrap it so the gap applies between rows. */
+        &[open]::details-content { display: contents; }
     }
     /* Floating help text (teaching tooltips, shift indicator). */
     .tooltip-panel {

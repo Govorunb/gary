@@ -47,6 +47,11 @@ export abstract class Engine<TOptions> {
         this.id = engineId;
     }
 
+    /** Whether the scheduler should route acts naming actions the engine wasn't offered. */
+    get allowsUnregisteredActions(): boolean {
+        return false;
+    }
+
     abstract tryAct(session: EngineContext, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError>;
     abstract forceAct(session: EngineContext, actions?: Action[], signal?: AbortSignal, forceContext?: ForceAction["data"]): ResultAsync<EngineAct, EngineActError>;
 

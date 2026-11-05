@@ -27,6 +27,11 @@
         <Field schema={fields.chanceDoNothing} bind:value={dirtyConfig.chanceDoNothing} />
         <Field schema={fields.latencyMs} bind:value={dirtyConfig.latencyMs} />
         <Field schema={fields.seed} bind:value={dirtyConfig.seed} />
+        <details class="details-box chaos-details">
+            <summary>Chaos testing</summary>
+            <Field schema={fields.chanceUnregisteredAction} bind:value={dirtyConfig.chanceUnregisteredAction} />
+            <Field schema={fields.chanceInvalidData} bind:value={dirtyConfig.chanceInvalidData} />
+        </details>
         {#if uiState.aprilFools}
             <div class="callout warn">
                 <span class="text-base font-semibold">
@@ -50,3 +55,11 @@
         {/if}
     {/snippet}
 </EngineConfig>
+
+<style lang="postcss">
+    @reference "global.css";
+
+    .chaos-details {
+        @apply fcol-4 mt-1;
+    }
+</style>
