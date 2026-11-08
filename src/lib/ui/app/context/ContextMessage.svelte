@@ -4,17 +4,18 @@
     import { boolAttr } from "runed";
     import { pressedKeys } from "#lib/app/utils/hotkeys.svelte.js";
     import dayjs from "dayjs";
-    import { Bot, EllipsisVertical, Gamepad2, Settings, User } from "@lucide/svelte";
+    import { Bot, Gamepad2, Settings, User } from "@lucide/svelte";
     import type { ContextRow, ContextSource } from "./formatters/types";
 
-    import Popover from "#lib/ui/common/Popover.svelte";
-    import { copyContextText, contextRowData } from "./copy";
+    import type { MenuRequest } from "./ContextMessageMenu.svelte";
 
     interface Props {
         row: ContextRow;
+        /** The log shares one menu between its rows; a menu per row makes mounting a thousand of them slow. */
+        onmenu: (request: MenuRequest) => void;
     }
 
-    const { row }: Props = $props();
+    const { row, onmenu }: Props = $props();
     const event = $derived(row.event);
     const rendered = $derived(row.rendered);
     const source = $derived(row.source);
@@ -23,20 +24,11 @@
     const session = getSession();
     const registry = getRegistry();
     const uiState = getUIState();
-    let menuOpen = $state(false);
-    let menuPoint = $state<{ x: number; y: number } | null>(null);
     let menuButton: HTMLButtonElement;
-
-    function copy(text: string) {
-        void copyContextText(text);
-        menuOpen = false;
-        menuButton.focus();
-    }
 
     function openMenu(evt: MouseEvent) {
         evt.preventDefault();
-        menuPoint = { x: evt.clientX, y: evt.clientY };
-        menuOpen = true;
+        onmenu({ row, button: menuButton, point: { x: evt.clientX, y: evt.clientY } });
     }
 
     const sourceIcons: Record<ContextSource["type"], typeof Settings> = {
@@ -55,6 +47,7 @@
     });
     // The details modifier reveals metrics on every row at once.
     const detailsHeld = $derived(pressedKeys.has("Shift") && !uiState.anyDialogOpen);
+    const lines = $derived((rendered?.text.match(/\n/g)?.length ?? 0) + 1);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions : the menu is also available through its button -->
@@ -63,9 +56,12 @@
     class:silent={rendered?.silent === true /* boolean | "noAct" */}
     data-continues={boolAttr(row.continues)}
     data-details={boolAttr(detailsHeld)}
+    style:--lines={lines}
 >
     <span class="message-icon" {@attach tooltip(source.type)}>
-        <SourceIcon />
+        {#if !row.continues}
+            <SourceIcon />
+        {/if}
     </span>
     <div class="message-content">
         {#if !row.continues}
@@ -102,25 +98,15 @@
         {/if}
         <span class="message-text" title={row.continues ? timestamp.format("LTS") : undefined}>{rendered?.text ?? ""}</span>
     </div>
-    <Popover open={menuOpen} onOpenChange={(d) => menuOpen = d.open}
-        positioning={{
-            placement: menuPoint ? "bottom-start" : "bottom-end",
-            getAnchorRect: () => menuPoint ? { ...menuPoint, width: 0, height: 0 } : null,
-        }}
-        finalFocusEl={() => menuButton}
+    <button class="icon-btn message-menu" bind:this={menuButton}
+        aria-label="Message menu" title="Message menu"
+        onclick={() => onmenu({ row, button: menuButton })}
     >
-        {#snippet trigger(props)}
-            <button {...props} class="icon-btn message-menu" bind:this={menuButton}
-                aria-label="Message menu" title="Message menu"
-                onclick={(evt) => { menuPoint = null; props.onclick?.(evt); }}
-            >
-                <EllipsisVertical />
-            </button>
-        {/snippet}
-        <button class="menu-item" onclick={() => copy(rendered?.text ?? "")}>Copy text</button>
-        <button class="menu-item" onclick={() => copy(event.id)}>Copy event ID</button>
-        <button class="menu-item" onclick={() => copy(JSON.stringify(contextRowData(row), null, 2))}>Copy as JSON</button>
-    </Popover>
+        <!-- Lucide's ellipsis-vertical as plain markup: the icon component costs more than the rest of the row. -->
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />
+        </svg>
+    </button>
     {#if metricsText}
         <span class="message-metrics" {@attach tooltip("Engine latency · tokens used")}>{metricsText}</span>
     {/if}
@@ -131,13 +117,15 @@
 
     .message {
         --src: var(--color-ink-3);
-        @apply relative grid gap-x-2 pl-3 pr-3 pt-1.5 pb-1.5 wrap-anywhere;
-        grid-template-columns: 1.25rem minmax(0, 1fr) 1.25rem;
+        /* Flex, not grid: WebKit lays a grid's multi-line text out several times, and a thousand new rows took seconds. */
+        @apply relative frow-2 items-start pl-3 pr-3 pt-1.5 pb-1.5 wrap-anywhere;
         background-color: color-mix(in oklab, var(--src) 4%, transparent);
         border-top: 1px solid var(--color-layer-0);
-        /* The log can hold a thousand rows; skip laying out the ones off screen, or every width change reflows them all. */
+        /* The log can hold a thousand rows; skip laying out the ones off screen, or every width change reflows them all.
+           A row that hasn't rendered yet reserves its line count, and its real height after that. */
         content-visibility: auto;
-        contain-intrinsic-size: auto 3rem;
+        contain-intrinsic-size: auto calc(var(--lines) * 1lh + 1.125rem); /* the content box (header, gap, text); padding goes on top */
+        &[data-continues] { contain-intrinsic-size: auto max(calc(var(--lines) * 1lh), calc(1.25rem + 1px)); /* at least the icon */ }
         &::before {
             content: "";
             @apply absolute left-0 top-0 bottom-0 w-[3px];
@@ -158,16 +146,17 @@
         }
     }
     .message-icon {
-        @apply flex size-5 items-center justify-center rounded cursor-default mt-px;
+        @apply flex size-5 shrink-0 items-center justify-center rounded cursor-default mt-px;
         color: var(--src);
         background-color: color-mix(in oklab, var(--src) 18%, transparent);
         & > :global(svg) { @apply size-3; }
     }
     .message-content {
-        @apply fcol-0.5 min-w-0;
+        @apply fcol-0.5 flex-1 min-w-0;
     }
     .message-header {
-        @apply frow-2 items-baseline;
+        /* A set height: the row's reserved height counts on it, and mixed font sizes on one baseline differ by engine. */
+        @apply frow-2 items-baseline h-4;
     }
     .message-timestamp {
         @apply text-[11px] text-ink-3 tabular-nums cursor-default;
@@ -177,7 +166,7 @@
     }
     .message-menu {
         @apply size-5 opacity-0;
-        .message:hover &, .message:focus-within &, &[aria-expanded="true"] { @apply opacity-100; }
+        .message:hover &, .message:focus-within & { @apply opacity-100; }
         @media (hover: none) { @apply opacity-100; }
     }
     .message-metrics {

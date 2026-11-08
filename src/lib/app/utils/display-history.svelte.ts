@@ -1,25 +1,24 @@
 /** Bounded ingestion buffer; reactive snapshots are published once per display interval. */
 export class DisplayHistory<T> {
     #buffer: T[] = [];
-    #oldest = 0;
     #items: readonly T[] = $state.raw([]);
     #timer: ReturnType<typeof setTimeout> | undefined;
     #pending = Promise.resolve();
     #resolve: (() => void) | undefined;
 
-    constructor(private readonly limit: number) {}
+    /**
+     * Keeps at least the newest `limit` items. With `headroom`, up to that many more pile up before the oldest are
+     * dropped in one go, so a DOM list sheds its top rows rarely instead of on every append.
+     */
+    constructor(private readonly limit: number, private readonly headroom = 0) {}
 
     get items() {
         return this.#items;
     }
 
     append(item: T) {
-        if (this.#buffer.length < this.limit) {
-            this.#buffer.push(item);
-        } else {
-            this.#buffer[this.#oldest] = item;
-            this.#oldest = (this.#oldest + 1) % this.limit;
-        }
+        this.#buffer.push(item);
+        if (this.#buffer.length > this.limit + this.headroom) this.#buffer.splice(0, this.#buffer.length - this.limit);
         if (this.#timer !== undefined) return;
         this.#pending = new Promise(resolve => { this.#resolve = resolve; });
         this.#timer = setTimeout(() => {
@@ -30,7 +29,7 @@ export class DisplayHistory<T> {
 
     /** The retained items, oldest first, without waiting for the next published snapshot. */
     current(): T[] {
-        return [...this.#buffer.slice(this.#oldest), ...this.#buffer.slice(0, this.#oldest)];
+        return [...this.#buffer];
     }
 
     /** Wait for pending events to reach the reactive snapshot, before awaiting Svelte's tick. */
@@ -41,7 +40,6 @@ export class DisplayHistory<T> {
     clear() {
         this.#cancel();
         this.#buffer = [];
-        this.#oldest = 0;
         this.#items = [];
     }
 

@@ -38,7 +38,8 @@ export const MAX_USER_CONTEXT_EVENTS = 1_000;
 export const MAX_ACTOR_CONTEXT_EVENTS = 10_000;
 
 export class ContextManager {
-    #userView = new DisplayHistory<UserContextEvent>(MAX_USER_CONTEXT_EVENTS);
+    // Shedding the oldest rows a hundred at a time keeps most updates append-only, which the plain DOM log renders cheaper.
+    #userView = new DisplayHistory<UserContextEvent>(MAX_USER_CONTEXT_EVENTS, MAX_USER_CONTEXT_EVENTS / 10);
     readonly actorView: ActorContextEvent[] = [];
     #toolCalls = new Set<string>();
 

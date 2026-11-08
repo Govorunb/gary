@@ -18,20 +18,21 @@ describe("ContextManager projection", () => {
         const { bus, eventLog, context } = createContext();
         let appends = 0;
         context.onActorViewAppend(() => appends++);
-        const count = MAX_USER_CONTEXT_EVENTS + 10;
+        const count = MAX_USER_CONTEXT_EVENTS * 2;
         for (let i = 0; i < count; i++) {
             bus.emit("ui/context/input", { text: String(i), silent: true });
         }
 
         vi.runAllTimers();
         expect(eventLog.displayed).toHaveLength(MAX_DISPLAYED_EVENTS);
-        expect(context.userView).toHaveLength(MAX_USER_CONTEXT_EVENTS);
-        expect(context.userView[0].data).toMatchObject({ text: "10" });
+        expect(context.userView.length).toBeGreaterThanOrEqual(MAX_USER_CONTEXT_EVENTS);
+        expect(context.userView.at(-1)?.data).toMatchObject({ text: String(count - 1) });
         expect(context.actorView).toHaveLength(count);
         expect(appends).toBe(count);
+        const retained = context.userView;
         eventLog.clearDisplayed();
         expect(context.actorView).toHaveLength(count);
-        expect(context.userView).toHaveLength(MAX_USER_CONTEXT_EVENTS);
+        expect(context.userView).toBe(retained);
     });
 
     test("bounds actor context even when no engine is compacting it", () => {

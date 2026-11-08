@@ -24,15 +24,15 @@ test("ingestion and actor callbacks stay immediate across microtasks without pub
     expect(vi.getTimerCount()).toBe(2);
     vi.advanceTimersByTime(16);
     await Promise.all([context.whenDisplayed(), log.whenDisplayed()]);
-    expect(context.userView).toHaveLength(1_000);
-    expect(context.userView[0].data).toMatchObject({ text: "1000" });
-    expect(context.userView.at(-1)?.data).toMatchObject({ text: "1999" });
-    expect(log.displayed.map(event => event.id)).toEqual(context.userView.map(event => event.id));
-    const snapshot = context.userView;
+    expect(log.displayed).toHaveLength(1_000);
+    expect(log.displayed[0].data).toMatchObject({ text: "1000" });
+    expect(log.displayed.at(-1)?.data).toMatchObject({ text: "1999" });
+    expect(context.userView.slice(-1_000).map(event => event.id)).toEqual(log.displayed.map(event => event.id));
+    const snapshot = log.displayed;
     bus.emit("ui/context/input", { text: "2000", silent: true });
-    expect(context.userView).toBe(snapshot);
+    expect(log.displayed).toBe(snapshot);
     vi.advanceTimersByTime(16);
-    expect(context.userView[0]).toBe(snapshot[1]);
+    expect(log.displayed[0]).toBe(snapshot[1]);
     expect(snapshot[0].data).toMatchObject({ text: "1000" });
     context.dispose();
     log.dispose();
@@ -70,4 +70,14 @@ test("clear and dispose cancel pending publication and release waiters", async (
     await last;
     expect(vi.getTimerCount()).toBe(0);
     expect(history.items).toEqual([100]);
+});
+
+test("headroom lets items pile up past the limit, then drops back to the newest limit at once", () => {
+    const history = new DisplayHistory<number>(3, 2);
+    for (let i = 0; i < 5; i++) history.append(i);
+    expect(history.current()).toEqual([0, 1, 2, 3, 4]);
+    history.append(5);
+    expect(history.current()).toEqual([3, 4, 5]);
+    history.append(6);
+    expect(history.current()).toEqual([3, 4, 5, 6]);
 });

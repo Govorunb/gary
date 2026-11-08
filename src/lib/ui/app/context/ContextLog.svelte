@@ -4,19 +4,22 @@
     import TeachingTooltip from "#lib/ui/common/TeachingTooltip.svelte";
     import ContextMessage from "#lib/ui/app/context/ContextMessage.svelte";
     import ContextLogMenu from "#lib/ui/app/context/ContextLogMenu.svelte";
+    import ContextMessageMenu from "#lib/ui/app/context/ContextMessageMenu.svelte";
     import ContextInput from "./ContextInput.svelte";
     import Hotkey from "#lib/ui/common/Hotkey.svelte";
     import { UI_COMMANDS, keysLabel } from "#lib/ui/commands.js";
     import Popover from "#lib/ui/common/Popover.svelte";
-    import { Search, Filter, X } from "@lucide/svelte";
+    import { ArrowDown, Search, Filter, X } from "@lucide/svelte";
     import { tick, untrack } from "svelte";
-    import { MAX_USER_CONTEXT_EVENTS } from "#lib/app/context.svelte.js";
+    import { MAX_USER_CONTEXT_EVENTS, type UserContextEvent } from "#lib/app/context.svelte.js";
     import { SvelteSet } from "svelte/reactivity";
     import { formatContextEvent } from "./formatters/registry";
     import type { ContextRow, ContextSource } from "./formatters/types";
 
     const session = getSession();
     let scrollEl: HTMLDivElement;
+    let listEl: HTMLDivElement;
+    let messageMenu: ContextMessageMenu;
 
     // Search and filter cover the retained conversation; they never touch what the model sees.
     let searchOpen = $state(false);
@@ -69,17 +72,25 @@
         }
     }
 
+    // Scrolling up pauses the log on a snapshot, so nothing moves under the reader; reaching the bottom resumes it.
+    let frozen = $state.raw<readonly UserContextEvent[] | null>(null);
+    const events = $derived(frozen ?? session.context.userView);
+
     const cachedRows = new WeakMap<ContextRow["event"], ContextRow>();
+    function baseRow(event: UserContextEvent): ContextRow {
+        let row = cachedRows.get(event);
+        if (!row) {
+            const rendered = formatContextEvent(event, "user");
+            row = { event, rendered, source: rendered?.source ?? { type: "system" }, continues: false };
+            cachedRows.set(event, row);
+        }
+        return row;
+    }
     const rows = $derived.by(() => {
         const out: ContextRow[] = [];
         let prev: ContextSource | null = null;
-        for (const event of session.context.userView) {
-            let row = cachedRows.get(event);
-            if (!row) {
-                const rendered = formatContextEvent(event, "user");
-                row = { event, rendered, source: rendered?.source ?? { type: "system" }, continues: false };
-                cachedRows.set(event, row);
-            }
+        for (const event of events) {
+            let row = baseRow(event);
             if (!matches(row)) continue;
             const continues: boolean = prev !== null && sameSource(prev, row.source);
             if (row.continues !== continues) {
@@ -91,15 +102,54 @@
         }
         return out;
     });
+    const newCount = $derived.by(() => {
+        if (!frozen) return 0;
+        const live = session.context.userView;
+        let count = 0;
+        for (let i = live.lastIndexOf(frozen.at(-1)!) + 1; i < live.length; i++) {
+            if (matches(baseRow(live[i]))) count++;
+        }
+        return count;
+    });
 
-    $effect.pre(() => {
-        rows;
-        const el = scrollEl;
-        if (!el) return;
-        const nearBottom = untrack(() => el.scrollHeight - el.clientHeight - el.scrollTop <= 96);
-        if (nearBottom) void tick().then(() => { el.scrollTop = el.scrollHeight; });
+    // Only the user pauses the log. The browser scrolls it too (rows render shorter than reserved and it clamps), and that mustn't count.
+    let dragging = false;
+    let lastScrollTop = 0;
+    function pause() {
+        frozen ??= session.context.userView;
+    }
+    function pin() {
+        scrollEl.scrollTop = scrollEl.scrollHeight;
+        lastScrollTop = scrollEl.scrollTop;
+    }
+    function onscroll() {
+        const top = scrollEl.scrollTop;
+        const atBottom = scrollEl.scrollHeight - scrollEl.clientHeight - top <= 2;
+        if (atBottom && top > lastScrollTop) frozen = null;
+        else if (!atBottom && dragging && top < lastScrollTop) pause();
+        lastScrollTop = top;
+    }
+    async function resume() {
+        frozen = null;
+        await tick();
+        pin();
+    }
+    $effect(() => session.eventLog.subscribe(["ui/context/reset"], () => frozen = null));
+    // A paused place means nothing in a differently filtered list, so changing the search or filters goes back to the latest.
+    $effect(() => {
+        void [query, showSilent, hidden.size];
+        untrack(resume);
+    });
+    // Rows settle to their real height after they mount, and the panel resizes with the layout; follow both.
+    $effect(() => {
+        const observer = new ResizeObserver(() => { if (!frozen) pin(); });
+        observer.observe(scrollEl);
+        observer.observe(listEl);
+        return () => observer.disconnect();
     });
 </script>
+
+<svelte:window onpointerup={() => dragging = false} ontouchend={() => dragging = false} />
 
 <div class="context-log-container">
     <div class="column-header">
@@ -156,11 +206,28 @@
         </TeachingTooltip>
         <ContextLogMenu {rows} />
     </div>
-    <div class="log" bind:this={scrollEl}>
-        {#each rows as row (row.event.id)}
-            <ContextMessage {row} />
-        {/each}
+    <!-- svelte-ignore a11y_no_static_element_interactions : these only watch how the user scrolls; the scrollbar is the only part of the log that is the scroller itself -->
+    <div class="log" bind:this={scrollEl} {onscroll}
+        onwheel={(e) => { if (e.deltaY < 0 && scrollEl.scrollTop > 0) pause(); }}
+        onpointerdown={(e) => { if (e.target === scrollEl) dragging = true; }}
+        ontouchstart={() => dragging = true}
+    >
+        <div bind:this={listEl}>
+            {#each rows as row (row.event.id)}
+                <ContextMessage {row} onmenu={(request) => messageMenu.show(request)} />
+            {/each}
+        </div>
+        {#if frozen}
+            <!-- Inside the scroller, so the wheel still scrolls the log under the button. -->
+            <div class="resume-dock">
+                <button class="resume" onclick={resume}>
+                    <ArrowDown />
+                    {newCount ? `${newCount.toLocaleString()} new ${newCount === 1 ? "message" : "messages"}` : "Jump to latest"}
+                </button>
+            </div>
+        {/if}
     </div>
+    <ContextMessageMenu bind:this={messageMenu} />
     <ContextInput />
 </div>
 
@@ -194,5 +261,18 @@
     }
     .log {
         @apply flex-1 min-h-0 overflow-y-auto;
+        /* Pausing keeps the view still instead; anchoring would pull it off the bottom as rows leave the top. */
+        overflow-anchor: none;
+    }
+    .resume-dock {
+        @apply sticky bottom-0 h-0;
+    }
+    .resume {
+        @apply absolute bottom-3 left-1/2 -translate-x-1/2;
+        @apply frow-1.5 items-center h-7 px-3 rounded-full;
+        @apply text-xs font-medium text-ink-0 bg-layer-3;
+        @apply ring-1 ring-edge shadow-xl;
+        &:hover { @apply bg-layer-4; }
+        & > :global(svg) { @apply size-3.5; }
     }
 </style>
