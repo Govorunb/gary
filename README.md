@@ -33,6 +33,12 @@ Head over to [Releases](https://github.com/Govorunb/gary/releases/latest), downl
 
 On Linux, Gary needs Ubuntu 24.04, Debian 13, Fedora 40, or a newer distro. On Debian/Ubuntu, prefer the `.deb` over the AppImage, since it uses your system's libraries.
 
+<details>
+<summary>Can't install a full release .deb over a beta of the same version?</summary>
+
+In Debian's versioning system, `1.0.0 < 1.0.0-beta.1`. I recommend updating in-app; you can also allow downgrades when installing (or remove the previous version).
+</details>
+
 Out of the box, you can use Randy, send actions manually a-la Tony, or connect to an OpenAI-compatible API.
 
 If you're not familiar with the Neuro-sama SDK, you should read a bit from the [architecture docs](docs/ARCHITECTURE.md) and the [unofficial](https://ktrain5169.github.io/neuro-sdk-docs/overview/) and [official](https://github.com/VedalAI/neuro-sdk/blob/main/API/SPECIFICATION.md) SDK docs to get a quick rundown. Otherwise, the basics of using the app are as follows:
