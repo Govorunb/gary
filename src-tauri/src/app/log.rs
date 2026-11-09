@@ -1,11 +1,10 @@
-// essentially just ~~copied over~~ adapted from https://github.com/tauri-apps/plugins-workspace/blob/ce6835d50ff7800dcfb8508a98e9ee83771fb283/plugins/log/src/commands.rs#L12
-// but with an added "target" arg
+use std::{fmt::Arguments, fs};
 
-use std::{collections::HashMap, fs};
-
-use log::RecordBuilder;
-use serde_repr::{Deserialize_repr, Serialize_repr};
+use log::{Record, RecordBuilder};
+use serde::{Deserialize, Serialize};
+use serde_repr::Deserialize_repr;
 use tauri::{Manager, Runtime};
+use tauri_plugin_log::fern::FormatCallback;
 use time::{OffsetDateTime, macros::format_description};
 
 pub fn prepare_launch_log<R: Runtime>(app: &tauri::AppHandle<R>) -> anyhow::Result<()> {
@@ -22,6 +21,36 @@ pub fn prepare_launch_log<R: Runtime>(app: &tauri::AppHandle<R>) -> anyhow::Resu
     Ok(())
 }
 
+/// Stdout is read by people: the webview's JSON events only get their level, since they carry their own timestamp.
+pub fn readable_line(out: FormatCallback, message: &Arguments, record: &Record) {
+    if record.target() == WEBVIEW {
+        return out.finish(format_args!("[{}] {message}", record.level()));
+    }
+    let now = OffsetDateTime::now_utc()
+        .format(format_description!("[[[year]-[month]-[day]][[[hour]:[minute]:[second]]"))
+        .expect("valid static timestamp format");
+    out.finish(format_args!("{now}[{}][{}] {message}", record.target(), record.level()));
+}
+
+/// The log file is JSON Lines, one object per record with a `timestamp` (ms) and `level`.
+/// The webview's records are already JSON events (`timestamp`, `event`, `data`) and only gain the level.
+pub fn json_line(out: FormatCallback, message: &Arguments, record: &Record) {
+    let level = record.level().as_str();
+    let message = message.to_string();
+    if record.target() == WEBVIEW && let Some(event) = message.strip_prefix('{') {
+        return out.finish(format_args!("{{\"level\":\"{level}\",{event}"));
+    }
+    #[derive(Serialize)]
+    struct Line<'a> { level: &'a str, timestamp: i128, target: &'a str, message: String }
+    let line = Line {
+        level,
+        timestamp: OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000,
+        target: record.target(),
+        message,
+    };
+    out.finish(format_args!("{}", serde_json::to_string(&line).expect("strings serialize")));
+}
+
 fn format_timestamp(timestamp: OffsetDateTime) -> String {
     timestamp
         .format(format_description!(
@@ -30,7 +59,7 @@ fn format_timestamp(timestamp: OffsetDateTime) -> String {
         .expect("valid static timestamp format")
 }
 
-#[derive(Debug, Clone, Deserialize_repr, Serialize_repr)]
+#[derive(Debug, Clone, Deserialize_repr)]
 #[repr(u16)]
 pub enum LogLevel {
     Verbose,
@@ -55,46 +84,23 @@ impl From<LogLevel> for log::Level {
     }
 }
 
-impl From<log::Level> for LogLevel {
-    fn from(value: log::Level) -> Self {
-        match value {
-            log::Level::Error => Self::Error,
-            log::Level::Warn => Self::Warn,
-            log::Level::Info => Self::Info,
-            log::Level::Debug => Self::Debug,
-            log::Level::Trace => Self::Verbose,
-        }
-    }
-}
+const WEBVIEW: &str = "webview";
 
-#[tauri::command]
-pub fn gary_log(
+#[derive(Deserialize)]
+pub struct LogEntry {
     level: LogLevel,
     message: String,
-    target: Option<&str>,
-    location: Option<&str>,
-    file: Option<&str>,
-    line: Option<u32>,
-    key_values: Option<HashMap<String, String>>,
-) {
-    let level = log::Level::from(level);
+}
 
-    let target = target.unwrap_or("webview");
-
-    let target = if let Some(location) = location {
-        format!("{target}:{location}")
-    } else {
-        target.to_string()
-    };
-
-    let mut builder = RecordBuilder::new();
-    builder.level(level).target(&target).file(file).line(line);
-    let key_values = key_values.unwrap_or_default();
-    let mut kv = HashMap::new();
-    for (k, v) in key_values.iter() {
-        kv.insert(k.as_str(), v.as_str());
+/// Writes the webview's log. It arrives in batches: an IPC call costs about as much as handling a game message.
+/// Sync, so batches run in order on the main thread and lines can't interleave.
+#[tauri::command]
+pub fn gary_log(entries: Vec<LogEntry>) {
+    for LogEntry { level, message } in entries {
+        log::logger().log(&RecordBuilder::new()
+            .level(level.into())
+            .target(WEBVIEW)
+            .args(format_args!("{message}"))
+            .build());
     }
-    builder.key_values(&kv);
-
-    log::logger().log(&builder.args(format_args!("{message}")).build());
 }

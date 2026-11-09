@@ -3,7 +3,7 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tauri::{ipc::Channel, AppHandle};
-use tauri_plugin_log::log::{debug, trace, warn};
+use tauri_plugin_log::log::{debug, warn};
 use tokio::{io::Sink, sync::oneshot::{self, Receiver, Sender}};
 use uuid::{Timestamp, Uuid};
 use axum::extract::ws::{CloseFrame, Message, WebSocket};
@@ -65,9 +65,9 @@ impl ClientWSConnection {
                     break
                 },
                 Message::Text(txt) => {
-                    match self.channel.send(ServerWSEvent::Message { text: txt.to_string() }) {
-                        Ok(()) => trace!("relayed WS Text msg: {txt}"),
-                        Err(e) => error!("failed to relay WS Text msg: {e}"),
+                    // The webview logs the message itself.
+                    if let Err(e) = self.channel.send(ServerWSEvent::Message { text: txt.to_string() }) {
+                        error!("failed to relay WS Text msg: {e}");
                     }
                 },
             }

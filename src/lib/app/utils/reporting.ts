@@ -12,19 +12,52 @@ export interface Reporter {
     autoToastLevel: LogLevel;
 }
 
-export type ReportOptions = {
-    message: string;
-    details?: string;
-    toast?: boolean | ToastOptions;
-    target?: string;
-    ctx?: Record<string, any>;
-    ignoreStackLevels?: number;
-};
-
 export type ToastOptions = ExternalToast & {
     title?: string; // override for toast title
     level?: LogLevel; // override for toast type (use it to e.g. show warning toasts on info/success events)
 };
+
+const CONSOLE_METHOD = {
+    [LogLevel.Verbose]: "log",
+    [LogLevel.Debug]: "debug",
+    [LogLevel.Info]: "info",
+    [LogLevel.Success]: "info",
+    [LogLevel.Warning]: "warn",
+    [LogLevel.Error]: "error",
+    [LogLevel.Fatal]: "error",
+} as const satisfies Record<LogLevel, keyof Console>;
+
+/**
+ * The app's log file, written in batches: an IPC call costs about as much as handling a game message, and every event is logged.
+ * Warnings and worse go out at once, with everything queued before them, so a crash doesn't take them along.
+ */
+class AppLog {
+    #entries: { level: LogLevel; message: string }[] = [];
+    #timer: ReturnType<typeof setTimeout> | undefined;
+
+    constructor() {
+        addEventListener("pagehide", () => this.flush());
+    }
+
+    write(level: LogLevel, message: string) {
+        this.#entries.push({ level, message });
+        if (level >= LogLevel.Warning) this.flush();
+        else this.#timer ??= setTimeout(() => this.flush(), 100);
+    }
+
+    flush() {
+        clearTimeout(this.#timer);
+        this.#timer = undefined;
+        if (!this.#entries.length) return;
+        const entries = this.#entries;
+        this.#entries = [];
+        void safeInvoke("gary_log", { entries })
+            .orTee(err => boundedToast.error("Failed to log!", { description: err, priority: LogLevel.Error }));
+    }
+}
+
+// The desktop app has the log file; the browser dev build logs to the console instead.
+const appLog = isTauri() ? new AppLog() : null;
 
 class DefaultReporter implements Reporter {
     constructor(public level: LogLevel, public autoToastLevel: LogLevel = LogLevel.Warning) {
@@ -44,11 +77,16 @@ class DefaultReporter implements Reporter {
                 data: e.data
             });
         } catch (err) {
-            text = `Failed to stringify event. Are you passing DI objects? Error: ${err}`;
+            // Still one JSON event per line in the log file.
+            text = JSON.stringify({
+                timestamp: e.timestamp,
+                event: e.key,
+                error: `Failed to stringify event data. Are you passing DI objects? ${err}`,
+            });
             level = LogLevel.Fatal;
         }
 
-        this.log({ message: text }, level);
+        this.log(text, level);
 
         if (def.silent) return;
         const havePresenter = e.key in EVENTS_DISPLAY;
@@ -72,35 +110,9 @@ class DefaultReporter implements Reporter {
         this.toast(combined);
     }
 
-    private log(options: ReportOptions, level: LogLevel, loc?: string) {
-        let msg = options.message;
-
-        if (options.details) msg += `\nDetails: ${options.details}`;
-        if (options.ctx) msg += `\nContext: ${JSON.stringify(options.ctx)}`;
-
-        let logFunc: (message: string) => void;
-        if (!isTauri()) { // dev only (vite dev server + browser)
-            const logFuncMap: Record<LogLevel, (message: string) => void> = {
-                [LogLevel.Verbose]: console.log,
-                [LogLevel.Debug]: console.debug,
-                [LogLevel.Info]: console.info,
-                [LogLevel.Success]: console.info,
-                [LogLevel.Warning]: console.warn,
-                [LogLevel.Error]: console.error,
-                [LogLevel.Fatal]: console.error,
-            };
-            const target = [options.target ?? "webview", loc].filter(Boolean).join(':');
-            msg = `[${LogLevel[level]}] ${msg}\nTarget: [${target}]`;
-            logFunc = logFuncMap[level];
-        } else {
-            logFunc = (message: string) => safeInvoke("gary_log", {
-                level,
-                message,
-                target: options.target,
-                location: loc,
-            }).orTee(err => boundedToast.error("Failed to log!", { description: err, priority: LogLevel.Error }));
-        }
-        logFunc(msg);
+    private log(message: string, level: LogLevel) {
+        if (appLog) return appLog.write(level, message);
+        console[CONSOLE_METHOD[level]](`[${LogLevel[level]}] ${message}`);
     }
 
     private toast(opts: ToastOptions) {

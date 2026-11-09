@@ -9,7 +9,7 @@ mod app;
 use app::state::{App, AppStateMutex};
 use app::commands::{is_server_running, server_state, start_server, stop_server, launched_with_start_server, open_logs_folder, restart};
 use api::server::{ws_accept, ws_deny, ws_send, ws_close, mcp_reply};
-use app::log::{gary_log, prepare_launch_log};
+use app::log::{gary_log, json_line, prepare_launch_log, readable_line};
 use app::safe_mode::{is_safe_mode, SafeMode};
 use app::window_menu::show_window_menu;
 use app::updater::check_update;
@@ -62,11 +62,13 @@ pub fn run() {
             .rotation_strategy(RotationStrategy::KeepSome(5))
             .max_file_size(100_000_000)
             .level(LevelFilter::Trace)
+            // Each target formats its own lines; the default would wrap theirs in its prefix.
+            .format(|out, message, _| out.finish(*message))
             // filtering out tungstenite/other random rust libs that spam logs
             .filter(|md| ["gary", "webview", "tauri_plugin_"].iter().any(|t| md.target().starts_with(t)))
             .targets([
-                Target::new(TargetKind::Stdout),
-                Target::new(TargetKind::LogDir { file_name: None }),
+                Target::new(TargetKind::Stdout).format(readable_line),
+                Target::new(TargetKind::LogDir { file_name: None }).format(json_line),
             ])
             .build())
         .plugin(tauri_plugin_opener::init())
