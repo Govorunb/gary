@@ -501,15 +501,23 @@ describe("Scheduler chaos sends", () => {
         }
     });
 
-    test("routes a made-up name only when enabled and one game can receive it", async () => {
+    test("never routes a name no game registered, even with one game and the opt-in", async () => {
         const game = createFakeGame("Game", "game", [{ name: "move" }]);
-        await withScheduler([game], createEngine(() => ({ name: "invented" }), false), async scheduler => {
+        await withScheduler([game], createEngine(() => ({ name: "invented" }), true), async scheduler => {
             expect((await scheduler.tryAct()).isErr()).toBe(true);
             expect(game.sentActions).toEqual([]);
+            expect(scheduler.busy).toBe(false);
         });
-        await withScheduler([game], createEngine(() => ({ name: "invented" }), true), async scheduler => {
-            expect((await scheduler.tryAct()).isOk()).toBe(true);
-            expect(game.sentActions[0].name).toBe("invented");
+    });
+
+    test("tags an active action sent outside a force's choices as not requested", async () => {
+        const confirm = { name: "confirm" };
+        const game = createFakeGame("Game", "game", [confirm, { name: "open_menu" }]);
+        await withScheduler([game], createEngine(() => ({ name: "open_menu" }), true), async (scheduler, acts) => {
+            const result = await scheduler.forceAct([{ game: game as unknown as Game, action: confirm }]);
+            expect(result.isOk()).toBe(true);
+            expect(game.sentActions[0].name).toBe("open_menu");
+            expect(acts[0].issues).toEqual(["not requested"]);
         });
     });
 

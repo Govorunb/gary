@@ -290,17 +290,10 @@ export class Scheduler {
         let target: ActionCandidate | undefined = targetsByName.get(act.name);
         const outsideRequestedActions = !target;
         if (!target && engine.allowsUnregisteredActions) {
-            const games = forced
-                ? [...new Set(Array.from(targetsByName.values(), target => target.game))]
-                : this.registry.games;
+            // a force only reaches the games it came from
+            const games = forced ? Array.from(targetsByName.values(), target => target.game) : this.registry.games;
             const historical = engineActionSet(this.registry.games).targetsByName.get(act.name);
-            if (historical) {
-                if (games.includes(historical.game)) target = historical;
-            } else {
-                const owners = games.filter(game => game.actions.has(act.name));
-                const game = owners.length === 1 ? owners[0] : owners.length === 0 && games.length === 1 ? games[0] : undefined;
-                if (game) target = { game, action: { name: act.name } };
-            }
+            if (historical && games.includes(historical.game)) target = historical;
         }
         if (!target) {
             EVENT_BUS.emit('app/scheduler/act/fail/action_not_found', { force: forced, act });

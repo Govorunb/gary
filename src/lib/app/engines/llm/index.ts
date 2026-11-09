@@ -45,7 +45,7 @@ export const zLLMOptions = z.strictObject({
     }),
     allowUnregisteredActions: z.boolean().fallback(false).field({
         title: "Allow unregistered actions",
-        description: "Send actions the game hasn't registered instead of asking the model to pick again. Useful for testing how the game rejects them.",
+        description: "Send actions the game has unregistered, or that a forced action doesn't offer, instead of asking the model to pick again. Useful for testing how the game rejects them.",
     }),
     /** How actions and optional commands are constrained in model responses. */
     promptingStrategy: z.enum(["json", "tools"]).fallback("json").field({
@@ -226,7 +226,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
 
             const generation = this.recordContextUsage(genRes.value, request, diagnostics, calibrationKey);
             if (this.options.promptingStrategy === "json") {
-                const result = this.parseStructuredOutput(generation, resolvedActions, isForce);
+                const result = this.parseStructuredOutput(generation, this.allowsUnregisteredActions ? promptActions : resolvedActions, isForce);
                 if (result.isOk() || !(result.error instanceof ToolCallError)
                     || attempts >= MAX_INVALID_TOOL_CALL_RETRIES) return result;
                 feedback = result.error.feedback;
@@ -286,7 +286,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return ok("skip");
         }
         const callable = callableActions.find(({ tool }) => tool.function.name === toolCall.name);
-        if (!callable && !this.allowsUnregisteredActions) {
+        if (!callable) {
             return err(new ToolCallError(
                 `Model called unknown tool '${toolCall.name}'`,
                 `Tool '${toolCall.name}' is not available on this turn. Use one of the currently available tools.`,
@@ -299,9 +299,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                 e,
             ));
         if (args.isErr()) return err(args.error);
-        const wrappedData = !callable
-            ? z.strictObject({ data: z.unknown().optional() }).safeParse(args.value)
-            : callable.action.schema
+        const wrappedData = callable.action.schema
             ? z.strictObject({ data: z.unknown() }).safeParse(args.value)
             : null;
         if (wrappedData && !wrappedData.success) {
@@ -318,8 +316,8 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             metadata: generation.metadata,
         });
         return ok({
-            name: callable?.action.name ?? toolCall.name,
-            data: wrappedData ? JSON.stringify(wrappedData.data.data) ?? null : null,
+            name: callable.action.name,
+            data: wrappedData ? JSON.stringify(wrappedData.data.data) : null,
             toolCallId: toolCall.id,
         });
     }
@@ -359,18 +357,18 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             return err(new EngineError(`Failed to parse structured command: ${actionCommand.error}`, actionCommand.error));
         }
         const action = actions.find(candidate => candidate.name === actionCommand.data.action);
-        if (!action && !this.allowsUnregisteredActions) {
+        if (!action) {
             return err(new ToolCallError(
                 `Model selected unavailable action '${actionCommand.data.action}'`,
                 `Action '${actionCommand.data.action}' is not available on this turn. Choose from the currently available actions.`,
             ));
         }
-        if (action?.schema && actionCommand.data.data === undefined) {
+        if (action.schema && actionCommand.data.data === undefined) {
             return err(new EngineError(`Model omitted data for action '${action.name}'`));
         }
         return ok({
-            name: actionCommand.data.action,
-            data: !action || action.schema ? JSON.stringify(actionCommand.data.data) ?? null : null,
+            name: action.name,
+            data: action.schema ? JSON.stringify(actionCommand.data.data) : null,
         });
     }
 

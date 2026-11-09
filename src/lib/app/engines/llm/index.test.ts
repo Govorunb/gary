@@ -89,25 +89,20 @@ describe("LLMEngine tool calling", () => {
         expect(engine.requests[0].messages[0].content).toContain("Call at most one tool per response.");
     });
 
-    test.each([false, true])("passes unavailable tool names only with opt-in, forced=%s", async forced => {
-        for (const args of ["{}", '{"data":{"from":"old menu"}}']) {
-            const engine = new TestLLMEngine(llmOptions({ allowUnregisteredActions: true }));
-            engine.generation = { text: "", toolCalls: [{ id: "stale-call", name: "old_menu", arguments: args }] };
-            const session = createSession();
-            const current = [{ name: "current_menu" }];
-            const result = await (forced ? engine.forceAct(session, current) : engine.tryAct(session, current));
-            expect(result._unsafeUnwrap()).toEqual({
-                name: "old_menu", toolCallId: "stale-call",
-                data: args === "{}" ? null : '{"from":"old menu"}',
-            });
-            expect(engine.requests).toHaveLength(1);
-        }
-    });
-
-    test("unknown-name opt-in still rejects malformed tool JSON", async () => {
-        const engine = new TestLLMEngine(llmOptions({ allowUnregisteredActions: true }));
-        engine.generation = { text: "", toolCalls: [{ id: "old", name: "old_menu", arguments: "{" }] };
-        expect((await engine.forceAct(createSession(), [{ name: "current_menu" }])).isErr()).toBe(true);
+    test.each(["tools", "json"] as const)("asks again for an action no game registered, even with opt-in, %s", async promptingStrategy => {
+        const engine = new TestLLMEngine(llmOptions({ allowUnregisteredActions: true, promptingStrategy }));
+        engine.generations = promptingStrategy === "tools"
+            ? [
+                { text: "", toolCalls: [{ id: "invented", name: "open_door", arguments: "{}" }] },
+                { text: "", toolCalls: [{ id: "named", name: "current_menu", arguments: "{}" }] },
+            ]
+            : [
+                { text: JSON.stringify({ command: { action: "open_door" } }), toolCalls: [] },
+                { text: JSON.stringify({ command: { action: "current_menu" } }), toolCalls: [] },
+            ];
+        const result = await engine.tryAct(createSession(), [{ name: "current_menu" }]);
+        expect(result._unsafeUnwrap()).toMatchObject({ name: "current_menu" });
+        expect(engine.requests).toHaveLength(2);
     });
 
     test("clones reactive action schemas", async () => {
@@ -601,18 +596,6 @@ describe("LLMEngine structured output", () => {
         expect(result._unsafeUnwrap()).toMatchObject({ name: "move" });
         expect(engine.requests).toHaveLength(2);
         expect(engine.requests[1].messages.at(-1)!.content).toContain("This turn is forced. Execute one of the currently available actions.");
-    });
-
-    test.each([false, true])("passes unavailable JSON action names with opt-in, forced=%s", async forced => {
-        const engine = new TestLLMEngine(llmOptions({ promptingStrategy: "json", allowUnregisteredActions: true }));
-        engine.generation = {
-            text: JSON.stringify({ command: { action: "old_menu", data: { item: "old item" } } }), toolCalls: [],
-        };
-        const session = createSession();
-        const current = [{ name: "current_menu" }];
-        const result = await (forced ? engine.forceAct(session, current) : engine.tryAct(session, current));
-        expect(result._unsafeUnwrap()).toEqual({ name: "old_menu", data: '{"item":"old item"}' });
-        expect(engine.requests).toHaveLength(1);
     });
 
     test("rejects unavailable actions even when the provider ignores the schema", async () => {

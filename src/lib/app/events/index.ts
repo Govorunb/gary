@@ -32,7 +32,7 @@ export interface EventDef<Prefix extends string = ''> {
     description?: string;
     /** Log level for the event, fixed or computed from its data. Used for display (toasts, event log). */
     level?: LogLevel | ((data: any) => LogLevel); // default Info
-    /** The emitter shows its own toast for this event, so the reporter must not. */
+    /** The reporter never toasts this event: the emitter shows its own toast, or it happens too often to toast. */
     silent?: boolean;
 }
 

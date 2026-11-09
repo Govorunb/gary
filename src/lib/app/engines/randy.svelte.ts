@@ -10,8 +10,8 @@ import { validateActionData } from "./action-data";
 import { engineActionSet } from "./actions";
 
 export const ENGINE_ID = "randy";
-/** Automatically generates actions conforming to the schema using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
- * Has a configurable chance to skip acting.
+/** Picks a random action and generates its data using [json-schema-faker](https://npmjs.org/package/json-schema-faker).
+ * Has a configurable chance to skip acting, and opt-in chances to send an unregistered action or data that doesn't fit the schema.
  */
 export class Randy extends Engine<RandyPrefs> {
     readonly name: string = "Randy";
