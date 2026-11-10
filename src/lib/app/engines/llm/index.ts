@@ -43,6 +43,10 @@ export const zLLMOptions = z.strictObject({
         title: "Allow yapping",
         description: "Let the model choose to speak instead of acting (unless forced)",
     }),
+    allowUnregisteredActions: z.boolean().fallback(false).field({
+        title: "Allow unregistered actions",
+        description: "Send actions the game has unregistered, or that a forced action doesn't offer, instead of asking the model to pick again. Useful for testing how the game rejects them.",
+    }),
     /** How actions and optional commands are constrained in model responses. */
     promptingStrategy: z.enum(["json", "tools"]).fallback("json").field({
         title: "Response method",
@@ -152,6 +156,10 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
     abstract name: string;
     private readonly tokensPerByte = new Map<string, number>();
 
+    override get allowsUnregisteredActions() {
+        return this.options.allowUnregisteredActions;
+    }
+
     tryAct(session: EngineContext, actions?: Action[], signal?: AbortSignal): ResultAsync<EngineActResult, EngineActError> {
         return new ResultAsync(this.actCore(session, actions, false, signal));
     }
@@ -218,7 +226,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
 
             const generation = this.recordContextUsage(genRes.value, request, diagnostics, calibrationKey);
             if (this.options.promptingStrategy === "json") {
-                const result = this.parseStructuredOutput(generation, resolvedActions, isForce);
+                const result = this.parseStructuredOutput(generation, this.allowsUnregisteredActions ? promptActions : resolvedActions, isForce);
                 if (result.isOk() || !(result.error instanceof ToolCallError)
                     || attempts >= MAX_INVALID_TOOL_CALL_RETRIES) return result;
                 feedback = result.error.feedback;
@@ -232,7 +240,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
                         "Model returned multiple tool calls",
                         "Only one tool call is allowed per response. Choose one tool and call it once.",
                     ))
-                    : this.parseToolCall(toolCall, generation, callableActions, isForce);
+                    : this.parseToolCall(toolCall, generation, this.allowsUnregisteredActions ? promptTools : callableActions, isForce);
                 if (toolResult.isOk()) return toolResult;
                 this.eventBus.emit("api/actor/tool_error", {
                     engineId: this.id,

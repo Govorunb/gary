@@ -34,6 +34,7 @@ function llmOptions(options: Partial<CommonLLMOptions> = {}): CommonLLMOptions {
     return {
         allowDoNothing: false,
         allowYapping: false,
+        allowUnregisteredActions: false,
         promptingStrategy: "tools",
         modelMetadata: { test: { contextWindow: 100_000 } },
         ...options,
@@ -86,6 +87,22 @@ describe("LLMEngine tool calling", () => {
         await engine.tryAct(createSession(), [{ name: "move" }]);
 
         expect(engine.requests[0].messages[0].content).toContain("Call at most one tool per response.");
+    });
+
+    test.each(["tools", "json"] as const)("asks again for an action no game registered, even with opt-in, %s", async promptingStrategy => {
+        const engine = new TestLLMEngine(llmOptions({ allowUnregisteredActions: true, promptingStrategy }));
+        engine.generations = promptingStrategy === "tools"
+            ? [
+                { text: "", toolCalls: [{ id: "invented", name: "open_door", arguments: "{}" }] },
+                { text: "", toolCalls: [{ id: "named", name: "current_menu", arguments: "{}" }] },
+            ]
+            : [
+                { text: JSON.stringify({ command: { action: "open_door" } }), toolCalls: [] },
+                { text: JSON.stringify({ command: { action: "current_menu" } }), toolCalls: [] },
+            ];
+        const result = await engine.tryAct(createSession(), [{ name: "current_menu" }]);
+        expect(result._unsafeUnwrap()).toMatchObject({ name: "current_menu" });
+        expect(engine.requests).toHaveLength(2);
     });
 
     test("clones reactive action schemas", async () => {
@@ -711,6 +728,20 @@ describe.each(["tools", "json"] as const)("LLMEngine %s prompt caching", prompti
 
         expect(result.isErr()).toBe(true);
         expect(JSON.stringify(engine.requests.at(-1)!.tools ?? engine.requests.at(-1)!.responseSchema)).toContain("old");
+    });
+
+    test("maps a stale catalog action back to its name with opt-in", async () => {
+        const { harness, session, engine } = setup();
+        engine.options.allowUnregisteredActions = true;
+        await harness.server.registerActions([{ name: "old!", schema: { type: "integer" } }, { name: "current" }]);
+        await harness.server.unregisterActions(["old!"]);
+        engine.generation = promptingStrategy === "tools"
+            ? { text: "", toolCalls: [{ id: "stale", name: "old_", arguments: '{"data":3}' }] }
+            : { text: '{"command":{"action":"old!","data":3}}', toolCalls: [] };
+        const result = await engine.tryAct(session);
+
+        expect(result._unsafeUnwrap()).toMatchObject({ name: "old!", data: "3" });
+        expect(engine.requests).toHaveLength(1);
     });
 });
 

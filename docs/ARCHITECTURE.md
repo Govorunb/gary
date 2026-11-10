@@ -87,7 +87,7 @@ Actions that only make sense on screen, such as opening dialogs or a dialog's ow
 - CodeMirror code editor
 - neverthrow (`Result` type for error handling)
 - Zod (parsing & validation)
-- Ajv (action schema validation for "schema test" internal game)
+- Ajv (checking action data against its schema in manual send and in engine acts)
 
 ## Development Workflow
 

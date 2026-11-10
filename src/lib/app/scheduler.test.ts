@@ -7,7 +7,7 @@ import type { Action } from "#lib/api/v1/spec.js";
 
 type FakeGame = {
     nextForcePriority: null;
-    actions: Map<string, Action>;
+    actions: Map<string, Action & { active: boolean }>;
     name: string;
     shortId: string;
     getActiveActions(): Action[];
@@ -66,7 +66,7 @@ describe("Scheduler no-action acts", () => {
             nextForcePriority: null,
             name: "Cafe",
             shortId: "cafe",
-            actions: new Map([["serve", { name: "serve" }]]),
+            actions: new Map([["serve", { name: "serve", active: true }]]),
             getActiveActions: () => [{ name: "serve" }],
             sendAction: vi.fn().mockResolvedValue(undefined),
         });
