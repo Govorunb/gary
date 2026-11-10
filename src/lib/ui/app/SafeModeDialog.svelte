@@ -169,8 +169,8 @@
 
     .editor-details {
         @apply mt-1;
-        /* Full width: the scroll area would clip the default bleed on the left. */
-        & > summary { @apply mx-0; }
+        /* The eye already says it toggles. */
+        & > summary::after { display: none; }
         & summary > :global(svg) { @apply size-4; }
     }
 

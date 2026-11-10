@@ -177,7 +177,6 @@
     @reference "global.css";
 
     .source-badge {
-        @apply ml-auto;
         &.override {
             @apply text-src-actor;
             background-color: color-mix(in oklab, var(--color-src-actor) 18%, transparent);
@@ -185,7 +184,7 @@
     }
 
     .metadata-content {
-        @apply fcol-2 px-1 pb-1;
+        @apply fcol-2;
     }
 
     code {

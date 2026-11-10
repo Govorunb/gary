@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Game } from "#lib/api/game.svelte.js";
-    import { CircleX, Info, Skull, TriangleAlert, Check, CheckCheck, EyeOff, Eye, Undo, Undo2, ChevronDown } from '@lucide/svelte';
+    import { CircleX, Info, Skull, TriangleAlert, Check, CheckCheck, EyeOff, Eye, Undo, Undo2 } from '@lucide/svelte';
     import { DIAGNOSTICS_BY_KEY, DiagnosticSeverity, type DiagnosticKey, type GameDiagnostic } from '#lib/api/diagnostics.js';
     import { tooltip } from '#lib/app/utils/index.js';
     import { boolAttr } from 'runed';
@@ -96,7 +96,6 @@
     {#if hasContext}
         <details class="details-box context-details" bind:open={ctxOpen}>
             <summary>
-                <ChevronDown size="14" class="chevron-icon" />
                 <span>Details</span>
             </summary>
             <div class="context-editor">
@@ -209,17 +208,16 @@
     .context-details {
         @apply mt-1 gap-1.5;
         & > summary {
-            @apply h-6 mx-0 px-0 text-xs font-medium text-accent bg-transparent;
+            @apply h-6 px-0 text-xs font-medium text-accent bg-transparent;
+            &::after { @apply order-first ml-0 size-3.5 opacity-100; }
             &:hover { @apply bg-transparent text-ink-0; }
         }
         &[open] > summary { @apply bg-transparent text-accent; }
+        &[open]::details-content { @apply ml-0 pl-0 border-l-0; }
     }
 
     .context-editor {
         @apply w-full;
     }
 
-    .chevron-icon {
-        @apply transition-transform open:rotate-180;
-    }
 </style>

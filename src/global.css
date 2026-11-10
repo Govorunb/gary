@@ -179,18 +179,29 @@
             &:hover { background-color: color-mix(in oklab, var(--color-lvl-err) 12%, transparent); }
         }
     }
-    /* A details element whose summary is a row, like an expanded action: background shows the open state, no frame. */
+    /* A details element whose summary is a bar: it has a control's surface and a select's chevron, and the open content hangs off a rail. */
     .details-box {
         @apply fcol-2;
         & > summary {
-            @apply frow-1.5 items-center h-8 px-2 -mx-2 rounded-md cursor-pointer select-none;
-            @apply text-sm font-semibold text-ink-1 transition-colors;
+            @apply frow-1.5 items-center h-8 px-3 rounded-md cursor-pointer select-none;
+            @apply text-sm font-semibold text-ink-1 bg-layer-2 transition-colors;
             list-style: none;
             &::-webkit-details-marker { display: none; }
-            &:hover { @apply bg-layer-2 text-ink-0; }
+            &::after {
+                content: "";
+                @apply size-4 shrink-0 ml-auto bg-current opacity-60 transition-transform;
+                mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center / contain no-repeat;
+            }
+            &:hover { @apply bg-layer-3 text-ink-0; }
             &:focus-visible { @apply outline-none ring-2 ring-inset ring-accent; }
         }
-        &[open] > summary { @apply bg-layer-2 text-ink-0; }
+        &[open] > summary { @apply text-ink-0; }
+        &[open] > summary::after { @apply rotate-180; }
+        /* Browsers wrap the content in ::details-content, so the rows are laid out there. */
+        &[open]::details-content {
+            @apply flex flex-col ml-3 pl-3 border-l border-edge;
+            gap: inherit;
+        }
     }
     /* Floating help text (teaching tooltips, shift indicator). */
     .tooltip-panel {
