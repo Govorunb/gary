@@ -3,7 +3,6 @@
     import OutLink from "#lib/ui/common/OutLink.svelte";
     import { getUpdater, getUserPrefs } from "#lib/app/utils/di.js";
     import { isTauri } from "@tauri-apps/api/core";
-    import { safeInvoke, sleep } from "#lib/app/utils/index.js";
     import { EVENT_BUS } from "#lib/app/events/bus.js";
     import { toast } from "svelte-sonner";
 
@@ -33,24 +32,11 @@
         if (isTauri()) {
             await update.downloadAndInstall();
         }
+        updater.installedVersion = update.version;
         EVENT_BUS.emit('ui/update/installed', { version: update.version });
         toast.success("Update successful", {
             description: "Restart the app at your convenience to finish the update.",
-            action: {
-                label: "Restart now",
-                async onClick() {
-                    if (isTauri()) {
-                        await safeInvoke('restart')
-                            .orTee((e) => toast.error("Failed to restart", { description: e }));
-                        await sleep(2500);
-                        toast.success("Erm... awkward...", {
-                            description: `Couldn't restart. Um... You'll have to do it manually. My bad.`,
-                        });
-                    } else {
-                        location.reload(); // pretend to relaunch (the app never updates on dev web server obviously)
-                    }
-                }
-            }
+            action: { label: "Restart now", onClick: () => updater.restart() },
         });
 
         updating = false;
@@ -70,40 +56,56 @@
 
 <Dialog bind:open position="center">
     {#snippet title()}
-        <h3>Update Available</h3>
+        <h3>{updater.installed ? "Update Installed" : "Update Available"}</h3>
     {/snippet}
     {#snippet body()}
-        <p class="update-message">
-            Update from <span class="font-mono font-semibold">{update.currentVersion}</span> to
-            <span class="font-mono font-semibold">{update.version}</span>?
-        </p>
-        <!-- the opener plugin only sends `target="_blank"` links to the browser; the rest would navigate the app away -->
-        <div class="dialog-scroll fcol-4" onclickcapture={(e) => (e.target as Element).closest("a")?.setAttribute("target", "_blank")}>
-            {#each update.releases as release (release.version)}
-                <section class="release-notes">
-                    <OutLink href="https://github.com/Govorunb/gary/releases/v{release.version}">v{release.version}</OutLink>
-                    <div class="release-notes-content">{@html release.notesHtml}</div>
-                </section>
-            {/each}
-        </div>
-        {#if update.prerelease}
-            <p class="note text-lvl-warn">
-                Pre-release: may introduce issues or become incompatible with stable versions. Back up your settings before installing.
+        {#if updater.installed}
+            <p class="update-message">
+                Restart now to finish updating to <span class="font-mono font-semibold">{update.version}</span>?
             </p>
+        {:else}
+            <p class="update-message">
+                Update from <span class="font-mono font-semibold">{update.currentVersion}</span> to
+                <span class="font-mono font-semibold">{update.version}</span>?
+            </p>
+            <!-- the opener plugin only sends `target="_blank"` links to the browser; the rest would navigate the app away -->
+            <div class="dialog-scroll fcol-4" onclickcapture={(e) => (e.target as Element).closest("a")?.setAttribute("target", "_blank")}>
+                {#each update.releases as release (release.version)}
+                    <section class="release-notes">
+                        <OutLink href="https://github.com/Govorunb/gary/releases/v{release.version}">v{release.version}</OutLink>
+                        <div class="release-notes-content">{@html release.notesHtml}</div>
+                    </section>
+                {/each}
+            </div>
+            {#if update.prerelease}
+                <p class="note text-lvl-warn">
+                    Pre-release: may introduce issues or become incompatible with stable versions. Back up your settings before installing.
+                </p>
+            {/if}
+            <p>Restart the app at your convenience to finish the update.</p>
         {/if}
-        <p>Restart the app at your convenience to finish the update.</p>
     {/snippet}
     {#snippet footer()}
-        <button class="btn" onclick={skip}>
-            Skip this version
-        </button>
-        <div class="flex-1 self-stretch"></div>
-        <button class="btn" onclick={cancel}>
-            Cancel
-        </button>
-        <button class="btn btn-primary" onclick={doUpdate} disabled={updating}>
-            {updating ? "Updating..." : "Update"}
-        </button>
+        {#if updater.installed}
+            <div class="flex-1 self-stretch"></div>
+            <button class="btn" onclick={cancel}>
+                Later
+            </button>
+            <button class="btn btn-primary" onclick={() => updater.restart()}>
+                Restart now
+            </button>
+        {:else}
+            <button class="btn" onclick={skip}>
+                Skip this version
+            </button>
+            <div class="flex-1 self-stretch"></div>
+            <button class="btn" onclick={cancel}>
+                Cancel
+            </button>
+            <button class="btn btn-primary" onclick={doUpdate} disabled={updating}>
+                {updating ? "Updating..." : "Update"}
+            </button>
+        {/if}
     {/snippet}
 </Dialog>
 

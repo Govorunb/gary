@@ -319,11 +319,11 @@
                                 Version {update.version} is available, but it was previously skipped.
                             {:else}
                                 <span class="text-sm frow-2 items-center">
-                                    Version {update.version} is available!
+                                    Version {update.version} is {updater.installed ? "installed" : "available"}!
                                     <button class="btn"
                                         onclick={() => updater.promptForUpdate()}
                                     >
-                                        See more
+                                        {updater.installed ? "Restart" : "See more"}
                                     </button>
                                 </span>
                             {/if}

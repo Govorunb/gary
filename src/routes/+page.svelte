@@ -35,7 +35,7 @@
     <div class="justify-self-end frow-2 items-center">
         {#if updater.hasPendingUpdate}
             <button class="update-btn" onclick={() => updater.promptForUpdate()}>
-                Update to {updater.update?.version ?? "latest version"}
+                {updater.installed ? "Restart to update" : `Update to ${updater.update?.version ?? "latest version"}`}
             </button>
         {/if}
         <button

@@ -78,6 +78,8 @@ export class Updater {
     public hasPendingUpdate: boolean;
     #checkingForUpdates = $state(false);
     #lastCheckResult: Result<AvailableUpdate | null, string> | null = $state(null);
+    /** Downloaded and installed this session; takes effect on restart. */
+    public installedVersion: string | null = $state(null);
 
     private get prefs() {
         return this.userPrefs.app.updates;
@@ -85,6 +87,11 @@ export class Updater {
 
     public get skipVersion() {
         return this.prefs.skipUpdateVersion;
+    }
+
+    /** The found update only needs a restart to take effect. */
+    public get installed() {
+        return !!this.update && this.installedVersion === this.update.version;
     }
 
     public get checkingForUpdates() {
@@ -177,6 +184,19 @@ export class Updater {
         if (!this.update) return;
 
         this.uiState.dialogs.openUpdateDialog();
+    }
+
+    async restart() {
+        if (!isTauri()) {
+            location.reload(); // pretend to relaunch (the app never updates on dev web server obviously)
+            return;
+        }
+        await safeInvoke('restart')
+            .orTee((e) => toast.error("Failed to restart", { description: e }));
+        await sleep(2500);
+        toast.success("Erm... awkward...", {
+            description: `Couldn't restart. Um... You'll have to do it manually. My bad.`,
+        });
     }
 }
 
