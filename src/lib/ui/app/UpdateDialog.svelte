@@ -82,7 +82,14 @@
                     Pre-release: may introduce issues or become incompatible with stable versions. Back up your settings before installing.
                 </p>
             {/if}
-            <p>Restart the app at your convenience to finish the update.</p>
+            {#if update.installable}
+                <p>Restart the app at your convenience to finish the update.</p>
+            {:else}
+                <p class="note">
+                    This copy of Gary wasn't installed from a release, so it can't update itself.
+                    Download the new version from its <OutLink href="https://github.com/Govorunb/gary/releases/v{update.version}">release page</OutLink>.
+                </p>
+            {/if}
         {/if}
     {/snippet}
     {#snippet footer()}
@@ -102,9 +109,11 @@
             <button class="btn" onclick={cancel}>
                 Cancel
             </button>
-            <button class="btn btn-primary" onclick={doUpdate} disabled={updating}>
-                {updating ? "Updating..." : "Update"}
-            </button>
+            {#if update.installable}
+                <button class="btn btn-primary" onclick={doUpdate} disabled={updating}>
+                    {updating ? "Updating..." : "Update"}
+                </button>
+            {/if}
         {/if}
     {/snippet}
 </Dialog>

@@ -1,5 +1,5 @@
 use serde::Serialize;
-use tauri::{Manager, ResourceId, Runtime, Url, Webview};
+use tauri::{utils::platform::bundle_type, Manager, ResourceId, Runtime, Url, Webview};
 use tauri_plugin_updater::UpdaterExt;
 use time::format_description::well_known::Rfc3339;
 
@@ -7,6 +7,9 @@ use time::format_description::well_known::Rfc3339;
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateMetadata {
+    /// Builds that didn't come from a release package (e.g. `cargo build`) can't update themselves:
+    /// the plugin would treat them as an AppImage and overwrite the executable, or whatever file an inherited `$APPIMAGE` points at.
+    installable: bool,
     rid: ResourceId,
     current_version: String,
     version: String,
@@ -23,6 +26,7 @@ pub async fn check_update<R: Runtime>(webview: Webview<R>, endpoint: Url) -> Res
         return Ok(None);
     };
     Ok(Some(UpdateMetadata {
+        installable: bundle_type().is_some(),
         current_version: update.current_version.clone(),
         version: update.version.clone(),
         date: update.date.and_then(|d| d.format(&Rfc3339).ok()),

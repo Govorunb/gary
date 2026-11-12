@@ -15,6 +15,7 @@ import z from "zod";
 
 const simUpdate = {
     available: true,
+    installable: true,
     currentVersion: '0.0.0',
     version: '1.0.0',
     prerelease: false,
@@ -48,6 +49,8 @@ export function updateCandidates(releases: z.infer<typeof zReleases>, channel: U
 }
 
 export type AvailableUpdate = Update & {
+    /** False for builds that didn't come from a release package; those must be updated manually. */
+    installable: boolean;
     prerelease: boolean;
     /** Every release since the current version, newest first. */
     releases: Release[];
@@ -66,8 +69,9 @@ function checkForUpdate(channel: UpdateChannel): ResultAsync<AvailableUpdate | n
             return candidates.length ? ok(candidates) : err("No releases to update to");
         })
         .andThen(candidates =>
-            safeInvoke<ConstructorParameters<typeof Update>[0] | null>("check_update", { endpoint: candidates[0].manifest })
+            safeInvoke<ConstructorParameters<typeof Update>[0] & { installable: boolean } | null>("check_update", { endpoint: candidates[0].manifest })
                 .map(metadata => metadata && Object.assign(new Update(metadata), {
+                    installable: metadata.installable,
                     prerelease: candidates[0].prerelease,
                     releases: candidates.filter(r => semverGt(r.version, metadata.currentVersion)),
                 })));
