@@ -270,10 +270,7 @@ describe("prot/schema/additionalProperties", () => {
                 foo: { type: "string" },
             },
         });
-        expect(harness.actions.get(action.name)?.schema).toEqual({
-            ...action.schema,
-            additionalProperties: false,
-        });
+        expect(harness.actions.get(action.name)?.schema).toEqual(action.schema);
         expect(harness.status).toBe("ok");
     });
 

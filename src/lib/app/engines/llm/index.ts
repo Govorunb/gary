@@ -558,7 +558,8 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             const required = ["action"];
             if (action.schema) {
                 const dataSchema = snapshotState(action.schema) as JSONSchema;
-                dataSchema.additionalProperties = false;
+                // strict structured outputs reject object schemas that allow extra fields
+                if (dataSchema.type === "object") dataSchema.additionalProperties = false;
                 properties.data = dataSchema;
                 required.push("data");
             }

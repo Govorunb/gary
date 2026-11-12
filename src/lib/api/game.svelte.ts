@@ -313,28 +313,14 @@ export class Game {
             this.diagnostics.trigger("prot/schema/type_object", { action: name, schema }, false);
         }
 
-        if (!('additionalProperties' in schema)) {
+        if (schema.properties && !('additionalProperties' in schema)) {
             this.diagnostics.trigger("prot/schema/additionalProperties", { action: name, schema }, false);
         }
     }
 
-    private normalizeAction(action: v1.Action): v1.Action {
-        if (!action.schema || "additionalProperties" in action.schema) {
-            return action;
-        }
-        return {
-            ...action,
-            schema: {
-                ...action.schema,
-                additionalProperties: false,
-            },
-        };
-    }
-
     async registerActions(actions: v1.Action[]) {
         const newActions = [];
-        for (const incomingAction of actions) {
-            const action = this.normalizeAction(incomingAction);
+        for (const action of actions) {
             const existing = this.actions.get(action.name);
             let schemaUpdated = false;
             if (!existing) {
@@ -369,7 +355,7 @@ export class Game {
                 }
             }
             if (schemaUpdated) {
-                this.checkActionSchema(incomingAction);
+                this.checkActionSchema(action);
             }
             if (!action.description) {
                 this.diagnostics.trigger("prot/action/no_desc", { action: action.name });

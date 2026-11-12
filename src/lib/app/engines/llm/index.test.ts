@@ -128,7 +128,6 @@ describe("LLMEngine tool calling", () => {
                 data: {
                     type: "object",
                     properties: { square: { type: "string" } },
-                    additionalProperties: false,
                 },
             },
             required: ["data"],
@@ -149,7 +148,7 @@ describe("LLMEngine tool calling", () => {
         expect(result._unsafeUnwrap()).toMatchObject({ name: "pick_number", data: "42" });
         expect(engine.requests[0].tools?.[0].function.parameters).toStrictEqual({
             type: "object",
-            properties: { data: { type: "integer", additionalProperties: false } },
+            properties: { data: { type: "integer" } },
             required: ["data"],
             additionalProperties: false,
         });
