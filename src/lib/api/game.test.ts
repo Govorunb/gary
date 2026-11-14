@@ -120,3 +120,43 @@ describe("force lifecycle", () => {
         expect(harness.server.hasForce).toBe(false);
     });
 });
+
+describe("in-game dialogue", () => {
+    test("holds the actor back until the dialogue has gone quiet, then prompts it", async ({harness}) => {
+        const scheduler = harness.session.scheduler;
+        await harness.client.hello();
+
+        await harness.client.sendSpeechStarted("1", "Guard", "Halt!");
+        expect(harness.server.speaking).toBe(true);
+        await harness.client.sendSpeechEnded("1");
+        // a line that follows right away belongs to the same stretch
+        await harness.client.sendSpeechStarted("2", "Guard", "Who goes there?");
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(harness.server.speaking).toBe(true);
+        expect(scheduler.actPending).toBe(false);
+
+        await harness.client.sendSpeechEnded("2");
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(harness.server.speaking).toBe(false);
+        expect(scheduler.actPending).toBe(true);
+    });
+
+    test("does not prompt after a line that wants no reply, and ignores reused ids", async ({harness}) => {
+        const scheduler = harness.session.scheduler;
+        await harness.client.hello();
+
+        await harness.client.sendSpeechStarted("1", "Crowd", "Grog!", "never");
+        await harness.client.sendSpeechEnded("1");
+        await harness.client.sendSpeechStarted("1", "Crowd", "Grog!");
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(harness.server.speaking).toBe(false);
+        expect(scheduler.actPending).toBe(false);
+    });
+
+    test("ends a line the game never ended", async ({harness}) => {
+        await harness.client.hello();
+        await harness.client.sendSpeechStarted("1", "Narrator");
+        await vi.advanceTimersByTimeAsync(40_000);
+        expect(harness.server.speaking).toBe(false);
+    });
+});

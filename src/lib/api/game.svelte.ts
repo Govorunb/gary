@@ -33,6 +33,11 @@ export type ForceDropReason = "retry_exhausted" | "actions_unregistered" | "not_
 const FORCE_RETRY_LIMIT = 3;
 const ACTION_RESULT_TIMEOUT = 20_000; // spec 2026-09
 
+const SPEECH_DEFAULT_DURATION_MS = 30_000;
+const SPEECH_END_SLACK_MS = 1_000;
+/** How long after a line ends the next one may start and still count as the same stretch of dialogue. */
+const SPEECH_QUIET_MS = 500;
+
 export class Game {
     public readonly actions = $state(new SvelteMap<string, GameAction>());
     public name: string = $state(null!);
@@ -55,6 +60,12 @@ export class Game {
         return this.conn.shortId;
     }
 
+    /** Dialogue lines being spoken, with the timer that ends a line the game never ended. */
+    private readonly speech = new Map<string, ReturnType<typeof setTimeout>>();
+    private readonly endedSpeech = new Set<string>();
+    private speechReply: v1.SpeechStarted['data']['reply'] = "maybe";
+    private speechQuietTimer: ReturnType<typeof setTimeout> | undefined;
+
     constructor(
         public readonly session: Session,
         public readonly conn: BaseConnection,
@@ -71,6 +82,7 @@ export class Game {
             if (this.name === v1PendingGameName(conn.id)) return;
             EVENT_BUS.emit('api/game/disconnected', { game: { id: this.id, name: this.name } });
             this.clearPendingActions();
+            this.clearSpeech();
             this.forceQueue.clear();
             this.activeForce = null;
         });
@@ -216,6 +228,12 @@ export class Game {
             case "context":
                 this.context(msg.data.message, msg.data.silent);
                 break;
+            case "speech/started":
+                this.speechStarted(msg.data);
+                break;
+            case "speech/ended":
+                this.speechEnded(msg.data.id);
+                break;
             case "actions/register":
                 this.registerActions(msg.data.actions);
                 break;
@@ -274,6 +292,48 @@ export class Game {
             message: text,
             silent,
         });
+    }
+
+    /** In-game dialogue is being spoken; the actor stays quiet meanwhile, as Neuro does. Forces are not affected. */
+    public get speaking() {
+        return this.speech.size > 0 || this.speechQuietTimer !== undefined;
+    }
+
+    speechStarted(data: v1.SpeechStarted['data']) {
+        if (this.speech.has(data.id) || this.endedSpeech.has(data.id)) return;
+        clearTimeout(this.speechQuietTimer);
+        this.speechQuietTimer = undefined;
+        this.speechReply = data.reply;
+        // the game should always end its lines; this is only the safety net the spec describes
+        const safetyMs = (data.expected_duration_ms ?? SPEECH_DEFAULT_DURATION_MS) + SPEECH_END_SLACK_MS;
+        this.speech.set(data.id, setTimeout(() => this.speechEnded(data.id), safetyMs));
+        this.context(data.text === undefined ? `${data.speaker} is speaking.` : `${data.speaker}: "${data.text}"`, true);
+    }
+
+    speechEnded(id: string) {
+        const safety = this.speech.get(id);
+        if (safety === undefined) return;
+        clearTimeout(safety);
+        this.speech.delete(id);
+        this.endedSpeech.add(id);
+        if (this.speech.size) return;
+        // lines that follow one another are one stretch of dialogue; only the last line's `reply` counts
+        this.speechQuietTimer = setTimeout(() => {
+            this.speechQuietTimer = undefined;
+            if (this.speechReply === "never") {
+                this.session.scheduler.resume();
+            } else {
+                // no way to make an engine speak, so "always" prompts like "maybe"
+                this.session.scheduler.requestAct();
+            }
+        }, SPEECH_QUIET_MS);
+    }
+
+    private clearSpeech() {
+        this.speech.forEach(clearTimeout);
+        this.speech.clear();
+        clearTimeout(this.speechQuietTimer);
+        this.speechQuietTimer = undefined;
     }
 
     getAction(name: string, onlyActive: boolean = true) {

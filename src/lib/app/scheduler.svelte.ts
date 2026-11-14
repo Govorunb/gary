@@ -111,9 +111,14 @@ export class Scheduler {
         } else if (this.forceQueue.length) {
             const force = this.forceQueue.shift();
             this.forceAct(force);
-        } else if (this.#actPending) {
+        } else if (this.#actPending && !this.registry.games.some(game => game.speaking)) {
             this.tryAct();
         }
+    }
+
+    /** Something that was holding the actor back (in-game dialogue) is over. */
+    public resume() {
+        this.requestDrain();
     }
     public get activeMutes() {
         return [

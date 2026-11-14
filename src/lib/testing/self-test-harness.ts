@@ -19,6 +19,10 @@ class MockSession {
             this.forceQueue.push(actions);
         },
         onGameForce() {},
+        requestAct() {
+            this.actPending = true;
+        },
+        resume() {},
     };
     private readonly mockPrefs = {
         ...zUserPrefs.decode({ version: "test" }),

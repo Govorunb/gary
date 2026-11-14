@@ -40,6 +40,27 @@ export const zContext = z.strictObject({
     }),
 });
 
+export const zSpeechStarted = z.strictObject({
+    ...zGameMessageBase.shape,
+    command: zConst("speech/started"),
+    data: z.strictObject({
+        id: z.string().nonempty().max(256),
+        speaker: z.string().max(200),
+        text: z.string().max(4000).optional(),
+        expected_duration_ms: z.int().min(0).max(600_000).optional(),
+        reply: z.enum(["never", "maybe", "always"]).default("maybe"),
+        responder: z.string().optional(),
+    }),
+});
+
+export const zSpeechEnded = z.strictObject({
+    ...zGameMessageBase.shape,
+    command: zConst("speech/ended"),
+    data: z.strictObject({
+        id: z.string(),
+    }),
+});
+
 export const zRegisterActions = z.strictObject({
     ...zGameMessageBase.shape,
     command: zConst("actions/register"),
@@ -86,6 +107,8 @@ export const zShutdownReady = z.strictObject({
 export const zGameMessage = z.discriminatedUnion("command", [
     zStartup,
     zContext,
+    zSpeechStarted,
+    zSpeechEnded,
     zRegisterActions,
     zUnregisterActions,
     zForceAction,
@@ -95,6 +118,8 @@ export const zGameMessage = z.discriminatedUnion("command", [
 
 export type Startup = z.infer<typeof zStartup>;
 export type Context = z.infer<typeof zContext>;
+export type SpeechStarted = z.infer<typeof zSpeechStarted>;
+export type SpeechEnded = z.infer<typeof zSpeechEnded>;
 export type RegisterActions = z.infer<typeof zRegisterActions>;
 export type UnregisterActions = z.infer<typeof zUnregisterActions>;
 export type ForceAction = z.infer<typeof zForceAction>;
