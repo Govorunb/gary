@@ -55,7 +55,10 @@ export function toResponsesParams(chat: ChatCompletionCreateParamsNonStreaming):
         ...(format?.type === "json_schema" ? {
             text: { format: { type: "json_schema" as const, name: format.json_schema.name, schema: format.json_schema.schema ?? {}, strict: false } },
         } : {}),
-        ...(chat.reasoning_effort ? { reasoning: { effort: chat.reasoning_effort } } : {}),
+        // the summary is the only view of the model's reasoning that OpenAI gives out
+        ...(chat.reasoning_effort ? {
+            reasoning: { effort: chat.reasoning_effort, ...(chat.reasoning_effort === "none" ? {} : { summary: "auto" as const }) },
+        } : {}),
         ...(chat.max_tokens ? { max_output_tokens: chat.max_tokens } : {}),
     };
 }
@@ -65,12 +68,15 @@ export function toChatCompletion(response: Response): ChatCompletion {
     if (response.error) return { error: response.error } as unknown as ChatCompletion;
 
     let content = "";
+    const reasoning: string[] = [];
     const toolCalls: ChatCompletion.Choice["message"]["tool_calls"] = [];
     for (const item of response.output) {
         if (item.type === "message") {
             for (const part of item.content) {
                 if (part.type === "output_text") content += part.text;
             }
+        } else if (item.type === "reasoning") {
+            reasoning.push(...item.summary.map(part => part.text));
         } else if (item.type === "function_call") {
             toolCalls.push({ id: item.call_id, type: "function", function: { name: item.name, arguments: item.arguments } });
         }
@@ -90,6 +96,8 @@ export function toChatCompletion(response: Response): ChatCompletion {
                 content: content || null,
                 refusal: null,
                 ...(toolCalls.length ? { tool_calls: toolCalls } : {}),
+                // not part of a chat completion, but where OpenAIClient looks for it (as OpenRouter sends it)
+                ...(reasoning.length ? { reasoning: reasoning.join("\n\n") } : {}),
             },
         }],
         ...(usage ? {

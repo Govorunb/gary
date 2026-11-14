@@ -207,7 +207,7 @@ describe("OpenAIClient", () => {
             status: "completed",
             error: null,
             output: [
-                { type: "reasoning", summary: [] },
+                { type: "reasoning", summary: [{ type: "summary_text", text: "The door is the way out." }] },
                 { type: "function_call", call_id: "call-2", name: "move", arguments: '{"where":"door"}' },
             ],
             usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
@@ -239,13 +239,13 @@ describe("OpenAIClient", () => {
             tools: [{ type: "function", name: "move", description: "Move", parameters, strict: false }],
             parallel_tool_calls: false,
             tool_choice: "required",
-            reasoning: { effort: "low" },
+            reasoning: { effort: "low", summary: "auto" },
             max_output_tokens: 100,
         }, expect.any(Object));
         expect(result._unsafeUnwrap()).toMatchObject({
             text: "",
             toolCalls: [{ id: "call-2", name: "move", arguments: '{"where":"door"}' }],
-            metadata: { usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } },
+            metadata: { reasoning: "The door is the way out.", usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } },
         });
     });
 
