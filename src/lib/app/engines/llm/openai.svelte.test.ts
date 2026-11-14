@@ -245,7 +245,7 @@ describe("OpenAIClient", () => {
         expect(result._unsafeUnwrap()).toMatchObject({
             text: "",
             toolCalls: [{ id: "call-2", name: "move", arguments: '{"where":"door"}' }],
-            metadata: { reasoning: "The door is the way out.", usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } },
+            metadata: { reasoning: "The door is the way out.", usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, completion_tokens_details: { reasoning_tokens: 0 } } },
         });
     });
 

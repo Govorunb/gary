@@ -101,7 +101,13 @@ export function toChatCompletion(response: Response): ChatCompletion {
             },
         }],
         ...(usage ? {
-            usage: { prompt_tokens: usage.input_tokens, completion_tokens: usage.output_tokens, total_tokens: usage.total_tokens },
+            usage: {
+                prompt_tokens: usage.input_tokens,
+                completion_tokens: usage.output_tokens,
+                total_tokens: usage.total_tokens,
+                // tells reasoning that produced no summary apart from no reasoning at all
+                completion_tokens_details: { reasoning_tokens: usage.output_tokens_details?.reasoning_tokens ?? 0 },
+            },
         } : {}),
     };
 }
