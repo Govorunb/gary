@@ -95,6 +95,7 @@ describe("OpenAIClient", () => {
         const prefs: OpenAIPrefs = {
             name: "OpenRouter",
             allowDoNothing: false,
+            forcePrompt: "detailed",
             allowYapping: false,
             allowUnregisteredActions: false,
             promptingStrategy: "json",
@@ -145,6 +146,7 @@ describe("OpenAIClient", () => {
         const prefs = $state<OpenAIPrefs>({
             name: "OpenAI",
             allowDoNothing: false,
+            forcePrompt: "detailed",
             allowYapping: false,
             allowUnregisteredActions: false,
             promptingStrategy: "json",
@@ -183,6 +185,7 @@ describe("OpenAIClient", () => {
         const prefs = $state<OpenAIPrefs>({
             name: "OpenRouter",
             allowDoNothing: false,
+            forcePrompt: "detailed",
             allowYapping: false,
             allowUnregisteredActions: false,
             promptingStrategy: "tools",
@@ -220,6 +223,7 @@ describe("OpenAIClient", () => {
         const prefs = $state<OpenAIPrefs>({
             name: "OpenAI",
             allowDoNothing: false,
+            forcePrompt: "detailed",
             allowYapping: false,
             allowUnregisteredActions: false,
             promptingStrategy: "json",
@@ -271,6 +275,7 @@ describe("OpenAIClient", () => {
         const prefs: OpenAIPrefs = {
             name: "Test",
             allowDoNothing: false,
+            forcePrompt: "detailed",
             allowYapping: false,
             allowUnregisteredActions: false,
             promptingStrategy: "tools",
@@ -304,6 +309,7 @@ describe("OpenAIClient", () => {
         const prefs = $state<OpenAIPrefs>({
             name: "Ollama",
             allowDoNothing: false,
+            forcePrompt: "detailed",
             allowYapping: false,
             allowUnregisteredActions: false,
             promptingStrategy: "json",
@@ -334,6 +340,7 @@ describe("OpenAIClient", () => {
         const prefs = $state<OpenAIPrefs>({
             name: "OpenRouter",
             allowDoNothing: false,
+            forcePrompt: "detailed",
             allowYapping: false,
             allowUnregisteredActions: false,
             promptingStrategy: "json",
