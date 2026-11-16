@@ -4,6 +4,7 @@ import type { LLMRequest, OpenAIContext } from ".";
 
 const openAIMock = vi.hoisted(() => ({
     create: vi.fn(),
+    createResponse: vi.fn(),
     constructorOptions: [] as Array<Record<string, any>>,
 }));
 
@@ -25,6 +26,7 @@ vi.mock("openai", () => ({
         baseURL: string;
         apiKey: string;
         chat;
+        responses;
 
         constructor(options: { baseURL: string; apiKey: string; fetch?: typeof fetch }) {
             openAIMock.constructorOptions.push(options);
@@ -35,6 +37,7 @@ vi.mock("openai", () => ({
                     create: openAIMock.create,
                 },
             };
+            this.responses = { create: openAIMock.createResponse };
         }
     },
 }));
@@ -85,6 +88,7 @@ function prefsSource(prefs: OpenAIPrefs) {
 describe("OpenAIClient", () => {
     beforeEach(() => {
         openAIMock.create.mockReset();
+        openAIMock.createResponse.mockReset();
         openAIMock.constructorOptions = [];
         tauriMock.isTauri.mockReset();
         tauriMock.isTauri.mockReturnValue(false);
@@ -99,6 +103,7 @@ describe("OpenAIClient", () => {
             allowUnregisteredActions: false,
             promptingStrategy: "json",
             reasoningEffort: "auto",
+            api: "chat",
             apiKey: "test-key",
             serverUrl: "https://openrouter.ai/api/v1/",
             modelId: "openrouter/auto",
@@ -149,6 +154,7 @@ describe("OpenAIClient", () => {
             allowUnregisteredActions: false,
             promptingStrategy: "json",
             reasoningEffort: "none",
+            api: "chat",
             apiKey: "test-key",
             serverUrl: "https://api.openai.com/v1",
             modelId: "gpt-5-mini",
@@ -179,6 +185,70 @@ describe("OpenAIClient", () => {
         }), expect.any(Object));
     });
 
+    test("uses the Responses API when the engine is set to", async () => {
+        const prefs: OpenAIPrefs = {
+            name: "OpenAI",
+            allowDoNothing: false,
+            allowYapping: false,
+            allowUnregisteredActions: false,
+            promptingStrategy: "tools",
+            reasoningEffort: "low",
+            api: "responses",
+            apiKey: "test-key",
+            serverUrl: "https://api.openai.com/v1",
+            modelId: "gpt-5-mini",
+        };
+        const client = new OpenAIClient(prefsSource(prefs));
+        const parameters = { type: "object", properties: { where: { type: "string" } } };
+        openAIMock.createResponse.mockResolvedValue({
+            id: "resp-1",
+            created_at: 1,
+            model: "gpt-5-mini",
+            status: "completed",
+            error: null,
+            output: [
+                { type: "reasoning", summary: [] },
+                { type: "function_call", call_id: "call-2", name: "move", arguments: '{"where":"door"}' },
+            ],
+            usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
+        });
+
+        const result = await client.generate({
+            messages: [
+                { role: "system", content: "Play the game" },
+                { role: "assistant", content: null, tool_calls: [{ id: "call-1", type: "function", function: { name: "look", arguments: "{}" } }] },
+                { role: "tool", tool_call_id: "call-1", content: "A door." },
+                { role: "user", content: "act" },
+            ],
+            tools: [{ type: "function", function: { name: "move", description: "Move", parameters } }],
+            toolChoice: "required",
+            maxTokens: 100,
+        });
+
+        expect(openAIMock.create).not.toHaveBeenCalled();
+        expect(openAIMock.createResponse).toHaveBeenCalledWith({
+            model: "gpt-5-mini",
+            store: false,
+            stream: false,
+            instructions: "Play the game",
+            input: [
+                { type: "function_call", call_id: "call-1", name: "look", arguments: "{}" },
+                { type: "function_call_output", call_id: "call-1", output: "A door." },
+                { role: "user", content: "act" },
+            ],
+            tools: [{ type: "function", name: "move", description: "Move", parameters, strict: false }],
+            parallel_tool_calls: false,
+            tool_choice: "required",
+            reasoning: { effort: "low" },
+            max_output_tokens: 100,
+        }, expect.any(Object));
+        expect(result._unsafeUnwrap()).toMatchObject({
+            text: "",
+            toolCalls: [{ id: "call-2", name: "move", arguments: '{"where":"door"}' }],
+            metadata: { usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } },
+        });
+    });
+
     test("surfaces provider errors returned in a completion choice", async () => {
         const prefs = $state<OpenAIPrefs>({
             name: "OpenRouter",
@@ -187,6 +257,7 @@ describe("OpenAIClient", () => {
             allowUnregisteredActions: false,
             promptingStrategy: "tools",
             reasoningEffort: "none",
+            api: "chat",
             apiKey: "test-key",
             serverUrl: "https://openrouter.ai/api/v1",
             modelId: "openai/gpt-oss-120b",
@@ -224,6 +295,7 @@ describe("OpenAIClient", () => {
             allowUnregisteredActions: false,
             promptingStrategy: "json",
             reasoningEffort: "none",
+            api: "chat",
             apiKey: "test-key",
             serverUrl: "https://api.openai.com/v1",
             modelId: "gpt-5-mini",
@@ -275,6 +347,7 @@ describe("OpenAIClient", () => {
             allowUnregisteredActions: false,
             promptingStrategy: "tools",
             reasoningEffort: "none",
+            api: "chat",
             apiKey: "test-key",
             serverUrl,
             modelId,
@@ -308,6 +381,7 @@ describe("OpenAIClient", () => {
             allowUnregisteredActions: false,
             promptingStrategy: "json",
             reasoningEffort: "auto",
+            api: "chat",
             apiKey: "",
             serverUrl: "http://localhost:11434/v1",
             modelId: "llama3",
@@ -338,6 +412,7 @@ describe("OpenAIClient", () => {
             allowUnregisteredActions: false,
             promptingStrategy: "json",
             reasoningEffort: "auto",
+            api: "chat",
             apiKey: "test-key",
             serverUrl: "https://openrouter.ai/api/v1",
             modelId: "openrouter/auto",

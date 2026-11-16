@@ -13,6 +13,7 @@ import { v4 as uuid } from "uuid";
 import { getLMStudioModelMetadata, isLMStudioEngine } from "./lm-studio";
 import { getOllamaModelMetadata, isOllamaEngine } from "./ollama";
 import { openAICompatFetch } from "./openai-compat";
+import { createViaResponses } from "./openai-responses";
 
 /** Generic engine for OpenAI-compatible servers (e.g. Ollama/LMStudio) instantiated from user-created profiles.
  * This engine type may have multiple instances active at once, each with a generated ID and a user-defined name.
@@ -81,6 +82,11 @@ export const zOpenAIPrefs = z.looseObject({
         description: "Base URL for the API",
     }),
     modelId: z.string().optional().field({ title: "Model ID", description: "Model identifier (e.g., llama3.1-7b)" }),
+    api: z.enum(["chat", "responses"]).fallback("chat").field({
+        title: "API",
+        options: { chat: "Chat Completions", responses: "Responses" },
+        description: "Which endpoint requests go to. OpenAI's newer models need Responses to use tools together with reasoning; most other servers only support Chat Completions.",
+    }),
 });
 
 export type OpenAIPrefs = z.infer<typeof zOpenAIPrefs>;
@@ -184,7 +190,7 @@ export class OpenAIClient {
             const text = [failure.message, failure.apiMessage, failure.causeMessage]
                 .filter(Boolean)
                 .join(" ");
-            return /reasoning[_ ]effort|reasoning is mandatory/i.test(text);
+            return /reasoning[_. ]effort|reasoning is mandatory/i.test(text);
         };
         const reqId = uuid();
         const sendRequest = async (effort?: WireReasoningEffort) => {
@@ -194,7 +200,9 @@ export class OpenAIClient {
             };
             this.eventBus.emit('app/engines/llm/request', { reqId, params });
             const res = await ResultAsync.fromPromise(
-                this.client.chat.completions.create(params, { signal }),
+                this.options.api === "responses"
+                    ? createViaResponses(this.client, params, { signal })
+                    : this.client.chat.completions.create(params, { signal }),
                 (error) => {
                     const message = error instanceof Error ? error.message : String(error);
                     const apiMessage = (error as any)?.error?.message;
