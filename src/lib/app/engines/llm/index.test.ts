@@ -33,6 +33,7 @@ afterEach(async () => {
 function llmOptions(options: Partial<CommonLLMOptions> = {}): CommonLLMOptions {
     return {
         allowDoNothing: false,
+        forcePrompt: "detailed",
         allowYapping: false,
         allowUnregisteredActions: false,
         promptingStrategy: "tools",
@@ -385,6 +386,27 @@ describe("LLMEngine tool calling", () => {
         expect(JSON.stringify(engine.requests[1].messages)).not.toContain("pick the winning move");
     });
 
+    test.each([
+        ["detailed", `You must perform one of the following actions, given this information: {"actions":["move"],"query":"pick the winning move","state":"final round"}`],
+        ["compact", "You must act (move): pick the winning move\nfinal round"],
+    ] as const)("words a forced action in the %s style", async (forcePrompt, expected) => {
+        const engine = new TestLLMEngine(llmOptions({ forcePrompt }));
+        engine.generation = {
+            text: "",
+            toolCalls: [{ id: "move-1", name: "move", arguments: "{}" }],
+        };
+
+        await engine.forceAct(createSession(), [{ name: "move" }], undefined, {
+            query: "pick the winning move",
+            state: "final round",
+            ephemeral_context: true,
+            action_names: ["move"],
+            priority: "high",
+        });
+
+        expect(engine.requests[0].messages.at(-1)?.content).toContain(expected);
+    });
+
     test("pairs long tool histories without searching the history for every call", async () => {
         const session = createSession();
         for (let i = 0; i < 100; i++) {
@@ -541,6 +563,7 @@ describe("LLMEngine structured output", () => {
         const engine = new TestLLMEngine(llmOptions({
             promptingStrategy: "json",
             allowDoNothing: true,
+            forcePrompt: "detailed",
             allowYapping: true,
         }));
         engine.generation = { text: JSON.stringify({ command: { say: "hello", notify: true } }), toolCalls: [] };

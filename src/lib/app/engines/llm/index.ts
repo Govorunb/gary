@@ -53,6 +53,12 @@ export const zLLMOptions = z.strictObject({
         options: { json: "Structured output", tools: "Tool calling (beta)" },
         description: "Choose how the model returns actions. Structured output works with more providers.",
     }),
+    /** How a forced action is put to the model. */
+    forcePrompt: z.enum(["detailed", "compact"]).fallback("detailed").field({
+        title: "Forced action prompt",
+        options: { detailed: "Detailed (JSON)", compact: "Compact" },
+        description: "How a forced action is worded for the model. Compact says the same in fewer tokens, which adds up when the game forces often.",
+    }),
     /** User-edited model metadata, keyed by the configured model identifier. */
     modelMetadata: zModelMetadataOverrides.optional(),
 });
@@ -669,7 +675,7 @@ export abstract class LLMEngine<TOptions extends CommonLLMOptions> extends Engin
             case "api/game/force":
                 return event.data.ephemeral_context
                     ? null
-                    : this.userMessage(event, clientSource(event.data.game), forceText(event.data));
+                    : this.userMessage(event, clientSource(event.data.game), forceText(event.data, this.options.forcePrompt));
             case "api/game/action_result":
                 return this.userMessage(event, clientSource(event.data.game),
                     `Result for action ${event.data.act.name} (request ID ${short(event.data.act.id)}): ${event.data.success ? "Performing" : "Failure"}`
@@ -811,7 +817,7 @@ The custom user instructions are as follows:
     private forceMessage(context: ForceContext): OpenAIMessage {
         return {
             role: "user",
-            content: forceText(context),
+            content: forceText(context, this.options.forcePrompt),
         };
     }
 
@@ -886,7 +892,10 @@ function clientSource(game: { id: string; name: string }) {
     return { type: "client", id: game.id, name: game.name } as const;
 }
 
-function forceText(context: Pick<ForceContext, "action_names" | "query" | "state">): string {
+function forceText(context: Pick<ForceContext, "action_names" | "query" | "state">, style: CommonLLMOptions["forcePrompt"]): string {
+    if (style === "compact") {
+        return `You must act (${context.action_names.join(", ")}): ${context.query}${context.state ? `\n${context.state}` : ""}`;
+    }
     return `You must perform one of the following actions, given this information: ${JSON.stringify({
         actions: context.action_names,
         query: context.query,

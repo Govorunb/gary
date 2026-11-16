@@ -64,6 +64,7 @@
             <summary>Advanced</summary>
             <Field schema={fields.allowUnregisteredActions} bind:value={dirtyConfig.allowUnregisteredActions} />
             <Field schema={fields.promptingStrategy} bind:value={dirtyConfig.promptingStrategy} />
+            <Field schema={fields.forcePrompt} bind:value={dirtyConfig.forcePrompt} />
             <Field schema={fields.reasoningEffort} bind:value={dirtyConfig.reasoningEffort} />
         </details>
     {/snippet}
