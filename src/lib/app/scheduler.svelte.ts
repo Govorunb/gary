@@ -108,12 +108,21 @@ export class Scheduler {
         const gameForce = this.takeGameForce();
         if (gameForce) {
             this.forceGame(gameForce.game, gameForce.force);
-        } else if (this.forceQueue.length) {
-            const force = this.forceQueue.shift();
+        } else if (this.nextQueuedForce() >= 0) {
+            const [force] = this.forceQueue.splice(this.nextQueuedForce(), 1);
             this.forceAct(force);
-        } else if (this.#actPending && !this.registry.games.some(game => game.speaking)) {
+        } else if (this.#actPending && !this.speaking) {
             this.tryAct();
         }
+    }
+
+    /** An idle force (null) is our own prodding, not the game's: it waits for dialogue like any other act. */
+    private nextQueuedForce() {
+        return this.speaking ? this.forceQueue.findIndex(force => force !== null) : this.forceQueue.length ? 0 : -1;
+    }
+
+    private get speaking() {
+        return this.registry.games.some(game => game.speaking);
     }
 
     /** Something that was holding the actor back (in-game dialogue) is over. */
@@ -265,6 +274,13 @@ export class Scheduler {
 
     private perform(choice: EngineActResult, force: boolean, engine: Engine<unknown>, targetsByName: Map<string, EngineActionTarget<Game>>, metrics: ActMetrics): ResultAsync<EngineActResult, ActError> {
         if (typeof choice === 'object' && 'name' in choice) {
+            if (!force && this.speaking) {
+                // dialogue began while the engine was thinking; Neuro would not talk over it.
+                // The choice was made before the line was heard, so drop it and ask again afterwards.
+                this.#actPending = true;
+                EVENT_BUS.emit('api/actor/skip', { engineId: engine.id, metrics });
+                return okAsync("skip");
+            }
             return this.performAct(choice, force, engine, targetsByName, metrics);
         }
         if (force) {

@@ -576,3 +576,47 @@ describe("Scheduler chaos sends", () => {
         });
     });
 });
+
+describe("Scheduler and in-game dialogue", () => {
+    test("drops an action chosen before a line began, then asks again once the line is over", async () => {
+        const action = { name: "move", description: "Move" };
+        const game = Object.assign(createFakeGame("Test Game", "test", [action]), { speaking: false });
+        // the line starts while the engine is thinking
+        let lineStarted = false;
+        const engine = createEngine(actions => {
+            if (!lineStarted) lineStarted = game.speaking = true;
+            return { name: actions[0].name };
+        });
+
+        await withScheduler([game], engine, async (scheduler, acts) => {
+            await scheduler.tryAct();
+            expect(acts).toHaveLength(0);
+            expect(game.sentActions).toHaveLength(0);
+
+            await vi.waitFor(() => expect(engine.tryAct).toHaveBeenCalledTimes(1));
+            game.speaking = false;
+            scheduler.resume();
+            await vi.waitFor(() => expect(game.sentActions).toHaveLength(1));
+        });
+    });
+
+    test("holds an idle force during a line, but not a force from the game", async () => {
+        const action = { name: "move", description: "Move" };
+        const game = Object.assign(createFakeGame("Test Game", "test", [action]), { speaking: true });
+        const engine = createEngine(actions => ({ name: actions[0].name }));
+
+        await withScheduler([game], engine, async scheduler => {
+            scheduler.queueForce(null);
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(engine.forceAct).not.toHaveBeenCalled();
+
+            scheduler.queueForce([{ game: game as unknown as Game, action }]);
+            await vi.waitFor(() => expect(game.sentActions).toHaveLength(1));
+
+            game.speaking = false;
+            scheduler.resume();
+            await vi.waitFor(() => expect(game.sentActions).toHaveLength(2));
+        });
+    });
+});
