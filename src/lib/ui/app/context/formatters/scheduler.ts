@@ -29,7 +29,14 @@ export const SCHEDULER_CONTEXT_FORMATTERS = {
     },
     "api/actor/generated": (event, target) => {
         if (target !== "actor") {
-            return null;
+            // the model's own account of its reasoning, for whoever is watching; the actor never sees it again
+            const reasoning = event.data.metadata?.reasoning;
+            if (typeof reasoning !== "string" || !reasoning.trim()) return null;
+            return {
+                source: { type: "actor", engineId: event.data.engineId },
+                silent: true,
+                text: `Thinking: ${reasoning}`,
+            };
         }
         return {
             source: { type: "actor", engineId: event.data.engineId },

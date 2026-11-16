@@ -9,6 +9,7 @@ export const USER_CONTEXT_KEYS = [
     "api/game/force",
     "api/game/action_result",
     "api/game/act/user",
+    "api/actor/generated",
     "api/actor/skip",
     "api/actor/say",
     "api/actor/act",
@@ -103,7 +104,10 @@ export class ContextManager {
     }
 
     #onUserDelta(delta: EventLogDelta) {
-        this.#userView.append(delta.event as UserContextEvent);
+        const event = delta.event as UserContextEvent;
+        // generated output belongs to the actor view; the user only gets to see the reasoning behind it
+        if (event.key === "api/actor/generated" && typeof event.data.metadata?.reasoning !== "string") return;
+        this.#userView.append(event);
     }
 
     #onActorDelta(delta: EventLogDelta) {

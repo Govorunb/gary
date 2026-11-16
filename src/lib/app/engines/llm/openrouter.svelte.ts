@@ -24,6 +24,7 @@ export class OpenRouter extends LLMEngine<OpenRouterPrefs> {
                     ...self.options,
                     modelId: self.modelId(),
                     serverUrl: "https://openrouter.ai/api/v1/",
+                    api: "chat",
                 };
             },
             setReasoningEffort(effort) {
