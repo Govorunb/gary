@@ -113,6 +113,14 @@ export abstract class ClientGame {
         await this.conn.send(context);
     }
 
+    public async sendSpeechStarted(id: string, speaker: string, text?: string, reply?: v1.SpeechStarted['data']['reply']) {
+        await this.conn.send(v1.zSpeechStarted.decode({ game: this.name, data: { id, speaker, text, reply } }));
+    }
+
+    public async sendSpeechEnded(id: string) {
+        await this.conn.send(v1.zSpeechEnded.decode({ game: this.name, data: { id } }));
+    }
+
     public async sendForce(actionNames: string[], query: string, state?: string, ephemeralContext?: boolean, priority?: "low" | "medium" | "high" | "critical") {
         const force: v1.ForceAction = v1.zForceAction.decode({
             game: this.name,
